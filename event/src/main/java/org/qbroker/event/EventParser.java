@@ -179,6 +179,11 @@ public class EventParser {
                     break;
                   case 's':
                     if ("summary".equals(key) && !attr.containsKey("text")) {
+                        if (value.indexOf("\\x") >= 0) { // special chars
+                            value = Utils.doSearchReplace("\\x22", "\"", value);
+                            value = Utils.doSearchReplace("\\x0D", "\r", value);
+                            value = Utils.doSearchReplace("\\x09", "\t", value);
+                        }
                         if (value.indexOf(Event.ESCAPED_QUOTE) >= 0)
                             value = Utils.doSearchReplace(Event.ESCAPED_QUOTE,
                                 "\"", value);
@@ -198,6 +203,11 @@ public class EventParser {
                     break;
                   case 'c':
                     if ("content".equals(key) && value.length() > 1) {
+                        if (value.indexOf("\\x") >= 0) { // special chars
+                            value = Utils.doSearchReplace("\\x22", "\"", value);
+                            value = Utils.doSearchReplace("\\x0D", "\r", value);
+                            value = Utils.doSearchReplace("\\x09", "\t", value);
+                        }
                         if (value.indexOf(Event.ESCAPED_AMPERSAND) >= 0)
                             value=Utils.doSearchReplace(Event.ESCAPED_AMPERSAND,
                                 "&", value);

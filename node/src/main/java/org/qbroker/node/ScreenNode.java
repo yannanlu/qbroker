@@ -1636,4 +1636,8 @@ public class ScreenNode extends Node {
         ruleList.clear();
         cacheList.clear();
     }
+
+    protected void finalize() {
+        close();
+    }
 }

@@ -356,6 +356,8 @@ public class TConnector extends JMSTConnector {
             catch (Exception ex) {
             }
             try { // retry
+                ctx = null;
+                ctx = new InitialContext(env);
               factory=(TopicConnectionFactory)ctx.lookup(connectionFactoryName);
             }
             catch (NamingException ex) {

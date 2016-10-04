@@ -426,6 +426,29 @@ public class EventSummary implements EventMerger {
         return name;
     }
 
+    public void close() {
+        con = null;
+        if (subMap != null) {
+            subMap.clear();
+            subMap = null;
+        }
+        if (summaryTemplate != null) {
+            summaryTemplate.clear();
+            summaryTemplate = null;
+        }
+        if (aggregation != null) {
+            for (Map map : aggregation)
+                if (map != null) map.clear();
+            for (int i=0; i<aggregation.length; i++)
+                aggregation[i] = null;
+            aggregation = null;
+        }
+    }
+
+    protected void finalize() {
+        close();
+    }
+
     private synchronized static void initTextEventConstructor() {
         if (con != null)
             return;

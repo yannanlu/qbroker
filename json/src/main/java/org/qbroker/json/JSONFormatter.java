@@ -1,6 +1,6 @@
 package org.qbroker.json;
 
-/* JSONFormatter.java - a formatter for JSON data */
+/* JSONFormatter.java - a formatter for JSON data in JMS Messages */
 
 import java.io.Reader;
 import java.io.FileReader;
@@ -1813,6 +1813,10 @@ public class JSONFormatter {
                 selector[i] = null;
             }
         }
+    }
+
+    protected void finalize() {
+         clear();
     }
 
     private static String getPropertyID(String key) throws JMSException {

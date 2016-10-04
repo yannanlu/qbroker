@@ -1383,4 +1383,8 @@ public class SelectNode extends Node {
         }
         pluginList.clear();
     }
+
+    protected void finalize() {
+        close();
+    }
 }

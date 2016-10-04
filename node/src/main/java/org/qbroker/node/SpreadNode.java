@@ -1301,4 +1301,8 @@ public class SpreadNode extends Node {
         substitutionMap.clear();
         dateFormatMap.clear();
     }
+
+    protected void finalize() {
+        close();
+    }
 }

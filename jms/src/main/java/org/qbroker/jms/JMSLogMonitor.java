@@ -30,7 +30,7 @@ public class JMSLogMonitor extends Monitor {
     private File referenceFile;
     private int errorIgnored, maxNumberLogs;
     private int previousDepth, logSize;
-    private int maxScannedLogs, debug;
+    private int maxScannedLogs, debug, waterMark;
     private long position, timestamp, offset;
     private long previousPosition, previousTimestamp, previousOffset;
     private long savedPosition, savedTimestamp, savedOffset;
@@ -74,6 +74,11 @@ public class JMSLogMonitor extends Monitor {
         catch (Exception e) {
             throw(new IllegalArgumentException("failed to decode: " + logfile));
         }
+
+        if ((o = props.get("WaterMark")) != null)
+            waterMark = Integer.parseInt((String) o);
+        else
+            waterMark = 0;
 
         if ((o = props.get("Debug")) != null)
             debug = Integer.parseInt((String) o);
@@ -464,6 +469,16 @@ public class JMSLogMonitor extends Monitor {
                 strBuf.append(curDepth + " messages in ");
                 strBuf.append(uri + " not moving");
             }
+            else if (waterMark > 0 && curDepth > waterMark &&
+                preDepth > waterMark) {
+                if (status != TimeWindows.BLACKOUT) { // for normal cases
+                    level = Event.ERR;
+                    if (step > 0)
+                        step = 0;
+                }
+                strBuf.append(curDepth + " messages in ");
+                strBuf.append(uri + " slow moving");
+            }
             break;
         }
         previousStatus = status;
@@ -641,5 +656,9 @@ public class JMSLogMonitor extends Monitor {
             newlog.close();
             newlog = null;
         }
+    }
+
+    protected void finalize() {
+        destroy();
     }
 }

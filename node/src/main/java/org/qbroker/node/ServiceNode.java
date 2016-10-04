@@ -34,7 +34,6 @@ import org.qbroker.common.DelimitedBuffer;
 import org.qbroker.common.Utils;
 import org.qbroker.common.TimeoutException;
 import org.qbroker.common.CollectibleCells;
-import org.qbroker.common.XML2Map;
 import org.qbroker.json.JSON2Map;
 import org.qbroker.jms.ObjectEvent;
 import org.qbroker.jms.MessageUtils;
@@ -160,7 +159,6 @@ public class ServiceNode extends Node {
 
     private QList pendList = null;     // list of msgs pending for establishment
     private ThreadPool thPool;
-    private XML2Map xmlReader = null;
     private boolean takebackEnabled = false;
 
     private final static int ASSET_REQ = ASSET_THR + 1;
@@ -216,19 +214,6 @@ public class ServiceNode extends Node {
         if ((o = props.get("TakeBackEnabled")) != null &&
             "true".equalsIgnoreCase((String) o))
             takebackEnabled = true;
-
-        if ((o = props.get("SAXParser")) != null)
-            saxParser = (String) o;
-        if (saxParser == null)
-            saxParser = (String) System.getProperty("org.xml.sax.driver",
-                "org.apache.xerces.parsers.SAXParser");
-        try {
-            xmlReader = new XML2Map(saxParser);
-        }
-        catch (Exception e) {
-            new Event(Event.WARNING, name + " failed to init xmlReader: "+
-                Event.traceStack(e)).send();
-        }
 
         if ((o = props.get("OutLink")) == null || !(o instanceof List))
             throw(new IllegalArgumentException(name +
@@ -504,9 +489,7 @@ public class ServiceNode extends Node {
 
         // default properties
         if ((o = ph.get("DefaultProperty")) != null && o instanceof Map) {
-            str = "<DefaultProperty>" + JSON2Map.toXML((Map) o)+
-                "</DefaultProperty>";
-            Template temp = new Template(str);
+            Template temp = new Template(JSON2Map.toJSON((Map) o));
             if (temp.numberOfFields() <= 0) // not a template
                 rule.put("DefaultProperty", Utils.cloneProperties((Map) o));
             else
@@ -845,8 +828,8 @@ public class ServiceNode extends Node {
                     String str;
                     str = MessageUtils.format(inMessage, buffer, (Template) o);
                     StringReader sin = new StringReader(str);
-                    o = xmlReader.getMap(sin);
-                    client.put("Properties", ((Map) o).get("DefaultProperty"));
+                    o = JSON2Map.parse(sin);
+                    client.put("Properties", (Map) o);
                     sin.close();
                 }
                 catch (Exception e) {
@@ -858,7 +841,7 @@ public class ServiceNode extends Node {
                     (o = client.get("Properties")) != null)
                     new Event(Event.DEBUG, name + ": " + ruleName +
                         " created the client for " + uriStr +
-                        ": " + JSON2Map.toXML((Map) o)).send();
+                        ": " + JSON2Map.toJSON((Map) o)).send();
 
                 ruleInfo[RULE_PEND] ++;
                 ruleInfo[RULE_TIME] = currentTime;
@@ -2469,5 +2452,9 @@ public class ServiceNode extends Node {
             }
         }
         ruleList.clear();
+    }
+
+    protected void finalize() {
+        close();
     }
 }

@@ -1089,6 +1089,7 @@ public class MessageLogger {
         if (file.exists() && file.isDirectory()) { // directory content
             DirectoryTree dir = new DirectoryTree(fieldName, filename, 0);
             strBuf.append(dir.getTreeMap());
+            dir.clear();
             return null;
         }
         in = new FileInputStream(filename);

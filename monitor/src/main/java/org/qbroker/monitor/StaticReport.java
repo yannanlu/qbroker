@@ -32,18 +32,26 @@ public class StaticReport extends Report {
         if ((o = props.get("InitialReport")) != null && o instanceof Map)
             report = Utils.cloneProperties((Map) o);
 
-        if((o = props.get("EnvironmentVariable")) != null && o instanceof Map){
+        if ((o = props.get("EnvironmentVariable")) != null && o instanceof Map){
             String str, key, prefix;
-            Iterator iter = ((Map) o).keySet().iterator();
+            Map ph = (Map) o;
+            Map<String, String> map = System.getenv();
+            Iterator iter = ph.keySet().iterator();
             prefix = (String) props.get("Prefix");
             while (iter.hasNext()) {
                 key = (String) iter.next();
-                str = (String) ((Map) o).get(key);
-                if (str != null && str.length() > 0)
-                    str = System.getProperty(prefix + "/" + key, str);
-                else
+                if (prefix != null)
                     str = System.getProperty(prefix + "/" + key);
-                report.put(key, str);
+                else
+                    str = System.getProperty(key);
+                if (str != null)
+                    report.put(key, str);
+                else if ((str = map.get(key)) != null)
+                    report.put(key, str);
+                else if ((o = ph.get(key)) != null) { // default value
+                    str = MonitorUtils.select(o);
+                    report.put(key, MonitorUtils.substitute(str, template));
+                }
             }
         }
         if ((o = props.get("StringProperty")) != null && o instanceof Map) {
@@ -51,6 +59,8 @@ public class StaticReport extends Report {
             Iterator iter = ((Map) o).keySet().iterator();
             while (iter.hasNext()) {
                 key = (String) iter.next();
+                if (report.containsKey(key)) // no override
+                    continue;
                 str = MonitorUtils.select(((Map) o).get(key));
                 report.put(key, MonitorUtils.substitute(str, template));
             }

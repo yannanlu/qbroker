@@ -23,7 +23,6 @@ import org.qbroker.common.AssetList;
 import org.qbroker.common.XQueue;
 import org.qbroker.common.IndexedXQueue;
 import org.qbroker.common.ThreadPool;
-import org.qbroker.common.XML2Map;
 import org.qbroker.json.JSON2Map;
 import org.qbroker.node.MessageNode;
 import org.qbroker.event.EventUtils;

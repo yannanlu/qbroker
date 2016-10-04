@@ -1290,8 +1290,6 @@ public class StreamReceiver extends Receiver {
                     comm.close();
                 }
                 catch (Exception e) {
-                    new Event(Event.WARNING, linkName + ": failed to " +
-                        "close "+device+": "+Event.traceStack(e)).send();
                 }
             }
             break;
@@ -1301,8 +1299,6 @@ public class StreamReceiver extends Receiver {
                     in.close();
                 }
                 catch (Exception e) {
-                    new Event(Event.WARNING, linkName + ": failed to " +
-                        "close "+uri+": "+Event.traceStack(e)).send();
                 }
             }
             break;
@@ -1316,6 +1312,8 @@ public class StreamReceiver extends Receiver {
     }
 
     public void close() {
+        if (status != RCVR_CLOSED)
+            new Event(Event.INFO, uri + " closed on " + linkName).send();
         setStatus(RCVR_CLOSED);
         disconnect();
         if (dependencyGroup != null) { // clear dependencies
@@ -1334,7 +1332,9 @@ public class StreamReceiver extends Receiver {
             cells.clear();
             sBuf.reset();
         }
+    }
 
-        new Event(Event.INFO, uri + " closed on " + linkName).send();
+    protected void finalize() {
+        close();
     }
 }

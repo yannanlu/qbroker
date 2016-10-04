@@ -12,7 +12,7 @@ import javax.security.auth.*;
 import javax.security.auth.callback.*;
 import javax.security.auth.login.*;
 import javax.security.auth.spi.*;
-import com.sun.security.auth.NTUserPrincipal;
+import com.sun.security.auth.UnixPrincipal;
 import org.qbroker.event.Event;
 import org.qbroker.common.Template;
 import org.qbroker.common.Base64Encoder;
@@ -37,7 +37,7 @@ public class JDBCLoginModule implements LoginModule {
     private Map<String, Object> props;
     private String uri = null, key = null;
     private Template template = null;
-    private NTUserPrincipal userPrincipal;
+    private UnixPrincipal userPrincipal;
     private MessageDigest md = null;
 
     public void initialize(Subject subject, CallbackHandler callbackHandler,
@@ -139,8 +139,13 @@ public class JDBCLoginModule implements LoginModule {
                 if (rs.next())
                     text = rs.getString(1);
                 rs.close();
+                reporter.destroy();
             }
-            reporter.destroy();
+            else {
+                o = ph.get("ErrorMessage");
+                reporter.destroy();
+                ph.put("ErrorMessage", o);
+            }
         }
         catch (Exception e) {
             succeeded = false;
@@ -181,14 +186,14 @@ public class JDBCLoginModule implements LoginModule {
             return false;
         }
         else {
-            // assume the user we authenticated is the NTPrincipal
-            userPrincipal = new NTUserPrincipal(username);
+            // assume the user we authenticated is the UnixPrincipal
+            userPrincipal = new UnixPrincipal(username);
             if (!subject.getPrincipals().contains(userPrincipal))
                 subject.getPrincipals().add(userPrincipal);
 
             if (debug) {
                 new Event(Event.DEBUG, "[JDBCLoginModule] added " +
-                    "the NTUserPrincipal to Subject").send();
+                    "the UnixPrincipal to Subject").send();
             }
 
             // in any case, clean out state

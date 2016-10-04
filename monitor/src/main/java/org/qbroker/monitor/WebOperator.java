@@ -451,4 +451,8 @@ public class WebOperator extends Monitor {
             httpTester = null;
         }
     }
+
+    protected void finalize() {
+        destroy();
+    }
 }

@@ -1950,4 +1950,8 @@ public class MapReduceNode extends Node {
         pendList.clear();
         reqList.clear();
     }
+
+    protected void finalize() {
+        close();
+    }
 }

@@ -27,7 +27,6 @@ import org.qbroker.common.DisabledException;
 import org.qbroker.common.RunCommand;
 import org.qbroker.common.Template;
 import org.qbroker.common.Utils;
-import org.qbroker.common.XML2Map;
 import org.qbroker.json.JSON2Map;
 import org.qbroker.monitor.MonitorReport;
 import org.qbroker.monitor.MonitorAction;
@@ -697,13 +696,12 @@ public class MonitorUtils {
      * an empty array.
      */
     public static String[] getSecondaryIncludes(String[] primaryItems,
-        String cfgDir, String saxParser, Map policyMap) {
+        String cfgDir, Map policyMap) {
         String key;
         Map ph;
         Set<String> hSet;
         Object o;
         File file;
-        boolean isJSON = (saxParser == null);
 
         if (primaryItems == null || primaryItems.length <= 0 ||
             cfgDir == null || cfgDir.length() <= 0 ||
@@ -714,25 +712,12 @@ public class MonitorUtils {
         for (String item : primaryItems) { // loop thru the primary list
             if (item.length() <= 0)
                 continue;
-            file = new File(cfgDir + FILE_SEPARATOR + item +
-                ((isJSON) ? ".json" : ".xml"));
+            file = new File(cfgDir + FILE_SEPARATOR + item + ".json");
             ph = null;
             if (file.exists() && file.isFile() && file.canRead()) try {
-                if (isJSON) {
-                    FileReader fr = new FileReader(file);
-                    ph = (Map) JSON2Map.parse(fr);
-                    fr.close();
-                }
-                else {
-                    FileInputStream fs = new FileInputStream(file);
-                    XML2Map xh = new XML2Map(saxParser);
-                    o = xh.getMap(fs).get(item);
-                    fs.close();
-                    if (o != null && o instanceof Map)
-                        ph = (Map) o;
-                    else
-                        ph = null;
-                }
+                FileReader fr = new FileReader(file);
+                ph = (Map) JSON2Map.parse(fr);
+                fr.close();
             }
             catch (Exception e) {
                 ph = null;

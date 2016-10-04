@@ -885,6 +885,20 @@ public class TextSubstitution {
         return name;
     }
 
+    public void clear() {
+        pattern = null;
+        pm = null;
+        substitution = null;
+        dateFormat = null;
+        dset = null;
+        rand = null;
+        md = null;
+    }
+
+    protected void finalize() {
+        clear();
+    }
+
     private static String doSearchReplace(String s,String r,String text,int n) {
         int len, i, j, k, d;
 

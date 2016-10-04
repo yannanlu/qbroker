@@ -398,6 +398,8 @@ public class PacketReceiver extends Receiver {
     }
 
     public void close() {
+        if (status != RCVR_CLOSED)
+            new Event(Event.INFO, uri + " closed on " + linkName).send();
         setStatus(RCVR_CLOSED);
         disconnect();
         if (group != null)
@@ -406,7 +408,9 @@ public class PacketReceiver extends Receiver {
             socket = null;
         if (snmp != null)
             snmp = null;
+    }
 
-        new Event(Event.INFO, uri + " closed on " + linkName).send();
+    protected void finalize() {
+        close();
     }
 }

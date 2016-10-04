@@ -415,4 +415,24 @@ public class Msg2Text {
         }
         return "{" + strBuf.toString() + "}";
     }
+
+    public void clear() {
+        pm = null;
+        if (template != null) {
+            template.clear();
+            template = null;
+        }
+        if (repeatedTemplate != null) {
+            repeatedTemplate.clear();
+            repeatedTemplate = null;
+        }
+        if (excludedProperty != null) {
+            excludedProperty.clear();
+            excludedProperty = null;
+        }
+    }
+
+    protected void finalize() {
+        clear();
+    }
 }

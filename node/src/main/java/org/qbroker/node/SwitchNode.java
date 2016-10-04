@@ -800,4 +800,8 @@ public class SwitchNode extends Node {
         pluginList.clear();
         hashChain.clear();
     }
+
+    protected void finalize() {
+        close();
+    }
 }

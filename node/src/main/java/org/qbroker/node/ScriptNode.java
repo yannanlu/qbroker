@@ -797,4 +797,8 @@ public class ScriptNode extends Node {
         if (factory != null)
             factory = null;
     }
+
+    protected void finalize() {
+        close();
+    }
 }

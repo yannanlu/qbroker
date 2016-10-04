@@ -881,4 +881,8 @@ public class FormatNode extends Node {
         substitutionMap.clear();
         cache.clear();
     }
+
+    protected void finalize() {
+        close();
+    }
 }

@@ -465,4 +465,8 @@ public class CachedList extends AssetList {
         for (int i=0; i<capacity; i++)
             topicCount[i] = 0;
     }
+
+    protected void finalize() {
+        clear();
+    }
 }

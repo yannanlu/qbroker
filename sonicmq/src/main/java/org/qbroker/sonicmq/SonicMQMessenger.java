@@ -29,7 +29,7 @@ import org.qbroker.common.Template;
 import org.qbroker.common.TextSubstitution;
 import org.qbroker.common.QuickCache;
 import org.qbroker.common.Utils;
-import org.qbroker.common.XML2Map;
+import org.qbroker.json.JSON2Map;
 import org.qbroker.net.JMXRequester;
 import org.qbroker.sonicmq.SonicMQRequester;
 import org.qbroker.jms.MessageUtils;
@@ -76,7 +76,6 @@ public class SonicMQMessenger extends SonicMQRequester {
     private int[] partition;
     private int maxMsgLength = 4194304;
     private QuickCache cache = null;
-    private XML2Map xmlReader = null;
     private Msg2Text msg2Text = null;
     private XQueue notice = null;
 
@@ -179,24 +178,8 @@ public class SonicMQMessenger extends SonicMQRequester {
             else
                 resultField = "MsgCount";
 
-            if ((o = props.get("Template")) != null &&
-                ((String) o).length()>0)
+            if((o = props.get("Template")) != null && ((String) o).length() > 0)
                 template = new Template((String) o);
-
-            if ((o = props.get("SAXParser")) != null)
-                saxParser = (String) o;
-            if (saxParser == null)
-                saxParser=(String)System.getProperty("org.xml.sax.driver",null);
-            if (saxParser == null)
-                saxParser = "org.apache.xerces.parsers.SAXParser";
-
-            try {
-                xmlReader = new XML2Map(saxParser);
-            }
-            catch (Exception e) {
-                throw(new IllegalArgumentException(uri +
-                    " failed to init xmlReader: " + e.toString()));
-            }
         }
         else if ("listen".equals(operation)) { // for notifications
             if ((o = props.get("Target")) != null)
@@ -314,8 +297,8 @@ public class SonicMQMessenger extends SonicMQRequester {
      * request message according to the result type, similar to a DB qurey.
      *<br/><br/>
      * It also supports the dynamic content filter and the formatter on queried
-     * messages. The filter and the formatter are defined via an XML text with
-     * Filters as the base tag. The XML text is stored in the body of the
+     * messages. The filter and the formatter are defined via a JSON text with
+     * Filters as the base name. The JSON text is stored in the body of the
      * request message. If the filter is defined, it will be used to select
      * certain messages based on the content and the header. If the formatter
      * is defined, it will be used to format the messages.
@@ -493,7 +476,7 @@ public class SonicMQMessenger extends SonicMQRequester {
                 else { // new or expired
                     Map ph;
                     StringReader ins = new StringReader(msgStr);
-                    ph = (Map) xmlReader.getMap(ins).get("Filters");
+                    ph = (Map) JSON2Map.parse(ins);
                     ins.close();
                     if (currentTime - cache.getMTime() >= heartbeat) {
                         cache.disfragment(currentTime);

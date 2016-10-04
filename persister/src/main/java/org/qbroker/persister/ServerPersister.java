@@ -1152,6 +1152,8 @@ public class ServerPersister extends Persister {
     }
 
     public void close() {
+        if (status != PSTR_CLOSED)
+            new Event(Event.INFO, uri + " closed on " + linkName).send();
         setStatus(PSTR_CLOSED);
         disconnect();
         stopAllAssets();
@@ -1163,7 +1165,9 @@ public class ServerPersister extends Persister {
             thPool.close();
         if (in != null)
             in.clear();
+    }
 
-        new Event(Event.INFO, uri + " closed on " + linkName).send();
+    protected void finalize() {
+        close();
     }
 }

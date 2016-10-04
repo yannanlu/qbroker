@@ -24,7 +24,7 @@ import org.qbroker.common.DataSet;
 
 public class EventPattern implements EventFilter {
     private Map<String, Object> eventPattern;
-    private String[] fields;
+    private String[] keys;
     private int[] types;
     private Perl5Matcher pm;
     private int size;
@@ -32,7 +32,6 @@ public class EventPattern implements EventFilter {
     public EventPattern(Map pattern) throws MalformedPatternException {
         String key;
         Object o;
-        Object[] keys;
         Perl5Compiler pc = new Perl5Compiler();
         eventPattern = new HashMap<String, Object>();
         Iterator iter = pattern.keySet().iterator();
@@ -49,11 +48,9 @@ public class EventPattern implements EventFilter {
                 eventPattern.put(key, pc.compile((String) o));
         }
         size = eventPattern.size();
-        keys = eventPattern.keySet().toArray();
-        fields = new String[size];
+        keys = eventPattern.keySet().toArray(new String[size]);
         types = new int[size];
         for (int i=0; i<size; i++) {
-            fields[i] = (String) keys[i];
             types[i] = 0;
             o = eventPattern.get(keys[i]);
             if (o != null && o instanceof DataSet)
@@ -73,7 +70,7 @@ public class EventPattern implements EventFilter {
 
         attr = event.attribute;
         for (i=0; i<size; i++) {
-            key = fields[i];
+            key = keys[i];
             if (types[i] > 0) {
                 dataSet = (DataSet) eventPattern.get(key);
                 if (dataSet != null) {
@@ -119,5 +116,17 @@ public class EventPattern implements EventFilter {
         }
 
         return true;
+    }
+
+    public void clear() {
+        if (eventPattern != null) {
+            eventPattern.clear();
+            eventPattern = null;
+        }
+        pm = null;
+    }
+
+    protected void finalize() {
+        clear();
     }
 }

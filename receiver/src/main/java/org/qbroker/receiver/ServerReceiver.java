@@ -779,6 +779,8 @@ public class ServerReceiver extends Receiver {
     }
 
     public void close() {
+        if (status != RCVR_CLOSED)
+            new Event(Event.INFO, uri + " closed on " + linkName).send();
         setStatus(RCVR_CLOSED);
         disconnect();
         if (lsnr != null)
@@ -787,7 +789,9 @@ public class ServerReceiver extends Receiver {
             thPool.close();
         if (in != null)
             in.clear();
+    }
 
-        new Event(Event.INFO, uri + " closed on " + linkName).send();
+    protected void finalize() {
+        close();
     }
 }

@@ -42,7 +42,7 @@ import org.qbroker.common.TextSubstitution;
 import org.qbroker.common.DataSet;
 import org.qbroker.common.Browser;
 import org.qbroker.common.XQueue;
-import org.qbroker.common.XML2Map;
+import org.qbroker.json.JSON2Map;
 import org.qbroker.monitor.MonitorReport;
 import org.qbroker.monitor.MonitorUtils;
 
@@ -55,7 +55,6 @@ import org.qbroker.monitor.MonitorUtils;
 
 @SuppressWarnings("unchecked")
 public class MessageUtils {
-    private static XML2Map xmlReader = null;
     private static Template rptTemplate = null;
     private static MonitorReport defaultReporter = null;
     private static java.lang.reflect.Method enableFlowControl = null;
@@ -1412,13 +1411,9 @@ public class MessageUtils {
                 Map map = null;
                 message = new org.qbroker.jms.MapEvent();
                 msgStr = processBody(msg, buffer);
-                if (msgStr != null && msgStr.length() > 0) try {
-                    if (xmlReader == null) // initialize xmlReader
-                        xmlReader = new XML2Map(
-                            (String)System.getProperty("org.xml.sax.driver",
-                            "org.apache.xerces.parsers.SAXParser"));
+                if (msgStr != null && msgStr.length() > 0) try { // json only
                     StringReader in = new StringReader(msgStr);
-                    map = xmlReader.getMap(in);
+                    map = (Map) JSON2Map.parse(in);
                     in.close();
                 }
                 catch (Exception e) {

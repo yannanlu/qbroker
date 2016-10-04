@@ -1277,4 +1277,8 @@ public class FileMonitor extends Monitor {
             sftpConn = null;
         }
     }
+
+    protected void finalize() {
+        destroy();
+    }
 }

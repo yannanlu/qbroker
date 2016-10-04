@@ -102,44 +102,49 @@ public class EventActionGroup implements EventAction {
                     className = "org.qbroker.event.EventSyslogger";
                 else if ("snmp".equals(s))
                     className = "org.qbroker.event.EventTrapSender";
+                else if ("jdbc".equals(s))
+                    className = "org.qbroker.event.EventSQLExecutor";
+                else
+                    throw(new IllegalArgumentException(s + " not supported"));
             }
             catch (URISyntaxException e) {
                 throw(new IllegalArgumentException(name+": bad URI for action "+
                     i + " of " + uri + ": " + e.toString()));
             }
 
-            if (className != null && className.length() > 0) {
-                try {
-                    java.lang.reflect.Constructor con;
-                    Class<?> cls = Class.forName(className);
-                    con = cls.getConstructor(new Class[]{Map.class});
-                    action[i] = (EventAction) con.newInstance(new Object[]{ph});
-                }
-                catch (InvocationTargetException e) {
-                    Throwable ex = e.getTargetException();
-                    new Event(Event.ERR, name +" failed to instantiate "+
-                        className + ": " + Event.traceStack(ex)).send();
-                    throw(new IllegalArgumentException(name +
-                        ": failed to instantiate " + className));
-                }
-                catch (Exception e) {
-                    new Event(Event.ERR, name +" failed to instantiate "+
-                        className + ": " + Event.traceStack(e)).send();
-                    throw(new IllegalArgumentException(name +
-                        ": failed to instantiate " + className));
-                }
-                if (action[i] instanceof EventScriptLauncher)
-                    m ++;
-            }
-            else
+            if (className == null || className.length() <= 0)
                 throw(new IllegalArgumentException(name + ": action " + i +
                     " is not supported: " + uri));
+            else try {
+                java.lang.reflect.Constructor con;
+                Class<?> cls = Class.forName(className);
+                con = cls.getConstructor(new Class[]{Map.class});
+                action[i] = (EventAction) con.newInstance(new Object[]{ph});
+            }
+            catch (InvocationTargetException e) {
+                Throwable ex = e.getTargetException();
+                new Event(Event.ERR, name +" failed to instantiate "+
+                    className + ": " + Event.traceStack(ex)).send();
+                throw(new IllegalArgumentException(name +
+                    ": failed to instantiate " + className));
+            }
+            catch (Exception e) {
+                new Event(Event.ERR, name +" failed to instantiate "+
+                    className + ": " + Event.traceStack(e)).send();
+                throw(new IllegalArgumentException(name +
+                    ": failed to instantiate " + className));
+            }
+            if (action[i] instanceof EventScriptLauncher ||
+                action[i] instanceof EventSQLExecutor)
+                m ++;
         }
 
         scriptIndex = new int[m];
         m = 0;
         for (i=0; i<action.length; i++) {
             if (action[i] instanceof EventScriptLauncher)
+                scriptIndex[m++] = i;
+            else if (action[i] instanceof EventSQLExecutor)
                 scriptIndex[m++] = i;
         }
     }
@@ -149,7 +154,8 @@ public class EventActionGroup implements EventAction {
         if (scriptIndex.length > 0 && scriptDisabled) {
             for (i=0; i<action.length; i++) {
                 if (action[i] != null &&
-                    !(action[i] instanceof EventScriptLauncher))
+                    !(action[i] instanceof EventScriptLauncher) &&
+                    !(action[i] instanceof EventSQLExecutor))
                     action[i].invokeAction(currentTime, event);
             }
         }
@@ -168,9 +174,13 @@ public class EventActionGroup implements EventAction {
         int i, j;
         for (i=0; i<scriptIndex.length; i++) {
             j = scriptIndex[i];
-            if (action[j] != null &&
-                action[j] instanceof EventScriptLauncher &&
+            if (action[j] == null)
+                continue;
+            if (action[j] instanceof EventScriptLauncher &&
                 ((EventScriptLauncher) action[j]).isActive(currentTime, event))
+                return true;
+            else if (action[j] instanceof EventSQLExecutor &&
+                ((EventSQLExecutor) action[j]).isActive(currentTime, event))
                 return true;
         }
         return false;
@@ -190,5 +200,19 @@ public class EventActionGroup implements EventAction {
 
     public String getName() {
         return name;
+    }
+
+    public void close() {
+        if (action != null) {
+            for (int i=0; i<action.length; i++) {
+                if (action[i] != null)
+                    action[i].close();
+                action[i] = null;
+            }
+        }
+    }
+
+    protected void finalize() {
+        close();
     }
 }

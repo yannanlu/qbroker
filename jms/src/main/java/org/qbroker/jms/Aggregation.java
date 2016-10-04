@@ -1878,4 +1878,19 @@ public class Aggregation {
 
         return strBuf.toString();
     }
+
+    public void clear() {
+        if (aggrList != null) {
+            aggrList.clear();
+            aggrList = null;
+        }
+        if (bodyMap != null) {
+            bodyMap.clear();
+            bodyMap = null;
+        }
+    }
+
+    protected void finalize() {
+        clear();
+    }
 }

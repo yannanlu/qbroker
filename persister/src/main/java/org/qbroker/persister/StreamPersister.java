@@ -1312,8 +1312,6 @@ public class StreamPersister extends Persister {
                     comm.close();
                 }
                 catch (Exception e) {
-                    new Event(Event.WARNING, linkName + ": failed to " +
-                        "close "+device+": "+Event.traceStack(e)).send();
                 }
             }
             break;
@@ -1323,8 +1321,6 @@ public class StreamPersister extends Persister {
                     out.close();
                 }
                 catch (Exception e) {
-                    new Event(Event.WARNING, linkName + ": failed to " +
-                        "close "+uri+": "+Event.traceStack(e)).send();
                 }
             }
             break;
@@ -1338,6 +1334,8 @@ public class StreamPersister extends Persister {
     }
 
     public void close() {
+        if (status != PSTR_CLOSED)
+            new Event(Event.INFO, uri + " closed on " + linkName).send();
         setStatus(PSTR_CLOSED);
         disconnect();
         if (comm != null)
@@ -1346,7 +1344,9 @@ public class StreamPersister extends Persister {
             out = null;
         if (sock != null)
             sock = null;
+    }
 
-        new Event(Event.INFO, uri + " closed on " + linkName).send();
+    protected void finalize() {
+        close();
     }
 }

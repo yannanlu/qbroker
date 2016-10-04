@@ -1117,4 +1117,8 @@ public class XSLTNode extends org.qbroker.node.Node {
         xpath = null;
         defaultTransformer = null;
     }
+
+    protected void finalize() {
+        close();
+    }
 }

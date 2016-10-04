@@ -1,6 +1,6 @@
 package org.qbroker.json;
 
-/* JSONSelector.java - a filter to select JSON data */
+/* JSONSelector.java - a filter to select JSON data in JMS Messages */
 
 import java.io.Reader;
 import java.io.FileReader;
@@ -32,15 +32,15 @@ import org.qbroker.event.Event;
  * @author yannanlu@yahoo.com
  */
 
-@SuppressWarnings("unchecked")
 public class JSONSelector {
     private String prefix;
     private int type = 0;
-    private Map aJSONProps = null;
+    private Map<String, Object> aJSONProps = null;
     private Pattern pattern = null;
     private DataSet dset = null;
     private Perl5Matcher pm = null;
 
+    @SuppressWarnings("unchecked")
     public JSONSelector(String prefix, Object obj, Perl5Matcher pm,
         Perl5Compiler pc) {
 
@@ -71,7 +71,7 @@ public class JSONSelector {
                     dset = new DataSet(list);
                     type = 2;
                 }
-                else if (k > 0 && o != null && o instanceof Map) { // for xml
+                else if (k > 0 && o != null && o instanceof Map) { // for k-v
                     String key;
                     Map h = new HashMap();
                     for (int i=0; i<k; i++) {
@@ -85,7 +85,7 @@ public class JSONSelector {
                     }
                     Map ph = new HashMap();
                     ph.put("Selector", h);
-                    aJSONProps = (Map) getPatternMap("Selector", ph, pc);
+                    aJSONProps = getPatternMap("Selector", ph, pc);
                     type = 3;
                 }
             }
@@ -179,9 +179,10 @@ public class JSONSelector {
     }
 
     public void clear() {
-        if (aJSONProps != null)
+        if (aJSONProps != null) {
             aJSONProps.clear();
-        aJSONProps = null;
+            aJSONProps = null;
+        }
         pm = null;
         pattern = null;
         dset = null;
@@ -190,14 +191,14 @@ public class JSONSelector {
     /**
      * returns a Map with compiled pattern as the value for each json path
      */
-    public static Map getPatternMap(String name, Map ph,
+    public static Map<String, Object> getPatternMap(String name, Map ph,
         Perl5Compiler pc) throws MalformedPatternException {
         Object o;
-        Map map = null;
+        Map<String, Object> map = null;
         String key;
         if ((o = ph.get(name)) != null && o instanceof Map) {
             Map h = (Map) o;
-            map = new HashMap();
+            map = new HashMap<String, Object>();
             Iterator iter = h.keySet().iterator();
             while (iter.hasNext()) {
                 key = (String) iter.next();
@@ -217,60 +218,11 @@ public class JSONSelector {
         return map;
     }
 
-    private static boolean evaluate(Map obj, Map ps, Perl5Matcher pm) {
+    private static boolean evaluate(Map json, Map<String, Object> ps,
+        Perl5Matcher pm) {
         Object o, v;
-        String key, value;
-        Iterator iter = ps.keySet().iterator();
-        while (iter.hasNext()) {
-            key = (String) iter.next();
-            if (key == null || key.length() <= 0 || key.startsWith("."))
-                continue;
-            o = ps.get(key); 
-            if (o == null)
-                continue;
-            v = JSON2FmModel.get(obj, key);
-            if (v == null)
-                return false;
-            else if (v instanceof String)
-                value = (String) v;
-            else if (v instanceof Map) // for count
-                value = String.valueOf(((Map) v).size());
-            else if (v instanceof List) // for count
-                value = String.valueOf(((List) v).size());
-            else
-                value = v.toString();
-            if (o instanceof DataSet) { // dataset testing
-                int k;
-                boolean status = false;
-                DataSet d = (DataSet) o;
-                try {
-                    if ((k = d.getDataType()) == DataSet.DATA_LONG)
-                        status = d.contains(Long.parseLong(value));
-                    else if (k == DataSet.DATA_DOUBLE)
-                        status = d.contains(Double.parseDouble(value));
-                    else
-                        status = false;
-                }
-                catch (Exception e) {
-                    status = false;
-                }
-                if (!status)
-                    return false;
-            }
-            else { // pattern
-                if (!pm.contains(value, (Pattern) o))
-                    return false;
-            }
-        }
-        return true;
-    }
-
-    private static boolean evaluate(List json, Map ps, Perl5Matcher pm) {
-        Object o, v;
-        String key, value;
-        Iterator iter = ps.keySet().iterator();
-        while (iter.hasNext()) {
-            key = (String) iter.next();
+        String value;
+        for (String key : ps.keySet()) {
             if (key == null || key.length() <= 0 || key.startsWith("."))
                 continue;
             o = ps.get(key); 
@@ -313,6 +265,54 @@ public class JSONSelector {
         return true;
     }
 
+    private static boolean evaluate(List json, Map<String, Object> ps,
+        Perl5Matcher pm) {
+        Object o, v;
+        String value;
+        for (String key : ps.keySet()) {
+            if (key == null || key.length() <= 0 || key.startsWith("."))
+                continue;
+            o = ps.get(key); 
+            if (o == null)
+                continue;
+            v = JSON2FmModel.get(json, key);
+            if (v == null)
+                return false;
+            else if (v instanceof String)
+                value = (String) v;
+            else if (v instanceof Map) // for count
+                value = String.valueOf(((Map) v).size());
+            else if (v instanceof List) // for count
+                value = String.valueOf(((List) v).size());
+            else
+                value = v.toString();
+            if (o instanceof DataSet) { // dataset testing
+                int k;
+                boolean status = false;
+                DataSet d = (DataSet) o;
+                try {
+                    if ((k = d.getDataType()) == DataSet.DATA_LONG)
+                        status = d.contains(Long.parseLong(value));
+                    else if (k == DataSet.DATA_DOUBLE)
+                        status = d.contains(Double.parseDouble(value));
+                    else
+                        status = false;
+                }
+                catch (Exception e) {
+                    status = false;
+                }
+                if (!status)
+                    return false;
+            }
+            else { // pattern
+                if (!pm.contains(value, (Pattern) o))
+                    return false;
+            }
+        }
+        return true;
+    }
+
+    @SuppressWarnings("unchecked")
     public static void main(String args[]) {
         String filename = null, path = ".", pattern = null, str = null;
         JSONSelector selector = null;

@@ -40,7 +40,7 @@ import org.qbroker.common.TimeoutException;
 import org.qbroker.common.DelimitedBuffer;
 import org.qbroker.common.Utils;
 import org.qbroker.common.QuickCache;
-import org.qbroker.common.XML2Map;
+import org.qbroker.json.JSON2Map;
 import org.qbroker.jms.MessageUtils;
 import org.qbroker.jms.MessageFilter;
 import org.qbroker.jms.Msg2Text;
@@ -104,7 +104,6 @@ public abstract class JMSQConnector implements QueueConnector {
     protected String msField = null, rcField = null, resultField = null;
     protected Template template = null;
     protected QuickCache cache = null;
-    protected XML2Map xmlReader = null;
     protected Msg2Text msg2Text = null;
     protected long startTime = -1;
     protected long endTime = -1;
@@ -760,8 +759,8 @@ public abstract class JMSQConnector implements QueueConnector {
      * of messages for the query.
      *<br/><br/>
      * It also supports the dynamic content filter and the formatter on queried
-     * messages. The filter and the formatter are defined via an XML text with
-     * Filters as the base tag. The XML text is stored in the body of the
+     * messages. The filter and the formatter are defined via a JSON text with
+     * Filters as the base name. The JSON text is stored in the body of the
      * request message. If the filter is defined, it will be used to select
      * certain messages based on the content and the header. If the formatter
      * is defined, it will be used to format the messages.
@@ -956,7 +955,7 @@ public abstract class JMSQConnector implements QueueConnector {
                 else { // new or expired
                     Map ph;
                     StringReader ins = new StringReader(msgStr);
-                    ph = (Map) xmlReader.getMap(ins).get("Filters");
+                    ph = (Map) JSON2Map.parse(ins);
                     ins.close();
                     if (currentTime - cache.getMTime() >= heartbeat) {
                         cache.disfragment(currentTime);

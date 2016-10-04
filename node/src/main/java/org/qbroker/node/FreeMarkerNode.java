@@ -813,4 +813,8 @@ public class FreeMarkerNode extends org.qbroker.node.Node {
         if (fmCfg != null)
             fmCfg = null;
     }
+
+    protected void finalize() {
+        close();
+    }
 }

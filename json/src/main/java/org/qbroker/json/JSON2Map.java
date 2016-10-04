@@ -14,6 +14,8 @@ import java.util.Iterator;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Collection;
 import org.apache.oro.text.regex.Perl5Matcher;
 import org.qbroker.common.Utils;
 import org.qbroker.common.Template;
@@ -69,34 +71,74 @@ public class JSON2Map {
 
     /** It returns JSON content in the tabular format for a given Map */
     public static String toJSON(Map m) {
+        return toJSON(m, false);
+    }
+
+    /**
+     * It returns JSON content for a given Map with ordering support
+     */
+    protected static String toJSON(Map m, boolean withOrder) {
         int i = 0;
-        String key;
+        String key, s;
         Object o;
+        HashSet<String> keySet = new HashSet<String>();
+        Collection c;
         StringBuffer strBuf;
         if (m == null)
             return null;
+        s = (withOrder) ? " " : "";
         strBuf = new StringBuffer();
         strBuf.append("{");
-        Iterator iter = m.keySet().iterator();
-        while (iter.hasNext()) {
-            key = (String) iter.next();
+        if (withOrder && (o = m.get("")) != null && o instanceof List)
+            c = (List) o;
+        else
+            c = m.keySet();
+        for (Object obj : c) {
+            key = (String) obj;
             if (key == null || key.length() <= 0)
                 continue;
+            if (withOrder)
+                keySet.add(key);
             if (i > 0)
                 strBuf.append(",");
-            strBuf.append("\n  \"" + Utils.escapeJSON(key) + "\"" + ":");
+            strBuf.append("\n  \"" + Utils.escapeJSON(key) + "\":" + s);
             i++;
             o = m.get(key);
             if (o == null)
                 strBuf.append("null");
             else if (o instanceof List)
-                strBuf.append(toJSON((List) o, null, null));
+                strBuf.append(toJSON((List) o, null, null, withOrder));
             else if (o instanceof Map)
-                strBuf.append(toJSON((Map) o, null, null));
+                strBuf.append(toJSON((Map) o, null, null, withOrder));
             else if (o instanceof String)
                 strBuf.append("\"" + Utils.escapeJSON((String) o) + "\"");
             else // not a String
                 strBuf.append("\"" + Utils.escapeJSON(o.toString()) + "\"");
+        }
+        if (withOrder) { // make sure nothing left out
+            for (Object obj : m.keySet()) {
+                key = (String) obj;
+                if (key == null || key.length() <= 0)
+                    continue;
+                if (keySet.contains(key))
+                    continue;
+                if (i > 0)
+                    strBuf.append(",");
+                strBuf.append("\n  \"" + Utils.escapeJSON(key) + "\": ");
+                i++;
+                o = m.get(key);
+                if (o == null)
+                    strBuf.append("null");
+                else if (o instanceof List)
+                    strBuf.append(toJSON((List) o, null, null, withOrder));
+                else if (o instanceof Map)
+                    strBuf.append(toJSON((Map) o, null, null, withOrder));
+                else if (o instanceof String)
+                    strBuf.append("\"" + Utils.escapeJSON((String) o) + "\"");
+                else // not a String
+                    strBuf.append("\"" + Utils.escapeJSON(o.toString()) + "\"");
+            }
+            keySet.clear();
         }
         strBuf.append("\n}");
 
@@ -105,35 +147,78 @@ public class JSON2Map {
 
     /** It returns JSON content for a given Map with indent */
     public static String toJSON(Map m, String indent, String end) {
+        return toJSON(m, indent, end, false);
+    }
+
+    /**
+     * It returns JSON content for a given Map with indent and ordering support
+     */ 
+    protected static String toJSON(Map m, String indent, String end,
+        boolean withOrder) {
         int i = 0;
-        String key, ind, ed;
+        String key, ind, ed, s;
+        HashSet<String> keySet = new HashSet<String>();
+        Collection c;
         Object o;
         StringBuffer strBuf = new StringBuffer();
+        s = (withOrder) ? " " : "";
         ind = (indent == null) ? "" : indent + "  ";
         ed = (end == null) ? "" : end;
         strBuf.append("{");
-        Iterator iter = m.keySet().iterator();
-        while (iter.hasNext()) {
-            key = (String) iter.next();
+        if (withOrder && (o = m.get("")) != null && o instanceof List)
+            c = (List) o;
+        else
+            c = m.keySet();
+        for (Object obj : c) {
+            key = (String) obj;
             if (key == null || key.length() <= 0)
                 continue;
+            if (withOrder)
+                keySet.add(key);
             if (i > 0)
                 strBuf.append(",");
-            strBuf.append(ed + ind + "\"" + Utils.escapeJSON(key) + "\"" + ":");
+            strBuf.append(ed + ind + "\"" + Utils.escapeJSON(key) + "\":" + s);
             i++;
             o = m.get(key);
             if (o == null)
                 strBuf.append("null");
             else if (o instanceof List)
                 strBuf.append(toJSON((List) o,
-                    (indent == null) ? null : indent + "  ", end));
+                    (indent == null) ? null : indent + "  ", end, withOrder));
             else if (o instanceof Map)
                 strBuf.append(toJSON((Map) o,
-                    (indent == null) ? null : indent + "  ", end));
+                    (indent == null) ? null : indent + "  ", end, withOrder));
             else if (o instanceof String)
                 strBuf.append("\"" + Utils.escapeJSON((String) o) + "\"");
             else // not a String
                 strBuf.append("\"" + Utils.escapeJSON(o.toString()) + "\"");
+        }
+        if (withOrder) { // make sure nothing left out
+            for (Object obj : m.keySet()) {
+                key = (String) obj;
+                if (key == null || key.length() <= 0)
+                    continue;
+                if (keySet.contains(key))
+                    continue;
+                if (i > 0)
+                    strBuf.append(",");
+                strBuf.append(ed + ind + "\"" + Utils.escapeJSON(key) + "\": ");
+                i++;
+                o = m.get(key);
+                if (o == null)
+                    strBuf.append("null");
+                else if (o instanceof List)
+                    strBuf.append(toJSON((List) o,
+                        (indent == null) ? null : indent + "  ",end,withOrder));
+                else if (o instanceof Map)
+                    strBuf.append(toJSON((Map) o,
+                    (indent == null) ? null : indent + "  ", end, withOrder));
+                else if (o instanceof String)
+                    strBuf.append("\"" + Utils.escapeJSON((String) o) + "\"");
+                else // not a String
+                    strBuf.append("\"" + Utils.escapeJSON(o.toString()) + "\"");
+            }
+            keySet.clear();
         }
         strBuf.append(ed + ((indent == null) ? "" : indent) + "}");
 
@@ -142,6 +227,14 @@ public class JSON2Map {
 
     /** It returns JSON content for a given List with indent */
     public static String toJSON(List a, String indent, String end) {
+        return toJSON(a, indent, end, false);
+    }
+
+    /**
+     * It returns JSON content for a given List with indent and ordering support
+     */
+    protected static String toJSON(List a, String indent, String end,
+        boolean withOrder) {
         int n;
         Object o = null;
         StringBuffer strBuf = new StringBuffer();
@@ -160,10 +253,10 @@ public class JSON2Map {
                 strBuf.append("null");
             else if (o instanceof List)
                 strBuf.append(toJSON((List) o,
-                    (indent == null) ? null : indent + "  ", end));
+                    (indent == null) ? null : indent + "  ", end, withOrder));
             else if (o instanceof Map)
                 strBuf.append(toJSON((Map) o,
-                    (indent == null) ? null : indent + "  ", end));
+                    (indent == null) ? null : indent + "  ", end, withOrder));
             else if (o instanceof String)
                 strBuf.append("\"" + Utils.escapeJSON((String) o) + "\"");
             else // not a String
@@ -1534,6 +1627,7 @@ public class JSON2Map {
         else { // it is a new key
             if (keyPath.indexOf('[') > 0) // for array access
                 keyPath = keyPath.replace('[', '.').replaceAll("]", "");
+
             if ((i = keyPath.lastIndexOf('.')) >= 0) {
                 parent = get(ph, keyPath.substring(0, i));
                 key = keyPath.substring(i+1);
@@ -1544,7 +1638,9 @@ public class JSON2Map {
             }
         }
 
-        if (parent instanceof Map) { // Map
+        if (parent == null)
+            throw(new IllegalArgumentException("no parent for: " + keyPath));
+        else if (parent instanceof Map) { // Map
             return ((Map) parent).put(key, data);
         }
         else if (key.matches("\\d+")) { // List
@@ -1591,7 +1687,9 @@ public class JSON2Map {
             }
         }
 
-        if (parent instanceof Map) { // Map
+        if (parent == null)
+            throw(new IllegalArgumentException("no parent for: " + keyPath));
+        else if (parent instanceof Map) { // Map
             return ((Map) parent).put(key, data);
         }
         else if (key.matches("\\d+")) { // List
@@ -1676,11 +1774,21 @@ public class JSON2Map {
      *  unescaped JSON data. It is MT-safe
      */
     public static Object parse(Reader in) throws IOException {
+        return parseJSON(in, false);
+    }
+
+    /** parses JSON stream from in and returns either a Map or a List with
+     *  unescaped JSON data as well as the key list with orginal order for maps.
+     *  The key list is stored at the empty key in the same map. It is MT-safe
+     */
+    public static Object parseJSON(Reader in, boolean withOrder)
+        throws IOException {
         int a = -1, level, action, offset, position, charsRead, pa, total, ln;
         boolean with_comma = false;
         String key = null, str;
         StringBuffer strBuf = null;
-        Map root = new HashMap();
+        List ao = null;
+        Map<String, Object> root = new HashMap<String, Object>();
         Object current = null, parent = null;
         Object[] tree = new Object[1024];
         String[] nodeName = new String[1024];
@@ -1769,12 +1877,17 @@ public class JSON2Map {
                             with_comma = false;
                             parent = current;
                             current = new HashMap();
+                            if (withOrder) // save order list at the empty key
+                                ((Map) current).put("", new ArrayList());
                             level ++;
                             tree[level] = current;
                             nodeName[level] = null;
                             if (parent instanceof Map) {
                                 key = nodeName[level - 1];
                                 ((Map) parent).put(key, current);
+                                if (withOrder && (ao =
+                                    (List) ((Map) parent).get("")) != null)
+                                    ao.add(key);
                             }
                             else {
                                 ((List) parent).add(current);
@@ -1797,10 +1910,14 @@ public class JSON2Map {
                             if (parent instanceof Map) {
                                 key = nodeName[level - 1];
                                 ((Map) parent).put(key, current);
+                                if (withOrder && (ao =
+                                    (List) ((Map) parent).get("")) != null)
+                                    ao.add(key);
                             }
                             else {
                                 ((List) parent).add(current);
                             }
+                            ao = null;
                             offset = position + 1;
                             action = ACTION_SKIP;
                         }
@@ -1827,6 +1944,9 @@ public class JSON2Map {
                                 else { // for value
                                     key = nodeName[level];
                                     ((Map) current).put(key, str);
+                                    if (withOrder && (ao =
+                                        (List) ((Map) current).get("")) != null)
+                                        ao.add(key);
                                     nodeName[level] = null;
                                     action = ACTION_FIND;
                                 }
@@ -1883,6 +2003,9 @@ public class JSON2Map {
                                     key = nodeName[level];
                                     nodeName[level] = null;
                                     ((Map) current).put(key, str);
+                                    if (withOrder && (ao =
+                                        (List) ((Map) current).get("")) != null)
+                                        ao.add(key);
                                 }
                                 else
                                     ((List) current).add(str);
@@ -1991,6 +2114,9 @@ public class JSON2Map {
                             }
                             if (isRaw) {
                                 ((Map) current).put(key, str);
+                                if (withOrder &&
+                                    (ao = (List)((Map)current).get("")) != null)
+                                    ao.add(key);
                                 nodeName[level] = null;
                                 level --;
                                 current = parent;
@@ -2060,6 +2186,9 @@ public class JSON2Map {
                                 if (current instanceof Map) {
                                     key = nodeName[level];
                                     ((Map) current).put(key, str);
+                                    if (withOrder && (ao =
+                                        (List) ((Map) current).get("")) != null)
+                                        ao.add(key);
                                     nodeName[level] = null;
                                 }
                                 else
@@ -2131,6 +2260,9 @@ public class JSON2Map {
                                     key = nodeName[level];
                                     nodeName[level] = null;
                                     ((Map) current).put(key, str);
+                                    if (withOrder && (ao =
+                                        (List) ((Map) current).get("")) != null)
+                                        ao.add(key);
                                 }
                                 else
                                     ((List) current).add(str);
@@ -2170,6 +2302,9 @@ public class JSON2Map {
                                 if (current instanceof Map) {
                                     key = nodeName[level];
                                     ((Map) current).put(key, str);
+                                    if (withOrder && (ao =
+                                        (List) ((Map) current).get("")) != null)
+                                        ao.add(key);
                                     nodeName[level] = null;
                                 }
                                 else
@@ -2316,7 +2451,7 @@ public class JSON2Map {
         if (level > 0)
             throw(new IOException("missing closed tag: " + level +"/"+ total));
 
-        return root.remove("JSON");
+        return root.get("JSON");
     }
 
     /** returns the position of the first target or -1 if not found */
@@ -2997,7 +3132,7 @@ public class JSON2Map {
     }
 
     public static void main(String args[]) {
-        String filename = null, action = "parse", type = "json", path = null;
+        String filename = null, action = "copy", type = "json", path = null;
         String data = null;
         int fromIndex = 0;
         for (int i=0; i<args.length; i++) {
@@ -3064,10 +3199,16 @@ public class JSON2Map {
                 System.exit(0);
             }
             in = new StringReader(json);
-            Object o = parse(in);
+            Object o = parseJSON(in, "copy".equalsIgnoreCase(action));
             in.close();
             if (o == null)
                 System.out.println("failed to parse json");
+            else if ("copy".equalsIgnoreCase(action)) {
+                if (o instanceof List)
+                    System.out.println(toJSON((List) o, "", "\n", true));
+                else
+                    System.out.println(toJSON((Map) o, "", "\n", true));
+            }
             else if ("parse".equalsIgnoreCase(action)) {
                 if ("json".equals(type)) {
                     if (o instanceof List)
@@ -3264,7 +3405,7 @@ public class JSON2Map {
         System.out.println("JSON2Map: parse JSON data in a file");
         System.out.println("Usage: java org.qbroker.json.JSON2Map -f filename -a action -t type -k path");
         System.out.println("  -?: print this message");
-        System.out.println("  -a: action of parse, test, count, locate, get, put, remove, format, diff or flatten (default: parse)");
+        System.out.println("  -a: action of copy, parse, test, count, locate, get, put, remove, format, diff or flatten (default: copy)");
         System.out.println("  -k: key path (example: .views.list[0].name)");
         System.out.println("  -d: json data for put");
         System.out.println("  -t: type of xml or json (default: json)");

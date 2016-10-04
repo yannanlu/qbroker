@@ -1162,4 +1162,8 @@ public class MultiFileMonitor extends Monitor implements Comparator<long[]> {
             ftpTester = null;
         }
     }
+
+    protected void finalize() {
+        destroy();
+    }
 }

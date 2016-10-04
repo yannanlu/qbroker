@@ -1588,4 +1588,8 @@ public class DispatchNode extends Node {
         super.close();
         hashChain.clear();
     }
+
+    protected void finalize() {
+        close();
+    }
 }

@@ -555,4 +555,8 @@ public class JVMMonitor extends Monitor {
             reporter = null;
         }
     }
+
+    protected void finalize() {
+        destroy();
+    }
 }

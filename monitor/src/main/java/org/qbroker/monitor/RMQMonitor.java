@@ -612,4 +612,8 @@ public class RMQMonitor extends Monitor {
             webTester = null;
         }
     }
+
+    protected void finalize() {
+        destroy();
+    }
 }

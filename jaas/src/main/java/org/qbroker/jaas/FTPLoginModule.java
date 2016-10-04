@@ -12,7 +12,7 @@ import javax.security.auth.*;
 import javax.security.auth.callback.*;
 import javax.security.auth.login.*;
 import javax.security.auth.spi.*;
-import com.sun.security.auth.NTUserPrincipal;
+import com.sun.security.auth.UnixPrincipal;
 import org.qbroker.common.Utils;
 import org.qbroker.event.Event;
 import org.qbroker.monitor.FTPTester;
@@ -32,7 +32,7 @@ public class FTPLoginModule implements LoginModule {
     private String username;
     private Map<String, Object> props;
     private String uri = null;
-    private NTUserPrincipal userPrincipal;
+    private UnixPrincipal userPrincipal;
 
     public void initialize(Subject subject, CallbackHandler callbackHandler,
         Map sharedState, Map options) {
@@ -135,14 +135,14 @@ public class FTPLoginModule implements LoginModule {
             return false;
         }
         else {
-            // assume the user we authenticated is the NTPrincipal
-            userPrincipal = new NTUserPrincipal(username);
+            // assume the user we authenticated is the UnixPrincipal
+            userPrincipal = new UnixPrincipal(username);
             if (!subject.getPrincipals().contains(userPrincipal))
                 subject.getPrincipals().add(userPrincipal);
 
             if (debug) {
                 new Event(Event.DEBUG, "[FTPLoginModule] added " +
-                    "the NTUserPrincipal to Subject").send();
+                    "the UnixPrincipal to Subject").send();
             }
 
             // in any case, clean out state

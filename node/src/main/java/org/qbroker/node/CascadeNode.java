@@ -1338,4 +1338,8 @@ public class CascadeNode extends Node {
             cfgList.clear();
         }
     }
+
+    protected void finalize() {
+        close();
+    }
 }

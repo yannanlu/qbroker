@@ -1755,4 +1755,8 @@ public class AggregateNode extends Node {
         }
         pluginList.clear();
     }
+
+    protected void finalize() {
+        close();
+    }
 }

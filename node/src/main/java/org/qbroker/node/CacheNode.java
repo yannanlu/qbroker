@@ -1925,33 +1925,67 @@ public class CacheNode extends Node {
         super.close();
     }
 
+    protected void finalize() {
+        close();
+    }
+
     /** returns the id for the request or 0 if the type is not supported */
     protected static final int getRequestType(String type) {
-        if ("jdbc".equalsIgnoreCase(type))
-            return OPTION_JDBC;
-        else if ("http".equalsIgnoreCase(type))
-            return OPTION_HTTP;
-        else if ("file".equalsIgnoreCase(type))
-            return OPTION_FILE;
-        else if ("ftp".equalsIgnoreCase(type))
-            return OPTION_FTP;
-        else if ("tcp".equalsIgnoreCase(type))
-            return OPTION_TCP;
-        else if ("udp".equalsIgnoreCase(type))
-            return OPTION_UDP;
-        else if ("jms".equalsIgnoreCase(type))
-            return OPTION_JMS;
-        else if ("jmx".equalsIgnoreCase(type))
-            return OPTION_JMX;
-        else if ("riak".equalsIgnoreCase(type))
-            return OPTION_RIAK;
-        else if ("mongo".equalsIgnoreCase(type))
-            return OPTION_MONGO;
-        else if ("redis".equalsIgnoreCase(type))
-            return OPTION_REDIS;
-        else if ("static".equalsIgnoreCase(type))
-            return OPTION_STATIC;
-        else
-            return OPTION_NONE;
+        int op = OPTION_NONE;
+        if (type != null && type.length() > 0) {
+            switch (type.charAt(0)) {
+              case 'f':
+              case 'F':
+                if ("file".equalsIgnoreCase(type))
+                  op = OPTION_FILE;
+                else if ("ftp".equalsIgnoreCase(type))
+                  op = OPTION_FTP;
+                break;
+              case 'h':
+              case 'H':
+                if ("http".equalsIgnoreCase(type))
+                    op = OPTION_HTTP;
+                break;
+              case 'j':
+              case 'J':
+                if ("jdbc".equalsIgnoreCase(type))
+                    op = OPTION_JDBC;
+                else if ("jms".equalsIgnoreCase(type))
+                    op = OPTION_JMS;
+                else if ("jmx".equalsIgnoreCase(type))
+                    op = OPTION_JMX;
+                break;
+              case 'm':
+              case 'M':
+                if ("mongo".equalsIgnoreCase(type))
+                    op = OPTION_MONGO;
+                break;
+              case 'r':
+              case 'R':
+                if ("riak".equalsIgnoreCase(type))
+                    op = OPTION_RIAK;
+                else if ("redis".equalsIgnoreCase(type))
+                    op = OPTION_REDIS;
+                break;
+              case 's':
+              case 'S':
+                if ("static".equalsIgnoreCase(type))
+                    op = OPTION_STATIC;
+                break;
+              case 't':
+              case 'T':
+                if ("tcp".equalsIgnoreCase(type))
+                    op = OPTION_TCP;
+                break;
+              case 'u':
+              case 'U':
+                if ("udp".equalsIgnoreCase(type))
+                    op = OPTION_UDP;
+                break;
+              default:
+                break;
+            }
+        }
+        return op;
     }
 }

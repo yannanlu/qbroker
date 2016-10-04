@@ -29,6 +29,7 @@ import org.qbroker.monitor.MonitorUtils;
 import org.qbroker.monitor.MonitorReport;
 import org.qbroker.monitor.Monitor;
 import org.qbroker.monitor.GenericList;
+import org.qbroker.monitor.QReportQuery;
 import org.qbroker.monitor.UnixlogMonitor;
 import org.qbroker.jms.QueueConnector;
 import org.qbroker.jms.QConnector;
@@ -54,8 +55,9 @@ public class JMSMonitor extends Monitor {
     private QueueConnector jmsQ = null;
     private UnixlogMonitor log = null;
     private int previousQStatus, previousDepth, operation, qStatusOffset;
-    private int disableMode, port, checkpointTimeout;
+    private int disableMode, port, waterMark, checkpointTimeout;
     private boolean isTopic = false;
+    public final static int Q_SLOW = -4;
     public final static int Q_STUCK = -3;
     public final static int Q_NOAPPS = -2;
     public final static int Q_UNKNOWN = -1;
@@ -64,8 +66,8 @@ public class JMSMonitor extends Monitor {
     public final static int Q_PUT = 2;
     public final static int Q_BROWSE = 3;
     public final static int Q_RESET = 4;
-    public final static String qStatusText[] = {"STUCK", "NOAPPS",
-        "UNKNOW", "OK", "GET", "PUT", "BROWSE", "RESET"};
+    public final static String qStatusText[] = {"SLOW", "STUCK",
+        "NOAPPS", "UNKNOW", "OK", "GET", "PUT", "BROWSE", "RESET"};
 
     public JMSMonitor(Map props) {
         super(props);
@@ -108,6 +110,12 @@ public class JMSMonitor extends Monitor {
             else if ((o = props.get("ConnectionFactoryName")) != null) {
                 connFactoryName = MonitorUtils.substitute((String) o, template);
             }
+            else if ("report".equals(u.getScheme())) {
+                if ((path = u.getPath()) != null && path.length() > 1)
+                    qmgrName = path.substring(1);
+                else
+                    qmgrName = "TBD";
+            }
         }
         else if ((o = MonitorUtils.select(props.get("QueueManager"))) != null) {
             qmgrName = MonitorUtils.substitute((String) o, template);
@@ -127,6 +135,11 @@ public class JMSMonitor extends Monitor {
             logFile = MonitorUtils.substitute((String) o, template);
         else
             logFile = null;
+
+        if ((o = props.get("WaterMark")) != null)
+            waterMark = Integer.parseInt((String) o);
+        else
+            waterMark = 0;
 
         if ((o = props.get("Operation")) != null) {
             if ("get".equals(((String) o).toLowerCase()))
@@ -232,6 +245,15 @@ public class JMSMonitor extends Monitor {
                 throw(new IllegalArgumentException("failed to instantiate " +
                     "MonitorReport: " + Event.traceStack(e)));
             }
+        }
+        else if (uri.startsWith("report://") && operation != Q_BROWSE){ //report
+            if ((o = props.get("ReportName")) != null)
+                h.put("ReportName", o);
+            else
+                h.put("ReportName", qName);
+            h.put("ReportExpiration", props.get("ReportExpiration"));
+            h.put("ReportClass", props.get("ReportClass"));
+            queue = new QReportQuery(h);
         }
         else if ((o = props.get("ClassNameForQueue")) != null) {
             h.put("ContextFactory",
@@ -410,8 +432,8 @@ public class JMSMonitor extends Monitor {
 
         previousMsgString = "";
         previousDepth = 0;
-        previousQStatus = Q_STUCK - 1;
-        qStatusOffset = 0 - Q_STUCK;
+        previousQStatus = Q_SLOW - 1;
+        qStatusOffset = 0 - Q_SLOW;
     }
 
     public Map<String, Object> generateReport(long currentTime)
@@ -772,6 +794,20 @@ public class JMSMonitor extends Monitor {
                 if (previousQStatus != qStatus)
                     actionCount = 1;
             }
+            else if (waterMark > 0 && curDepth > waterMark &&
+                preDepth > waterMark) {
+                if (status != TimeWindows.BLACKOUT) { // for normal case
+                    level = Event.ERR;
+                    if (step > 0)
+                        step = 0;
+                }
+                strBuf.append("Queue: application is slow to read from ");
+                strBuf.append(qmgrName + ":");
+                strBuf.append(qName);
+                qStatus = Q_SLOW;
+                if (previousQStatus != qStatus)
+                    actionCount = 1;
+            }
             else if (previousQStatus != qStatus) {
                 if (isTopic)
                     strBuf.append("Topic: application is OK");
@@ -1047,5 +1083,9 @@ public class JMSMonitor extends Monitor {
             jmsQ.close();
             jmsQ = null;
         }
+    }
+
+    protected void finalize() {
+        destroy();
     }
 }

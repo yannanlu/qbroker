@@ -417,11 +417,15 @@ public class JMSPublisher extends Persister {
     }
 
     public void close() {
+        if (status != PSTR_CLOSED)
+            new Event(Event.INFO, tName + " closed on " + linkName).send();
         setStatus(PSTR_CLOSED);
         disconnect();
         if (tConn != null)
             tConn = null;
+    }
 
-        new Event(Event.INFO, tName + " closed on " + linkName).send();
+    protected void finalize() {
+        close();
     }
 }

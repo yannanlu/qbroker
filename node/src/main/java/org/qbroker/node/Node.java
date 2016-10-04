@@ -1843,4 +1843,8 @@ public abstract class Node implements MessageNode {
 
         return h;
     }
+
+    protected void finalize() {
+        close();
+    }
 }

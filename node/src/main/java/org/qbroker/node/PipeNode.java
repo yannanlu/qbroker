@@ -1408,4 +1408,8 @@ public class PipeNode extends Node implements Comparator<int[]> {
                 return 0;
         }
     }
+
+    protected void finalize() {
+        close();
+    }
 }

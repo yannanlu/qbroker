@@ -444,13 +444,17 @@ public class DocumentPersister extends Persister {
     }
 
     public void close() {
+        if (status != PSTR_CLOSED)
+            new Event(Event.INFO, uri + " closed on " + linkName).send();
         setStatus(PSTR_CLOSED);
         disconnect();
         if (mongo != null)
             mongo = null;
         if (riak != null)
             riak = null;
+    }
 
-        new Event(Event.INFO, uri + " closed on " + linkName).send();
+    protected void finalize() {
+        close();
     }
 }

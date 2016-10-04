@@ -22,7 +22,6 @@ import org.qbroker.common.GenericPool;
 import org.qbroker.common.AssetList;
 import org.qbroker.common.Template;
 import org.qbroker.common.Utils;
-import org.qbroker.common.XML2Map;
 import org.qbroker.json.JSON2Map;
 import org.qbroker.jms.MessageUtils;
 import org.qbroker.receiver.MessageReceiver;
@@ -49,12 +48,12 @@ import org.qbroker.event.Event;
  * check in both the thread and the receiver.
  *<br/><br/>
  * URI is used to identify the source destinations.  ReceiverPool parses the
- * URI string and creates a Map with all XML properties from the key-value
+ * URI string and creates a Map with all properties from the key-value
  * pairs specified in the query-string.  Therefore, please carefully define
  * them in the query-string of the URI.  ReceiverPool also allows the
  * default properties defined for each implementations.  If any of the default
  * properties is missing in the URI, ReceiverPool will copy it to the
- * XML property Map before the instantiation of the MessageReceiver.
+ * property Map before the instantiation of the MessageReceiver.
  *<br/>
  * @author yannanlu@yahoo.com
  */
@@ -406,7 +405,7 @@ public class ReceiverPool extends Persister implements Runnable {
                 props = Utils.cloneProperties(ph);
                 if ((displayMask & MessageUtils.SHOW_DST) > 0)
                     new Event(Event.INFO, uri+": received a request from "+
-                    linkName + " with: "+ JSON2Map.toXML(ph)).send();
+                    linkName + " with: "+ JSON2Map.toJSON(ph)).send();
             }
 
             uriStr = null;
@@ -1195,7 +1194,7 @@ public class ReceiverPool extends Persister implements Runnable {
                 else if (ssp.startsWith("mysql"))
                     props.put("DBDriver", "com.mysql.jdbc.Driver");
                 else if (ssp.startsWith("postgresql"))
-                    props.put("DBDriver", "postgresql.Driver");
+                    props.put("DBDriver", "org.postgresql.Driver");
                 else if (ssp.startsWith("microsoft"))
                     props.put("DBDriver",
                         "com.microsoft.jdbc.sqlserver.SQLServerDriver");
@@ -1351,7 +1350,12 @@ public class ReceiverPool extends Persister implements Runnable {
         stopAll();
         assetList.clear();
         poolList.clear();
+        if (status != PSTR_CLOSED)
+            new Event(Event.INFO, uri + " closed on " + linkName).send();
         setStatus(PSTR_CLOSED);
-        new Event(Event.INFO, uri + " closed on " + linkName).send();
+    }
+
+    protected void finalize() {
+        close();
     }
 }

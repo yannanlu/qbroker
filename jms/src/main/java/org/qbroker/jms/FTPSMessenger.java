@@ -33,8 +33,8 @@ import org.qbroker.common.Utils;
 import org.qbroker.common.XQueue;
 import org.qbroker.common.Template;
 import org.qbroker.common.TimeWindows;
-import org.qbroker.common.XML2Map;
 import org.qbroker.common.TimeoutException;
+import org.qbroker.json.JSON2Map;
 import org.qbroker.net.FTPSConnector;
 import org.qbroker.jms.MessageOutputStream;
 import org.qbroker.jms.MessageUtils;
@@ -78,7 +78,6 @@ public class FTPSMessenger extends FTPSConnector {
     private int displayMask = 0;
     private SimpleDateFormat dateFormat = null;
     private int pathType = PATH_NONE;
-    private XML2Map xmlReader = null;
 
     private String correlationID = null;
     private String operation = "store";
@@ -276,21 +275,6 @@ public class FTPSMessenger extends FTPSConnector {
                 }
                 n ++;
             }
-        }
-
-        if ("copy".equals(operation)) try {
-            String saxParser = null;
-            if ((o = props.get("SAXParser")) != null)
-                saxParser = (String) o;
-            if (saxParser == null)
-                saxParser=(String)System.getProperty("org.xml.sax.driver",null);
-            if (saxParser == null)
-                saxParser = "org.apache.xerces.parsers.SAXParser";
-            xmlReader = new XML2Map(saxParser);
-        }
-        catch (Exception e) {
-            throw(new IllegalArgumentException(uri +
-                " failed to init xmlReader: " + e.toString()));
         }
 
         dateFormat = new SimpleDateFormat("yyyy/MM/dd.HH:mm:ss.SSS");
@@ -2861,14 +2845,14 @@ public class FTPSMessenger extends FTPSConnector {
     }
 
     /**
-     * It gets a JMS Message from the XQueue and retrieves the property XML
-     * from its body. It copies the source file defined in FileName to the
-     * remote file in LocalStore via ftps.
+     * It gets a JMS Message from the XQueue and retrieves the property map in
+     * JSON content from its body. It copies the source file defined in
+     * FileName to the remote file in LocalStore via ftps.
      *<br/><br/>
      * It will always try to retrieve the URL from the field specified by
      * FileName property.  If the message does not contain the URL, the method
      * will use the default URL defined by URI property.  The LocalStore
-     * specifies the target filename and its property XML is required to be
+     * specifies the target filename and its property map is required to be
      * stored in message body.
      *<br/><br/>
      * The copy operation also supports the requests.  If the XAMode has
@@ -3049,9 +3033,9 @@ public class FTPSMessenger extends FTPSConnector {
             }
 
             target = null;
-            try { // instantiate the target
+            try { // instantiate the target from JSON content
                 StringReader ins = new StringReader(msgStr);
-                Map ph = (Map) xmlReader.getMap(ins).get("Target");
+                Map ph = (Map) JSON2Map.parse(ins);
                 ins.close();
                 for (i=0; i<=retry; i++) {
                     try {

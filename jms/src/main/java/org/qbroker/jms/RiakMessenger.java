@@ -26,7 +26,6 @@ import org.qbroker.common.TimeWindows;
 import org.qbroker.common.XQueue;
 import org.qbroker.common.IndexedXQueue;
 import org.qbroker.common.Utils;
-import org.qbroker.common.XML2Map;
 import org.qbroker.common.TimeoutException;
 import org.qbroker.common.NonSQLException;
 import org.qbroker.net.RiakConnector;

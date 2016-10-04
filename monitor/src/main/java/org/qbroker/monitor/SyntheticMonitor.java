@@ -515,4 +515,8 @@ public class SyntheticMonitor extends Monitor {
         if (ph != null)
             ph.clear();
     }
+
+    protected void finalize() {
+        destroy();
+    }
 }

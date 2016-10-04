@@ -311,4 +311,21 @@ public class EventSelector implements EventFilter {
         }
         return "^" + str + "$";
     }
+
+    public void clear() {
+        if (eventPattern != null) {
+            for (EventPattern p : eventPattern)
+                if (p != null) p.clear();
+            eventPattern = null;
+        }
+        if (xEventPattern != null) {
+            for (EventPattern p : xEventPattern)
+                if (p != null) p.clear();
+            xEventPattern = null;
+        }
+    }
+
+    protected void finalize() {
+        clear();
+    }
 }

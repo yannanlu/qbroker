@@ -89,6 +89,7 @@ public class PacketNodeBean implements java.io.Serializable {
     public void clear() {
         packet = null;
         packetInfo = null;
+        pattern = null;
         content = null;
         pm = null;
         address = null;
@@ -308,5 +309,9 @@ public class PacketNodeBean implements java.io.Serializable {
     public void setExtraPort(int port) {
         if (port > 0 && port < 65536)
             this.extraPort = port;
+    }
+
+    protected void finalize() {
+        clear();
     }
 }

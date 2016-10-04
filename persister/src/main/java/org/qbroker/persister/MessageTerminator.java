@@ -469,6 +469,8 @@ public class MessageTerminator extends Persister {
         int rid;
         Map rule;
         Browser browser;
+        if (status != PSTR_CLOSED)
+            new Event(Event.INFO, uri + " closed on " + linkName).send();
         setStatus(PSTR_CLOSED);
         browser = ruleList.browser();
         while((rid = browser.next()) >= 0) {
@@ -477,7 +479,9 @@ public class MessageTerminator extends Persister {
                 rule.clear();
         }
         ruleList.clear();
+    }
 
-        new Event(Event.INFO, uri + " closed on " + linkName).send();
+    protected void finalize() {
+        close();
     }
 }

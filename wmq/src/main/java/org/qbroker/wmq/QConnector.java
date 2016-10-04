@@ -43,7 +43,6 @@ import org.qbroker.common.Template;
 import org.qbroker.common.TextSubstitution;
 import org.qbroker.common.Utils;
 import org.qbroker.common.QuickCache;
-import org.qbroker.common.XML2Map;
 import org.qbroker.jms.MessageUtils;
 import org.qbroker.jms.MessageFilter;
 import org.qbroker.jms.Msg2Text;
@@ -293,24 +292,8 @@ public class QConnector extends JMSQConnector {
             else
                 resultField = "MsgCount";
 
-            if ((o = props.get("Template")) != null &&
-                ((String) o).length()>0)
+            if((o = props.get("Template")) != null && ((String) o).length() > 0)
                 template = new Template((String) o);
-
-            if ((o = props.get("SAXParser")) != null)
-                saxParser = (String) o;
-            if (saxParser == null)
-                saxParser=(String)System.getProperty("org.xml.sax.driver",null);
-            if (saxParser == null)
-                saxParser = "org.apache.xerces.parsers.SAXParser";
-
-            try {
-                xmlReader = new XML2Map(saxParser);
-            }
-            catch (Exception e) {
-                throw(new IllegalArgumentException(qName +
-                    " failed to init xmlReader: " + e.toString()));
-            }
         }
         else if ("browse".equals(operation)) try {
             if ((o = props.get("Ruleset")) != null && o instanceof List)

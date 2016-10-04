@@ -295,6 +295,20 @@ public class Template {
         return substitute((Perl5Matcher) null, input, map);
     }
 
+    public void clear() {
+        pattern = null;
+        pm = null;
+        allFields = null;
+        if (fields != null) {
+            fields.clear();
+            fields = null;
+        }
+    }
+
+    protected void finalize() {
+        clear();
+    }
+
 /**
     // require v2.0.5
     public int substitute(StringBuffer result, String field, String value,

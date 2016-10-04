@@ -71,8 +71,10 @@ public abstract class Report implements MonitorReport {
         else
             step = 0;
 
-        if ((o = props.get("ReportName")) != null)
-            reportName = (String) o;
+        if ((o = props.get("ReportName")) != null) {
+            reportName = MonitorUtils.select(o);
+            reportName = MonitorUtils.substitute(reportName, template);
+        }
         else
             reportName = name;
 
@@ -229,7 +231,20 @@ public abstract class Report implements MonitorReport {
             MonitorUtils.clearDependencies(dependencyGroup);
             dependencyGroup = null;
         }
-        if (statsLogger != null)
-            statsLogger = null;
+        if (template != null) {
+            template.clear();
+            template = null;
+        }
+        if (timeTemplate != null) {
+            timeTemplate.clear();
+            timeTemplate = null;
+        }
+        statsLogger = null;
+        pm = null;
+        timeFormat = null;
+    }
+
+    protected void finalize() {
+        destroy();
     }
 }

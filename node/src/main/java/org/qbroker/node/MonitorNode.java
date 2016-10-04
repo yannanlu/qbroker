@@ -21,7 +21,6 @@ import org.qbroker.common.AssetList;
 import org.qbroker.common.TimeWindows;
 import org.qbroker.common.Template;
 import org.qbroker.common.Utils;
-import org.qbroker.common.XML2Map;
 import org.qbroker.common.CollectibleCells;
 import org.qbroker.json.JSON2Map;
 import org.qbroker.monitor.MonitorUtils;
@@ -88,7 +87,6 @@ public class MonitorNode extends Node {
     private String rcField;
 
     private AssetList reqList = null; // {rid,tid} to track active tasks on pool
-    private XML2Map xmlReader = null;
     private XQueue pool;
     private long[] poolInfo;
     private int[] heartbeat;
@@ -137,19 +135,6 @@ public class MonitorNode extends Node {
             rcField = (String) o;
         else
             rcField = "status";
-
-        if ((o = props.get("SAXParser")) != null)
-            saxParser = (String) o;
-        if (saxParser == null)
-            saxParser = (String) System.getProperty("org.xml.sax.driver", null);
-
-        try {
-            xmlReader = new XML2Map(saxParser);
-        }
-        catch (Exception e) {
-            throw(new IllegalArgumentException(name +
-                " failed to init xmlReader: " + e.toString()));
-        }
 
         if ((o = props.get("OutLink")) == null || !(o instanceof List))
             throw(new IllegalArgumentException(name +
@@ -533,7 +518,7 @@ public class MonitorNode extends Node {
         text = MessageUtils.format(msg, buffer, template);
         try {
             StringReader ins = new StringReader(text);
-            ph = (Map) xmlReader.getMap(ins).get("Monitor");
+            ph = (Map) JSON2Map.parse(ins);
             ins.close();
         }
         catch (Exception e) {
@@ -1348,5 +1333,9 @@ public class MonitorNode extends Node {
 
         super.close();
         reqList.clear();
+    }
+
+    protected void finalize() {
+        close();
     }
 }

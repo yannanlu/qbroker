@@ -218,7 +218,7 @@ public class GenericList extends Report {
                 h.put("Username", o);
                 h.put("Password", props.get("Password"));
             }
-            target = (String) props.get("MBeanName");
+            target = (String) MonitorUtils.select(props.get("MBeanName"));
             if (target == null || target.length() <= 0)
                 throw(new IllegalArgumentException("MBeanName"+
                     " is not defined for " + uri));
@@ -304,7 +304,7 @@ public class GenericList extends Report {
                 h.put("Username", o);
                 h.put("Password", props.get("Password"));
             }
-            target = (String) props.get("PCFCommand");
+            target = (String) MonitorUtils.select(props.get("PCFCommand"));
             if (target == null || target.length() <= 0)
                 throw(new IllegalArgumentException("PCFCommand" +
                     " is not defined for " + uri));
@@ -318,7 +318,7 @@ public class GenericList extends Report {
                 h.put("Password", props.get("Password"));
             }
             h.put("ConnectOnInit", "false");
-            target = (String) props.get("RequestCommand");
+            target = (String) MonitorUtils.select(props.get("RequestCommand"));
             if (target == null || target.length() <= 0)
                 throw(new IllegalArgumentException("RequestCommand" +
                     " is not defined for " + uri));
@@ -332,7 +332,7 @@ public class GenericList extends Report {
                 h.put("Password", props.get("Password"));
             }
             h.put("ConnectOnInit", "false");
-            target = (String) props.get("RequestCommand");
+            target = (String) MonitorUtils.select(props.get("RequestCommand"));
             if (target == null || target.length() <= 0)
                 throw(new IllegalArgumentException("RequestCommand" +
                     " is not defined for " + uri));
@@ -696,6 +696,10 @@ public class GenericList extends Report {
             reporter.destroy();
         if (requester != null)
             requester.close();
+    }
+
+    protected void finalize() {
+        destroy();
     }
 
     /**

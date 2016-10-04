@@ -107,8 +107,10 @@ public abstract class Monitor implements MonitorReport, MonitorAction {
             throw(new IllegalArgumentException(e.toString()));
         }
 
-        if ((o = props.get("ReportName")) != null)
-            reportName = (String) o;
+        if ((o = props.get("ReportName")) != null) {
+            reportName = MonitorUtils.select(o);
+            reportName = MonitorUtils.substitute(reportName, template);
+        }
         else
             reportName = name;
 
@@ -371,5 +373,9 @@ public abstract class Monitor implements MonitorReport, MonitorAction {
         }
         if (statsLogger != null)
             statsLogger = null;
+    }
+
+    protected void finalize() {
+        destroy();
     }
 }

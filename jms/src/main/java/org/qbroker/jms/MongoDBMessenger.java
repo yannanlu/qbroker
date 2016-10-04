@@ -32,9 +32,9 @@ import org.qbroker.common.XQueue;
 import org.qbroker.common.IndexedXQueue;
 import org.qbroker.common.QuickCache;
 import org.qbroker.common.Utils;
-import org.qbroker.common.XML2Map;
 import org.qbroker.common.TimeoutException;
 import org.qbroker.common.NonSQLException;
+import org.qbroker.json.JSON2Map;
 import org.qbroker.net.MongoDBConnector;
 import org.qbroker.jms.MessageUtils;
 import org.qbroker.jms.TextEvent;
@@ -64,7 +64,6 @@ public class MongoDBMessenger extends MongoDBConnector {
     private int timeout;
     private Template template;
     private QuickCache cache = null;
-    private XML2Map xmlReader = null;
     private String[] propertyName = null;
     private String[] propertyValue = null;
     private int displayMask = 0;
@@ -233,18 +232,8 @@ public class MongoDBMessenger extends MongoDBConnector {
                 " failed to parse DefaultProjection: " + e.toString()));
         }
 
-        if ("list".equals(operation)) try {
+        if ("list".equals(operation))
             cache = new QuickCache(uri, QuickCache.META_DEFAULT, 0, 0);
-
-            String str = (String) System.getProperty("org.xml.sax.driver",null);
-            if (str == null)
-                str = "org.apache.xerces.parsers.SAXParser";
-            xmlReader = new XML2Map(str);
-        }
-        catch (Exception e) {
-            throw(new IllegalArgumentException(uri +
-                " failed to init xmlReader: " + e.toString()));
-        }
     }
 
     /**
@@ -533,7 +522,7 @@ public class MongoDBMessenger extends MongoDBConnector {
                         filters=(MessageFilter[])cache.get(msgStr,currentTime);
                     else { // new or expired
                         StringReader ins = new StringReader(msgStr);
-                        ph = (Map) xmlReader.getMap(ins).get("Filters");
+                        ph = (Map) JSON2Map.parse(ins);
                         ins.close();
                         if (currentTime - cache.getMTime() >= heartbeat) {
                             cache.disfragment(currentTime);

@@ -323,4 +323,31 @@ public class FileSynchronizer implements EventAction {
     public String getName() {
         return name;
     }
+
+    public void close() {
+        pm = null;
+        pattern = null;
+        file = null;
+        targetFile = null;
+        if (template != null) {
+            template.clear();
+            template = null;
+        }
+        if (httpConn != null) {
+            httpConn.close();
+            httpConn = null;
+        }
+        if (sftpConn != null) {
+            sftpConn.close();
+            sftpConn = null;
+        }
+        if (ftpConn != null) {
+            ftpConn.close();
+            ftpConn = null;
+        }
+    }
+
+    protected void finalize() {
+        close();
+    }
 }

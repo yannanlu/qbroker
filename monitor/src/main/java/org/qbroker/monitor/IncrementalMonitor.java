@@ -217,8 +217,10 @@ public class IncrementalMonitor extends Monitor {
             reporter = new FileTester(h);
             break;
           case OBJ_TCP:
-            jsonPath = (String) props.get("JSONPath");
-            queryStr = (String) props.get("RequestCommand");
+            jsonPath = (String) MonitorUtils.select(props.get("JSONPath"));
+            jsonPath = MonitorUtils.substitute(jsonPath, template);
+            queryStr = (String)MonitorUtils.select(props.get("RequestCommand"));
+            queryStr = MonitorUtils.substitute(queryStr, template);
             h.put("Operation", "request");
             h.put("ClassName", "org.qbroker.persister.StreamPersister");
             h.put("Capacity", "2");
@@ -234,8 +236,10 @@ public class IncrementalMonitor extends Monitor {
                 "org.qbroker.flow.GenericRequester", name);
             break;
           case OBJ_UDP:
-            jsonPath = (String) props.get("JSONPath");
-            queryStr = (String) props.get("RequestCommand");
+            jsonPath = (String) MonitorUtils.select(props.get("JSONPath"));
+            jsonPath = MonitorUtils.substitute(jsonPath, template);
+            queryStr = (String)MonitorUtils.select(props.get("RequestCommand"));
+            queryStr = MonitorUtils.substitute(queryStr, template);
             h.put("Operation", "inquire");
             h.put("ClassName", "org.qbroker.persister.PacketPersister");
             h.put("URIField", "UDP");
@@ -355,8 +359,10 @@ public class IncrementalMonitor extends Monitor {
                 h.put("Username", o);
             if ((o = props.get("Password")) != null)
                 h.put("Password", o);
-            dataField = (String) props.get("AttributeName");
-            queryStr = (String) props.get("MBeanName");
+            dataField = (String)MonitorUtils.select(props.get("AttributeName"));
+            dataField = MonitorUtils.substitute(dataField, template);
+            queryStr = (String) MonitorUtils.select(props.get("MBeanName"));
+            queryStr = MonitorUtils.substitute(queryStr, template);
             if (dataField == null || dataField.length() <= 0 ||
                 queryStr == null || queryStr.length() <= 0)
                 throw(new IllegalArgumentException("MBeanName or AttributeName"+
@@ -1037,5 +1043,9 @@ public class IncrementalMonitor extends Monitor {
             snmp.close();
         if (jmxReq != null)
             jmxReq.close();
+    }
+
+    protected void finalize() {
+        destroy();
     }
 }

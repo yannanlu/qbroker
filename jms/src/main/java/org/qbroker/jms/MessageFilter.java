@@ -40,7 +40,7 @@ import org.qbroker.event.Event;
 
 @SuppressWarnings("unchecked")
 public class MessageFilter implements Filter<Message> {
-    private Map[] aJMSProps = null, xJMSProps = null;
+    private Map<String, Object>[] aJMSProps = null, xJMSProps = null;
     private Pattern[][] aPatterns = null, xPatterns = null;
     private String[] dataField = null, mapKey = null;
     private int[] dataType = null;
@@ -73,8 +73,8 @@ public class MessageFilter implements Filter<Message> {
         check_body = false;
         if (props.containsKey("PatternGroup") ||
             props.containsKey("XPatternGroup")) try {
-            aPatterns = (Pattern[][]) getPatterns("PatternGroup", props, pc);
-            xPatterns = (Pattern[][]) getPatterns("XPatternGroup", props, pc);
+            aPatterns = getPatterns("PatternGroup", props, pc);
+            xPatterns = getPatterns("XPatternGroup", props, pc);
             check_body = true;
         }
         catch (Exception e) {
@@ -86,8 +86,8 @@ public class MessageFilter implements Filter<Message> {
         check_header = false;
         if (props.containsKey("JMSPropertyGroup") ||
             props.containsKey("XJMSPropertyGroup")) try {
-            aJMSProps = (Map[]) getPatternMaps("JMSPropertyGroup", props, pc);
-            xJMSProps = (Map[]) getPatternMaps("XJMSPropertyGroup", props, pc);
+            aJMSProps = getPatternMaps("JMSPropertyGroup", props, pc);
+            xJMSProps = getPatternMaps("XJMSPropertyGroup", props, pc);
             check_header = true;
         }
         catch (Exception e) {
@@ -354,7 +354,7 @@ public class MessageFilter implements Filter<Message> {
     /**
      * returns an array of Map with a group of patterns in each of them
      */
-    public static Map[] getPatternMaps(String name, Map ph,
+    public static Map<String, Object>[] getPatternMaps(String name, Map ph,
         Perl5Compiler pc) throws MalformedPatternException {
         int i, size = 0;
         Object o;
@@ -364,7 +364,7 @@ public class MessageFilter implements Filter<Message> {
                 String str;
                 pl = (List) o;
                 size = pl.size();
-                Map[] h = new HashMap[size];
+                Map<String, Object>[] h = new HashMap[size];
                 for (i=0; i<size; i++) {
                     h[i] = new HashMap<String, Object>();
                     if ((o = pl.get(i)) == null || !(o instanceof Map))
@@ -498,39 +498,27 @@ public class MessageFilter implements Filter<Message> {
      * A pattern group represents all the patterns in a Map.
      * The default value is used to evaluate an empty pattern group.
      */
-    public static boolean evaluate(Message msg, Map[] props, Perl5Matcher pm,
-        boolean def) {
-        Map h;
-        Iterator iter;
+    public static boolean evaluate(Message msg, Map<String, Object>[] props,
+        Perl5Matcher pm, boolean def) {
         Pattern p;
         DataSet d;
         Object o;
-        String name, value;
+        String value;
+        String[] keys;
         boolean status = def;
-        int i, n;
 
         if (msg == null || props == null)
             return (! status);
 
-        n= props.length;
-        if (n <= 0)
-            return status;
-
-        for (i=0; i<n; i++) {
-            h = props[i];
-            if (h == null)
-                continue;
-            iter = h.keySet().iterator();
+        for (Map<String, Object> h : props) {
+            keys = h.keySet().toArray(new String[h.size()]);
             status = true;
-            while (iter.hasNext()) {
-                name = (String) iter.next();
-                if (name == null)
-                    continue;
-                o = h.get(name);
+            for (String key : keys) {
+                o = h.get(key);
                 if (o == null)
                     continue;
                 try {
-                    value = MessageUtils.getProperty(name, msg);
+                    value = MessageUtils.getProperty(key, msg);
                 }
                 catch (JMSException e) {
                     new Event(Event.WARNING, Event.traceStack(e)).send();
@@ -895,5 +883,9 @@ public class MessageFilter implements Filter<Message> {
             temp = null;
             tsub = null;
         }
+    }
+
+    protected void finalize() {
+        clear();
     }
 }

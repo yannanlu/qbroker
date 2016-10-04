@@ -28,7 +28,7 @@ import org.qbroker.common.Template;
 import org.qbroker.common.TextSubstitution;
 import org.qbroker.common.QuickCache;
 import org.qbroker.common.Utils;
-import org.qbroker.common.XML2Map;
+import org.qbroker.json.JSON2Map;
 import org.qbroker.net.JMXRequester;
 import org.qbroker.jms.MessageUtils;
 import org.qbroker.jms.MessageFilter;
@@ -78,7 +78,6 @@ public class JMXMessenger implements Connector {
     private int[] partition;
     private int maxMsgLength = 4194304;
     private QuickCache cache = null;
-    private XML2Map xmlReader = null;
     private Msg2Text msg2Text = null;
 
     /** Creates new JMXMessenger */
@@ -228,21 +227,6 @@ public class JMXMessenger implements Connector {
             throw(new IllegalArgumentException(uri +
                 ": operation is not supported for " + operation));
 
-        if ((o = props.get("SAXParser")) != null)
-            saxParser = (String) o;
-        if (saxParser == null)
-            saxParser = (String) System.getProperty("org.xml.sax.driver", null);
-        if (saxParser == null)
-            saxParser = "org.apache.xerces.parsers.SAXParser";
-
-        try {
-            xmlReader = new XML2Map(saxParser);
-        }
-        catch (Exception e) {
-            throw(new IllegalArgumentException(uri +
-                " failed to init xmlReader: " + e.toString()));
-        }
-
         dateFormat = new SimpleDateFormat("yyyy/MM/dd.HH:mm:ss.SSS");
     }
 
@@ -254,8 +238,8 @@ public class JMXMessenger implements Connector {
      * request message according to the result type, similar to a DB qurey.
      *<br/><br/>
      * It also supports the dynamic content filter and the formatter on queried
-     * messages. The filter and the formatter are defined via an XML text with
-     * Filters as the base tag. The XML text is stored in the body of the
+     * messages. The filter and the formatter are defined via a JSON text with
+     * Filters as the base name. The JSON text is stored in the body of the
      * request message. If the filter is defined, it will be used to select
      * certain messages based on the content and the header. If the formatter
      * is defined, it will be used to format the messages.
@@ -434,7 +418,7 @@ public class JMXMessenger implements Connector {
                 else { // new or expired
                     Map ph;
                     StringReader ins = new StringReader(msgStr);
-                    ph = (Map) xmlReader.getMap(ins).get("Filters");
+                    ph = (Map) JSON2Map.parse(ins);
                     ins.close();
                     if (currentTime - cache.getMTime() >= heartbeat) {
                         cache.disfragment(currentTime);

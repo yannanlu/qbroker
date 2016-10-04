@@ -261,8 +261,8 @@ public class DBRecord extends Monitor {
             throw(new IOException("DBQuery failed: returnCode is null"));
         }
         else {
-            throw(new IOException("DBQuery failed: " +
-                sqlStatusText[returnCode + sqlStatusOffset]));
+            throw(new IOException("DBQuery failed: " + r.get("ErrorMessage") +
+                " with " + sqlStatusText[returnCode + sqlStatusOffset]));
         }
 
         return report;
@@ -520,5 +520,9 @@ public class DBRecord extends Monitor {
             dbQuery.destroy();
             dbQuery = null;
         }
+    }
+
+    protected void finalize() {
+        destroy();
     }
 }

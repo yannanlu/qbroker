@@ -17,7 +17,6 @@ import org.apache.oro.text.regex.MalformedPatternException;
 import org.qbroker.net.MessageMailer;
 import org.qbroker.common.Template;
 import org.qbroker.common.TextSubstitution;
-import org.qbroker.common.Utils;
 import org.qbroker.event.Event;
 import org.qbroker.event.EventUtils;
 import org.qbroker.event.EventAction;
@@ -40,7 +39,7 @@ public class FormattedEventMailer implements EventAction {
     private long serialNumber;
     private int debug = 0;
     private MessageMailer mailer;
-    private Map<String, Object> sender;
+    private Map<String, Map> sender;
     private InternetAddress[] recipients;
     private Pattern pattern = null;
     private Perl5Matcher pm = null;
@@ -51,7 +50,7 @@ public class FormattedEventMailer implements EventAction {
         TextSubstitution[] msgSub = null;
         Map h;
         Map<String, Object> map;
-        String s, key, value;
+        String str, key, value;
         String[] addressList = null;
         int i, n;
 
@@ -82,15 +81,22 @@ public class FormattedEventMailer implements EventAction {
             throw(new IllegalArgumentException(name +
                 ": null or empty recipients"));
 
-        sender = new HashMap<String, Object>();
-        if ((key = (String) props.get("Subject")) != null &&
-            (value = (String) props.get("TemplateFile")) != null) {
+        sender = new HashMap<String, Map>();
+        key = (String) props.get("Subject");
+        value = (String) props.get("Template");
+        str = (String) props.get("TemplateFile");
+        if (key != null && key.length() > 0 &&
+           ((value != null && value.length() > 0) ||
+           (str != null && str.length() > 0))) {
             map = new HashMap<String, Object>();
             map.put("Subject", new Template(key));
-            map.put("Template", new Template(new File(value)));
+            if (value != null && value.length() > 0)
+                map.put("Template", new Template(value));
+            else
+                map.put("Template", new Template(new File(str)));
             o = props.get("Substitution");
             if (o != null && o instanceof List) {
-                msgSub = Utils.initSubstitutions((List) o);
+                msgSub = EventUtils.initSubstitutions((List) o);
                 map.put("MsgSub", msgSub);
             }
             sender.put("Default", map);
@@ -98,10 +104,10 @@ public class FormattedEventMailer implements EventAction {
         else if ((o = props.get("Default")) != null && o instanceof Map) {
             o = ((Map) o).get("Substitution");
             if (o != null && o instanceof List)
-                msgSub = Utils.initSubstitutions((List) o);
+                msgSub = EventUtils.initSubstitutions((List) o);
             else if ((o = props.get("Substitution")) != null &&
                 o instanceof List)
-                msgSub = Utils.initSubstitutions((List) o);
+                msgSub = EventUtils.initSubstitutions((List) o);
         }
 
         Iterator iter = props.keySet().iterator();
@@ -119,16 +125,23 @@ public class FormattedEventMailer implements EventAction {
             if (h.containsKey("Option")) // for option
                 continue;
             o = h.get("Subject");
-            value = (String) h.get("TemplateFile");
-            if (o == null || value == null || value.length() <= 0)
+            if (o == null)
+                continue;
+            value = (String) h.get("Template");
+            str = (String) h.get("TemplateFile");
+            if ((value == null || value.length() <= 0) &&
+                (str == null || str.length() <= 0))
                 continue;
             map = new HashMap<String, Object>();
             map.put("Subject", new Template((String) o));
-            map.put("Template", new Template(new File(value)));
+            if (value != null && value.length() > 0)
+                map.put("Template", new Template(value));
+            else
+                map.put("Template", new Template(new File(str)));
 
             o = h.get("Substitution");
             if (o != null && o instanceof List) // override
-                map.put("MsgSub", Utils.initSubstitutions((List) o));
+                map.put("MsgSub", EventUtils.initSubstitutions((List) o));
             else if (o == null) // use the default
                 map.put("MsgSub", msgSub);
 
@@ -181,8 +194,11 @@ public class FormattedEventMailer implements EventAction {
             return null;
 
         msgSub = (TextSubstitution[]) map.get("MsgSub");
-        if (msgSub != null)
+        if (msgSub != null) {
             change = EventUtils.getChange(event, msgSub, pm);
+            if (change != null && change.size() <= 0)
+                change = null;
+        }
 
         attr = event.attribute;
         template = (Template) map.get("Subject");
@@ -264,9 +280,9 @@ public class FormattedEventMailer implements EventAction {
         if (eventType == null || eventType.length() == 0)
             eventType = "Default";
 
-        map = (Map) sender.get(eventType);
+        map = sender.get(eventType);
         if (map == null)
-            map = (Map) sender.get("Default");
+            map = sender.get("Default");
 
         if (map != null && map.size() > 0) try {
             str = send(event, map);
@@ -283,5 +299,21 @@ public class FormattedEventMailer implements EventAction {
 
     public String getName() {
         return name;
+    }
+
+    public void close() {
+        pm = null;
+        pattern = null;
+        mailer = null;
+        if (sender != null) {
+            for (String key : sender.keySet())
+                sender.get(key).clear();
+            sender.clear();
+            sender = null;
+        }
+    }
+
+    protected void finalize() {
+        close();
     }
 }

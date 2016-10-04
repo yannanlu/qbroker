@@ -39,7 +39,7 @@ public class EventPoster implements EventAction {
     private HTTPConnector conn = null;
     private long serialNumber;
     private int debug = 0;
-    private Map<String, Object> poster;
+    private Map<String, Map> poster;
     private Pattern pattern = null;
     private Perl5Matcher pm = null;
     private boolean isPost = true;
@@ -89,7 +89,7 @@ public class EventPoster implements EventAction {
             throw(new IllegalArgumentException(name +
                 ": host not defined in " + uri));
 
-        poster = new HashMap<String, Object>();
+        poster = new HashMap<String, Map>();
         ph = Utils.cloneProperties(props);
         ph.put("URI", uri);
         ph.remove("Site");
@@ -114,8 +114,8 @@ public class EventPoster implements EventAction {
                 map.put("Fields", temp.getAllFields());
                 o = ph.get("Substitution");
                 if (o != null && o instanceof List) {
-                    msgSub = Utils.initSubstitutions((List) o);
-                    map.put("MsgSub", Utils.initSubstitutions((List) o));
+                    msgSub = EventUtils.initSubstitutions((List) o);
+                    map.put("MsgSub", EventUtils.initSubstitutions((List) o));
                 }
             }
             poster.put("Default", map);
@@ -123,10 +123,10 @@ public class EventPoster implements EventAction {
         else if ((o = ph.get("Default")) != null && o instanceof Map) {
             o = ((Map) o).get("Substitution");
             if (o != null && o instanceof List)
-                msgSub = Utils.initSubstitutions((List) o);
+                msgSub = EventUtils.initSubstitutions((List) o);
             else if ((o = ph.get("Substitution")) != null &&
                 o instanceof List)
-                msgSub = Utils.initSubstitutions((List) o);
+                msgSub = EventUtils.initSubstitutions((List) o);
         }
 
         Iterator iter = ph.keySet().iterator();
@@ -155,7 +155,7 @@ public class EventPoster implements EventAction {
                 map.put("Fields", temp.getAllFields());
                 o = ((Map) o).get("Substitution");
                 if (o != null && o instanceof List) // override
-                    map.put("MsgSub", Utils.initSubstitutions((List) o));
+                    map.put("MsgSub", EventUtils.initSubstitutions((List) o));
                 else if (o == null) // use the default
                     map.put("MsgSub", msgSub);
             }
@@ -188,8 +188,11 @@ public class EventPoster implements EventAction {
                 Template template = (Template) o;
                 String[] allFields = (String[]) map.get("Fields");
                 msgSub = (TextSubstitution[]) map.get("MsgSub");
-                if (msgSub != null)
+                if (msgSub != null) {
                     change = EventUtils.getChange(event, msgSub, pm);
+                    if (change != null && change.size() <= 0)
+                        change = null;
+                }
                 line = template.copyText();
                 n = allFields.length;
                 for (i=0; i<n; i++) {
@@ -269,8 +272,12 @@ public class EventPoster implements EventAction {
                 Template template = (Template) o;
                 String[] allFields = (String[]) map.get("Fields");
                 msgSub = (TextSubstitution[]) map.get("MsgSub");
-                if (msgSub != null)
+                if (msgSub != null) {
                     change = EventUtils.getChange(event, msgSub, pm);
+                    if (change != null && change.size() <= 0)
+                        change = null;
+                }
+
                 url = template.copyText();
                 attr = event.attribute;
                 n = allFields.length;
@@ -334,9 +341,9 @@ public class EventPoster implements EventAction {
         if (eventType == null || eventType.length() == 0)
             eventType = "Default";
 
-        map = (Map) poster.get(eventType);
+        map = poster.get(eventType);
         if (map == null)
-            map = (Map) poster.get("Default");
+            map = poster.get("Default");
 
         try {
             if (isPost)
@@ -356,5 +363,28 @@ public class EventPoster implements EventAction {
 
     public String getName() {
         return name;
+    }
+
+    public void close() {
+        pm = null;
+        pattern = null;
+        if (conn != null) {
+            conn.close();
+            conn = null;
+        }
+        if (queryTemplate != null) {
+            queryTemplate.clear();
+            queryTemplate = null;
+        }
+        if (poster != null) {
+            for (String key : poster.keySet())
+                poster.get(key).clear();
+            poster.clear();
+            poster = null;
+        }
+    }
+
+    protected void finalize() {
+        close();
     }
 }

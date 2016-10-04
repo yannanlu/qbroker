@@ -1603,6 +1603,10 @@ public class MonitorGroup {
         cachedProps = null;
     }
 
+    protected void finalize() {
+        close();
+    }
+
     /**
      * It initializes an monitor object with the given property Map
      * and returns a Map upon success or null otherwise.  If the
@@ -1635,6 +1639,15 @@ public class MonitorGroup {
                 "not defined for " + key).send();
             return null;
         }
+        else if (type == null || type.length() == 0) {
+            int i;
+            if ((i = className.lastIndexOf('.')) > 0)
+                type = className.substring(i+1);
+            else
+                type = className;
+        }
+        else if (className == null || className.length() == 0) //default package
+            className = "org.qbroker.monitor." + type;
 
         if ("ShortJob".equals(type)) {
             try {

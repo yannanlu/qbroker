@@ -368,7 +368,7 @@ public class ScriptedBrowser {
         int i, k, n, debug = 0;
         int[][] taskInfo = null;
         String[][] taskData = null;
-        List list = new ArrayList();
+        List<String> list = new ArrayList<String>();
         int TASK_ID = 0;
         int TASK_TYPE = 1;
         int TASK_PAUSE = 2;
@@ -423,7 +423,7 @@ public class ScriptedBrowser {
         taskInfo = new int[k][];
         taskData = new String[k][];
         for (i=0; i<k; i++) {
-            String attr = (String) list.get(i);
+            String attr = list.get(i);
             taskInfo[i] = new int[]{-1, -1, -1, -1, -1};
             taskData[i] = new String[]{null, null, null, null, null};
             if ((n = attr.indexOf(':')) > 0) { // for multiple attributes

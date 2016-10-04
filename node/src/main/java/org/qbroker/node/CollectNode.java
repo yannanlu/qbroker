@@ -1670,4 +1670,8 @@ public class CollectNode extends Node {
         templateMap.clear();
         substitutionMap.clear();
     }
+
+    protected void finalize() {
+        close();
+    }
 }

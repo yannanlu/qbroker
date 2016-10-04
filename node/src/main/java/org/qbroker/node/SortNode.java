@@ -1822,4 +1822,8 @@ public class SortNode extends Node {
         cache.clear();
         idCache.clear();
     }
+
+    protected void finalize() {
+        close();
+    }
 }

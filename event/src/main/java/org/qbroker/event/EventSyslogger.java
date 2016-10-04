@@ -22,8 +22,7 @@ import org.apache.oro.text.regex.Perl5Matcher;
 import org.apache.oro.text.regex.MalformedPatternException;
 import org.qbroker.common.Template;
 import org.qbroker.common.TextSubstitution;
-import org.qbroker.common.Utils;
-import org.qbroker.event.Event;
+import org.qbroker.event.EventUtils;
 import org.qbroker.event.EventAction;
 
 /**
@@ -46,7 +45,7 @@ public class EventSyslogger implements EventAction {
     private Perl5Matcher pm = null;
     private static DatagramSocket socket = null;
     private DatagramPacket packet;
-    private Map<String, Object> logger;
+    private Map<String, Map> logger;
     private String uri, hostname = "localhost";
     private int port = 514, debug = 0;
     private int defaultFacility = LOG_USER;
@@ -147,7 +146,7 @@ public class EventSyslogger implements EventAction {
                 defaultFacility = LOG_USER;
         }
 
-        logger = new HashMap<String, Object>();
+        logger = new HashMap<String, Map>();
         if ((o = props.get("Message")) != null) { // default
             value = EventUtils.substitute((String) o, template);
             map = new HashMap<String, Object>();
@@ -159,7 +158,7 @@ public class EventSyslogger implements EventAction {
                 map.put("Fields", temp.getAllFields());
                 o = props.get("Substitution");
                 if (o != null && o instanceof List) {
-                   msgSub = Utils.initSubstitutions((List) o);
+                   msgSub = EventUtils.initSubstitutions((List) o);
                    map.put("MsgSub", msgSub);
                 }
             }
@@ -169,10 +168,10 @@ public class EventSyslogger implements EventAction {
         else if ((o = props.get("Default")) != null && o instanceof Map) {
             o = ((Map) o).get("Substitution");
             if (o != null && o instanceof List)
-                msgSub = Utils.initSubstitutions((List) o);
+                msgSub = EventUtils.initSubstitutions((List) o);
             else if ((o = props.get("Substitution")) != null &&
                 o instanceof List)
-                msgSub = Utils.initSubstitutions((List) o);
+                msgSub = EventUtils.initSubstitutions((List) o);
         }
 
         Iterator iter = props.keySet().iterator();
@@ -201,7 +200,7 @@ public class EventSyslogger implements EventAction {
                 map.put("Fields", temp.getAllFields());
                 o = h.get("Substitution");
                 if (o != null && o instanceof List) // override
-                   map.put("MsgSub", Utils.initSubstitutions((List) o));
+                   map.put("MsgSub", EventUtils.initSubstitutions((List) o));
                 else if (o == null) // use the default
                    map.put("MsgSub", msgSub);
             }
@@ -286,8 +285,11 @@ public class EventSyslogger implements EventAction {
 
                 template = (Template) o;
                 msgSub = (TextSubstitution[]) map.get("MsgSub");
-                if (msgSub != null)
+                if (msgSub != null) {
                     change = EventUtils.getChange(event, msgSub, pm);
+                    if (change != null && change.size() <= 0)
+                        change = null;
+                }
 
                 allFields = (String[]) map.get("Fields");
                 text = template.copyText();
@@ -379,9 +381,9 @@ public class EventSyslogger implements EventAction {
         if (eventType == null || eventType.length() == 0)
             eventType = "Default";
 
-        map = (Map) logger.get(eventType);
+        map = logger.get(eventType);
         if (map == null)
-            map = (Map) logger.get("Default");
+            map = logger.get("Default");
 
         try {
             str = log(event, map);
@@ -463,6 +465,26 @@ public class EventSyslogger implements EventAction {
           default:
         }
         return -1;
+    }
+
+    public void close() {
+        pm = null;
+        pattern = null;
+        packet = null;
+        if (logger != null) {
+            for (String key : logger.keySet())
+                logger.get(key).clear();
+            logger.clear();
+            logger = null;
+        }
+        if (socket != null) {
+            socket.close();
+            socket = null;
+        }
+    }
+
+    protected void finalize() {
+        close();
     }
 
     static {

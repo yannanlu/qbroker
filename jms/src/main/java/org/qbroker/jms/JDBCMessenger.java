@@ -41,8 +41,8 @@ import org.qbroker.common.QList;
 import org.qbroker.common.GenericPool;
 import org.qbroker.common.SQLUtils;
 import org.qbroker.common.Utils;
-import org.qbroker.common.XML2Map;
 import org.qbroker.common.TimeoutException;
+import org.qbroker.json.JSON2Map;
 import org.qbroker.net.DBConnector;
 import org.qbroker.jms.MessageInputStream;
 import org.qbroker.jms.MessageUtils;
@@ -121,7 +121,6 @@ public class JDBCMessenger extends DBConnector {
     private String rcField, resultField, referenceFile = null;
     private String keyField = null, idField = null, msgID = null;
     private String bodyField = null;
-    private XML2Map xmlReader = null;
 
     private final static int ASSET_RS = 0;
     private final static int ASSET_KEY = 1;
@@ -285,20 +284,7 @@ public class JDBCMessenger extends DBConnector {
 
         offset = 1;
         timestamp = 0;
-        if ("list".equals(operation)) {
-            try {
-                String str = (String) System.getProperty("org.xml.sax.driver",
-                    null);
-                if (str == null)
-                    str = "org.apache.xerces.parsers.SAXParser";
-                xmlReader = new XML2Map(str);
-            }
-            catch (Exception e) {
-                throw(new IllegalArgumentException(uri +
-                    " failed to init xmlReader: " + e.toString()));
-            }
-        }
-        else if ("select".equals(operation)) try {
+        if ("select".equals(operation)) try {
             if ((o = props.get("ReferenceFile")) != null)
                 referenceFile = (String) o;
 
@@ -2037,7 +2023,7 @@ public class JDBCMessenger extends DBConnector {
                     filters = (MessageFilter[]) cache.get(msgStr, currentTime);
                 else { // new or expired
                     StringReader ins = new StringReader(msgStr);
-                    ph = (Map) xmlReader.getMap(ins).get("Filters");
+                    ph = (Map) JSON2Map.parse(ins);
                     ins.close();
                     if (currentTime - cache.getMTime() >= heartbeat) {
                         cache.disfragment(currentTime);

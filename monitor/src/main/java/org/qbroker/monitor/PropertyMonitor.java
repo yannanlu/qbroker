@@ -24,7 +24,6 @@ import java.io.PrintWriter;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import org.xml.sax.SAXException;
 import org.apache.oro.text.regex.Pattern;
 import org.apache.oro.text.regex.MatchResult;
 import org.apache.oro.text.regex.Perl5Compiler;
@@ -34,7 +33,6 @@ import org.qbroker.common.Service;
 import org.qbroker.common.Utils;
 import org.qbroker.common.TimeWindows;
 import org.qbroker.common.Template;
-import org.qbroker.common.XML2Map;
 import org.qbroker.json.JSON2Map;
 import org.qbroker.event.Event;
 import org.qbroker.monitor.MonitorUtils;
@@ -94,7 +92,7 @@ import org.qbroker.monitor.WebTester;
  * the property map. Then those objects not referenced by the list will be
  * removed for the support of projections.
  *<br/><br/>
- * Currently, it only supports web based or local JSON/XML properties.
+ * Currently, it only supports web based or local JSON properties.
  *<br/>
  * @author yannanlu@yahoo.com
  */
@@ -103,14 +101,13 @@ public class PropertyMonitor extends Monitor {
     private Map property = null;
     private Map<String, Object> baseMap, includeGroup, includeMap;
     private Map<String, List> secondaryMap;
-    private String uri, saxDriver, basename, configDir, authString;
+    private String uri, basename, configDir, authString;
     private String dataField = null;
     private File propertyFile = null;
-    private XML2Map xmlReader = null;
     private WebTester webTester;
     private File file;
     private Pattern pattern;
-    private boolean isRemote, isJSON = false;
+    private boolean isRemote;
     private long gmtOffset = 0L, timeDifference, previousTime;
     private int webStatusOffset, debug = 0;
     private SimpleDateFormat dateFormat;
@@ -134,7 +131,7 @@ public class PropertyMonitor extends Monitor {
             type = "PropertyMonitor";
 
         if (description == null)
-            description = "monitor changes on JSON or XML properties";
+            description = "monitor changes on JSON properties";
 
         if ((o = MonitorUtils.select(props.get("URI"))) == null)
             throw(new IllegalArgumentException("URI is not defined"));
@@ -164,9 +161,6 @@ public class PropertyMonitor extends Monitor {
                 authString = MonitorUtils.select(props.get("Password"));
                 h.put("Password", authString);
             }
-
-            if (uri.endsWith(".json"))
-                isJSON = true;
 
             h.put("Name", name);
             h.put("URI", uri);
@@ -210,8 +204,6 @@ public class PropertyMonitor extends Monitor {
             catch (Exception e) {
              throw(new IllegalArgumentException("failed to decode: "+fileName));
             }
-            if (fileName.endsWith(".json"))
-                isJSON = true;
         }
         else
             throw(new IllegalArgumentException("unsupported scheme: " +
@@ -249,41 +241,19 @@ public class PropertyMonitor extends Monitor {
         secondaryMap = new HashMap<String, List>();
 
         if ((o = MonitorUtils.select(props.get("PropertyFile"))) != null) {
-            if ((isJSON && !((String) o).endsWith(".json")) ||
-                (((String) o).endsWith(".json") && !isJSON))
+            if (!((String) o).endsWith(".json"))
         throw(new IllegalArgumentException("PropertyFile is not well defined"));
             propertyFile = new File((String) o);
         }
         else
             propertyFile = null;
 
-        if (!isJSON) {
-            if ((o = MonitorUtils.select(props.get("SAXDriver"))) != null)
-                saxDriver = (String) o;
-            else
-                saxDriver = (String) System.getProperty("org.xml.sax.driver",
-                    "org.apache.xerces.parsers.SAXParser");
-            try {
-                xmlReader = new XML2Map(saxDriver);
-            }
-            catch (Exception e) {
-                throw(new IllegalArgumentException(e.toString()));
-            }
-        }
-
         try {
             if (property == null && propertyFile != null &&
                 propertyFile.canRead()) {
-                if (isJSON) {
-                    FileReader fr = new FileReader(propertyFile);
-                    property = (Map) JSON2Map.parse(fr);
-                    fr.close();
-                }
-                else { // for xml
-                    FileInputStream fin = new FileInputStream(propertyFile);
-                    property = (Map) xmlReader.getMap(fin).get(basename);
-                    fin.close();
-                }
+                FileReader fr = new FileReader(propertyFile);
+                property = (Map) JSON2Map.parse(fr);
+                fr.close();
             }
             else if (property == null) {
                 property = new HashMap<String, Object>();
@@ -300,8 +270,7 @@ public class PropertyMonitor extends Monitor {
 
     @SuppressWarnings("unchecked")
     public Map<String, Object> generateReport(long currentTime)
-        throws IOException,
-        SAXException {
+        throws IOException {
         Map props = null;
         String response = null;
         long size = -1L;
@@ -394,7 +363,7 @@ public class PropertyMonitor extends Monitor {
                         new ParsePosition(0));
                     if (date != null)
                         mtime = date.getTime() - timeDifference;
-                    if (mtime < 0)
+                    if (mtime + timeDifference < 0L)
                         throw(new IOException("failed to parse mtime: " +
                             strBuf.toString()));
                 }
@@ -416,10 +385,7 @@ public class PropertyMonitor extends Monitor {
                 return report;
 
             StringReader in = new StringReader(response);
-            if (isJSON)
-                props = (Map) JSON2Map.parse(in);
-            else
-                props = (Map) xmlReader.getMap(in).get(basename);
+            props = (Map) JSON2Map.parse(in);
             in.close();
 
             if (props == null)
@@ -439,21 +405,9 @@ public class PropertyMonitor extends Monitor {
             if (mtime <= previousTime) // not updated
                 return report;
 
-            if (isJSON) {
-                FileReader fr = new FileReader(file);
-                props = (Map) JSON2Map.parse(fr);
-                fr.close();
-            }
-            else {
-                FileInputStream fin = new FileInputStream(file);
-                props = (Map) xmlReader.getMap(fin);
-                fin.close();
-
-                if (props == null) {
-                    throw(new SAXException("failed to get object from "+ uri));
-                }
-                props = (Map) props.get(basename);
-            }
+            FileReader fr = new FileReader(file);
+            props = (Map) JSON2Map.parse(fr);
+            fr.close();
 
             String dir = file.getParent();
             List<Object> group, list;
@@ -513,21 +467,13 @@ public class PropertyMonitor extends Monitor {
                             if ((o = props.get(item)) != null &&
                                 o instanceof Map)
                                 continue;
-                            File f = new File(dir + FILE_SEPARATOR + item +
-                                ((isJSON) ? ".json" : ".xml"));
+                            File f = new File(dir+FILE_SEPARATOR+item+".json");
                             if (!f.exists() || !f.isFile() || !f.canRead())
                                 throw(new IOException("failed to open " +
                                     f.getPath()));
-                            if (isJSON) {
-                                FileReader fr = new FileReader(f);
-                                o = (Map) JSON2Map.parse(fr);
-                                fr.close();
-                            }
-                            else {
-                                FileInputStream fin = new FileInputStream(f);
-                                o = xmlReader.getMap(fin).get(item);
-                                fin.close();
-                            }
+                            fr = new FileReader(f);
+                            o = (Map) JSON2Map.parse(fr);
+                            fr.close();
                             props.put(item, o);
                         }
                     }
@@ -732,10 +678,8 @@ public class PropertyMonitor extends Monitor {
                                 baseMap.put(key, o);
                         }
                     }
-                    if (isRemote && isJSON)
+                    if (isRemote)
                         persistJSON(mtime, response, change);
-                    else if (isRemote)
-                        persistXML(mtime, response, change);
                     else
                         copy(mtime, change);
                     actionCount = 0;
@@ -936,8 +880,7 @@ public class PropertyMonitor extends Monitor {
                 continue;
 
             if (change.get(key) == null) try { // item should be deleted
-                File file = new File(to + FILE_SEPARATOR + key +
-                    ((isJSON) ? ".json" : ".xml"));
+                File file = new File(to + FILE_SEPARATOR + key + ".json");
                 file.delete();
                 continue;
             }
@@ -950,8 +893,8 @@ public class PropertyMonitor extends Monitor {
                 key = file.getPath();
             }
             else {
-                value = to + FILE_SEPARATOR + key + ((isJSON)?".json":".xml");
-                key = from + FILE_SEPARATOR + key + ((isJSON)?".json":".xml");
+                value = to + FILE_SEPARATOR + key + ".json";
+                key = from + FILE_SEPARATOR + key + ".json";
             }
             try {
                 FileInputStream in = new FileInputStream(key);
@@ -1217,312 +1160,6 @@ public class PropertyMonitor extends Monitor {
         propertyFile.setLastModified(mtime);
     }
 
-    /**
-     * persists changes in XML downloaded from repository to local files
-     */
-    private void persistXML(long mtime, String content, Map change) {
-        Object o;
-        String key, dir, master, text;
-        int i, j, min, n;
-        if (propertyFile == null || content == null || change == null ||
-            change.size() <= 0)
-            return;
-        min = content.length();
-        dir = propertyFile.getParent();
-        master = propertyFile.getPath();
-        for (Iterator iter = change.keySet().iterator(); iter.hasNext();) {
-            key = (String) iter.next();
-            if (key == null || key.equals(basename))
-                continue;
-
-            if (change.get(key) == null) try { // item should be deleted
-                File file = new File(dir + FILE_SEPARATOR + key + ".xml");
-                file.delete();
-                if ((debug & Service.DEBUG_UPDT) > 0)
-                    new Event(Event.DEBUG, name + " deleted " + key).send();
-                continue;
-            }
-            catch (Exception e) {
-                continue;
-            }
-
-            // persist either new or changed includes
-            if ((i = content.indexOf("<" + key + ">")) <= 0) {
-                new Event(Event.ERR, name + ": begin tag not found for "+
-                    key).send();
-                continue;
-            }
-
-            if (i < min)
-                min = i;
-
-            if ((j = content.indexOf("</" + key + ">", i)) <= 0) {
-                new Event(Event.ERR, name + ": end tag not found for "+
-                    key).send();
-                continue;
-            }
-
-            text = content.substring(i, j+key.length()+3);
-            key = dir + FILE_SEPARATOR + key + ".xml";
-            try {
-                saveToFile(key, text);
-            }
-            catch (IOException e) {
-                new Event(Event.ERR, name + ": failed to write to "+
-                    key + ": " + e.toString()).send();
-                continue;
-            }
-            if ((debug & Service.DEBUG_UPDT) > 0)
-                new Event(Event.DEBUG, name + " updated " + key).send();
-        }
-
-        // secondaryMap stores a list of maps at each includeGroup key
-        // where the keys of each map are the names of 2nd includes
-        // and the values are the corresponding primary includes
-        if ((o = secondaryMap.get(basename)) != null) { //for secondary includes
-            int k;
-            List list = (List) o;
-            n = list.size();
-            for (i=0; i<n; i++) {
-                if ((o = list.get(i)) == null || !(o instanceof Map))
-                    continue;
-
-                // keys of the map are names of 2nd includes, values of the
-                // map are names of the container with the 2nd includes
-                Map map = (Map) o;
-                for (Iterator r = map.keySet().iterator(); r.hasNext();) {
-                    String item = (String) r.next();
-                    o = map.get(item);
-                    if (!change.containsKey((String) o)) // no changes
-                        continue;
-                    j = content.indexOf("<" + item + ">");
-                    k = (j >= 0) ? content.indexOf("</" + item + ">", j) : 0;
-                    if (j >= 0 && k > j) {
-                        text = content.substring(j, k+item.length()+3);
-                        key = dir + FILE_SEPARATOR + item + ".xml";
-
-                        try { // persist changes
-                            saveToFile(key, text);
-                        }
-                        catch (IOException e) {
-                            new Event(Event.ERR, name + ": failed to write to "+
-                                key + ": " + e.toString()).send();
-                            continue;
-                        }
-                        if ((debug & Service.DEBUG_UPDT) > 0)
-                            new Event(Event.DEBUG, name + " updated " +
-                                key).send();
-                    }
-                }
-            }
-        }
-
-        // extract content for master if it has changed
-        if ((o = change.get(basename)) != null) { // for primary includes
-            String[] items = null;
-
-            // get primary includes for the new master config
-            items = Utils.getIncludes(basename, includeGroup, (Map) o);
-            if (items == null)
-                items = new String[0];
-
-            // items contains names for all components with new properties
-            n = items.length;
-            for (i=0; i<n; i++) { // loop thru all items to find upper boundary
-                key = items[i];
-                j = content.indexOf("<" + key + ">");
-                if (j >= 0 && j < min)
-                    min = j;
-            }
-
-            for (i=min-1; i>=0; i--) { // skip white spaces for indent
-                if (content.charAt(i) == ' ' || content.charAt(i) == '\t')
-                    continue;
-                else
-                    break;
-            }
-
-            // extract content for the master config
-            text = content.substring(0, i+1);
-            if (min < content.length())
-                text += "</" + basename + ">";
-
-            // get rid of the ignored field
-            if (ignoredFields.length > 0 && ignoredFields[0] != null) {
-                i = text.indexOf("<" + ignoredFields[0] + ">");
-                j = (i >= 0) ? text.indexOf("</" + ignoredFields[0] + ">", i):0;
-                if (i >= 0 && j > i) {
-                    min = text.indexOf("<", j+ignoredFields[0].length() + 3);
-                    if (min > j)
-                        j = min;
-                    text = text.substring(0, i) + text.substring(j);
-                }
-            }
-
-            // clean up secondary includes for the master config
-            if ((o = secondaryMap.remove(basename)) != null) {
-                int k;
-                String str;
-                List list = (List) o;
-                n = list.size();
-                min = text.length();
-                for (i=0; i<n; i++) {
-                    if ((o = list.get(i)) == null || !(o instanceof Map))
-                        continue;
-
-                    // keys of the map are names of 2nd includes, values of the
-                    // map are names of the container with the 2nd includes
-                    Map map = (Map) o;
-                    for (Iterator r = map.keySet().iterator(); r.hasNext();) {
-                        String item = (String) r.next();
-                        j = text.indexOf("<" + item + ">");
-                        k = (j >= 0) ? text.indexOf("</" + item + ">", j) : 0;
-                        if (j >= 0 && k > j) {
-                            if (j < min)
-                                min = j;
-                        }
-                    }
-                }
-
-                for (i=min-1; i>=0; i--) { // skip white spaces for indent
-                    if (text.charAt(i) == ' ' || text.charAt(i) == '\t')
-                        continue;
-                    else
-                        break;
-                }
-
-                // extract content for the master config
-                if (min < text.length())
-                    text = text.substring(0, i+1) + "</" + basename + ">";
-            }
-
-            // clean up secondary includes for other groups
-            for (String item : secondaryMap.keySet()) {
-                int k;
-                String str, g;
-                StringBuffer strBuf = new StringBuffer();
-                if ((o = secondaryMap.get(item)) == null)
-                    continue;
-
-                i = text.indexOf("<" + item + " "); // item is an ARRAY
-                j = text.lastIndexOf("</" + item + ">");
-                if (i >= 0 && j > i) // str covers all members for item
-                    str = text.substring(i, j + item.length() + 3);
-                else
-                    continue;
-
-                List list = (List) o;
-                n = list.size();
-                for (i=0; i<n; i++) { // loop thru the list to extract content
-                    if ((j = str.indexOf("</" + item + ">")) < 0)
-                        continue;
-                    g = str.substring(0, j + item.length() + 3);
-                    str = str.substring(j + item.length() + 3);
-                    if ((o = list.get(i)) == null || !(o instanceof Map)) {
-                        strBuf.append(g);
-                        continue;
-                    }
-                    min = g.length();
-
-                    // keys of the map are names of 2nd includes, values of the
-                    // map are names of the container with the 2nd includes
-                    Map map = (Map) o;
-                    for (Iterator r = map.keySet().iterator(); r.hasNext();) {
-                        key = (String) r.next();
-                        j = g.indexOf("<" + key + ">");
-                        k = (j >= 0) ? g.indexOf("</" + key + ">", j) : 0;
-                        if (j >= 0 && k > j) try { // persist changes
-                            if (j < min)
-                                min = j;
-                            k += key.length()+3;
-                            key = dir + FILE_SEPARATOR + key + ".xml";
-                            saveToFile(key, g.substring(j, k));
-                            if ((debug & Service.DEBUG_UPDT) > 0)
-                                new Event(Event.DEBUG, name + " updated " +
-                                    key).send();
-                        }
-                        catch (IOException e) {
-                            new Event(Event.ERR, name + ": failed to write to "+
-                                key + ": " + e.toString()).send();
-                            continue;
-                        }
-                    }
-
-                    for (j=min-1; j>=0; j--) { // skip white spaces for indent
-                        if (g.charAt(j) == ' ' || g.charAt(j) == '\t')
-                            continue;
-                        else
-                            break;
-                    }
-
-                    if (min < g.length())
-                        strBuf.append(g.substring(0, j+1) + "</" + item + ">");
-                    else
-                        strBuf.append(g);
-                }
-                if (strBuf.length() > 0) { // find boundaries for item
-                    i = text.indexOf("<" + item + " ");
-                    j = text.lastIndexOf("</" + item + ">");
-                    if (i >= 0 && j > i) // replace the part for item
-                        text = text.substring(0, i) + strBuf.toString() +
-                            text.substring(j + item.length() + 3);
-                }
-            }
-
-            // make sure to update the list of dataField only
-            if (dataField != null && dataField.length() > 0) {
-                String str, data;
-                StringBuffer strBuf = new StringBuffer();
-                i = text.indexOf("<" + dataField + " ");
-                j = text.lastIndexOf("</" + dataField + ">");
-                if (i >= 0 && j > i)
-                    str = text.substring(i, j + dataField.length() + 3);
-                else
-                    str = "";
-
-                try {
-                    data = loadFromFile(master);
-                }
-                catch (IOException e) {
-                    data = "";
-                    new Event(Event.ERR, name + ": failed to read from "+
-                        master + ": " + e.toString()).send();
-                }
-                if (data.length() > 0) { // got original master content
-                    text = data;
-                    i = text.indexOf("<" + dataField + " ");
-                    j = text.lastIndexOf("</" + dataField + ">");
-                    if (i >= 0 && j > i)
-                        text = text.substring(0, i) + str +
-                            text.substring(j + dataField.length() + 3);
-                    else {
-                        i = text.lastIndexOf("</" + basename + ">");
-                        if (i > 0)
-                            text = text.substring(0, i) + str +
-                                text.substring(i);
-                        else {
-                            new Event(Event.ERR, name + ": failed to find the "+
-                                 "close tag of "+basename+" in "+master).send();
-                            return;
-                        }
-                    }
-                }
-            }
-
-            try { // persist the master config
-                saveToFile(master, text);
-                if ((debug & Service.DEBUG_UPDT) > 0)
-                    new Event(Event.DEBUG, name + " updated " + master).send();
-            }
-            catch (IOException e) {
-                new Event(Event.ERR, name + ": failed to write to "+
-                    master + ": " + e.toString()).send();
-            }
-        }
-
-        propertyFile.setLastModified(mtime);
-    }
-
     /** saves content correctly to a file specified by the path */
     private static void saveToFile(String path, String text) throws IOException{
         int i, j, l;
@@ -1634,23 +1271,6 @@ public class PropertyMonitor extends Monitor {
         return positions;
     }
 
-    /** returns the location for insert on the key after n searches */
-    private static int locateXML(int n, String key, String content) {
-        int i, j, m;
-        if (content == null || key == null || key.length() <= 0 || n <= 0)
-            return -1;
-
-        String str = "</" + key + ">";
-        m = content.length() - 1;
-        for (i=1; i<=n; i++) {
-            j = content.lastIndexOf(str, m);
-            if (j < 0)
-                return -i;
-            m = j;
-        }
-        return m;
-    }
-
     /** returns the JSON content retrieved from the master content */
     private static String getContentJSON(int s, String key, String content) {
         int i, j;
@@ -1665,22 +1285,6 @@ public class PropertyMonitor extends Monitor {
             int k = JSON2Map.locate(1, content, j);
             return (k > j) ? content.substring(j, k + 1) : "";
         }
-        else
-            return "";
-    }
-
-    /** returns the XML content retrieved from the master content */
-    private static String getContentXML(int s, String key, String content) {
-        int i, j;
-        if (key == null || content == null)
-            return null;
-        if (s > 0)
-            i = content.indexOf("<" + key + ">", s);
-        else
-            i = content.indexOf("<" + key + ">");
-        j = (i >= 0) ? content.indexOf("</" + key + ">", i) : -1;
-        if (j >= 0 && j > i) // found the block
-            return content.substring(i, j + key.length() + 3);
         else
             return "";
     }
@@ -1754,8 +1358,12 @@ public class PropertyMonitor extends Monitor {
         }
     }
 
+    protected void finalize() {
+        destroy();
+    }
+
     /**
-     * It builds the complete JSON or XML property file with SSI according to
+     * It builds the complete JSON property file according to
      * the master configuration file and the files for individual components.
      * The configuration parameters are stored in the json file, pm.json,
      * that defines how to handle all applications, etc.
@@ -1771,12 +1379,10 @@ public class PropertyMonitor extends Monitor {
         Set<String> hSet;
         String cfgDir, basename = null, configFile = null;
         String indicatorFile, propertyFile, application = null, category = null;
-        String content, lastModified, includeFile = null, saxParser = null;
+        String content, lastModified, includeFile = null;
         String item, str;
         String[] includes, keys;
-        boolean isJSON = false;
         StringBuffer strBuf = new StringBuffer();
-        XML2Map xmlReader = null;
         SimpleDateFormat dateFormat = null;
         Template template;
         File file;
@@ -1809,11 +1415,6 @@ public class PropertyMonitor extends Monitor {
                     configFile = args[i+1];
                 }
                 break;
-              case 'X':
-                if (i+1 < args.length) {
-                    saxParser = args[i+1];
-                }
-                break;
               case 'R':
                 queries[num++] = QUERY_REPOS;
                 break;
@@ -1837,28 +1438,10 @@ public class PropertyMonitor extends Monitor {
         if (configFile == null)
             configFile = "/opt/qbroker/agent/pm.json";
 
-        isJSON = configFile.endsWith(".json");
-
         try {
-            if (isJSON) {
-                FileReader fr = new FileReader(configFile);
-                ph = (Map) JSON2Map.parse(fr);
-                fr.close();
-            }
-            else { // for xml
-                if (saxParser == null)
-                    saxParser =
-                        (String) System.getProperty("org.xml.sax.driver", null);
-
-                if (saxParser == null)
-                    saxParser = "org.apache.xerces.parsers.SAXParser";
-
-                FileInputStream fs = new FileInputStream(configFile);
-                xmlReader = new XML2Map(saxParser);
-                Map h = xmlReader.getMap(fs);
-                fs.close();
-                ph = (Map) h.get("PM");
-            }
+            FileReader fr = new FileReader(configFile);
+            ph = (Map) JSON2Map.parse(fr);
+            fr.close();
         }
         catch (Exception e) {
             e.printStackTrace();
@@ -1930,18 +1513,10 @@ public class PropertyMonitor extends Monitor {
 
         lastModified = (String) o;
 
-        if (isJSON) { // for JSON
-            if ((o = ph.get("DateFormat")) == null || !(o instanceof String))
+        if ((o = ph.get("DateFormat")) == null || !(o instanceof String))
             throw(new IllegalArgumentException( "DateFormat not well defined"));
-            
-            dateFormat = new SimpleDateFormat((String) o);
-        }
-        else { // for XML
-            if ((o=ph.get("IncludeTemplate")) == null || !(o instanceof String))
-        throw(new IllegalArgumentException("IncludeTemplate not well defined"));
 
-            includeFile = (String) o;
-        }
+        dateFormat = new SimpleDateFormat((String) o);
 
         if ((o = ph.get(application)) != null && o instanceof Map)
             props = (Map) o;
@@ -1987,12 +1562,8 @@ public class PropertyMonitor extends Monitor {
                 "IndicatorFile not well defined for: " + application));
         indicatorFile = template.substitute("category", category, (String) o);
         file = new File(indicatorFile);
-        if (isJSON)
-            lastModified = template.substitute("mtime",
-                dateFormat.format(new Date()), lastModified);
-        else
-            lastModified = template.substitute("filename", file.getName(),
-                lastModified);
+        lastModified = template.substitute("mtime",
+            dateFormat.format(new Date()), lastModified);
         String dir = file.getParent() + FILE_SEPARATOR;
         if ((i = cfgDir.indexOf(dir)) >= 0)
             dir = cfgDir.substring(i+dir.length());
@@ -2013,16 +1584,8 @@ public class PropertyMonitor extends Monitor {
             content = strBuf.toString();
 
             StringReader in = new StringReader(content);
-            if (isJSON) {
-                props = (Map) JSON2Map.parse(in);
-                in.close();
-            }
-            else {
-                ph = xmlReader.getMap(in);
-                in.close();
-                if (ph != null) // property Map of the application
-                    props = (Map) ph.get(basename);
-            }
+            props = (Map) JSON2Map.parse(in);
+            in.close();
             if (props == null)
                 throw(new IOException("failed to get object from "+
                     file.getPath()));
@@ -2030,10 +1593,6 @@ public class PropertyMonitor extends Monitor {
         catch (IOException e) {
             e.printStackTrace();
             System.exit(1);
-        }
-        catch (SAXException e) {
-            e.printStackTrace();
-            System.exit(2);
         }
 
         hSet = new HashSet<String>();
@@ -2080,7 +1639,7 @@ public class PropertyMonitor extends Monitor {
             list = (List) o;
             size = list.size();
             positions = null;
-            if (isJSON && !key.equals(basename)) {
+            if (!key.equals(basename)) {
                 // scan for positions for key and its members
                 positions = locateJSON(key, content);
                 if (positions.length != size + 2) { // failure
@@ -2111,55 +1670,39 @@ public class PropertyMonitor extends Monitor {
 
                 // get all secondary includes
                 includes = MonitorUtils.getSecondaryIncludes(
-                    hSet.toArray(new String[n]), cfgDir,
-                    ((isJSON) ? null : saxParser), policyMap);
+                    hSet.toArray(new String[n]), cfgDir, policyMap);
 
                 strBuf = new StringBuffer();
                 for (j=0; j<includes.length; j++) {
                     if (includes[j] == null || includes[j].length() <= 0)
                         continue;
-                    if (isJSON) { // for json
-                        String text;
-                        item = cfgDir + FILE_SEPARATOR + includes[j] + ".json";
-                        try {
-                            text = loadFromFile(item);
-                        }
-                        catch (Exception e) {
-                            text = "failed to load the content from " +
-                                item + ": " + e.toString();
-                        }
-                        strBuf.append(",\"" + includes[j] + "\":\n" + text);
+                    String text;
+                    item = cfgDir + FILE_SEPARATOR + includes[j] + ".json";
+                    try {
+                        text = loadFromFile(item);
                     }
-                    else { // for SSI on xml
-                        item = dir + FILE_SEPARATOR + includes[j] + ".xml";
-                        strBuf.append(template.substitute("filename", item,
-                            includeFile) + "\n");
+                    catch (Exception e) {
+                        text = "failed to load the content from " +
+                            item + ": " + e.toString();
                     }
+                    strBuf.append(",\"" + includes[j] + "\":\n" + text);
                 }
                 if (includes.length <= 0 || strBuf.length() <= 0) //no 2nd incls
                     continue;
                 if (basename.equals(key))
-                    k = content.lastIndexOf((isJSON) ? "}" : "</" + key + ">");
-                else if (isJSON) { // JSON for other group instances
+                    k = content.lastIndexOf("}");
+                else // JSON for other group instances
                     k = positions[i+1];
-                }
-                else // XML for other group instances
-                    k = locateXML(size-i, key, content);
                 if (k > 0) // insert the content
                     content = content.substring(0, k) + strBuf.toString() +
                         content.substring(k);
             }
         }
 
-        if (isJSON) { // add mtime
-            if ((i = JSON2Map.locate(0, content, 0)) >= 0)
-                content = content.substring(0, i+1) +
-                    lastModified + content.substring(i+1);
-        }
-        else if ((i = content.indexOf("<" + basename + ">")) >= 0) { //add mtime
-            content = content.substring(0, i+2+basename.length()) +
-                lastModified + content.substring(i+2+basename.length());
-        }
+        // add mtime
+        if ((i = JSON2Map.locate(0, content, 0)) >= 0)
+            content = content.substring(0, i+1) +
+                lastModified + content.substring(i+1);
 
         // get names for all primary includes
         includes = Utils.getIncludes(basename, includeGroup, props);
@@ -2167,34 +1710,21 @@ public class PropertyMonitor extends Monitor {
         n = includes.length;
         strBuf = new StringBuffer();
         for (i=0; i<n; i++) { // include individual configs into master config
-            if (isJSON) { // for json
-                String text;
-                item = cfgDir + FILE_SEPARATOR + includes[i] + ".json";
-                try {
-                    text = loadFromFile(item);
-                }
-                catch (Exception e) {
-                    text = "failed to load the content from " + item +
-                        ": " + e.toString();
-                }
-                strBuf.append(",\"" + includes[i] + "\":\n" + text);
+            String text;
+            item = cfgDir + FILE_SEPARATOR + includes[i] + ".json";
+            try {
+                text = loadFromFile(item);
             }
-            else { // for xml SSI
-                item = dir + FILE_SEPARATOR + includes[i] + ".xml";
-                strBuf.append(template.substitute("filename", item,
-                    includeFile) + "\n");
+            catch (Exception e) {
+                text = "failed to load the content from " + item +
+                    ": " + e.toString();
             }
+            strBuf.append(",\"" + includes[i] + "\":\n" + text);
         }
 
-        if (isJSON) {
-            if ((i = content.lastIndexOf("}")) > 0)
-                content = content.substring(0, i) + strBuf.toString() +
-                    content.substring(i);
-        }
-        else if ((i = content.lastIndexOf("</" + basename + ">")) > 0) {
+        if ((i = content.lastIndexOf("}")) > 0)
             content = content.substring(0, i) + strBuf.toString() +
                 content.substring(i);
-        }
 
         if (show > 0) { // output content to stdout
             System.out.print(content);
@@ -2214,7 +1744,6 @@ public class PropertyMonitor extends Monitor {
         System.out.println("  -?: print this usage page");
         System.out.println("  -l: list all properties of the indicator file");
         System.out.println("  -I: ConfigFile (default: /opt/qbroker/agent/pm.json)");
-        System.out.println("  -X: XMLParser (default: xerces)");
         System.out.println("  -c: Category");
         System.out.println("  -a: Application");
         System.out.println("  -R: query the full path of the Repository Directory");

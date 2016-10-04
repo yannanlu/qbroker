@@ -671,6 +671,33 @@ public class EventUtils {
         return strBuf.toString();
     }
 
+    /** returns an array of TextSubstitution for a list of maps for Sub */
+    public static TextSubstitution[] initSubstitutions(List sub) {
+        TextSubstitution[] msgSub = null;
+        if (sub != null && sub.size() > 0) {
+            int i;
+            String key, value;
+            Iterator iter;
+            Object o;
+            msgSub = new TextSubstitution[sub.size()];
+            for (i=0; i<msgSub.length; i++) {
+                o = sub.get(i);
+                if (o instanceof Map) {
+                    iter = ((Map) o).keySet().iterator();
+                    key = (String) iter.next();
+                    if (key == null || key.length() <= 0)
+                        continue;
+                    value = (String) ((Map) o).get(key);
+                    msgSub[i] = new TextSubstitution(key, value);
+                }
+                else
+                    msgSub[i] = null;
+            }
+        }
+
+        return msgSub;
+    }
+
     /**
      * returns a Map contains changes only from the substitution
      */

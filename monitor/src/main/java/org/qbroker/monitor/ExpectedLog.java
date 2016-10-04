@@ -1196,4 +1196,8 @@ public class ExpectedLog extends Monitor {
             script = null;
         }
     }
+
+    protected void finalize() {
+        destroy();
+    }
 }

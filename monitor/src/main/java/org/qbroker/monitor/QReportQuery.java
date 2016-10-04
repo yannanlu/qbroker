@@ -20,6 +20,8 @@ import org.qbroker.json.JSON2Map;
 public class QReportQuery extends Report {
     private int debug = 0;
     private int reportExpiration = 0;
+    private boolean withPrivateReport = false;
+    private Map<String, String> keyMap;
     private java.lang.reflect.Method getReport = null;
 
     public QReportQuery(Map props) {
@@ -27,7 +29,7 @@ public class QReportQuery extends Report {
         Object o;
 
         if (type == null)
-            type = "ReportQuery";
+            type = "QReportQuery";
 
         if ((o = props.get("ReportClass")) != null && o instanceof String) {
             try {
@@ -42,10 +44,22 @@ public class QReportQuery extends Report {
                 throw(new IllegalArgumentException("getReport: not a static " +
                     "method of: " + (String) o));
         }
+        else if ((o = props.get("WithPrivateReport")) != null &&
+            "true".equals((String) o)) // for private report
+            withPrivateReport = true;
 
         if ((o = props.get("ReportExpiration")) != null &&
             (reportExpiration = Integer.parseInt((String) o)) < 0)
             reportExpiration = 0;
+
+        keyMap = new HashMap<String, String>();
+        if ((o = props.get("KeyMap")) != null && o instanceof Map) {
+            Map map = (Map) o;
+            for (Object ky : map.keySet()) {
+                if ((o = map.get(ky)) != null && o instanceof String)
+                    keyMap.put((String) ky, (String) o);
+            }
+        }
 
         if ((o = props.get("Debug")) != null)
             debug = Integer.parseInt((String) o);
@@ -82,13 +96,27 @@ public class QReportQuery extends Report {
             }
         }
 
-        if (getReport == null)
+        if (withPrivateReport) // for private report
+            r = (Map) MonitorUtils.getPrivateReport();
+        else if (getReport == null)
             r = MonitorUtils.getReport(reportName);
         else
             r = (Map) getReport.invoke(null, new Object[] {reportName});
 
         if (r == null)
             throw(new IllegalArgumentException("no such report: " +reportName));
+        else if (keyMap.size() > 0) { // copy content over with keyMap
+            String str;
+            for (String key : keyMap.keySet()) {
+                str = keyMap.get(key);
+                if (str == null || str.length() <= 0 || !r.containsKey(str))
+                    continue;
+                report.put(key, r.get(str));
+            }
+            if (!keyMap.containsKey("TestTime") && !r.containsKey("TestTime"))
+                report.put("TestTime", String.valueOf(currentTime));
+            r.clear();
+        }
         else { // copy the content over
             for (Object ky : r.keySet())
                 report.put((String) ky, r.get(ky));
@@ -117,7 +145,7 @@ public class QReportQuery extends Report {
             }
         }
 
-        try {
+        if (disableMode != 0) try {
             long curDepth, preDepth;
             curDepth = Long.parseLong((String) report.get("CurrentDepth"));
             preDepth = Long.parseLong((String) report.get("PreviousDepth"));
@@ -136,5 +164,18 @@ public class QReportQuery extends Report {
         }
 
         return report;
+    }
+
+    public void destroy() {
+        super.destroy();
+        getReport = null;
+        if (keyMap != null) {
+            keyMap.clear();
+            keyMap = null;
+        }
+    }
+
+    protected void finalize() {
+        destroy();
     }
 }

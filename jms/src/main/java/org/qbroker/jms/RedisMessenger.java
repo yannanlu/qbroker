@@ -32,7 +32,6 @@ import org.qbroker.common.XQueue;
 import org.qbroker.common.IndexedXQueue;
 import org.qbroker.common.Utils;
 import org.qbroker.common.BytesBuffer;
-import org.qbroker.common.XML2Map;
 import org.qbroker.common.TimeoutException;
 import org.qbroker.net.JedisConnector;
 import org.qbroker.net.RedisConnector;

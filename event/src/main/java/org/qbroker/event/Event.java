@@ -617,7 +617,7 @@ public class Event implements org.qbroker.common.Event {
     protected void finalize() {
         if (body != null)
             body = null;
-        if (attribute.size() > 0)
+        if (attribute != null)
             attribute.clear();
     }
 

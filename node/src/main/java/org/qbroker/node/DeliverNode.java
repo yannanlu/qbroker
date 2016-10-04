@@ -23,7 +23,6 @@ import org.qbroker.common.AssetList;
 import org.qbroker.common.Template;
 import org.qbroker.common.TextSubstitution;
 import org.qbroker.common.Utils;
-import org.qbroker.common.XML2Map;
 import org.qbroker.common.CollectibleCells;
 import org.qbroker.json.JSON2Map;
 import org.qbroker.jms.JMSEvent;
@@ -124,7 +123,6 @@ public class DeliverNode extends Node {
     private String poolNamePatternStr = null;
 
     private AssetList reqList = null;  //{oid,rid} for tracking outstanding reqs
-    private XML2Map xmlReader = null;
     private Map<String, Object> templateMap, substitutionMap;
     private Perl5Matcher pm = null;
     private boolean takebackEnabled = false;
@@ -174,18 +172,6 @@ public class DeliverNode extends Node {
             takebackEnabled = true;
 
         pm = new Perl5Matcher();
-        if ((o = props.get("SAXParser")) != null)
-            saxParser = (String) o;
-        if (saxParser == null)
-            saxParser = (String) System.getProperty("org.xml.sax.driver",
-                "org.apache.xerces.parsers.SAXParser");
-        try {
-            xmlReader = new XML2Map(saxParser);
-        }
-        catch (Exception e) {
-            new Event(Event.WARNING, name + " failed to init xmlReader: "+
-                Event.traceStack(e)).send();
-        }
 
         if ((o = props.get("OutLink")) == null || !(o instanceof List))
             throw(new IllegalArgumentException(name +
@@ -484,9 +470,7 @@ public class DeliverNode extends Node {
 
             if ((o = ph.get("DefaultProperty")) != null &&
                 o instanceof Map) { // default properties
-                str = "<DefaultProperty>" + JSON2Map.toXML((Map) o)+
-                    "</DefaultProperty>";
-                Template temp = new Template(str);
+                Template temp = new Template(JSON2Map.toJSON((Map) o));
                 if (temp.numberOfFields() <= 0) // not a template
                     rule.put("DefaultProperty", Utils.cloneProperties((Map) o));
                 else
@@ -761,9 +745,7 @@ public class DeliverNode extends Node {
                             Template temp = (Template) o;
                             str = MessageUtils.format(inMessage,buffer,temp,pm);
                             StringReader sin = new StringReader(str);
-                            o = xmlReader.getMap(sin);
-                            bag.put("Properties",
-                                ((Map) o).get("DefaultProperty"));
+                            bag.put("Properties", (Map) JSON2Map.parse(sin));
                             sin.close();
                         }
                         catch (Exception e) {
@@ -775,7 +757,7 @@ public class DeliverNode extends Node {
                             (o = bag.get("Properties")) != null)
                             new Event(Event.DEBUG, name + ": " + ruleName +
                                 " created an ObjectMessage for " + uriStr +
-                                ": " + JSON2Map.toXML((Map) o)).send();
+                                ": " + JSON2Map.toJSON((Map) o)).send();
                         try {
                             msg = new ObjectEvent();
                             msg.setStringProperty("URI", uriStr);
@@ -1564,5 +1546,9 @@ public class DeliverNode extends Node {
         reqList.clear();
         templateMap.clear();
         substitutionMap.clear();
+    }
+
+    protected void finalize() {
+        close();
     }
 }

@@ -27,7 +27,6 @@ import java.text.SimpleDateFormat;
 import java.text.ParsePosition;
 import javax.jms.Message;
 import javax.jms.JMSException;
-import org.qbroker.common.XML2Map;
 import org.qbroker.common.XQueue;
 import org.qbroker.json.JSON2Map;
 import org.qbroker.jms.MessageUtils;
@@ -42,8 +41,8 @@ import org.qbroker.event.Event;
 
 /**
  * QCLient browses/copies/gets/moves/puts JMS messages from/to/between queues.
- * The configuration parameters are stored in the property file, either
- * Client.json or Client.xml, that list hostname, qmgr_name, q_name, etc.
+ * The configuration parameters are stored in the property file, Client.json,
+ * that list hostname, qmgr_name, q_name, etc.
  *<br/>
  * Usage: java org.qbroker.flow.QClient [-?|-l|-I configFile|...]
  */
@@ -82,19 +81,9 @@ public class QClient {
 
         try {
             if (configFile != null) {
-                if (configFile.endsWith(".json")) {
-                    FileReader fr = new FileReader(configFile);
-                    props = (Map) JSON2Map.parse(fr);
-                    fr.close();
-                }
-                else { // for xml
-                    FileInputStream fs = new FileInputStream(configFile);
-                    XML2Map xh =
-                        new XML2Map("org.apache.xerces.parsers.SAXParser");
-                    h = xh.getMap(fs);
-                    fs.close();
-                    props = (Map) h.get("Client");
-                }
+                FileReader fr = new FileReader(configFile);
+                props = (Map) JSON2Map.parse(fr);
+                fr.close();
             }
 
             show = processArgs(args, props);

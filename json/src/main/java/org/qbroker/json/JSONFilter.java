@@ -7,9 +7,9 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.Iterator;
-import java.io.StringReader;
-import java.io.IOException;
 import org.apache.oro.text.regex.Pattern;
 import org.apache.oro.text.regex.Perl5Compiler;
 import org.apache.oro.text.regex.Perl5Matcher;
@@ -28,15 +28,36 @@ import org.qbroker.event.Event;
  * of evaluate() returns true if the filter matches the JSON data. Otherwise,
  * it returns false. The method of format is to format the JSON data with the
  * internal formatter.
+ *<br/><br/>
+ * The filter part contains two sets of EvalMaps. One set is for positive match
+ * to include certain patterns. The other set is for negtive match to exclude
+ * certain patterns. An EvalMap contains key-value pairs to supports 3 types of
+ * evaluations: Perl5 pattern match, number range testing and evaluations on
+ * variables. If a key is like "v:xxx:, the evaluation is on a variable where
+ * "xxx" is the json path and the value determines the operation. Currently,
+ * only "==" is supported. The dynamic value will be stored in parameter map at
+ * the key of "v:xxx". For keys without namespace, they are json paths to
+ * retrieve data to be evaluated. The value will be either a Perl5 Pattern or
+ * a list of number ranges.
+ *<br/><br/>
+ * The template part supports JSONSection for keys with the namespace of "s:".
+ * In this case, the list of sections must be provided for the format method.
+ * The parameter map is supposed to contain the root JSON doc at the key of
+ * "r:_JSON_".
+ *<br/><br/>
+ * It also supports the dynamic pattern or value for keys with the namespace
+ * of "v:". In this case, the parameter map is supposed to contain the
+ * value of the variable under the key of "v:xxx".
  *<br/>
  * @author yannanlu@yahoo.com
  */
 
-@SuppressWarnings("unchecked")
 public class JSONFilter implements Filter<Map> {
     private String prefix;
+    private String indent = null;
+    private String end = null;
     private String[] keys = null;
-    private Map[] aJSONProps = null, xJSONProps = null;
+    private Map<String, Object>[] aJSONProps = null, xJSONProps = null;
     private Template temp = null;
     private TextSubstitution tsub = null;
     private Perl5Matcher pm = null;
@@ -62,12 +83,15 @@ public class JSONFilter implements Filter<Map> {
         else
             this.pm = pm;
 
+        if ((o = props.get("indent")) != null && o instanceof String)
+            indent = (String) o;
+        if ((o = props.get("end")) != null && o instanceof String)
+            end = (String) o;
+
         // for path-pattern group
         if(props.containsKey("patterns") || props.containsKey("xpatterns")) try{
-            aJSONProps = (Map[])
-                getPatternMaps("patterns", props, pc);
-            xJSONProps = (Map[])
-                getPatternMaps("xpatterns", props, pc);
+            aJSONProps = getPatternMaps("patterns", props, pc);
+            xJSONProps = getPatternMaps("xpatterns", props, pc);
         }
         catch (Exception e) {
             throw(new IllegalArgumentException(prefix +
@@ -98,7 +122,7 @@ public class JSONFilter implements Filter<Map> {
             keys = temp.getAllFields();
             count = temp.numberOfFields();
             for (int i=0; i<count; i++) {
-                if (keys[i].matches("^s:.+")) {
+                if (keys[i].startsWith("s:")) { // for sections
                     hasSection = true;
                     break;
                 }
@@ -107,82 +131,79 @@ public class JSONFilter implements Filter<Map> {
     }
 
     /**
-     * formats the message with the predefined formatter and returns number of
-     * fields modified upon success.
+     * formats the JSON map with the predefined formatters, a given list of
+     * JSONSections and a given parameter map. It returns formatted content
+     * upon success.
      */
-    public String format(Map json, AssetList list, Map params) {
-        String text, key, value;
+    public String format(Map json, AssetList list, Map<String, Object> params) {
+        String text, value;
         Object o;
+        boolean withSection;
         if ((!hasFormatter) || json == null)
             return null;
         if (params == null)
-            params = new HashMap();
+            params = new HashMap<String, Object>();
 
+        withSection = (hasSection && list != null);
         text = temp.copyText();
-        if (!hasSection || list == null) { // no sections or list is null
-            for (int i=0; i<count; i++) {
-                key = keys[i];
-                if (key.matches("^p:.+")) { // for a parameter
-                    key = key.substring(2);
-                    o = params.get(key);
-                    if (o == null)
-                        value = "null";
-                    else if (o instanceof String)
-                        value = "\"" + (String) o + "\"";
-                    else
-                        value = o.toString();
-                    text = temp.substitute(pm, keys[i], value, text);
-                }
-                else { // for a json path
-                    o = JSON2FmModel.get(json, key);
-                    if (o == null)
-                        value = "null";
-                    else if (o instanceof String)
-                        value = "\"" + (String) o + "\"";
-                    else if (o instanceof Map)
-                        value = JSON2FmModel.toJSON((Map) o, null, null);
-                    else if (o instanceof List)
-                        value = JSON2FmModel.toJSON((List) o, null, null);
-                    else
-                        value = o.toString();
-                    text = temp.substitute(pm, key, value, text);
-                }
+        for (String key : keys) {
+            if (key.startsWith("p:")) { // for a parameter
+                o = params.get(key.substring(2));
+                if (o == null)
+                    value = "null";
+                else if (o instanceof String)
+                    value = "\"" + (String) o + "\"";
+                else
+                    value = o.toString();
+                text = temp.substitute(pm, key, value, text);
             }
-        }
-        else { // with section list
-            JSONSection sect;
-            for (int i=0; i<count; i++) {
-                key = keys[i];
-                if (key.matches("^p:.+")) { // for a parameter
-                    key = key.substring(2);
-                    o = params.get(key);
-                    if (o == null)
-                        value = "null";
-                    else if (o instanceof String)
-                        value = "\"" + (String) o + "\"";
-                    else
-                        value = o.toString();
-                    text = temp.substitute(pm, keys[i], value, text);
-                    continue;
-                }
-                else if (!key.matches("^s:.+")) { // for a json path
-                    o = JSON2FmModel.get(json, key);
-                    if (o == null)
-                        value = "null";
-                    else if (o instanceof String)
-                        value = "\"" + (String) o + "\"";
-                    else if (o instanceof Map)
-                        value = JSON2FmModel.toJSON((Map) o, null, null);
-                    else if (o instanceof List)
-                        value = JSON2FmModel.toJSON((List) o, null, null);
-                    else
-                        value = o.toString();
-                    text = temp.substitute(pm, key, value, text);
-                    continue;
-                }
-                // for a section
-                key = key.substring(2);
-                sect = (JSONSection) list.get(key);
+            else if (key.startsWith("P:")) {//for a parameter without quotes
+                o = params.get(key.substring(2));
+                if (o == null)
+                    value = "null";
+                else if (o instanceof String)
+                    value = (String) o;
+                else
+                    value = o.toString();
+                text = temp.substitute(pm, key, value, text);
+            }
+            else if (key.startsWith("v:")) { // for a variable
+                o = params.get(key);
+                if (o == null)
+                    value = "null";
+                else if (o instanceof String)
+                    value = "\"" + (String) o + "\"";
+                else
+                    value = o.toString();
+                text = temp.substitute(pm, key, value, text);
+            }
+            else if (key.startsWith("V:")) { // for a variable without quotes
+                o = params.get("v:"+key.substring(2));
+                if (o == null)
+                    value = "null";
+                else if (o instanceof String)
+                    value = (String) o;
+                else
+                    value = o.toString();
+                text = temp.substitute(pm, key, value, text);
+            }
+            else if (!key.startsWith("s:")) { // for a json path
+                o = JSON2FmModel.get(json, key);
+                if (o == null)
+                    value = "null";
+                else if (o instanceof String)
+                    value = "\"" + (String) o + "\"";
+                else if (o instanceof Map)
+                    value = JSON2FmModel.toJSON((Map) o, null, null);
+                else if (o instanceof List)
+                    value = JSON2FmModel.toJSON((List) o, null, null);
+                else
+                    value = o.toString();
+                text = temp.substitute(pm, key, value, text);
+            }
+            else if (withSection) { // for a section key
+                JSONSection sect;
+                sect = (JSONSection) list.get(key.substring(2));
                 if (sect == null) {
                     throw(new RuntimeException(prefix +
                         " failed to get section for " + key));
@@ -195,7 +216,7 @@ public class JSONFilter implements Filter<Map> {
                         " failed to fulfill the section of " + key + ": " +
                         Event.traceStack(e)));
                 }
-                text = temp.substitute(pm, keys[i], value, text);
+                text = temp.substitute(pm, key, value, text);
             }
         }
         if (tsub != null)
@@ -204,79 +225,80 @@ public class JSONFilter implements Filter<Map> {
         return text;
     }
 
-    public String format(List json, AssetList list, Map params) {
-        String text, key, value;
+    /**
+     * formats the JSON list with the predefined formatters, a given list of
+     * JSONSections and a given parameter map. It returns formatted content
+     * upon success.
+     */
+    public String format(List json, AssetList list, Map<String, Object> params){
+        String text, value;
         Object o;
+        boolean withSection;
         if ((!hasFormatter) || json == null)
             return null;
         if (params == null)
-            params = new HashMap();
+            params = new HashMap<String, Object>();
 
+        withSection = (hasSection && list != null);
         text = temp.copyText();
-        if (!hasSection || list == null) { // no sections or list is null
-            for (int i=0; i<count; i++) {
-                key = keys[i];
-                if (key.matches("^p:.+")) { // for a parameter
-                    key = key.substring(2);
-                    o = params.get(key);
-                    if (o == null)
-                        value = "null";
-                    else if (o instanceof String)
-                        value = "\"" + (String) o + "\"";
-                    else
-                        value = o.toString();
-                    text = temp.substitute(pm, keys[i], value, text);
-                }
-                else { // for a json path
-                    o = JSON2FmModel.get(json, key);
-                    if (o == null)
-                        value = "null";
-                    else if (o instanceof String)
-                        value = "\"" + (String) o + "\"";
-                    else if (o instanceof Map)
-                        value = JSON2FmModel.toJSON((Map) o, null, null);
-                    else if (o instanceof List)
-                        value = JSON2FmModel.toJSON((List) o, null, null);
-                    else
-                        value = o.toString();
-                    text = temp.substitute(pm, key, value, text);
-                }
+        for (String key : keys) {
+            if (key.startsWith("p:")) { // for a parameter
+                o = params.get(key.substring(2));
+                if (o == null)
+                    value = "null";
+                else if (o instanceof String)
+                    value = "\"" + (String) o + "\"";
+                else
+                    value = o.toString();
+                text = temp.substitute(pm, key, value, text);
             }
-        }
-        else if (list != null) { // with section list
-            JSONSection sect;
-            for (int i=0; i<count; i++) {
-                key = keys[i];
-                if (key.matches("^p:.+")) { // for a parameter
-                    key = key.substring(2);
-                    o = params.get(key);
-                    if (o == null)
-                        value = "null";
-                    else if (o instanceof String)
-                        value = "\"" + (String) o + "\"";
-                    else
-                        value = o.toString();
-                    text = temp.substitute(pm, keys[i], value, text);
-                    continue;
-                }
-                else if (!key.matches("^s:.+")) { // for a json path
-                    o = JSON2FmModel.get(json, key);
-                    if (o == null)
-                        value = "null";
-                    else if (o instanceof String)
-                        value = "\"" + (String) o + "\"";
-                    else if (o instanceof Map)
-                        value = JSON2FmModel.toJSON((Map) o, null, null);
-                    else if (o instanceof List)
-                        value = JSON2FmModel.toJSON((List) o, null, null);
-                    else
-                        value = o.toString();
-                    text = temp.substitute(pm, key, value, text);
-                    continue;
-                }
-                // for a section
-                key = key.substring(2);
-                sect = (JSONSection) list.get(key);
+            else if (key.startsWith("P:")) {//for a parameter without quotes
+                o = params.get(key.substring(2));
+                if (o == null)
+                    value = "null";
+                else if (o instanceof String)
+                    value = (String) o;
+                else
+                    value = o.toString();
+                text = temp.substitute(pm, key, value, text);
+            }
+            else if (key.startsWith("v:")) { // for a variable
+                o = params.get(key);
+                if (o == null)
+                    value = "null";
+                else if (o instanceof String)
+                    value = "\"" + (String) o + "\"";
+                else
+                    value = o.toString();
+                text = temp.substitute(pm, key, value, text);
+            }
+            else if (key.startsWith("V:")) { // for a variable without qutoes
+                o = params.get("v:"+key.substring(2));
+                if (o == null)
+                    value = "null";
+                else if (o instanceof String)
+                    value = (String) o;
+                else
+                    value = o.toString();
+                text = temp.substitute(pm, key, value, text);
+            }
+            else if (!key.startsWith("s:")) { // for a json path
+                o = JSON2FmModel.get(json, key);
+                if (o == null)
+                    value = "null";
+                else if (o instanceof String)
+                    value = "\"" + (String) o + "\"";
+                else if (o instanceof Map)
+                    value = JSON2FmModel.toJSON((Map) o, null, null);
+                else if (o instanceof List)
+                    value = JSON2FmModel.toJSON((List) o, null, null);
+                else
+                    value = o.toString();
+                text = temp.substitute(pm, key, value, text);
+            }
+            else if (withSection) { // for a section key
+                JSONSection sect;
+                sect = (JSONSection) list.get(key.substring(2));
                 if (sect == null) {
                     throw(new RuntimeException(prefix +
                         " failed to get section for " + key));
@@ -289,7 +311,7 @@ public class JSONFilter implements Filter<Map> {
                         " failed to fulfill the section of " + key + ": " +
                         Event.traceStack(e)));
                 }
-                text = temp.substitute(pm, keys[i], value, text);
+                text = temp.substitute(pm, key, value, text);
             }
         }
 
@@ -299,18 +321,81 @@ public class JSONFilter implements Filter<Map> {
         return text;
     }
 
-    public String format(String json) {
-        String text;
+    /**
+     * formats the JSON text with the predefined formatters, a given list of
+     * JSONSections and a given parameter map. It returns formatted content
+     * upon success.
+     */
+    public String format(String json, AssetList list,Map<String,Object> params){
+        String text, value;
+        Object o;
+        boolean withSection;
         if ((!hasFormatter) || json == null)
             return null;
 
+        withSection = (hasSection && list != null);
         text = temp.copyText();
-        if (count > 0) try {
-            text = temp.substitute(pm, keys[0], json, text);
-        }
-        catch (Exception e) {
-            throw(new RuntimeException(prefix + ": failed to format json: " +
-                Event.traceStack(e)));
+        for (String key : keys) {
+            if (key.startsWith("p:")) { // for a parameter
+                o = params.get(key.substring(2));
+                if (o == null)
+                    value = "null";
+                else if (o instanceof String)
+                    value = "\"" + (String) o + "\"";
+                else
+                    value = o.toString();
+                text = temp.substitute(pm, key, value, text);
+            }
+            else if (key.startsWith("P:")) {//for a parameter without quotes
+                o = params.get(key.substring(2));
+                if (o == null)
+                    value = "null";
+                else if (o instanceof String)
+                    value = (String) o;
+                else
+                    value = o.toString();
+                text = temp.substitute(pm, key, value, text);
+            }
+            else if (key.startsWith("v:")) { // for a variable
+                o = params.get(key);
+                if (o == null)
+                    value = "null";
+                else if (o instanceof String)
+                    value = "\"" + (String) o + "\"";
+                else
+                    value = o.toString();
+                text = temp.substitute(pm, key, value, text);
+            }
+            else if (key.startsWith("V:")) { // for a variable
+                o = params.get("v:"+key.substring(2));
+                if (o == null)
+                    value = "null";
+                else if (o instanceof String)
+                    value = (String) o;
+                else
+                    value = o.toString();
+                text = temp.substitute(pm, key, value, text);
+            }
+            else if (!key.startsWith("s:")) { // for selected value
+                text = temp.substitute(pm, key, json, text);
+            }
+            else if (withSection) { // for a section
+                JSONSection sect;
+                sect = (JSONSection) list.get(key.substring(2));
+                if (sect == null) {
+                    throw(new RuntimeException(prefix +
+                        " failed to get section for " + key));
+                }
+                else try {
+                    value = sect.fulfill(new HashMap(), list, params);
+                }
+                catch (Exception e) {
+                    throw(new RuntimeException(prefix + ": " + sect.getName() +
+                        " failed to fulfill the section of " + key + ": " +
+                        Event.traceStack(e)));
+                }
+                text = temp.substitute(pm, key, value, text);
+            }
         }
         if (tsub != null)
             tsub.substitute(pm, text);
@@ -318,93 +403,98 @@ public class JSONFilter implements Filter<Map> {
         return text;
     }
 
+    /**
+     * It evalues the JSON map data with the internal predefined filters
+     * and returns true if there is a hit or false otherwise.
+     */
     public boolean evaluate(long tm, Map json) {
-        return evaluate(json);
+        return evaluate(json, null);
     }
 
     /**
-     * It applies the Perl5 pattern match on the message and returns true
-     * if the filter gets a hit or false otherwise. In case there are patterns
-     * for message body, it requires the content of the message body ready.
+     * It evalues the JSON map data with the internal predefined filters
+     * and the given parameter map. It returns true if there is a hit or
+     * false otherwise.
      */
-    public boolean evaluate(Map json) {
+    public boolean evaluate(Map json, Map<String, Object> params) {
         if (json == null)
             return false;
-        else if (evaluate(json, aJSONProps, pm, true) &&
-            !evaluate(json, xJSONProps, pm, false))
-            return true;
-        else
-            return false;
-    }
-
-    public boolean evaluate(List json) {
-        if (json == null)
-            return false;
-        else if (evaluate(json, aJSONProps, pm, true) &&
-            !evaluate(json, xJSONProps, pm, false))
-            return true;
-        else
-            return false;
-    }
-
-    public boolean evaluate(String json) {
-        if (json == null)
-            return false;
-        else if (evaluate(json, aJSONProps, pm, true) &&
-            !evaluate(json, xJSONProps, pm, false))
+        else if (evaluate(json, aJSONProps, pm, true, params) &&
+            !evaluate(json, xJSONProps, pm, false, params))
             return true;
         else
             return false;
     }
 
     /**
-     * returns true if any one of the pattern maps matches on the parsed
-     * JSON data. A pattern map represents all the patterns in a Map where
-     * each key is a json path.  In case the key of a pattern is pointing
-     * a container, the size of the container will be evaluated. The default
-     * boolean value is used to evaluate an empty pattern map.
+     * It evalues the JSON list data with the internal predefined filters
+     * and the given parameter map. It returns true if there is a hit or
+     * false otherwise.
      */
-    public static boolean evaluate(Map json, Map[] props, Perl5Matcher pm,
-        boolean def) {
-        Map h;
-        Iterator iter;
+    public boolean evaluate(List json, Map<String, Object> params) {
+        if (json == null)
+            return false;
+        else if (evaluate(json, aJSONProps, pm, true, params) &&
+            !evaluate(json, xJSONProps, pm, false, params))
+            return true;
+        else
+            return false;
+    }
+
+    /**
+     * It evalues the JSON text with the internal predefined filters
+     * and the given parameter map. It returns true if there is a hit or
+     * false otherwise.
+     */
+    public boolean evaluate(String json, Map<String, Object> params) {
+        if (json == null)
+            return false;
+        else if (evaluate(json, aJSONProps, pm, true, params) &&
+            !evaluate(json, xJSONProps, pm, false, params))
+            return true;
+        else
+            return false;
+    }
+
+    /**
+     * returns true if any one of the eval maps matches on the parsed JSON data.
+     * An eval map contains key-value pairs with the key for either a json path
+     * or a key path for a variable. The value of the key is one of the pattern,     * number range or operator. In case a key is ".", the size of the
+     * container will be evaluated. If a key starts with "v:", it will be
+     * treated as the variable. The rest part of the key will be the json path.
+     * The default boolean value is used to evaluate an empty eval map.
+     */
+    public static boolean evaluate(Map json, Map<String, Object>[] props,
+        Perl5Matcher pm, boolean def, Map<String, Object> params) {
         Pattern p;
         DataSet d;
         Object o;
         String key, value;
         String[] keys;
         boolean status = def;
-        int i, k, n;
+        int k;
 
         if (json == null || props == null)
             return (! status);
 
-        n= props.length;
-        if (n <= 0)
-            return status;
-
-        for (i=0; i<n; i++) {
-            h = props[i];
-            if (h == null)
-                continue;
-            k = h.size();
-            keys = new String[k];
-            iter = h.keySet().iterator();
+        for (Map<String, Object> h : props) {
+            keys = h.keySet().toArray(new String[h.size()]);
             k = 0;
-            while (iter.hasNext()) {
-                key = (String) iter.next();
-                if (key == null || key.length() <= 0)
+            for (String ky : keys) {
+                if (ky == null || ky.length() <= 0)
                     continue;
-                keys[k++] = key;
+                keys[k++] = ky;
             }
             if (k > 1)
                 Arrays.sort(keys, 0, k);
             status = true;
-            for (int j=0; j<k; j++) {
-                key = keys[j];
+            for (int i=0; i<k; i++) {
+                key = keys[i];
                 o = h.get(key);
                 if (o == null)
                     continue;
+                if (key.startsWith("v:")) // for variable
+                    key = key.substring(2);
                 try {
                     Object v = JSON2FmModel.get(json, key);
                     if (v == null)
@@ -443,12 +533,17 @@ public class JSONFilter implements Filter<Map> {
                     if (!status)
                         break;
                 }
-                else { // pattern
+                else if (o instanceof Pattern) { // pattern
                     p = (Pattern) o;
                     if (!pm.contains(value, p)) {
                         status = false;
                         break;
                     }
+                }
+                else if (params != null) { // variable testing
+                    status = value.equals((String) params.get("v:" + key));
+                    if (!status)
+                        break;
                 }
             }
             if (status)
@@ -458,53 +553,44 @@ public class JSONFilter implements Filter<Map> {
     }
 
     /**
-     * returns true if any one of the pattern maps matches on the parsed
-     * JSON data. A pattern map represents all the patterns in a Map where
-     * each key is a json path.  In case the key of a pattern is pointing
-     * a container, the size of the container will be evaluated. The default
-     * boolean value is used to evaluate an empty pattern map.
+     * returns true if any one of the eval maps matches on the parsed JSON data.
+     * An eval map contains key-value pairs with the key for either a json path
+     * or a key path for a variable. The value of the key is one of the pattern,     * number range or operator. In case a key is ".", the size of the
+     * container will be evaluated. If a key starts with "v:", it will be
+     * treated as the variable. The rest part of the key will be the json path.
+     * The default boolean value is used to evaluate an empty eval map.
      */
-    public static boolean evaluate(List json, Map[] props, Perl5Matcher pm,
-        boolean def) {
-        Map h;
-        Iterator iter;
+    public static boolean evaluate(List json, Map<String, Object>[] props,
+        Perl5Matcher pm, boolean def, Map<String, Object> params) {
         Pattern p;
         DataSet d;
         Object o;
         String key, value;
         String[] keys;
         boolean status = def;
-        int i, k, n;
+        int k;
 
         if (json == null || props == null)
             return (! status);
 
-        n= props.length;
-        if (n <= 0)
-            return status;
-
-        for (i=0; i<n; i++) {
-            h = props[i];
-            if (h == null)
-                continue;
-            k = h.size();
-            keys = new String[k];
-            iter = h.keySet().iterator();
+        for (Map<String, Object> h : props) {
+            keys = h.keySet().toArray(new String[h.size()]);
             k = 0;
-            while (iter.hasNext()) {
-                key = (String) iter.next();
-                if (key == null || key.length() <= 0)
+            for (String ky : keys) {
+                if (ky == null || ky.length() <= 0)
                     continue;
-                keys[k++] = key;
+                keys[k++] = ky;
             }
             if (k > 1)
                 Arrays.sort(keys, 0, k);
             status = true;
-            for (int j=0; j<k; j++) {
-                key = keys[j];
+            for (int i=0; i<k; i++) {
+                key = keys[i];
                 o = h.get(key);
                 if (o == null)
                     continue;
+                if (key.startsWith("v:")) // for variable
+                    key = key.substring(2);
                 try {
                     Object v = JSON2FmModel.get(json, key);
                     if (v == null)
@@ -543,12 +629,17 @@ public class JSONFilter implements Filter<Map> {
                     if (!status)
                         break;
                 }
-                else { // pattern
+                else if (o instanceof Pattern) { // pattern
                     p = (Pattern) o;
                     if (!pm.contains(value, p)) {
                         status = false;
                         break;
                     }
+                }
+                else if (params != null) { // variable testing
+                    status = value.equals((String) params.get("v:" + key));
+                    if (!status)
+                        break;
                 }
             }
             if (status)
@@ -557,31 +648,32 @@ public class JSONFilter implements Filter<Map> {
         return status;
     }
 
-    public static boolean evaluate(String value, Map[] props, Perl5Matcher pm,
-        boolean def) {
-        Map h;
-        Iterator iter;
+    /**
+     * returns true if any one of the eval maps matches on the parsed JSON data.
+     * An eval map contains key-value pairs with the key for either a json path
+     * or a key path for a variable. The value of the key is one of the pattern,     * number range or operator. In case a key is ".", the size of the
+     * container will be evaluated. If a key starts with "v:", it will be
+     * treated as the variable. The rest part of the key will be the json path.
+     * The default boolean value is used to evaluate an empty eval map.
+     */
+    public static boolean evaluate(String value, Map<String, Object>[] props,
+        Perl5Matcher pm, boolean def, Map<String, Object> params) {
         Pattern p;
         DataSet d;
         Object o;
+        String[] keys;
         boolean status = def;
-        int i, k, n;
+        int k;
 
         if (value == null || props == null)
             return (! status);
 
-        n = props.length;
-        if (n <= 0)
-            return status;
-
-        for (i=0; i<n; i++) {
-            h = props[i];
-            if (h == null)
-                continue;
-            k = h.size();
-            iter = h.entrySet().iterator();
+        for (Map<String, Object> h : props) {
+            keys = h.keySet().toArray(new String[1]);
             status = true;
-            o = iter.next();
+            if (keys.length <= 0 || keys[0] == null)
+                continue;
+            o = h.get(keys[0]);
             if (o == null)
                 continue;
             if (o instanceof DataSet) { // dataset testing
@@ -599,49 +691,17 @@ public class JSONFilter implements Filter<Map> {
                     status = false;
                 }
             }
-            else { // pattern
+            else if (o instanceof Pattern) { // pattern
                 p = (Pattern) o;
                 status = pm.contains(value, p);
+            }
+            else if (params != null && keys[0].startsWith("v:")) { // variable
+                status = value.equals((String) params.get(keys[0]));
             }
             if (status)
                 break;
         }
         return status;
-    }
-
-    public static JSONFilter[] initFilters(String prefix, String name, Map ph,
-        Perl5Matcher pm) {
-        Perl5Compiler pc;
-        Object o;
-        if (ph == null || ph.size() <= 0)
-            return null;
-        if (name == null || name.length() <= 0)
-            return null;
-        if ((o = ph.get(name)) == null || !(o instanceof List))
-            return new JSONFilter[0];
-        else {
-            JSONFilter[] filters = null;
-            JSONFilter filter = null;
-            List pl, list = (List) o;
-            int i, n = list.size();
-            pl = new ArrayList();
-            if (pm == null)
-                pm = new Perl5Matcher();
-            pc = new Perl5Compiler();
-            for (i=0; i<n; i++) {
-                o = list.get(i);
-                if (o == null || !(o instanceof Map))
-                    continue;
-                filter = new JSONFilter(prefix, (Map) o, pm, pc);
-                if (filter != null)
-                    pl.add(filter);
-            }
-            n = pl.size();
-            filters = new JSONFilter[n];
-            for (i=0; i<n; i++)
-                filters[i] = (JSONFilter) pl.get(i);
-            return filters;
-        }
     }
 
     public boolean hasFormatter() {
@@ -676,21 +736,64 @@ public class JSONFilter implements Filter<Map> {
         }
         xJSONProps = null;
         pm = null;
-        if (hasFormatter) {
+        if (temp != null) {
+            temp.clear();
             temp = null;
+        }
+        if (tsub != null) {
+            tsub.clear();
             tsub = null;
+        }
+    }
+
+    protected void finalize() {
+        clear();
+    }
+
+    // returns an array of JSONFilters with given property map
+    public static JSONFilter[] initFilters(String prefix, String name, Map ph,
+        Perl5Matcher pm) {
+        Perl5Compiler pc;
+        Object o;
+        if (ph == null || ph.size() <= 0)
+            return null;
+        if (name == null || name.length() <= 0)
+            return null;
+        if ((o = ph.get(name)) == null || !(o instanceof List))
+            return new JSONFilter[0];
+        else {
+            JSONFilter[] filters = null;
+            JSONFilter filter = null;
+            List<JSONFilter> pl;
+            List list = (List) o;
+            int n = list.size();
+            pl = new ArrayList<JSONFilter>();
+            if (pm == null)
+                pm = new Perl5Matcher();
+            pc = new Perl5Compiler();
+            for (int i=0; i<n; i++) {
+                o = list.get(i);
+                if (o == null || !(o instanceof Map))
+                    continue;
+                filter = new JSONFilter(prefix, (Map) o, pm, pc);
+                if (filter != null)
+                    pl.add(filter);
+            }
+            filters = pl.toArray(new JSONFilter[pl.size()]);
+            return filters;
         }
     }
 
     /**
      * returns an array of Map with a group of patterns in each of them
      */
-    public static Map[] getPatternMaps(String name, Map ph,
+    @SuppressWarnings("unchecked")
+    public static Map<String, Object>[] getPatternMaps(String name, Map ph,
         Perl5Compiler pc) throws MalformedPatternException {
         int i, size = 0;
         Object o;
         List pl;
-        Map[] h = new HashMap[0];
+        Map<String, Object>[] h = new HashMap[0];
         if ((o = ph.get(name)) != null) {
             if (o instanceof List) {
                 String str;
@@ -701,16 +804,18 @@ public class JSONFilter implements Filter<Map> {
                     if ((o = pl.get(i)) == null || !(o instanceof Map))
                         return null;
                     Map m = (Map) o;
-                    h[i] = new HashMap();
+                    h[i] = new HashMap<String, Object>();
                     Iterator iter = m.keySet().iterator();
                     while (iter.hasNext()) {
                         String key = (String) iter.next();
                         if (key == null || key.length() <= 0)
                             continue;
                         o = m.get(key);
-                        if (o instanceof List)
+                        if (o instanceof List) // for range
                             h[i].put(key, new DataSet((List) o));
-                        else {
+                        else if (key.startsWith("v:")) // for dynamic variable
+                            h[i].put(key, ".");
+                        else { // for pattern
                             str = (String) o;
                             h[i].put(key, pc.compile(str));
                         }

@@ -1094,7 +1094,8 @@ public class MessageEvaluator extends Persister {
         StringReader sr = new StringReader(json);
 
         try {
-            o = JSON2FmModel.parse(sr);
+            o = (!template.keepOriginalOrder()) ? JSON2FmModel.parse(sr) :
+                JSON2Map.parseJSON(sr, true);
         }
         catch (IOException e) {
             sr.close();
@@ -2269,6 +2270,8 @@ public class MessageEvaluator extends Persister {
         int[] list;
         Object[] asset;
         java.lang.reflect.Method close;
+        if (status != PSTR_CLOSED)
+            new Event(Event.INFO, uri + " closed on " + linkName).send();
         setStatus(PSTR_CLOSED);
         n = assetList.depth();
         list = new int[n];
@@ -2295,7 +2298,9 @@ public class MessageEvaluator extends Persister {
         builder = null;
         xpath = null;
         defaultTransformer = null;
+    }
 
-        new Event(Event.INFO, uri + " closed on " + linkName).send();
+    protected void finalize() {
+        close();
     }
 }

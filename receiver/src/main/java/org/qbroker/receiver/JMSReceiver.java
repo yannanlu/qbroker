@@ -422,6 +422,8 @@ public class JMSReceiver extends Receiver {
     }
 
     public void close() {
+        if (status != RCVR_CLOSED)
+            new Event(Event.INFO, qName + " closed on " + linkName).send();
         setStatus(RCVR_CLOSED);
         disconnect();
         if (dependencyGroup != null) { // clear dependencies
@@ -430,6 +432,9 @@ public class JMSReceiver extends Receiver {
         }
         if (qConn != null)
             qConn = null;
-        new Event(Event.INFO, qName + " closed on " + linkName).send();
+    }
+
+    protected void finalize() {
+        close();
     }
 }

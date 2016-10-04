@@ -512,4 +512,8 @@ public class QMFQMonitor extends Monitor {
             qmfReq = null;
         }
     }
+
+    protected void finalize() {
+        destroy();
+    }
 }

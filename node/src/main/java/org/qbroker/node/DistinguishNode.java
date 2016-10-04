@@ -1265,4 +1265,8 @@ public class DistinguishNode extends Node {
         super.close();
         cache.clear();
     }
+
+    protected void finalize() {
+        close();
+    }
 }

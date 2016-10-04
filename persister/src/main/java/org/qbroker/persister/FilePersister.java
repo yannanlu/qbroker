@@ -1256,6 +1256,8 @@ public class FilePersister extends Persister {
     }
 
     public void close() {
+        if (status != PSTR_CLOSED)
+            new Event(Event.INFO, uri + " closed on " + linkName).send();
         setStatus(PSTR_CLOSED);
         disconnect();
         if (msgLog != null)
@@ -1270,7 +1272,9 @@ public class FilePersister extends Persister {
             nntp = null;
         if (http != null)
             http = null;
+    }
 
-        new Event(Event.INFO, uri + " closed on " + linkName).send();
+    protected void finalize() {
+        close();
     }
 }

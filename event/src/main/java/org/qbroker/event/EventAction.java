@@ -9,8 +9,10 @@ package org.qbroker.event;
 public interface EventAction {
     /** invokes the action upon the event */
     public void invokeAction(long currentTime, org.qbroker.event.Event event);
-    /** return the name of the action */
+    /** returns the name of the action */
     public String getName();
+    /** closes or cleans up all the resources */
+    public void close();
 
     public final static int ACTION_LIST = 0;
     public final static int ACTION_QUERY = 1;

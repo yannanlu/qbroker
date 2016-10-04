@@ -227,4 +227,16 @@ public class EventLogger {
             url = null;
         }
     }
+
+    public void close() {
+        eLogger = null;
+        if (webConn != null) {
+            webConn.close();
+            webConn = null;
+        }
+    }
+
+    protected void finalize() {
+        close();
+    }
 }

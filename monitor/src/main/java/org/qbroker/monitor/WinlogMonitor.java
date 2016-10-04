@@ -788,6 +788,10 @@ public class WinlogMonitor extends Monitor implements Comparator<int[]> {
         close();
     }
 
+    protected void finalize() {
+        destroy();
+    }
+
     public Map<String, Object> checkpoint() {
         Map<String, Object> chkpt = super.checkpoint();
         chkpt.put("PreviousNumber", String.valueOf(previousNumber));

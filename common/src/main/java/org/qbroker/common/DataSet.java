@@ -1,9 +1,9 @@
 package org.qbroker.common;
 
+/* DataSet.java -  a set of intervals specifying a set of numbers */
+
 import java.util.List;
 import java.util.ArrayList;
-
-/* DataSet.java -  a set of intervals specifying a set of numbers */
 
 /**
  * DataSet - A set of data intervals defining a set of number.

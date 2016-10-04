@@ -716,4 +716,8 @@ public class XPathNode extends Node {
         builder = null;
         xpath = null;
     }
+
+    protected void finalize() {
+        close();
+    }
 }

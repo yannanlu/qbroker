@@ -354,7 +354,8 @@ public class ThreadPool implements Runnable {
     }
 
     public void close() {
-        int i;
+        method = null;
+        object = null;
         if (pool != null) {
             stopRunning(pool);
             stopRunning(root);

@@ -94,7 +94,7 @@ public class EventTrapSender extends SNMPConnector implements EventAction {
             if (k > 0 && rid >= 0) { // variables may need to be formatted
                 o = props.get("Substitution");
                 if (o != null && o instanceof List) { // save to fisrt map
-                    msgSub = Utils.initSubstitutions((List) o);
+                    msgSub = EventUtils.initSubstitutions((List) o);
                     h.put("MsgSub", msgSub);
                 }
             }
@@ -102,10 +102,10 @@ public class EventTrapSender extends SNMPConnector implements EventAction {
         else if ((o = props.get("Default")) != null && o instanceof Map) {
             o = ((Map) o).get("Substitution");
             if (o != null && o instanceof List)
-                msgSub = Utils.initSubstitutions((List) o);
+                msgSub = EventUtils.initSubstitutions((List) o);
             else if ((o = props.get("Substitution")) != null &&
                 o instanceof List)
-                msgSub = Utils.initSubstitutions((List) o);
+                msgSub = EventUtils.initSubstitutions((List) o);
         }
 
         iter = props.keySet().iterator();
@@ -151,7 +151,7 @@ public class EventTrapSender extends SNMPConnector implements EventAction {
             if (k > 0 && rid >= 0) { // variables may need to be formatted
                 o = ph.get("Substitution");
                 if (o != null && o instanceof List) // save to fisrt map
-                    h.put("MsgSub", Utils.initSubstitutions((List) o));
+                    h.put("MsgSub", EventUtils.initSubstitutions((List) o));
                 else if (o == null) // use the default
                     h.put("MsgSub", msgSub);
             }
@@ -210,8 +210,11 @@ public class EventTrapSender extends SNMPConnector implements EventAction {
             return -1;
 
         msgSub = (TextSubstitution[]) map.get("MsgSub");
-        if (msgSub != null)
+        if (msgSub != null) {
             change = EventUtils.getChange(event, msgSub, pm);
+            if (change != null && change.size() <= 0)
+                change = null;
+        }
 
         attr = event.attribute;
         n = list.size();
@@ -301,5 +304,18 @@ public class EventTrapSender extends SNMPConnector implements EventAction {
 
     public String getName() {
         return name;
+    }
+
+    public void close() {
+        pm = null;
+        pattern = null;
+        if (ruleList != null) {
+            ruleList.clear();
+            ruleList = null;
+        }
+    }
+
+    protected void finalize() {
+        close();
     }
 }

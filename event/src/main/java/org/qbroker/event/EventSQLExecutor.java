@@ -1,6 +1,6 @@
 package org.qbroker.event;
 
-/* EventScriptLauncher.java - an EventAction to launch a script */
+/* EventSQLExecutor.java - an EventAction to execute an query on a database */
 
 import java.util.HashMap;
 import java.util.Map;
@@ -15,13 +15,13 @@ import org.apache.oro.text.regex.MalformedPatternException;
 import org.qbroker.common.TimeoutException;
 import org.qbroker.common.Template;
 import org.qbroker.common.TextSubstitution;
+import org.qbroker.net.DBConnector;
 import org.qbroker.event.Event;
-import org.qbroker.event.EventUtils;
 import org.qbroker.event.EventAction;
 
 /**
- * EventScriptLauncher runs a script outside JVM in response to an event.
- * The script may contains the template placeholders referecing the
+ * EventSQLExecutor runs a SQL statement on a database in response to an event.
+ * The SQL statement may contains the template placeholders referecing the
  * attributes of the event.
  *<br/><br/>
  * NB. The action part is MT-Safe.
@@ -30,7 +30,7 @@ import org.qbroker.event.EventAction;
  */
 
 @SuppressWarnings("unchecked")
-public class EventScriptLauncher implements EventAction {
+public class EventSQLExecutor implements EventAction {
     private String name;
     private String site;
     private String type;
@@ -43,11 +43,12 @@ public class EventScriptLauncher implements EventAction {
     private Pattern pattern = null;
     private Perl5Matcher pm = null;
     private String program, hostname, pid;
+    private DBConnector dbConn = null;
 
-    public EventScriptLauncher(Map props) {
+    public EventSQLExecutor(Map props) {
         Object o;
         Map map;
-        String script, key, value;
+        String sql, key, value;
         Template template, temp;
         TextSubstitution[] msgSub = null;
         int n;
@@ -60,14 +61,26 @@ public class EventScriptLauncher implements EventAction {
         if ((o = props.get("Type")) != null)
             type = (String) o;
         else
-            type = "EventScriptLauncher";
+            type = "EventSQLExecutor";
 
         template = new Template("__hostname__, __HOSTNAME__", "__[^_]+__");
 
         if ((o = props.get("Description")) != null)
             description = EventUtils.substitute((String) o, template);
         else
-            description = "launch a script in response to an event";
+            description = "execute a SQL query in response to an event";
+
+        if ((o = props.get("URI")) == null)
+            throw(new IllegalArgumentException("URI is not defined"));
+
+        map = new HashMap();
+        map.put("URI", o);
+        map.put("Username", props.get("Username"));
+        map.put("Password", props.get("Password"));
+        map.put("DBTimeout", props.get("DBTimeout"));
+        map.put("SQLExecTimeout", props.get("SQLExecTimeout"));
+        map.put("ConnectOnInit", "false");
+        dbConn = new DBConnector(map);
 
         launcher = new HashMap<String, Map>();
 
@@ -75,12 +88,12 @@ public class EventScriptLauncher implements EventAction {
             (timeout = 1000*Integer.parseInt((String) o)) < 0)
             timeout = 60000;
 
-        if ((o = props.get("Script")) != null) {
-            script = EventUtils.substitute((String) o, template);
+        if ((o = props.get("SQLStatement")) != null) {
+            sql = EventUtils.substitute((String) o, template);
             map = new HashMap();
-            temp = new Template(script);
+            temp = new Template(sql);
             if (temp.numberOfFields() <= 0)
-                map.put("Template", script);
+                map.put("Template", sql);
             else { // with variables
                 map.put("Template", temp);
                 map.put("Fields", temp.getAllFields());
@@ -113,14 +126,14 @@ public class EventScriptLauncher implements EventAction {
                 continue;
             if (((Map) o).containsKey("Option")) // for option hash
                 continue;
-            value = (String) ((Map) o).get("Script");
-            if (value == null || value.length() <= 0) // not for script
+            value = (String) ((Map) o).get("SQLStatement");
+            if (value == null || value.length() <= 0) // not for SQL
                 continue;
-            script = EventUtils.substitute(value, template);
+            sql = EventUtils.substitute(value, template);
             map = new HashMap();
-            temp = new Template(script);
+            temp = new Template(sql);
             if (temp.numberOfFields() <= 0)
-                map.put("Template", script);
+                map.put("Template", sql);
             else { // with variables
                 map.put("Template", temp);
                 map.put("Fields", temp.getAllFields());
@@ -133,7 +146,7 @@ public class EventScriptLauncher implements EventAction {
             launcher.put(key, map);
         }
         if (launcher.size() <= 0)
-            throw(new IllegalArgumentException(name + ": no script defined"));
+            throw(new IllegalArgumentException(name + ": no SQL defined"));
 
         try {
             Perl5Compiler pc = new Perl5Compiler();
@@ -173,7 +186,7 @@ public class EventScriptLauncher implements EventAction {
         Object o;
         HashMap attr;
         Map map;
-        String key, value, priorityName, eventType, script = null;
+        String key, value, priorityName, eventType, sql = null, str = null;
         StringBuffer strBuf;
         int i, n;
 
@@ -211,7 +224,7 @@ public class EventScriptLauncher implements EventAction {
             }
 
             allFields = (String[]) map.get("Fields");
-            script = template.copyText();
+            sql = template.copyText();
             n = allFields.length;
             for (i=0; i<n; i++) {
                 key = allFields[i];
@@ -224,26 +237,42 @@ public class EventScriptLauncher implements EventAction {
                         value = (String) attr.get(key);
                     if (value == null)
                         value = "";
-                    script = template.substitute(pm, key, value, script);
+                    sql = template.substitute(pm, key, value, sql);
                 }
                 else if ("serialNumber".equals(key)) {
-                    script = template.substitute(pm, key,
-                        String.valueOf(serialNumber), script);
+                    sql = template.substitute(pm, key,
+                        String.valueOf(serialNumber), sql);
                 }
                 else {
-                    script = template.substitute(pm, key, "", script);
+                    sql = template.substitute(pm, key, "", sql);
                 }
             }
             if (change != null)
                 change.clear();
         }
         else if (o != null && o instanceof String)
-            script = (String) o;
+            sql = (String) o;
         else
             return;
 
-        Event ev = EventUtils.runScript(script, timeout);
+        n = -1;
+        str = dbConn.reconnect();
+        if (str == null) try {
+            dbConn.setAutoCommit(true);
+            n = dbConn.executeQuery(sql);
+        }
+        catch (Exception e) {
+            str = e.toString();
+        }
+        dbConn.close();
+        if (str != null)
+            i = Event.ERR;
+        else {
+            i = Event.INFO;
+            str = "SQL executed with the return code: " + n;
+        }
 
+        Event ev = new Event(i, str);
         strBuf = new StringBuffer();
         strBuf.append((String) attr.get("date"));
         strBuf.append(" " + priorityName);
@@ -260,7 +289,7 @@ public class EventScriptLauncher implements EventAction {
         ev.setAttribute("type", type);
         ev.setAttribute("date", Event.dateFormat(new Date(ev.timestamp)));
         ev.setAttribute("description", description);
-        ev.setAttribute("script", script);
+        ev.setAttribute("sql", sql);
         ev.setAttribute("original", strBuf.toString());
 
         for (i=0; i<copiedProperty.length; i++) {
@@ -312,6 +341,10 @@ public class EventScriptLauncher implements EventAction {
     public void close() {
         pm = null;
         pattern = null;
+        if (dbConn != null) {
+            dbConn.close();
+            dbConn = null;
+        }
         if (launcher != null) {
             for (String key : launcher.keySet())
                 launcher.get(key).clear();

@@ -4,43 +4,43 @@
   <modelVersion>4.0.0</modelVersion>
   <artifactId>cluster</artifactId>
   <packaging>jar</packaging>
-  <version>1.0.0</version>
+  <version>1.1.0</version>
   <url>http://maven.apache.org</url>
+  <parent>
+    <groupId>org.qbroker</groupId>
+    <artifactId>qbroker</artifactId>
+    <version>1.1.0</version>
+  </parent>
   <dependencies>
     <dependency>
       <groupId>org.qbroker</groupId>
       <artifactId>common</artifactId>
-      <version>1.0.0</version>
+      <version>1.1.0</version>
     </dependency>
     <dependency>
       <groupId>org.qbroker</groupId>
       <artifactId>net</artifactId>
-      <version>1.0.0</version>
+      <version>1.1.0</version>
     </dependency>
     <dependency>
       <groupId>org.qbroker</groupId>
       <artifactId>event</artifactId>
-      <version>1.0.0</version>
+      <version>1.1.0</version>
     </dependency>
     <dependency>
       <groupId>org.qbroker</groupId>
       <artifactId>monitor</artifactId>
-      <version>1.0.0</version>
+      <version>1.1.0</version>
     </dependency>
     <dependency>
       <groupId>org.qbroker</groupId>
       <artifactId>jms</artifactId>
-      <version>1.0.0</version>
+      <version>1.1.0</version>
     </dependency>
     <dependency>
       <groupId>org.qbroker</groupId>
       <artifactId>receiver</artifactId>
-      <version>1.0.0</version>
+      <version>1.1.0</version>
     </dependency>
   </dependencies>
-  <parent>
-    <groupId>org.qbroker</groupId>
-    <artifactId>qbroker</artifactId>
-    <version>1.0.0</version>
-  </parent>
 </project>

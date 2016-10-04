@@ -12,4 +12,6 @@ public interface EventMerger {
         org.qbroker.event.Event[] events);
     /** returns the name of the merger */
     public String getName();
+    /** closeis and cleans up all the resources */
+    public void close();
 }

@@ -29,7 +29,6 @@ import org.qbroker.common.ReservableCells;
 import org.qbroker.common.TimeWindows;
 import org.qbroker.common.Service;
 import org.qbroker.common.RunCommand;
-import org.qbroker.common.XML2Map;
 import org.qbroker.json.JSON2Map;
 import org.qbroker.net.HTTPServer;
 import org.qbroker.net.MessageMailer;
@@ -157,6 +156,7 @@ public class QFlow implements Service, Runnable {
     }
 
     /** Creates new QFlow */
+    @SuppressWarnings("unchecked")
     public QFlow(Map props, int debugForReload, String configFile) {
         Object o;
         String className, key;
@@ -955,11 +955,11 @@ public class QFlow implements Service, Runnable {
             n ++;
             if (o == null)
                 strBuf.append("\n\t"+n+": "+ key + " has been removed");
-            else if ("QFlow".equals(key)) {
+            else if (name.equals(key)) {
                 strBuf.append("\n\t"+n+": "+ key + " has changes");
                 if(!detail || props == null)
                     continue;
-                h = Utils.getMasterProperties("QFlow", includeMap, props);
+                h = Utils.getMasterProperties(name, includeMap, props);
                 new Event(Event.DEBUG, prefix + ": " + key +
                     " has been changed with detailed diff:\n" +
                     JSON2Map.diff(h, (Map) o, "")).send();
@@ -993,7 +993,7 @@ public class QFlow implements Service, Runnable {
         Map change = null;
         List list;
         Browser browser;
-        String key, basename = "Flow";
+        String key, basename = name;
         long tm;
         int i, k, n, id, size;
 
@@ -4519,9 +4519,8 @@ public class QFlow implements Service, Runnable {
         List list = null;
         File file;
         Map props = new HashMap();
-        String operation, cfgDir, configFile = null, saxParser = null;
+        String operation, cfgDir, configFile = null;
         String FILE_SEPARATOR = System.getProperty("file.separator");
-        boolean isJSON = false;
 
         for (i=0; i<args.length; i++) {
             if (args[i].charAt(0) != '-' || args[i].length() != 2)
@@ -4545,11 +4544,6 @@ public class QFlow implements Service, Runnable {
               case 'I':
                 if (i+1 < args.length) {
                     configFile = args[i+1];
-                }
-                break;
-              case 'P':
-                if (i+1 < args.length) {
-                    saxParser = args[i+1];
                 }
                 break;
               case 'A':
@@ -4582,32 +4576,10 @@ public class QFlow implements Service, Runnable {
             System.exit(0);
         }
 
-        if (configFile.endsWith(".json"))
-            isJSON = true;
-
         try {
-            if (isJSON) {
-                FileReader fr = new FileReader(configFile);
-                props = (Map) JSON2Map.parse(fr);
-                fr.close();
-            }
-            else {
-                if (saxParser == null)
-                    saxParser = System.getProperty("org.xml.sax.driver", null);
-                else
-                    System.setProperty("org.xml.sax.driver", saxParser);
-
-                if (saxParser == null) {
-                    saxParser = "org.apache.xerces.parsers.SAXParser";
-                    System.setProperty("org.xml.sax.driver", saxParser);
-                }
-
-                FileInputStream fs = new FileInputStream(configFile);
-                XML2Map xh = new XML2Map(saxParser);
-                Map h = xh.getMap(fs);
-                fs.close();
-                props = (Map) h.get("Flow");
-            }
+            FileReader fr = new FileReader(configFile);
+            props = (Map) JSON2Map.parse(fr);
+            fr.close();
         }
         catch (IOException e) {
             e.printStackTrace();
@@ -4763,10 +4735,10 @@ public class QFlow implements Service, Runnable {
             pstr.close();
             if (key == null) { // got response back
                 try {
-                    System.out.println(event.getText());
+                    System.err.println(event.getText());
                 }
                 catch (Exception e) {
-                    System.out.println(e.toString());
+                    System.err.println(e.toString());
                 }
             }
             else {
@@ -4832,20 +4804,11 @@ public class QFlow implements Service, Runnable {
         size = 0;
         if ((o = props.get("ConfigRepository")) != null && o instanceof String){
             String key = (String) o;
-            file = new File(cfgDir + FILE_SEPARATOR + key +
-                ((isJSON) ? ".json" : ".xml"));
+            file = new File(cfgDir + FILE_SEPARATOR + key + ".json");
             if (file.exists() && file.isFile() && file.canRead()) try {
-                if (isJSON) {
-                    FileReader fr = new FileReader(file);
-                    o = JSON2Map.parse(fr);
-                    fr.close();
-                }
-                else {
-                    FileInputStream fs = new FileInputStream(file);
-                    XML2Map xh = new XML2Map(saxParser);
-                    o = xh.getMap(fs).get(key);
-                    fs.close();
-                }
+                FileReader fr = new FileReader(file);
+                o = JSON2Map.parse(fr);
+                fr.close();
                 if (o == null || !(o instanceof Map)) {
                     new Event(Event.ERR, "empty property file for "+key).send();
                 }
@@ -4868,31 +4831,27 @@ public class QFlow implements Service, Runnable {
         list = (List) props.get("Reporter");
         if (list == null)
             list = new ArrayList();
-        size += MonitorAgent.loadListProperties(list, cfgDir,
-            ((isJSON) ? null : saxParser), show, props);
+        size += MonitorAgent.loadListProperties(list, cfgDir, show, props);
 
         list = (List) props.get("Receiver");
         if (list == null)
             list = new ArrayList();
-        size += MonitorAgent.loadListProperties(list, cfgDir,
-            ((isJSON) ? null : saxParser), show, props);
+        size += MonitorAgent.loadListProperties(list, cfgDir, show, props);
 
         list = (List) props.get("Node");
         if (list == null)
             list = new ArrayList();
-        size += MonitorAgent.loadListProperties(list, cfgDir,
-            ((isJSON) ? null : saxParser), show, props);
+        size += MonitorAgent.loadListProperties(list, cfgDir, show, props);
 
         // merge 2nd includes only on MessageNodes
         if ((o = props.get("IncludePolicy")) != null && o instanceof Map)
-            MonitorAgent.loadIncludedProperties(list, cfgDir,
-                ((isJSON) ? null : saxParser), show, props, (Map) o);
+            MonitorAgent.loadIncludedProperties(list, cfgDir, show, props,
+                (Map) o);
 
         list = (List) props.get("Persister");
         if (list == null)
             list = new ArrayList();
-        size += MonitorAgent.loadListProperties(list, cfgDir,
-            ((isJSON) ? null : saxParser), show, props);
+        size += MonitorAgent.loadListProperties(list, cfgDir, show, props);
 
         if (show > 0) {
             System.out.println("} // end of " + configFile);
@@ -4945,7 +4904,6 @@ public class QFlow implements Service, Runnable {
         System.out.println("  -l: list all properties");
         System.out.println("  -d: debug mode for reload testing only");
         System.out.println("  -I: ConfigFile (default: ./Flow.json)");
-        System.out.println("  -P: XMLParser (default: xerces)");
         System.out.println("  -A: Action for query (default: none)");
         System.out.println("  -C: Category for query (default: USAGE)");
         System.out.println("  -G: Group for query (default: default)");

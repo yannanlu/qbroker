@@ -659,4 +659,8 @@ public class UnixlogMonitor extends Monitor {
             newlog = null;
         }
     }
+
+    protected void finalize() {
+        destroy();
+    }
 }

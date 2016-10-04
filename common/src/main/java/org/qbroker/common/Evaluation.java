@@ -1,14 +1,15 @@
 package org.qbroker.common;
 
-/* Evaluation.java - an evaluator on a simple numeric or boolean expression */
+/* Evaluation.java - an evaluator on a simple numeric or a boolean expression */
 
 /**
  * Evaluation evaluates a simple expression with just numbers and the 5 basic
  * numeric operations, such as addition, substruction, multiplication, division,
- * modulation and ternary operations. The method of evaluate() takes a string as
- * the input expression and returns either a Long or a Double for a numeric
- * expression, or an Integer for a boolean expression. In case of a boolean
- * expression, the Integer 1 is for true and the Integer 0 for false.
+ * modulation, or a boolean expression or a combined ternary operation. The API
+ * method of evaluate() takes a string as the input expression and returns
+ * either a Long or a Double for a numeric expression, or an Integer for a
+ * boolean expression. In case of a boolean expression, the Integer 1 is for
+ * true and the Integer 0 for false.
  *<br/><br/>
  * In boolean expressions or ternary expressions, parentheses are required to
  * group terms and operations.

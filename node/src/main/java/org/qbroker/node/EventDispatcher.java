@@ -24,7 +24,6 @@ import org.qbroker.common.CachedList;
 import org.qbroker.common.QuickCache;
 import org.qbroker.common.Template;
 import org.qbroker.common.TimeWindows;
-import org.qbroker.common.XML2Map;
 import org.qbroker.common.CollectibleCells;
 import org.qbroker.json.JSON2Map;
 import org.qbroker.net.MessageMailer;
@@ -1211,5 +1210,9 @@ public class EventDispatcher extends Node {
             }
             cfgList.clear();
         }
+    }
+
+    protected void finalize() {
+        close();
     }
 }

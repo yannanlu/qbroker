@@ -636,4 +636,8 @@ public class JMXQMonitor extends Monitor {
             jmxReq = null;
         }
     }
+
+    protected void finalize() {
+        destroy();
+    }
 }

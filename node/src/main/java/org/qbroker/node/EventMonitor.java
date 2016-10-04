@@ -1070,4 +1070,8 @@ public class EventMonitor extends Node {
             cfgList.clear();
         }
     }
+
+    protected void finalize() {
+        close();
+    }
 }

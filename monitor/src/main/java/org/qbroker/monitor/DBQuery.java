@@ -5,6 +5,8 @@ package org.qbroker.monitor;
 import java.util.Map;
 import java.util.Date;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.sql.DriverManager;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -67,13 +69,34 @@ public class DBQuery extends Monitor {
         if (description == null)
             description = "Query Database Server";
 
-        if ((o = props.get("DBDriver")) == null)
-            throw(new IllegalArgumentException("DBDriver is not defined"));
-        dbDriver = (String) o;
-
         if ((o = MonitorUtils.select(props.get("URI"))) == null)
             throw(new IllegalArgumentException("URI is not defined"));
         uri = MonitorUtils.substitute((String) o, template);
+
+        if ((o = props.get("DBDriver")) != null)
+            dbDriver = (String) o;
+        else try {
+            String ssp;
+            URI u = new URI(uri);
+            ssp = u.getSchemeSpecificPart();
+            if (ssp == null)
+                throw(new IllegalArgumentException("uri is not well defined"));
+            else if (ssp.startsWith("oracle"))
+                dbDriver = "oracle.jdbc.driver.OracleDriver";
+            else if (ssp.startsWith("mysql"))
+                dbDriver = "com.mysql.jdbc.Driver";
+            else if (ssp.startsWith("postgresql"))
+                dbDriver = "org.postgresql.Driver";
+            else if (ssp.startsWith("microsoft"))
+                dbDriver = "com.microsoft.jdbc.sqlserver.SQLServerDriver";
+            else if (ssp.startsWith("db2"))
+                dbDriver = "com.ibm.db2.jcc.DB2Driver";
+            else
+                throw(new IllegalArgumentException("DBDriver is not defined"));
+        }
+        catch (URISyntaxException e) {
+            throw(new IllegalArgumentException(e.toString()));
+        }
 
         if ((o = MonitorUtils.select(props.get("Username"))) == null)
             throw(new IllegalArgumentException("Username is not defined"));
@@ -505,5 +528,9 @@ public class DBQuery extends Monitor {
     public void destroy() {
         super.destroy();
         dbClose();
+    }
+
+    protected void finalize() {
+        destroy();
     }
 }

@@ -29,8 +29,7 @@ public class DirectoryTree {
             throw(new IllegalArgumentException("directory is not right: " +
                 path));
         tree = new HashMap<String, Map>();
-        Map h = getAllFiles(root);
-        tree.put(path, h);
+        tree.put(path, getAllFiles(root));
     }
 
     public String getName() {
@@ -41,80 +40,85 @@ public class DirectoryTree {
         return root.getPath();
     }
 
+    /**
+     * returns the tree map of the given directory
+     */
     private Map<String, Object> getAllFiles(File dir) {
         if (dir == null)
             return null;
         if (!dir.exists() || !dir.isDirectory() || !dir.canRead())
             throw(new IllegalArgumentException("directory is not right: " +
                 dir.getPath()));
-        String[] list = dir.list();
-        Arrays.sort(list);
 
-        Map<String, Object> h = new HashMap<String, Object>();
         File file;
-        String fname;
-        for (int i=0; i<list.length; i++) {
-            fname = list[i];
+        Map<String, Object> h = new HashMap<String, Object>();
+        for (String fname : dir.list()) {
             if (fname == null || fname.length() <= 0 || fname.charAt(0) == '.')
                 continue;
             file = new File(dir, fname);
-            if (file.isDirectory()) {
-                Map o = getAllFiles(file);
+            if (file.isDirectory())
                 h.put(fname, getAllFiles(file));
-            }
-            else {
+            else
                 h.put(fname, file);
-            }
         }
-        if (h.size() > 0)
-            h.put(".SortedList", list);
+        String[] list = h.keySet().toArray(new String[h.size()]);
+        if (list.length > 1)
+            Arrays.sort(list);
+        h.put(".SortedList", list);
         return h;
     }
 
+    /**
+     * returns JSON representation of the directory tree
+     */
     public String getTreeMap() {
-        return getTreeMap(name, tree, "  ", "\n");
+        String path = root.getPath();
+        return getTreeMap(path, tree.get(path), "", "\n");
     }
 
-    public String getTreeMap(String baseName, Map node, String indent,
+    /**
+     * returns JSON representation of the directory tree on the give node
+     */
+    public String getTreeMap(String dirName, Map node, String indent,
         String end) {
-        StringBuffer strBuf = new StringBuffer();
-        if (baseName == null || baseName.length() <= 0)
-            baseName = name;
-        String fname;
-        if (node == tree) { // root level
-            fname = root.getPath();
-            strBuf.append("<" + baseName + ">" + end);
-            strBuf.append(indent + "<Name>" + baseName + "</Name>" + end);
-            strBuf.append(getTreeMap(fname, (Map) node.get(fname), indent,
-                end));
-            strBuf.append("</" + baseName + ">");
-            return strBuf.toString();
-        }
-        else {
-            strBuf.append(indent + "<DirName>" + baseName + "</DirName>" + end);
-        }
-        String[] list;
         Object o;
+        String[] list;
+        String ind, indd, path;
+        int i = 0;
+        if (dirName == null || dirName.length() <= 0)
+            return null;
+        StringBuffer strBuf = new StringBuffer();
         o = node.get(".SortedList");
         if (o == null || !(o instanceof String[]))
-          return null;
+            return null;
+        ind = (indent == null) ? "" : indent + "  ";
+        indd = (indent == null) ? "" : ind + "  ";
+        path = root.getPath();
+        strBuf.append(indent + "{" + end);
+        if (path.equals(dirName) && node == tree.get(path)) // top level
+            strBuf.append(ind + "\"Name\":\"" + name + "\"," + end);
+        strBuf.append(ind + "\"DirName\":\"" + dirName + "\"," + end);
+        strBuf.append(ind + "\"File\": [");
         list = (String[]) o;
-        for (int i=0; i<list.length; i++) {
-            fname = list[i];
+        for (String fname : list) {
             if ((o = node.get(fname)) == null)
                 continue;
-            if (o instanceof Map) {
-                strBuf.append(indent + "<File type=\"ARRAY\">" + end);
-                strBuf.append(getTreeMap(fname, (Map) o, indent + indent,
-                    end));
-                strBuf.append(indent + "</File>\n");
+            if (o instanceof Map) { // directory
+                if (i > 0)
+                    strBuf.append(",");
+                strBuf.append(end + getTreeMap(fname, (Map) o,
+                    (indent == null) ? null : indd, end));
+                i ++;
             }
-            else if (o instanceof File) {
-                strBuf.append(indent + "<File type=\"ARRAY\">");
-                strBuf.append(fname);
-                strBuf.append("</File>" + end);
+            else if (o instanceof File) { // file
+                if (i > 0)
+                    strBuf.append(",");
+                strBuf.append(end + indd + "\"" + fname + "\"");
+                i ++;
             }
         }
+        strBuf.append(end + ind + "]");
+        strBuf.append(end + indent + "}");
         return strBuf.toString();
     }
 
@@ -122,6 +126,15 @@ public class DirectoryTree {
      * clean up the tree and metadata
      */
     public void clear() {
+        for (String key : tree.keySet()) {
+            Map map = tree.get(key);
+            if (map != null)
+                map.clear();
+        }
         tree.clear();
+    }
+
+    protected void finalize() {
+        clear();
     }
 }

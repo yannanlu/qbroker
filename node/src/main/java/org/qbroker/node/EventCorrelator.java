@@ -900,4 +900,8 @@ public class EventCorrelator extends Node {
         super.close();
         groupList.clear();
     }
+
+    protected void finalize() {
+        close();
+    }
 }

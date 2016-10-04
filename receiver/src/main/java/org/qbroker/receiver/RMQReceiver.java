@@ -272,10 +272,15 @@ public class RMQReceiver extends Receiver {
     }
 
     public void close() {
+        if (status != RCVR_CLOSED)
+            new Event(Event.INFO, qName + " closed on " + linkName).send();
         setStatus(RCVR_CLOSED);
         disconnect();
         if (rmq != null)
             rmq = null;
-        new Event(Event.INFO, qName + " closed on " + linkName).send();
+    }
+
+    protected void finalize() {
+        close();
     }
 }

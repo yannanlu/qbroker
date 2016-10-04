@@ -1000,4 +1000,8 @@ public class LatestRecord extends Monitor {
             dbQuery = null;
         }
     }
+
+    protected void finalize() {
+        destroy();
+    }
 }

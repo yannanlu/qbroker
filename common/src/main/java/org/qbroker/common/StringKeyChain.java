@@ -400,11 +400,15 @@ public class StringKeyChain extends KeyChain {
     /** It cleans up the arrays */
     public void clear() {
         int i, n = getCapacity();
-        super.clear();
         for (i=0; i<n; i++) {
             keyChain[i][0] = null;
             keyChain[i][1] = null;
         }
+        super.clear();
+    }
+
+    protected void finalize() {
+        clear();
     }
 
     /** It compares a and b in the ascending order */

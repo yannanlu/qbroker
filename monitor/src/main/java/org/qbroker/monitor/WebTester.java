@@ -20,11 +20,6 @@ import org.apache.oro.text.regex.MatchResult;
 import org.apache.oro.text.regex.Perl5Compiler;
 import org.apache.oro.text.regex.Perl5Matcher;
 import org.apache.oro.text.regex.MalformedPatternException;
-import javax.mail.Multipart;
-import javax.mail.Session;
-import javax.mail.BodyPart;
-import javax.mail.MessagingException;
-import javax.mail.internet.MimeMessage;
 import org.qbroker.common.Base64Encoder;
 import org.qbroker.common.Template;
 import org.qbroker.common.Utils;
@@ -79,7 +74,7 @@ public class WebTester extends Report {
     private byte[] request;
     private String response;
     private int port;
-    private boolean isHTTP, isMultipart = false, isPost = false, isHead = false;
+    private boolean isHTTP, isPost = false, isHead = false;
     private int debug = 0;
     private int totalBytes, timeout, socketType;
     private byte[] buffer = new byte[0];
@@ -88,7 +83,6 @@ public class WebTester extends Report {
     private SimpleDateFormat dateFormat;
     private Pattern httpPattern = null;
     private Pattern pattern = null;
-    private Session session;
     private String data, cookie = null;
     public final static int TESTFAILED = -1;
     public final static int TESTOK = 0;
@@ -194,15 +188,6 @@ public class WebTester extends Report {
             }
             else
                 strBuf.append("GET " + path + " HTTP/1.0\r\n");
-            if ((o = props.get("IsMultipart")) != null &&
-                "true".equals((String) o)){
-                isMultipart = true;
-                session = Session.getInstance(System.getProperties(), null);
-            }
-            else {
-                isMultipart = false;
-                session = null;
-            }
             if ("POST ".equals(strBuf.substring(0, 5))) {
                 isPost = true;
                 isHead = false;
@@ -460,42 +445,7 @@ public class WebTester extends Report {
             }
         }
 
-        if (isMultipart && session != null) {
-            MimeMessage msg = null;
-            Multipart mp = null;
-            int m = 0;
-            strBuf.append("HTTP/1.0 200 OK\r\n");
-            try {
-                msg = new MimeMessage(session, in);
-                strBuf.append(msg.getContent());
-            }
-            catch (MessagingException e) {
-                if (debug != 0)
-                    new Event(Event.DEBUG, name +
-                        ": failed to instantiate MIME msg: " +
-                        e.toString()).send();
-                close(out);
-                close(in);
-                close(s);
-                s = null;
-                in = null;
-                out = null;
-                return NOTMULTIPART;
-            }
-            catch (Exception e) {
-                if (debug != 0)
-                    new Event(Event.DEBUG, name + ": failed to read MIME msg: "+
-                        e.toString()).send();
-                close(out);
-                close(in);
-                close(s);
-                s = null;
-                in = null;
-                out = null;
-                return READFAILED;
-            }
-        }
-        else try {
+        try {
             for (i=0; i<300; i++) {
                 if (in.available() > 0)
                     break;
@@ -648,11 +598,5 @@ public class WebTester extends Report {
                 }
             }
         }
-    }
-
-    public void destroy() {
-        super.destroy();
-        if (session != null)
-            session = null;
     }
 }

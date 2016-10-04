@@ -246,6 +246,8 @@ public class LogReceiver extends Receiver {
     }
 
     public void close() {
+        if (status != RCVR_CLOSED)
+            new Event(Event.INFO, uri + " closed on " + linkName).send();
         setStatus(RCVR_CLOSED);
         if (dependencyGroup != null) { // clear dependencies
             MonitorUtils.clearDependencies(dependencyGroup);
@@ -253,7 +255,9 @@ public class LogReceiver extends Receiver {
         }
         if (msgLog != null)
             msgLog = null;
+    }
 
-        new Event(Event.INFO, uri + " closed on " + linkName).send();
+    protected void finalize() {
+        close();
     }
 }

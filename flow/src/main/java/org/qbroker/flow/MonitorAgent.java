@@ -40,7 +40,6 @@ import org.qbroker.common.Service;
 import org.qbroker.common.RunCommand;
 import org.qbroker.common.Browser;
 import org.qbroker.common.AssetList;
-import org.qbroker.common.XML2Map;
 import org.qbroker.json.JSON2Map;
 import org.qbroker.net.HTTPServer;
 import org.qbroker.net.HTTPConnector;
@@ -4654,19 +4653,17 @@ public class MonitorAgent implements Service, Runnable {
 
     /**
      * It loads the property map from configDir for each string item of the
-     * given list and adds the property map to the given props. If saxParser
-     * is null, the config files are assumed to have the names with the
-     * extension of ".json". It returns the number of included configs upon
-     * success or -1 otherwise.
+     * given list and adds the property map to the given props. It only supports
+     * the config files with the extension of ".json". It returns the number
+     * of included configs upon success or -1 otherwise.
      */
     @SuppressWarnings("unchecked")
     public static int loadListProperties(List list, String configDir,
-        String saxParser, int show, Map props) {
+        int show, Map props) {
         int i, n, size;
         File file;
         Object o;
         String name;
-        boolean isJSON = (saxParser == null);
 
         if (list == null || configDir == null || props == null)
             return -1;
@@ -4686,21 +4683,12 @@ public class MonitorAgent implements Service, Runnable {
             if ((o = props.get(name)) != null && o instanceof Map) // loaded
                 continue;
 
-            file = new File(configDir + FILE_SEPARATOR + name +
-                ((isJSON) ? ".json" : ".xml"));
+            file = new File(configDir + FILE_SEPARATOR + name + ".json");
             if (file.exists() && file.isFile() && file.canRead()) {
                 try {
-                    if (isJSON) {
-                        FileReader fr = new FileReader(file);
-                        o = JSON2Map.parse(fr);
-                        fr.close();
-                    }
-                    else {
-                        FileInputStream fs = new FileInputStream(file);
-                        XML2Map xh = new XML2Map(saxParser);
-                        o = xh.getMap(fs).get(name);
-                        fs.close();
-                    }
+                    FileReader fr = new FileReader(file);
+                    o = JSON2Map.parse(fr);
+                    fr.close();
                     if (o == null || !(o instanceof Map)) {
                         new Event(Event.ERR, "bad content for " + name +
                             " or base tag not found in "+file.getPath()).send();
@@ -4734,21 +4722,19 @@ public class MonitorAgent implements Service, Runnable {
      * given policy map for 2nd includes, the value will be the name of the
      * list that may contain items to be included secondarily. For each item
      * to be included, the method will load its property map from cfgDir and
-     * merges it to its primary include loaded already to props. If saxParser
-     * is is null, the config files are assumed to have the name with the
-     * extension of ".json". It returns the number of merged configs upon
-     * success or -1 otherwise.
+     * merges it to its primary include loaded already to props. It only
+     * supports the config files with the extension of ".json". It returns the
+     * number of merged configs upon success or -1 otherwise.
      */
     @SuppressWarnings("unchecked")
     public static int loadIncludedProperties(List group, String cfgDir,
-        String saxParser, int show, Map props, Map policy) {
+        int show, Map props, Map policy) {
         int i, k, n, size;
         Object o;
         List list;
         Map ph;
         File file;
         String name, key;
-        boolean isJSON = (saxParser == null);
 
         if (group == null || cfgDir == null || props == null || policy == null)
             return -1;
@@ -4785,20 +4771,11 @@ public class MonitorAgent implements Service, Runnable {
                 key = (String) o;
                 if ((o = ph.get(key)) != null && o instanceof Map) // included
                     continue;
-                file = new File(cfgDir + FILE_SEPARATOR + key +
-                    ((isJSON) ? ".json" : ".xml"));
+                file = new File(cfgDir + FILE_SEPARATOR + key + ".json");
                 if (file.exists() && file.isFile() && file.canRead()) try {
-                    if (isJSON) {
-                        FileReader fr = new FileReader(file);
-                        o = JSON2Map.parse(fr);
-                        fr.close();
-                    }
-                    else {
-                        FileInputStream fs = new FileInputStream(file);
-                        XML2Map xh = new XML2Map(saxParser);
-                        o = xh.getMap(fs).get(key);
-                        fs.close();
-                    }
+                    FileReader fr = new FileReader(file);
+                    o = JSON2Map.parse(fr);
+                    fr.close();
                     if (o == null ||!(o instanceof Map))
                         continue;
                     else if (show > 0) {
@@ -4908,7 +4885,7 @@ public class MonitorAgent implements Service, Runnable {
 
     /**
      * The configuration parameters are stored in the property file,
-     * Agent.json or Agent.xml, that lists all monitorGroups, etc.
+     * Agent.json, that lists all monitorGroups, etc.
      *<br/><br/>
      * Usage: java org.qbroker.flow.MonitorAgent [-?|-l|-I ConfigFile|...]
      *<br/>
@@ -4918,13 +4895,12 @@ public class MonitorAgent implements Service, Runnable {
     public static void main(String args[]) {
         int i, n, show = 0, size = 0, debugForReload = 0;
         Map<String, Object> props = new HashMap<String, Object>();
-        String cfgDir, homeDir, configFile = null, saxParser = null;
+        String cfgDir, homeDir, configFile = null;
         String action = null, category = null, name = null, groupName="default";
         List list = null, group = null;
         MonitorAgent agent = null;
         Object o;
         Thread c = null;
-        boolean isJSON = false;
 
         for (i=0; i<args.length; i++) {
             if (args[i].charAt(0) != '-' || args[i].length() != 2)
@@ -4948,11 +4924,6 @@ public class MonitorAgent implements Service, Runnable {
               case 'I':
                 if (i+1 < args.length) {
                     configFile = args[i+1];
-                }
-                break;
-              case 'P':
-                if (i+1 < args.length) {
-                    saxParser = args[i+1];
                 }
                 break;
               case 'A':
@@ -4982,32 +4953,10 @@ public class MonitorAgent implements Service, Runnable {
         if (configFile == null)
             configFile = "/opt/qbroker/agent/Agent.json";
 
-        if (configFile.endsWith(".json"))
-            isJSON = true;
-
         try {
-            if (isJSON) {
-                FileReader fr = new FileReader(configFile);
-                props = (Map) JSON2Map.parse(fr);
-                fr.close();
-            }
-            else {
-                if (saxParser == null)
-                    saxParser = System.getProperty("org.xml.sax.driver", null);
-                else
-                    System.setProperty("org.xml.sax.driver", saxParser);
-
-                if (saxParser == null) {
-                    saxParser = "org.apache.xerces.parsers.SAXParser";
-                    System.setProperty("org.xml.sax.driver", saxParser);
-                }
-
-                FileInputStream fs = new FileInputStream(configFile);
-                XML2Map xh = new XML2Map(saxParser);
-                Map h = xh.getMap(fs);
-                fs.close();
-                props = (Map) h.get("Agent");
-            }
+            FileReader fr = new FileReader(configFile);
+            props = (Map) JSON2Map.parse(fr);
+            fr.close();
         }
         catch (Exception e) {
             e.printStackTrace();
@@ -5149,10 +5098,10 @@ public class MonitorAgent implements Service, Runnable {
             pstr.close();
             if (key == null) { // got response back
                 try {
-                    System.out.println(event.getText());
+                    System.err.println(event.getText());
                 }
                 catch (Exception e) {
-                    System.out.println(e.toString());
+                    System.err.println(e.toString());
                 }
             }
             else {
@@ -5228,20 +5177,11 @@ public class MonitorAgent implements Service, Runnable {
         // ConfigRepository
         if ((o = props.get("ConfigRepository")) != null && o instanceof String){
             String key = (String) o;
-            File file = new File(cfgDir + FILE_SEPARATOR + key +
-                ((isJSON) ? ".json" : ".xml"));
+            File file = new File(cfgDir + FILE_SEPARATOR + key + ".json");
             if (file.exists() && file.isFile() && file.canRead()) try {
-                if (isJSON) {
-                    FileReader fr = new FileReader(file);
-                    o = JSON2Map.parse(fr);
-                    fr.close();
-                }
-                else {
-                    FileInputStream fs = new FileInputStream(file);
-                    XML2Map xh = new XML2Map(saxParser);
-                    o = xh.getMap(fs).get(key);
-                    fs.close();
-                }
+                FileReader fr = new FileReader(file);
+                o = JSON2Map.parse(fr);
+                fr.close();
                 if (o == null || !(o instanceof Map)) {
                     new Event(Event.ERR, "empty property file for "+key).send();
                 }
@@ -5283,8 +5223,7 @@ public class MonitorAgent implements Service, Runnable {
             list = (List) h.get("Monitor");
             if (list == null)
                 list = new ArrayList();
-            size += loadListProperties(list, configDir,
-                ((isJSON) ? null : saxParser), show, props);
+            size += loadListProperties(list, configDir, show, props);
         }
 
         // MessageFlow
@@ -5305,25 +5244,21 @@ public class MonitorAgent implements Service, Runnable {
             list = (List) h.get("Receiver");
             if (list == null)
                 list = new ArrayList();
-            size += loadListProperties(list, configDir,
-                ((isJSON) ? null : saxParser), show, props);
+            size += loadListProperties(list, configDir, show, props);
 
             list = (List) h.get("Node");
             if (list == null)
                 list = new ArrayList();
-            size += loadListProperties(list, configDir,
-                ((isJSON) ? null : saxParser), show, props);
+            size += loadListProperties(list, configDir, show, props);
 
             // implement include policy only on MessageNodes
             if ((o = h.get("IncludePolicy")) != null && o instanceof Map)
-                loadIncludedProperties(list, configDir,
-                    ((isJSON) ? null : saxParser), show, props, (Map) o);
+                loadIncludedProperties(list, configDir, show, props, (Map) o);
 
             list = (List) h.get("Persister");
             if (list == null)
                 list = new ArrayList();
-            size += loadListProperties(list, configDir,
-                ((isJSON) ? null : saxParser), show, props);
+            size += loadListProperties(list, configDir, show, props);
         }
 
         if (show > 0) {
@@ -5378,7 +5313,6 @@ public class MonitorAgent implements Service, Runnable {
         System.out.println("  -l: list all properties");
         System.out.println("  -d: debug mode for reload testing only");
         System.out.println("  -I: ConfigFile (default: /opt/qbroker/agent/Agent.json)");
-        System.out.println("  -P: XMLParser (default: xerces)");
         System.out.println("  -A: Action for query (default: none)");
         System.out.println("  -C: Category for query (default: AGENT)");
         System.out.println("  -G: Group for query (default: default)");

@@ -27,6 +27,8 @@ import org.qbroker.monitor.Report;
 
 public class ReportQuery extends Report {
     private int reportExpiration = 0;
+    private boolean withPrivateReport = false;
+    private Map<String, String> keyMap;
     private Pattern[][] aPatternGroup = null;
     private Pattern[][] xPatternGroup = null;
     private java.lang.reflect.Method getReport = null;
@@ -52,6 +54,9 @@ public class ReportQuery extends Report {
                 throw(new IllegalArgumentException("getReport: not a static " +
                   "method of: " + (String) o));
         }
+        else if ((o = props.get("WithPrivateReport")) != null &&
+            "true".equals((String) o)) // for private report
+            withPrivateReport = true;
 
         if ((o = props.get("ReportExpiration")) != null &&
             (reportExpiration = Integer.parseInt((String) o)) < 0)
@@ -65,6 +70,15 @@ public class ReportQuery extends Report {
         }
         catch (Exception e) {
          throw(new IllegalArgumentException("Pattern failed" + e.getMessage()));
+        }
+
+        keyMap = new HashMap<String, String>();
+        if ((o = props.get("KeyMap")) != null && o instanceof Map) {
+            Map map = (Map) o;
+            for (Object ky : map.keySet()) {
+                if ((o = map.get(ky)) != null && o instanceof String)
+                    keyMap.put((String) ky, (String) o);
+            }
         }
     }
 
@@ -100,14 +114,27 @@ public class ReportQuery extends Report {
             }
         }
 
-        if (getReport == null)
+        if (withPrivateReport) // for private report
+            r = MonitorUtils.getPrivateReport();
+        else if (getReport == null)
             r = MonitorUtils.getReport(reportName);
         else
             r = (Map) getReport.invoke(null, new Object[] {reportName});
 
         if (r == null)
             throw(new IllegalArgumentException("no such report: " +reportName));
-
+        else if (keyMap.size() > 0) { // copy content over with keyMap
+            String str;
+            for (String key : keyMap.keySet()) {
+                str = keyMap.get(key);
+                if (str == null || str.length() <= 0 || !r.containsKey(str))
+                    continue;
+                report.put(key, r.get(str));
+            }
+            if (!keyMap.containsKey("TestTime") && !r.containsKey("TestTime"))
+                report.put("TestTime", String.valueOf(currentTime));
+            r.clear();
+        }
         else  { // copy the content over
             for (Object ky : r.keySet())
                 report.put((String) ky, r.get(ky));
@@ -208,5 +235,20 @@ public class ReportQuery extends Report {
         }
 
         return report;
+    }
+
+    public void destroy() {
+        super.destroy();
+        getReport = null;
+        aPatternGroup = null;
+        xPatternGroup = null;
+        if (keyMap != null) {
+            keyMap.clear();
+            keyMap = null;
+        }
+    }
+
+    protected void finalize() {
+        destroy();
     }
 }

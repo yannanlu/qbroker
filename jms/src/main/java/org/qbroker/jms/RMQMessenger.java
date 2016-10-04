@@ -31,7 +31,6 @@ import org.qbroker.common.Utils;
 import org.qbroker.common.XQueue;
 import org.qbroker.common.Template;
 import org.qbroker.common.TimeWindows;
-import org.qbroker.common.XML2Map;
 import org.qbroker.common.TimeoutException;
 import org.qbroker.net.RMQConnector;
 import org.qbroker.jms.MessageUtils;

@@ -767,4 +767,8 @@ public class JMSHealthChecker extends Monitor {
             jmsTCon = null;
         }
     }
+
+    protected void finalize() {
+        destroy();
+    }
 }

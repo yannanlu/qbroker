@@ -17,7 +17,6 @@ import org.apache.oro.text.regex.Perl5Matcher;
 import org.apache.oro.text.regex.MalformedPatternException;
 import org.qbroker.common.Template;
 import org.qbroker.common.TextSubstitution;
-import org.qbroker.common.Utils;
 import org.qbroker.event.Event;
 import org.qbroker.event.EventUtils;
 import org.qbroker.event.EventAction;
@@ -39,7 +38,7 @@ public class EventAppender implements EventAction {
     private String category;
     private long serialNumber;
     private int debug = 0;
-    private Map<String, Object> appender;
+    private Map<String, Map> appender;
     private String logfile = null, uri;
     private boolean append = true;
     private Pattern pattern = null;
@@ -100,7 +99,7 @@ public class EventAppender implements EventAction {
                 ": unsupported scheme: " + s));
         }
 
-        appender = new HashMap<String, Object>();
+        appender = new HashMap<String, Map>();
         map = new HashMap<String, Object>();
         if ((o = props.get("Summary")) != null)
             map.put("Summary", new Template((String) o));
@@ -111,7 +110,7 @@ public class EventAppender implements EventAction {
         if (map.size() > 0) {
             o = props.get("Substitution");
             if (o != null && o instanceof List) {
-                msgSub = Utils.initSubstitutions((List) o);
+                msgSub = EventUtils.initSubstitutions((List) o);
                 map.put("MsgSub", msgSub);
             }
             appender.put("Default", map);
@@ -119,10 +118,10 @@ public class EventAppender implements EventAction {
         else if ((o = props.get("Default")) != null && o instanceof Map) {
             o = ((Map) o).get("Substitution");
             if (o != null && o instanceof List)
-                msgSub = Utils.initSubstitutions((List) o);
+                msgSub = EventUtils.initSubstitutions((List) o);
             else if ((o = props.get("Substitution")) != null &&
                 o instanceof List)
-                msgSub = Utils.initSubstitutions((List) o);
+                msgSub = EventUtils.initSubstitutions((List) o);
         }
 
         Iterator iter = props.keySet().iterator();
@@ -150,7 +149,7 @@ public class EventAppender implements EventAction {
             if (map.size() > 0) {
                 o = h.get("Substitution");
                 if (o != null && o instanceof List) // override
-                    map.put("MsgSub", Utils.initSubstitutions((List) o));
+                    map.put("MsgSub", EventUtils.initSubstitutions((List) o));
                 else if (o == null) // use the default
                     map.put("MsgSub", msgSub);
 
@@ -193,8 +192,11 @@ public class EventAppender implements EventAction {
             return null;
 
         msgSub = (TextSubstitution[]) map.get("MsgSub");
-        if (msgSub != null)
+        if (msgSub != null) {
             change = EventUtils.getChange(event, msgSub, pm);
+            if (change != null && change.size() <= 0)
+                change = null;
+        }
 
         attr = event.attribute;
         template = (Template) map.get("Summary");
@@ -295,9 +297,9 @@ public class EventAppender implements EventAction {
         if (eventType == null || eventType.length() == 0)
             eventType = "Default";
 
-        map = (Map) appender.get(eventType);
+        map = appender.get(eventType);
         if (map == null)
-            map = (Map) appender.get("Default");
+            map = appender.get("Default");
 
         if (map != null && map.size() > 0) try {
             str = append(event, map);
@@ -314,5 +316,20 @@ public class EventAppender implements EventAction {
 
     public String getName() {
         return name;
+    }
+
+    public void close() {
+        pm = null;
+        pattern = null;
+        if (appender != null) {
+            for (String key : appender.keySet())
+                appender.get(key).clear();
+            appender.clear();
+            appender = null;
+        }
+    }
+
+    protected void finalize() {
+        close();
     }
 }

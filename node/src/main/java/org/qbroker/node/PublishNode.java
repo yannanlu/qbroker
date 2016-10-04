@@ -1150,4 +1150,8 @@ public class PublishNode extends Node {
             cfgList.clear();
         }
     }
+
+    protected void finalize() {
+        close();
+    }
 }

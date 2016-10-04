@@ -273,11 +273,15 @@ public class RMQPersister extends Persister {
     }
 
     public void close() {
+        if (status != PSTR_CLOSED)
+            new Event(Event.INFO, qName + " closed on " + linkName).send();
         setStatus(PSTR_CLOSED);
         disconnect();
         if (rmq != null)
             rmq = null;
+    }
 
-        new Event(Event.INFO, qName + " closed on " + linkName).send();
+    protected void finalize() {
+        close();
     }
 }

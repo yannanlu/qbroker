@@ -21,7 +21,8 @@ import org.qbroker.json.JSON2FmModel;
 import org.qbroker.json.JSONSection;
 
 /**
- * JSONTemaplte is a template that formats JSON data.
+ * JSONTemaplte is a template that formats JSON data. It contains a template
+ * and a list of JSONSections.
  *<br/>
  * @author yannanlu@yahoo.com
  */
@@ -32,6 +33,8 @@ public class JSONTemplate extends AssetList {
     private TextSubstitution tsub;
     private Perl5Matcher pm = null;
     private Map<String, Object> params = new HashMap<String, Object>();
+    private Map<String, String> varMap = new HashMap<String, String>();
+    private boolean keepOriginalOrder = false;
 
     public JSONTemplate(Map props) {
         super((String) props.get("name"), 1024);
@@ -76,6 +79,17 @@ public class JSONTemplate extends AssetList {
         throw(new IllegalArgumentException("template has no field defined for "+
                name));
 
+        if ((o = props.get("keepOriginalOrder")) != null &&
+            o instanceof String && "true".equals((String) o))
+            keepOriginalOrder = true;
+
+        if ((o = props.get("variable")) != null && o instanceof Map) {
+            Map map = (Map) o;
+            for (Object obj : map.keySet()) {
+                varMap.put((String) obj, (String) map.get(obj));
+            }
+        }
+
         if ((o = props.get("sections")) != null && o instanceof List)
             list = (List) o;
         else
@@ -86,14 +100,14 @@ public class JSONTemplate extends AssetList {
             o = list.get(i);
             if (o == null || !(o instanceof Map))
                 continue;
-            sect = new JSONSection((Map) o);
+            sect = new JSONSection((Map) o, keepOriginalOrder);
             add(sect.getName(), new long[]{i}, sect);
         }
 
         iter = temp.iterator();
         while (iter.hasNext()) { // check if any section is missing
             key = (String) iter.next();
-            if (!key.matches("^s:.+"))
+            if (!key.startsWith("s:"))
                 continue;
             key = key.substring(2);
             if (!containsKey(key))
@@ -103,7 +117,9 @@ public class JSONTemplate extends AssetList {
     }
 
     public void setParameter(String key, Object value) {
-        params.put(key, value);
+        if (key != null && key.length() > 0 && value != null &&
+            !key.startsWith("r:") && !key.startsWith("v:"))
+            params.put(key, value);
     }
 
     public Object getParameter(String key) {
@@ -122,46 +138,55 @@ public class JSONTemplate extends AssetList {
         return temp.copyText();
     }
 
+    /** if this returns true, the json should be parsed with ordering support */
+    public boolean keepOriginalOrder() {
+        return keepOriginalOrder;
+    }
+
+    /**
+     * returns the formatted JSON content on the given JSON data
+     */
     public String format(Map json) {
         JSONSection sect;
         Object o;
-        String[] keys;
-        String key, value, text;
-        int i, n;
+        String path, value, text;
 
         if (json == null || json.size() <= 0)
             return null;
 
-        keys = temp.getAllFields();
-        n = keys.length;
+        // add JSON data
+        params.put("r:_JSON_", json);
+        for (String key : varMap.keySet()) { // load values for variables
+            if (key == null || key.length() <= 0 || key.startsWith("r:"))
+                continue;
+            path = varMap.get(key);
+            o = JSON2FmModel.get(json, path);
+            if (o != null)
+                params.put("v:" + key, o);
+        }
         text = temp.copyText();
-        for (i=0; i<n; i++) {
-            key = keys[i];
-            if (key.matches("^p:.+")) { // for a parameter
-                key = key.substring(2);
-                o = params.get(key);
+        for (String key : temp.getAllFields()) {
+            if (key.startsWith("p:")) { // for a parameter
+                o = params.get(key.substring(2));
                 if (o == null)
                     value = "null";
                 else if (o instanceof String)
                     value = "\"" + (String) o + "\"";
                 else
                     value = o.toString();
-                text = temp.substitute(pm, keys[i], value, text);
-                continue;
+                text = temp.substitute(pm, key, value, text);
             }
-            else if (key.matches("^P:.+")) { // for a parameter without quotes
-                key = key.substring(2);
-                o = params.get(key);
+            else if (key.startsWith("P:")) { // for a parameter without quotes
+                o = params.get(key.substring(2));
                 if (o == null)
                     value = "null";
                 else if (o instanceof String)
                     value = (String) o;
                 else
                     value = o.toString();
-                text = temp.substitute(pm, keys[i], value, text);
-                continue;
+                text = temp.substitute(pm, key, value, text);
             }
-            else if (!key.matches("^s:.+")) { // for a json path 
+            else if (!key.startsWith("s:")) { // for a json path 
                 o = JSON2FmModel.get(json, key);
                 if (o == null)
                     value = "null";
@@ -174,25 +199,33 @@ public class JSONTemplate extends AssetList {
                 else
                     value = o.toString();
                 text = temp.substitute(pm, key, value, text);
-                continue;
             }
-            // for a section
-            key = key.substring(2);
-            sect = (JSONSection) get(key);
-            if (sect == null) {
+            else if ((sect = (JSONSection) get(key.substring(2))) != null) {
+                try {
+                    value = sect.fulfill(json, this, params);
+                }
+                catch (Exception e) {
+                    params.remove("r:_JSON_");
+                    for (String ky : varMap.keySet()) // clean up
+                        params.remove("v:" + ky);
+                    throw(new RuntimeException(name + ": " + sect.getName() +
+                        " failed to fulfill the section of " + key + ": " +
+                        Utils.traceStack(e)));
+                }
+                text = temp.substitute(pm, key, value, text);
+            }
+            else {
+                params.remove("r:_JSON_");
+                for (String ky : varMap.keySet()) // clean up
+                    params.remove("v:" + ky);
                 throw(new RuntimeException(name+" has no section defined for "+
                     key));
             }
-            else try {
-                value = sect.fulfill(json, this, params);
-            }
-            catch (Exception e) {
-                throw(new RuntimeException(name + ": " + sect.getName() +
-                    " failed to fulfill the section of " + key + ": " +
-                    Utils.traceStack(e)));
-            }
-            text = temp.substitute(pm, keys[i], value, text);
         }
+        // remove JSON data
+        params.remove("r:_JSON_");
+        for (String key : varMap.keySet()) // clean up
+            params.remove("v:" + key);
 
         if (tsub != null)
             tsub.substitute(pm, text);
@@ -200,46 +233,50 @@ public class JSONTemplate extends AssetList {
         return text;
     }
 
+    /**
+     * returns the formatted JSON content on the given JSON data
+     */
     public String format(List json) {
         JSONSection sect;
         Object o;
-        String[] keys;
-        String key, value, text;
-        int i, n;
+        String path, value, text;
 
         if (json == null || json.size() <= 0)
             return null;
 
-        keys = temp.getAllFields();
-        n = keys.length;
+        // add JSON data
+        params.put("r:_JSON_", json);
+        for (String key : varMap.keySet()) { // load values for variables
+            if (key == null || key.length() <= 0 || key.startsWith("r:"))
+                continue;
+            path = varMap.get(key);
+            o = JSON2FmModel.get(json, path);
+            if (o != null)
+                params.put(key, o);
+        }
         text = temp.copyText();
-        for (i=0; i<n; i++) {
-            key = keys[i];
-            if (key.matches("^p:.+")) { // for a parameter
-                key = key.substring(2);
-                o = params.get(key);
+        for (String key : temp.getAllFields()) {
+            if (key.startsWith("p:")) { // for a parameter
+                o = params.get(key.substring(2));
                 if (o == null)
                     value = "null";
                 else if (o instanceof String)
                     value = "\"" + (String) o + "\"";
                 else
                     value = o.toString();
-                text = temp.substitute(pm, keys[i], value, text);
-                continue;
+                text = temp.substitute(pm, key, value, text);
             }
-            else if (key.matches("^P:.+")) { // for a parameter without quotes
-                key = key.substring(2);
-                o = params.get(key);
+            else if (key.startsWith("P:")) { // for a parameter without quotes
+                o = params.get(key.substring(2));
                 if (o == null)
                     value = "null";
                 else if (o instanceof String)
                     value = (String) o;
                 else
                     value = o.toString();
-                text = temp.substitute(pm, keys[i], value, text);
-                continue;
+                text = temp.substitute(pm, key, value, text);
             }
-            else if (!key.matches("^s:.+")) { // for a json path
+            else if (!key.startsWith("s:")) { // for a json path
                 o = JSON2FmModel.get(json, key);
                 if (o == null)
                     value = "null";
@@ -252,25 +289,33 @@ public class JSONTemplate extends AssetList {
                 else
                     value = o.toString();
                 text = temp.substitute(pm, key, value, text);
-                continue;
             }
-            // for a section
-            key = key.substring(2);
-            sect = (JSONSection) get(key);
-            if (sect == null) {
+            else if ((sect = (JSONSection) get(key.substring(2))) != null) {
+                try {
+                    value = sect.fulfill(json, this, params);
+                }
+                catch (Exception e) {
+                    params.remove("r:_JSON_");
+                    for (String ky : varMap.keySet()) // clean up
+                        params.remove("v:" + ky);
+                    throw(new RuntimeException(name + ": " + sect.getName() +
+                        " failed to fulfill the section of " + key + ": " +
+                        Utils.traceStack(e)));
+                }
+                text = temp.substitute(pm, key, value, text);
+            }
+            else {
+                params.remove("r:_JSON_");
+                for (String ky : varMap.keySet()) // clean up
+                    params.remove("v:" + ky);
                 throw(new RuntimeException(name+" has no section defined for "+
                     key));
             }
-            else try {
-                value = sect.fulfill(json, this, params);
-            }
-            catch (Exception e) {
-                throw(new RuntimeException(name + ": " + sect.getName() +
-                    " failed to fulfill the section of " + key + ": " +
-                    Utils.traceStack(e)));
-            }
-            text = temp.substitute(pm, keys[i], value, text);
         }
+        // remove JSON data
+        params.remove("r:_JSON_");
+        for (String key : varMap.keySet()) // clean up
+            params.remove("v:" + key);
 
         if (tsub != null)
             tsub.substitute(pm, text);
@@ -290,7 +335,20 @@ public class JSONTemplate extends AssetList {
         }
         temp = null;
         tsub = null;
+        if (params != null) {
+            params.clear();
+            params = null;
+        }
+        if (varMap != null) {
+            varMap.clear();
+            varMap = null;
+        }
         super.clear();
+    }
+
+    protected void finalize() {
+        clear();
+        super.finalize();
     }
 
     @SuppressWarnings("unchecked")
@@ -339,15 +397,14 @@ public class JSONTemplate extends AssetList {
             in.close();
             ph.put("name", path);
             template = new JSONTemplate(ph);
-            Iterator iter = params.keySet().iterator();
-            while (iter.hasNext()) { // set parameters
-                str = (String) iter.next();
-                if (str == null || str.length() <= 0)
+            for (String key : params.keySet()) { // set parameters
+                if (key == null || key.length() <= 0)
                     continue;
-                template.setParameter(str, params.get(str));
+                template.setParameter(key, params.get(key));
             }
             in = new FileReader(filename);
-            Object o = JSON2FmModel.parse(in);
+            Object o = (!template.keepOriginalOrder()) ? JSON2FmModel.parse(in):
+                JSON2Map.parseJSON(in, true);
             in.close();
             if (o instanceof List)
                 System.out.println(template.format((List) o));

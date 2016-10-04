@@ -396,11 +396,15 @@ public class JMSSubscriber extends Receiver {
     }
 
     public void close() {
+        if (status != RCVR_CLOSED)
+            new Event(Event.INFO, tName + " closed on " + linkName).send();
         setStatus(RCVR_CLOSED);
         disconnect();
         if (tConn != null)
             tConn = null;
+    }
 
-        new Event(Event.INFO, tName + " closed on " + linkName).send();
+    protected void finalize() {
+        close();
     }
 }

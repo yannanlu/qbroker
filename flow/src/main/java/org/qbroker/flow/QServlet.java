@@ -41,7 +41,6 @@ import org.qbroker.jaas.SimpleCallbackHandler;
 import org.qbroker.common.Utils;
 import org.qbroker.common.TimeWindows;
 import org.qbroker.common.Base64Encoder;
-import org.qbroker.common.XML2Map;
 import org.qbroker.json.JSON2Map;
 import org.qbroker.net.DBConnector;
 import org.qbroker.jms.MessageUtils;
@@ -111,7 +110,6 @@ import org.qbroker.event.Event;
 public class QServlet extends HttpServlet {
     private String cfgDir;
     private String configFile;
-    private String saxParser = null;
     private String name;
     private String loginURL, welcomeURL, baseURI;
     private int timeout = 10000;
@@ -129,7 +127,6 @@ public class QServlet extends HttpServlet {
     private MessageDigest md = null;
     private int restURILen = 0;
     private int baseURILen = 0;
-    private boolean isJSON = false;
 
     protected final static String statusText[] = {"READY", "RUNNING",
         "RETRYING", "PAUSE", "STANDBY", "DISABLED", "STOPPED", "CLOSED"};
@@ -147,8 +144,6 @@ public class QServlet extends HttpServlet {
         String loggerName, reportName, jaasConfig;
         ServletConfig config = getServletConfig();
         configFile = config.getInitParameter("ConfigFile");
-        if (configFile == null)
-            configFile = config.getInitParameter("XMLConfigFile");
         loggerName = config.getInitParameter("LoggerName");
         reportName = config.getInitParameter("ReportName");
         jaasConfig = config.getInitParameter("JAASConfig");
@@ -159,8 +154,6 @@ public class QServlet extends HttpServlet {
         headerRegex = config.getInitParameter("HeaderRegex");
         if (configFile == null)
             throw(new ServletException("ConfigFile not defined"));
-        if (configFile.endsWith(".json"))
-            isJSON = true;
         if (restURI != null)
             restURILen = restURI.length();
         if (loggerName == null)
@@ -194,22 +187,9 @@ public class QServlet extends HttpServlet {
         }
 
         try {
-            if (isJSON) {
-                FileReader fr = new FileReader(configFile);
-                props = (Map) JSON2Map.parse(fr);
-                fr.close();
-            }
-            else {
-                saxParser = config.getInitParameter("SAXParser");
-                if (saxParser == null)
-                    saxParser = (String)System.getProperty("org.xml.sax.driver",
-                        "org.apache.xerces.parsers.SAXParser");
-                FileInputStream fs = new FileInputStream(configFile);
-                XML2Map xh = new XML2Map(saxParser);
-                Map h = xh.getMap(fs);
-                fs.close();
-                props = (Map) h.get("Flow");
-            }
+            FileReader fr = new FileReader(configFile);
+            props = (Map) JSON2Map.parse(fr);
+            fr.close();
 
             // init Event logging
             String datePattern = null;
@@ -219,7 +199,7 @@ public class QServlet extends HttpServlet {
             if ((o = props.get("LogDir")) != null)
                 Event.setLogDir((String) o, datePattern);
             else
-                Event.setLogDir("/logs", datePattern);
+                Event.setLogDir("/var/log/qbroker", datePattern);
         }
         catch (Exception e) {
             throw(new ServletException("failed to load configuration from " +
@@ -252,20 +232,11 @@ public class QServlet extends HttpServlet {
         n = 0;
         if ((o = props.get("ConfigRepository")) != null && o instanceof String){
             String key = (String) o;
-            file = new File(cfgDir + FILE_SEPARATOR + key +
-                ((isJSON) ? ".json" : ".xml"));
+            file = new File(cfgDir + FILE_SEPARATOR + key + ".json");
             if (file.exists() && file.isFile() && file.canRead()) try {
-                if (isJSON) {
-                    FileReader fr = new FileReader(file);
-                    o = JSON2Map.parse(fr);
-                    fr.close();
-                }
-                else {
-                    FileInputStream fs = new FileInputStream(file);
-                    XML2Map xh = new XML2Map(saxParser);
-                    o = xh.getMap(fs).get(key);
-                    fs.close();
-                }
+                FileReader fr = new FileReader(file);
+                o = JSON2Map.parse(fr);
+                fr.close();
                 if (o == null || !(o instanceof Map)) {
                     new Event(Event.ERR, "empty property file for "+key).send();
                 }
@@ -283,31 +254,26 @@ public class QServlet extends HttpServlet {
         list = (List) props.get("Reporter");
         if (list == null)
             list = new ArrayList();
-        n = MonitorAgent.loadListProperties(list, cfgDir,
-            ((isJSON) ? null : saxParser), 0, props);
+        n = MonitorAgent.loadListProperties(list, cfgDir, 0, props);
 
         list = (List) props.get("Receiver");
         if (list == null)
             list = new ArrayList();
-        n = MonitorAgent.loadListProperties(list, cfgDir,
-            ((isJSON) ? null : saxParser), 0, props);
+        n = MonitorAgent.loadListProperties(list, cfgDir, 0, props);
 
         list = (List) props.get("Node");
         if (list == null)
             list = new ArrayList();
-        n = MonitorAgent.loadListProperties(list, cfgDir,
-            ((isJSON) ? null : saxParser), 0, props);
+        n = MonitorAgent.loadListProperties(list, cfgDir, 0, props);
 
         // merge 2nd includes only on MessageNodes
         if ((o = props.get("IncludePolicy")) != null && o instanceof Map)
-            MonitorAgent.loadIncludedProperties(list, cfgDir,
-                ((isJSON) ? null : saxParser), 0, props, (Map) o);
+            MonitorAgent.loadIncludedProperties(list, cfgDir, 0, props, (Map)o);
 
         list = (List) props.get("Persister");
         if (list == null)
             list = new ArrayList();
-        n = MonitorAgent.loadListProperties(list, cfgDir,
-            ((isJSON) ? null : saxParser), 0, props);
+        n = MonitorAgent.loadListProperties(list, cfgDir, 0, props);
 
         try {
             qf = new QFlow(props);
@@ -1375,24 +1341,14 @@ public class QServlet extends HttpServlet {
 
         if (k == 0 && (o = props.get("tmpl")) != null) { // load the template
             str = ((String[]) o)[0];
-            i = (isJSON) ? str.indexOf(".json") : str.indexOf(".xml");
+            i = str.indexOf(".json");
             uri = cfgDir + FILE_SEPARATOR + str;
             if (i >= 0)
                 str = str.substring(0, i);
             try {
-                if (isJSON) {
-                    FileReader fr = new FileReader(uri);
-                    template = (Map) JSON2Map.parse(fr);
-                    fr.close();
-                }
-                else {
-                    FileInputStream fs = new FileInputStream(uri);
-                    XML2Map xh = new XML2Map(saxParser);
-                    Map h = xh.getMap(fs);
-                    fs.close();
-                    Iterator iter =  h.keySet().iterator();
-                    template = (Map) h.get(iter.next());
-                }
+                FileReader fr = new FileReader(uri);
+                template = (Map) JSON2Map.parse(fr);
+                fr.close();
                 request.setAttribute(str, template);
             }
             catch (Exception e) {
@@ -1465,6 +1421,7 @@ public class QServlet extends HttpServlet {
         if (qf != null)
             qf.close();
 
+        super.destroy();
         if (manager != null && manager.isAlive()) try {
             manager.join();
         }

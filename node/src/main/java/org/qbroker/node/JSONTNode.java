@@ -1008,4 +1008,8 @@ public class JSONTNode extends Node {
         cache.clear();
         pluginList.clear();
     }
+
+    protected void finalize() {
+        close();
+    }
 }

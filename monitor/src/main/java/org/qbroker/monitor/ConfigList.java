@@ -265,15 +265,30 @@ public class ConfigList {
     }
 
     public void close() {
-        if (pm != null)
+        if (pm != null) {
             pm.destroy();
-        pm = null;
+            pm = null;
+        }
         if (cachedProps != null)
             cachedProps.clear();
         cachedProps = null;
-        if (dataMap != null)
+        if (dataMap != null) {
             dataMap.clear();
+            dataMap = null;
+        }
+        if (map != null) {
+            map.clear();
+            map = null;
+        }
+        if (template != null) {
+            template.clear();
+            template = null;
+        }
         items = null;
         size = 0;
+    }
+
+    protected void finalize() {
+        close();
     }
 }

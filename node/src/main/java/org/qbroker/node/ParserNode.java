@@ -744,4 +744,8 @@ public class ParserNode extends Node {
         }
         pluginList.clear();
     }
+
+    protected void finalize() {
+        close();
+    }
 }

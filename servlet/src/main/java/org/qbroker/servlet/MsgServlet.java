@@ -35,7 +35,6 @@ import org.qbroker.common.Service;
 import org.qbroker.common.Utils;
 import org.qbroker.common.TimeWindows;
 import org.qbroker.common.Base64Encoder;
-import org.qbroker.common.XML2Map;
 import org.qbroker.json.JSON2Map;
 import org.qbroker.net.DBConnector;
 import org.qbroker.event.Event;
@@ -101,7 +100,6 @@ import org.qbroker.jms.ObjectEvent;
  */
 
 public class MsgServlet extends HttpServlet {
-    private String saxParser = null;
     private Service service = null;
     private String loginURL = "/login.jsp";
     private String welcomeURL = "/welcome.jsp";
@@ -118,7 +116,6 @@ public class MsgServlet extends HttpServlet {
     private String[] propertyName, propertyValue;
     private MessageDigest md = null;
     private int restURILen = 0;
-    private boolean isJSON = false;
 
     protected final static String statusText[] = {"READY", "RUNNING",
         "RETRYING", "PAUSE", "STANDBY", "DISABLED", "STOPPED", "CLOSED"};
@@ -132,7 +129,6 @@ public class MsgServlet extends HttpServlet {
         int i, n;
         Object o;
         String jaasConfig = null;
-        isJSON = true;
 
         if (jaasLogin != null) { // initialize JAAS LoginContext
             if (jaasConfig != null)
@@ -1475,5 +1471,11 @@ public class MsgServlet extends HttpServlet {
             }
         }
         return msg;
+    }
+
+    public void destroy() {
+        if (service != null)
+            service.close();
+        super.destroy();
     }
 }

@@ -390,6 +390,10 @@ public class FileTester extends Report {
         }
     }
 
+    protected void finalize() {
+        destroy();
+    }
+
     /** lists all files in a folder selected by a pattern, mtime or size */
     public static void main(String args[]) {
         int i, ic = -1, jc = -1, k;

@@ -55,11 +55,11 @@ import org.qbroker.event.Event;
  * each generated monitor. The reporter makes the private reports available
  * for each of the monitor. The container will pass the report to the job
  * thread so that the runtime of the monitor will be able to retrieve the data
- * in the report. A shared report is only shared in the creation scope by the
- * future reporters within the same MonitorGroup. Its purpose is to save the
- * resources for ConfigTemplate's reporters in the back. The keyword for the
- * private report is KeyTemplate. The keyword for the shared report is the
- * value of REPORT_LOCAL defined for ReportMode.
+ * in the report. A shared report is just a list of names for items. It is only
+ * shared in creation scope by the future reporters within same MonitorGroup.
+ * Its purpose is to save the resources for ConfigTemplate's reporters in the
+ * back. The keyword for the private report is KeyTemplate. The keyword for
+ * the shared report is the value of REPORT_LOCAL defined for ReportMode.
  *<br/>
  * @author yannanlu@yahoo.com
  */
@@ -563,11 +563,11 @@ public class ConfigTemplate {
             return false;
     }
 
-    /** returns the shared report */
+    /** returns the shared report with the list of items */
     public Map getSharedReport() {
         if (withSharedReport) {
             List<String> lst = new ArrayList<String>();
-            if (items != null) {
+            if (items != null) { // for list of items only
                 for (String ky : items)
                     lst.add(ky);
             }
@@ -772,25 +772,48 @@ public class ConfigTemplate {
     }
 
     public void close() {
-        if (reporter != null)
+        if (reporter != null) {
             reporter.destroy();
-        reporter = null;
-        if (keyMap != null)
+            reporter = null;
+        }
+        if (keyMap != null) {
             keyMap.clear();
-        keyMap = null;
-        if (cachedProps != null)
+            keyMap = null;
+        }
+        if (cachedProps != null) {
             cachedProps.clear();
-        cachedProps = null;
-        if (withPrivateReport)
+            cachedProps = null;
+        }
+        if (overrideList != null) {
+            overrideList.clear();
+            overrideList = null;
+        }
+        if (withPrivateReport && privateReport != null)
             privateReport.clear();
         privateReport = null;
         items = null;
         keys = null;
         size = 0;
         pm = null;
+        if (template != null) {
+            template.clear();
+            template = null;
+        }
+        if (tsub != null) {
+            tsub.clear();
+            tsub = null;
+        }
+        if (postSub != null) {
+            postSub.clear();
+            postSub = null;
+        }
         pattern = null;
         builder = null;
         xpe = null;
-        postSub = null;
+    }
+
+
+    protected void finalize() {
+        close();
     }
 }

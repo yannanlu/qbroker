@@ -379,6 +379,8 @@ public class PacketPersister extends Persister {
     }
 
     public void close() {
+        if (status != PSTR_CLOSED)
+            new Event(Event.INFO, uri + " closed on " + linkName).send();
         setStatus(PSTR_CLOSED);
         disconnect();
         if (group != null)
@@ -387,7 +389,9 @@ public class PacketPersister extends Persister {
             socket = null;
         if (snmp != null)
             snmp = null;
+    }
 
-        new Event(Event.INFO, uri + " closed on " + linkName).send();
+    protected void finalize() {
+        close();
     }
 }

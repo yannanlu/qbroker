@@ -498,6 +498,8 @@ public class DocumentReceiver extends Receiver {
     }
 
     public void close() {
+        if (status != RCVR_CLOSED)
+            new Event(Event.INFO, uri + " closed on " + linkName).send();
         setStatus(RCVR_CLOSED);
         disconnect();
         if (dependencyGroup != null) { // clear dependencies
@@ -508,7 +510,9 @@ public class DocumentReceiver extends Receiver {
             mongo = null;
         if (riak != null)
             riak = null;
+    }
 
-        new Event(Event.INFO, uri + " closed on " + linkName).send();
+    protected void finalize() {
+        close();
     }
 }
