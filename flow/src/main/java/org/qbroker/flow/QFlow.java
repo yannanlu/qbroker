@@ -305,7 +305,7 @@ public class QFlow implements Service, Runnable {
         h.put("TestTime", String.valueOf(mtime));
         h.put("TZ", TimeZone.getDefault().getID());
         h.put("Status", String.valueOf(TimeWindows.NORMAL));
-        h.put("ReleaseTag", org.qbroker.common.ReleaseTag.getReleaseTag());
+        h.put("ReleaseTag", ReleaseTag.getReleaseTag());
         h.put("Name", name);
         reports.put("SYSTEM", h);
 
@@ -2954,21 +2954,21 @@ public class QFlow implements Service, Runnable {
                 Map h = queryInfo(currentTime, sessionTime, target, key, type);
 
                 if (h != null) { // got response
-                    if ((type & Utils.RESULT_XML) > 0) { // xml
+                    if ((type & Utils.RESULT_JSON) > 0) { // json
+                        if (h.size() == 1) // for list of records
+                            text = "{\"Record\": " +(String)h.get(target)+ "}";
+                        else // for a map
+                            text = JSON2Map.toJSON(h);
+                        ev = new Event(Event.INFO, text);
+                        h.clear();
+                    }
+                    else if ((type & Utils.RESULT_XML) > 0) { // xml
                         if (h.size() == 1) // for list of records
                             text = (String) h.get(target);
                         else // for a map
                             text = JSON2Map.toXML(h);
                         ev = new Event(Event.INFO, "<Result>" + text +
                             "</Result>");
-                        h.clear();
-                    }
-                    else if ((type & Utils.RESULT_JSON) > 0) { // json
-                        if (h.size() == 1) // for list of records
-                            text = (String) h.get(target);
-                        else // for a map
-                            text = JSON2Map.toJSON(h);
-                        ev = new Event(Event.INFO, text);
                         h.clear();
                     }
                     else if (isRemote) {
@@ -2991,13 +2991,13 @@ public class QFlow implements Service, Runnable {
                         event.setBody(h);
                     }
                 }
-                else if ((type & Utils.RESULT_XML) > 0) { // failed to get xml
-                    ev = new Event(Event.ERR, "<Result><Error>" + target +
-                        ": not found " + key + "</Error><RC>-1</RC></Result>");
-                }
                 else if ((type & Utils.RESULT_JSON) > 0) { // failed to get json
                     ev = new Event(Event.ERR, "{\"Error\":\"" + target +
                         ": not found " + key + "\", \"RC\": \"-1\"}");
+                }
+                else if ((type & Utils.RESULT_XML) > 0) { // failed to get xml
+                    ev = new Event(Event.ERR, "<Result><Error>" + target +
+                        ": not found " + key + "</Error><RC>-1</RC></Result>");
                 }
                 else if (isRemote) {
                     ev = new Event(Event.WARNING, key +" not found in "+target);
@@ -3125,8 +3125,8 @@ public class QFlow implements Service, Runnable {
         boolean isXML = (type & Utils.RESULT_XML) > 0;
         boolean isJSON = (type & Utils.RESULT_JSON) > 0;
 
-        if ("FLOW".equals(NAME)) // reset name for container
-            NAME = "STATUS";
+        if ("FLOW".equals(NAME)) // reset name for container due to collision
+            NAME = "QFLOW";
         if (key == null)
             key = target;
         if ("PROPERTIES".equals(target)) { // for properties
@@ -3735,7 +3735,7 @@ public class QFlow implements Service, Runnable {
         else if (NAME.equals(target) || "STATUS".equals(target)) { // for status
             h = new HashMap<String, String>();
             h.put("Name", name);
-            h.put("ReleaseTag", org.qbroker.common.ReleaseTag.getReleaseTag());
+            h.put("ReleaseTag", ReleaseTag.getReleaseTag());
             if (previousRole == 0)
                 str = "master";
             else if (previousRole > 0)
@@ -4330,7 +4330,7 @@ public class QFlow implements Service, Runnable {
         display(DEBUG_INIT);
         new Event(Event.INFO, name + ": " + count +
             " flows started with the build of " +
-            org.qbroker.common.ReleaseTag.getReleaseTag()).send();
+            ReleaseTag.getReleaseTag()).send();
 
         count = 0;
         currentTime = System.currentTimeMillis();

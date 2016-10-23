@@ -32,8 +32,6 @@ import org.qbroker.json.JSON2Map;
 import org.qbroker.jms.MessageUtils;
 import org.qbroker.jms.QueueConnector;
 import org.qbroker.jms.TopicConnector;
-import org.qbroker.wmq.QConnector;
-import org.qbroker.wmq.TConnector;
 import org.qbroker.persister.ReceiverPool;
 import org.qbroker.persister.PersisterPool;
 import org.qbroker.flow.MessageFlow;

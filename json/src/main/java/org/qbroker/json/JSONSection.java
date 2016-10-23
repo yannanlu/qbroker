@@ -27,8 +27,8 @@ import org.qbroker.event.Event;
  *<br/><br/>
  * JSONSection supports nested children JSONSections. Therefore, its json path
  * is always applied to the root JSON data. In this case, a list of sections
- * and a parameter map must be specified for the api method. The parameter map
- * is supposed to contain the root JSON doc at the key of "r:_JSON_".
+ * and a parameter map must be provided for the api method. The parameter map
+ * is supposed to contain the root JSON data at the key of "r:_JSON_".
  *<br/>
  * @author yannanlu@yahoo.com
  */
@@ -131,9 +131,9 @@ public class JSONSection {
             params = new HashMap<String, Object>();
 
         if (list == null || (o = params.get("r:_JSON_")) == null ||
-            !(o instanceof Map)) // root doc not defined
+            !(o instanceof Map)) // root JSON not defined
             o = JSON2FmModel.get(json, path);
-        else { // always retrieve data from the root doc
+        else { // always retrieve data from the root JSON
             ph = (Map) o;
             o = JSON2FmModel.get(ph, path);
             ph = null;
@@ -188,9 +188,9 @@ public class JSONSection {
             params = new HashMap<String, Object>();
 
         if (list == null || (o = params.get("r:_JSON_")) == null ||
-            !(o instanceof Map)) // root doc not defined
+            !(o instanceof Map)) // root JSON not defined
             o = JSON2FmModel.get(json, path);
-        else { // always retrieve data from the root doc
+        else { // always retrieve data from the root JSON
             ph = (Map) o;
             o = JSON2FmModel.get(ph, path);
             ph = null;
@@ -236,29 +236,30 @@ public class JSONSection {
         return text;
     }
 
-    /** returns the copied JSON content for the JSON map with the order
-     *  support on all the keys. The given parameter map
-     *  contains the values and their JSON paths for updates.
+    /**
+     * returns the copied JSON content for the JSON map with the order
+     * support on all the keys. The given parameter map contains the values
+     * and their JSON paths for updates.
      */
     private String copy(Map json, Map<String, Object> params) {
         if (json == null)
             return "";
 
-        if (params != null) {
+        if (params != null) { // set the values of parameters with valid path
             for (String key : params.keySet()) {
-                if (key == null || key.length() <= 0)
+                if (key == null || !key.startsWith("o:" + path))
                     continue;
-                if (!key.equals("r:_JSON_"))
-                    JSON2FmModel.put(json, key, params.get(key));
+                JSON2FmModel.put(json, key.substring(2), params.get(key));
             }
         }
         return (withOrder) ? JSON2Map.toJSON(json, indent, end, true) :
             JSON2FmModel.toJSON(json, indent, end);
     }
 
-    /** returns the copied JSON content for the JSON list with the order
-     *  support on all the keys. The given parameter map
-     *  contains the values and their JSON paths for updates.
+    /**
+     * returns the copied JSON content for the JSON list with the order
+     * support on all the keys. The given parameter map contains the values
+     * and their JSON paths for updates.
      */
     private String copy(List json, Map<String, Object> params) {
         if (json == null)
@@ -266,10 +267,9 @@ public class JSONSection {
 
         if (params != null) {
             for (String key : params.keySet()) {
-                if (key == null || key.length() <= 0)
+                if (key == null || !key.startsWith("o:" + path))
                     continue;
-                if (!key.equals("r:_JSON_"))
-                    JSON2FmModel.put(json, key, params.get(key));
+                JSON2FmModel.put(json, key.substring(2), params.get(key));
             }
         }
         return (withOrder) ? JSON2Map.toJSON(json, indent, end, true) :

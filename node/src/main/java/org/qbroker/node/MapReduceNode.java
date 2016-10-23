@@ -132,8 +132,9 @@ public class MapReduceNode extends Node {
     private final static int REQ_FAILURE = 4;
     private final static int REQ_TOTAL = 5;
     private final static int REQ_QUORUM = 6;
-    private final static int REQ_TTL = 7;
-    private final static int REQ_TIME = 8;
+    private final static int REQ_DEFRC = 7;
+    private final static int REQ_TTL = 8;
+    private final static int REQ_TIME = 9;
 
     public MapReduceNode(Map props) {
         super(props);
@@ -495,6 +496,11 @@ public class MapReduceNode extends Node {
                     ruleInfo[RULE_GID] = Integer.parseInt((String) o);
                 if (ruleInfo[RULE_GID] <= 0 || ruleInfo[RULE_GID] > m)
                     ruleInfo[RULE_GID] = m;
+
+                // store RCrequired in rule if it is not required
+                if ((o = ph.get("RCRequired")) != null &&
+                    "false".equals((String) o))
+                    rule.put("RCRequired", o);
             }
             else if (o != null && o instanceof String) { // for select
                 m = 1;
@@ -536,6 +542,11 @@ public class MapReduceNode extends Node {
                         ruleInfo[RULE_GID] = Integer.parseInt((String) o);
                     if (ruleInfo[RULE_GID] <= 0 || ruleInfo[RULE_GID] > m)
                         ruleInfo[RULE_GID] = m;
+
+                    // store RCrequired in rule if it is not required
+                    if ((o = ph.get("RCRequired")) != null &&
+                        "false".equals((String) o))
+                        rule.put("RCRequired", o);
                 }
             }
             else { // for default mapping
@@ -556,6 +567,11 @@ public class MapReduceNode extends Node {
                     ruleInfo[RULE_GID] = Integer.parseInt((String) o);
                 if (ruleInfo[RULE_GID] <= 0 || ruleInfo[RULE_GID] > m)
                     ruleInfo[RULE_GID] = m;
+
+                // store RCrequired in rule if it is not required
+                if ((o = ph.get("RCRequired")) != null &&
+                    "false".equals((String) o))
+                    rule.put("RCRequired", o);
             }
             rule.put("SelectedOutLink", oids);
 
@@ -1137,12 +1153,14 @@ public class MapReduceNode extends Node {
                 ttl = ruleInfo[RULE_TTL];
                 quorum = ruleInfo[RULE_GID];
                 key = String.valueOf(cid) + ":" + currentTime;
+                i = rule.containsKey("RCRequired") ? 0 : -1; 
                 i = pendList.add(key, new long[]{cid, rid, -1, 0, 0, m, quorum,
-                    ttl, currentTime}, key, cid);
+                    i, ttl, currentTime}, key, cid);
                 if (i < 0) { // removed the old object first
                     pendList.remove(cid);
+                    i = rule.containsKey("RCRequired") ? 0 : -1; 
                     i = pendList.add(key, new long[]{cid, rid, -1, 0, 0, m,
-                        quorum, ttl, currentTime}, key, cid);
+                        quorum, i, ttl, currentTime}, key, cid);
                 }
                 if (i >= 0) { 
                     int dmask = (int) ruleInfo[RULE_DMASK];
@@ -1221,12 +1239,14 @@ public class MapReduceNode extends Node {
                     else
                         quorum = batch.length;
                     key = String.valueOf(cid) + ":" + currentTime;
+                    i = rule.containsKey("RCRequired") ? 0 : -1; 
                     i = pendList.add(key, new long[]{cid, rid, -1, 0, 0,
-                        batch.length, quorum, ttl, currentTime}, key, cid);
+                        batch.length, quorum, i, ttl, currentTime}, key, cid);
                     if (i < 0) { // removed the old object first
                         pendList.remove(cid);
+                        i = rule.containsKey("RCRequired") ? 0 : -1; 
                         i = pendList.add(key, new long[]{cid, rid, -1, 0, 0,
-                            batch.length, quorum, ttl, currentTime}, key, cid);
+                            batch.length,quorum,i,ttl, currentTime}, key, cid);
                     }
                     if (i >= 0) try { // try to copy properties for select
                         String str;
@@ -1387,22 +1407,25 @@ public class MapReduceNode extends Node {
         if (aggr == null || aggr.getSize() <= 0 || request == null)
             return -1;
 
-        try {
-            str = MessageUtils.getProperty(rcField, inMessage);
-            if (str != null)
-                rc = Integer.parseInt(str);
-            else
-                rc = -1;
-        }
-        catch (Exception e) {
-            str = "-1";
-            rc = -1;
-        }
         meta = pendList.getMetaData(cid);
         if (meta == null || meta.length <= REQ_TIME) {
             new Event(Event.ERR, name+ " " + ruleList.getKey(rid) +
                 " bad meta data of request cache for " + cid).send();
             return -1;
+        }
+
+        try {
+            str = MessageUtils.getProperty(rcField, inMessage);
+            if (str != null)
+                rc = Integer.parseInt(str);
+            else { // use the default rc if rc is not defined
+                str = String.valueOf(meta[REQ_DEFRC]);
+                rc = (int) meta[REQ_DEFRC];
+            }
+        }
+        catch (Exception e) {
+            str = "-1";
+            rc = -1;
         }
 
         if (rc != 0) { // request failed
@@ -1413,6 +1436,17 @@ public class MapReduceNode extends Node {
             catch (Exception e) {
                 new Event(Event.ERR, name + " " + ruleList.getKey(rid) +
                     " failed to set rc: " + str).send();
+            }
+            if ((debug & DEBUG_UPDT) > 0) try {
+                new Event(Event.DEBUG, name + " reduce: cid=" + cid +
+                    " rid=" + rid + " oid=" + meta[REQ_OID] +
+                    "/" + meta[REQ_SUCCESS] + " " + meta[REQ_FAILURE] + " " +
+                    meta[REQ_QUORUM] + " " + meta[REQ_TOTAL] + ":" +
+                    MessageUtils.display(request,
+                    MessageUtils.processBody(request, buffer),
+                    65, null)).send();
+            }
+            catch (Exception e) {
             }
             if (meta[REQ_FAILURE] + meta[REQ_QUORUM] > meta[REQ_TOTAL]) {
                 // failed too many responses
@@ -1515,6 +1549,16 @@ public class MapReduceNode extends Node {
                     if (msgStr == null)
                         msgStr = "";
                     pendList.set(cid, msgStr);
+                    if ((debug & DEBUG_UPDT) > 0) try {
+                        new Event(Event.DEBUG, name + " reduce: cid=" + cid +
+                            " rid=" + rid + " oid=" + meta[REQ_OID] +
+                            "/" + meta[REQ_SUCCESS] + " " + meta[REQ_FAILURE] +
+                            " " + meta[REQ_QUORUM] + " " + meta[REQ_TOTAL] +
+                            ":" + MessageUtils.display(request, msgStr,
+                            65, null)).send();
+                    }
+                    catch (Exception e) {
+                    }
                     return convert(cid, rid, Utils.RESULT_TEXT, aggr, request);
                   default:
                 }
@@ -1608,6 +1652,17 @@ public class MapReduceNode extends Node {
                     break;
                   default:
                 }
+            }
+            if ((debug & DEBUG_UPDT) > 0) try {
+                new Event(Event.DEBUG, name + " reduce: cid=" + cid +
+                    " rid=" + rid + " oid=" + meta[REQ_OID] +
+                    "/" + meta[REQ_SUCCESS] + " " + meta[REQ_FAILURE] + " " +
+                    meta[REQ_QUORUM] + " " + meta[REQ_TOTAL] + ":" +
+                    MessageUtils.display(request,
+                    MessageUtils.processBody(request, buffer),
+                    65, null)).send();
+            }
+            catch (Exception e) {
             }
 
             // check number of responses collected

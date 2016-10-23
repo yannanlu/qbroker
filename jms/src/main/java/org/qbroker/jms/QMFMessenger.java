@@ -194,7 +194,7 @@ public class QMFMessenger extends QMFRequester {
      *<br/><br/>
      * It also supports the dynamic content filter and the formatter on queried
      * messages. The filter and the formatter are defined via a JSON text with
-     * Filters as the base name. The JSON text is stored in the body of the
+     * Ruleset defined as a list. The JSON text is stored in the body of the
      * request message. If the filter is defined, it will be used to select
      * certain messages based on the content and the header. If the formatter
      * is defined, it will be used to format the messages.
@@ -364,7 +364,7 @@ public class QMFMessenger extends QMFRequester {
                 msgStr = MessageUtils.processBody(outMessage, buffer);
                 if (msgStr == null || msgStr.length() <= 0)
                     filters = null;
-                else if (msgStr.indexOf("<Filters>") < 0)
+                else if (msgStr.indexOf("Ruleset") < 0)
                     filters = null;
                 else if (cache.containsKey(msgStr) &&
                     !cache.isExpired(msgStr, currentTime))

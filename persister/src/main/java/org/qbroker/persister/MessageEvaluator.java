@@ -64,7 +64,7 @@ import org.qbroker.common.PHP2Map;
 import org.qbroker.json.JSON2Map;
 import org.qbroker.json.JSON2FmModel;
 import org.qbroker.json.JSONTemplate;
-import org.qbroker.json.JSONFormatter;
+import org.qbroker.jms.JSONFormatter;
 import org.qbroker.jms.MessageUtils;
 import org.qbroker.jms.MessageFilter;
 import org.qbroker.jms.JMSEvent;
@@ -73,30 +73,32 @@ import org.qbroker.event.Event;
 
 /**
  * MessageEvaluator evaluates JMS Messages according to rulesets.  The incoming
- * messages are supposed to specify what rule to be invoked for the evaluation.
- * The evaluation consists two separate steps.  The first one is the pattern
- * match on the content.  The second is the transformation on the content.  If
- * the pattern match returns true, the message will be transformed according to
- * the ruleset and its return code will be reset to 0 for SUCCESS.  Otherwise,
- * MessageEvaluator will only reset its return code to 1 for FAILURE.  If the
- * evaluation process fails, the return code will be reset to -1 for EXCEPTION. 
- * MessageEvaluator will not consume any messages, nor commit any messages.
- * It will just bounce them back via removing them from the input XQueue.
+ * messages are supposed to specify what rules to be invoked for the evaluation.
+ * The evaluation consists two separate steps. The first one is to apply the
+ * filter on the message with the pattern matches, etc. The second is to invoke
+ * the formatter to transform the message properties and the payload.  If the
+ * pattern does not match, the evaluation process will abort with the return
+ * code of the message set to 1 for FAILURE to indicate NOHIT. Otherwise, the
+ * message will be transformed according to the ruleset and its return code
+ * will be set to 0 for SUCCESS. In case of failures, the return code will be
+ * set to -1 for EXCEPTION. MessageEvaluator will not consume any messages,
+ * nor commit any messages. It just bounces them back via removing them from
+ * the input XQueue.
  *<br/><br/>
  * MessageEvaluator contains a number of predefined rulesets.  Each ruleset
  * has its own unique name and the evaluation rules.  It may also contain the
- * formatting rules or plugins for modifying the content of the messages.
+ * formatting rules or plugins for modifying the properties of the messages.
  * There are many built-in transformation supports.  The default one is the
  * simple Templates and TextSubstitutions.  Others are simple template files,
- * XSLT templates, XPath evaluations, JSONT templates and JSONPath evaluations. 
- * MessageEvaluator also supports branch ruleset to invoke the certain ruleset
- * according to the pattern match.
+ * JSONPath evaluations, JSONT templates, XPath evaluations and XSLT templates,
+ * etc. MessageEvaluator also supports CommaList, PipeList or ColonList for
+ * evaluations on multiple rulesets.
  *<br/><br/>
  * For the default formatting support, the ruleset is supposed to have an array
- * of FormatterArgument.  A FormatterArgument contains a name specifying
- * what to be formatted and two sets of format operations.  The first oeration
- * set lists format templates in the name of Template.  The other is the array
- * of substitutions with the name of Substitution.  Each Template appends the
+ * of FormatterArgument.  A FormatterArgument contains a name specifying what
+ * property to be modifued, and two sets of format operations. The first set
+ * of operations lists format templates in the name of Template. The other lists
+ * substitutions with the name of Substitution.  Each Template appends the
  * previous non-empty text to the variable and sets the next initial text for
  * its corresponding Substitutions.  If the first template is null, the initial
  * text will be the variable itself.  Each Substitution modifies the text
@@ -114,7 +116,39 @@ import org.qbroker.event.Event;
  * case, MessageEvaluator will load the template file at the start up and
  * stores it into the cache. It will be used to format the message body at the
  * end of the format process. If NeedChop is defined with the value of "true",
- * MessageEvaluator will try to chop the newline from the loaded content.
+ * MessageEvaluator will try to chop the newline off the end of the loaded
+ * content.
+ *<br/><br/>
+ * MessageEvaluator also supports SimpleParser with a list of ParserArgument
+ * defined. It is used to parse the message payload and updates the various
+ * properties of the message.
+ *<br/><br/>
+ * MessageEvaluator also supports JSONPath evaluations with a map of JSONPath
+ * defined. It is used to retrieve data from the JSON payload and updates the
+ * various properties of the message. Therefore, the map of JSONPath should
+ * specify the property name as the key and a JSONPath expression as the value.
+ *<br/><br/>
+ * For JSONT support, the ruleset must not have any FormatterArgument defined.
+ * Instead, the full path of the JSONT template file must be specified in the
+ * name of JTMPFile. If there is any parameter to be set, they should be defined
+ * in the map of JSONParameter where the key is the name of the parameter and
+ * the value is a template for message properties. MessageEvaluator will load
+ * the JSONT template file, compiles it at the startup and stores it to cache.
+ * The parameters will be set dynamically in case there is any reference on the
+ * properties of the incoming message.
+ *<br/><br/>
+ * MessageEvaluator also supports JSON formatter with a list of JSONFormatter
+ * defined. A JSONFormatter is a map containing JSONPath, Operation, DataType,
+ * Selector, and Template and Substitution. It supports various operations on
+ * the messages and their JSON payload, such as get, set, remove, select,
+ * first, last and merge, etc.
+ *<br/><br/>
+ * MessageEvaluator also supports XPath evaluations, similar to the evaluation
+ * of JSONPath. It also supports operations of xmerge and xcut. XMerge is to
+ * merge an XML content stored in XMLField into the XML payload of the message.
+ * The ruleset should define SourceXPath and TargetXPath. Currently, only
+ * append is supported for XMerge. XCut is to remove the object at a given
+ * XPath expression.
  *<br/><br/>
  * For XSLT support, the ruleset must not have any FormatterArgument defined.
  * Instead, the full path of the XSL template file must be specified
@@ -124,36 +158,18 @@ import org.qbroker.event.Event;
  * will be set dynamically in case there is any references on the data of the
  * incoming message.
  *<br/><br/>
- * MessageEvaluator also supports XPath operatons, such as xmerge and xcut.
- * XMerge is to merge an XML content stored in XMLField into the XML payload
- * of the message. The ruleset should define SourceXPath and TargetXPath.
- * Currently, only append is supported. XCut is to remove the object at a given
- * XPath expression.
+ * A PipeList is a list of pipe delimited names which reference a bunch of
+ * existing rulesets. MessageEvaluator will match the message to the patterns
+ * of each ruleset and invokes the formatter on the first hit only.
  *<br/><br/>
- * For JSONT support, the ruleset must not have any FormatterArgument defined.
- * Instead, the full path of the JSONT template file must be specified in the
- * name of JTMPFile.  If there is any parameters to be set, they should be
- * defined in the map of JSONParameter.  MessageEvaluator will load the JSONT
- * template file, compiles it at the startup and stores it to cache. The
- * parameters will be set dynamically in case there is any reference on the
- * data of the incoming message.
+ * A ColonList is a list of colon delimited names which reference a bunch of
+ * existing rulesets. MessageEvaluator will match the message to the patterns
+ * of each ruleset and invokes the formatter on every ruleset that is a hit.
  *<br/><br/>
- * MessageEvaluator also supports JSON formatter if a list of JSONFormatter is
- * defined. A JSONFormatter is a map containing JSONPath, Operation, DataType, 
- * Selector, and Template and Subtitution. It supports various operations on
- * the messages and their JSON payload, such as get, set, remove, select,
- * first, last and merge, etc.
- *<br/><br/>
- * Loop support is to apply a group of selected formatters.  The ruleset
- * references a bunch of the existing rulesets with format rules.
- * MessageEvaluator will match the message to the patterns of each ruleset
- * and invokes the formatter if the match is a hit.
- *<br/><br/>
- * For branch support, the ruleset references other existing rulesets
- * via the array of Branch.  MessageEvaluator will match message to the
- * patterns of each ruleset in the order to find the first hit.  Then
- * it applies the ruleset on the message.  It allows you to invoke ruleset
- * according to the content of the message.
+ * A CommaList is a list of comma delimited names which reference a bunch of
+ * existing rulesets. MessageEvaluator will evaluate all the rulesets one by
+ * one at the listed order. If any ruleset fails or does not match, the entire
+ * evaluation process also fails.
  *<br/><br/>
  * For time window support, the ruleset can evalute the age of the message.
  * It requires ActiveTime, KeyTemplate and TimePattern to be defined in the
@@ -221,21 +237,19 @@ public class MessageEvaluator extends Persister {
     private final static int FAILURE = 1;
     private final static int EXCEPTION = -1;
     private final static int EVAL_NONE = 0;
-    private final static int EVAL_FORMAT = 1;
-    private final static int EVAL_PARSE = 2;
-    private final static int EVAL_XSLT = 4;
-    private final static int EVAL_XPATH = 8;
-    private final static int EVAL_LOOP = 16;
-    private final static int EVAL_BRANCH = 32;
-    private final static int EVAL_PATTERN = 64;
-    private final static int EVAL_FILTER = 128;
-    private final static int EVAL_AGE = 256;
-    private final static int EVAL_FILE = 512;
+    private final static int EVAL_PATTERN = 1;
+    private final static int EVAL_AGE = 2;
+    private final static int EVAL_FILE = 4;
+    private final static int EVAL_FILTER = 8;
+    private final static int EVAL_PARSE = 16;
+    private final static int EVAL_FORMAT = 32;
+    private final static int EVAL_JSONPATH = 64;
+    private final static int EVAL_JSONT = 128;
+    private final static int EVAL_XPATH = 256;
+    private final static int EVAL_XSLT = 512;
     private final static int EVAL_TRANS = 1024;
-    private final static int EVAL_PLUGIN = 2048;
-    private final static int EVAL_JSONPATH = 4096;
-    private final static int EVAL_JSONT = 8192;
-    private final static int EVAL_CACHE = 16384;
+    private final static int EVAL_CACHE = 2048;
+    private final static int EVAL_PLUGIN = 4096;
     private final static int ASSET_NAME = 0;
     private final static int ASSET_PNAME = 1;
     private final static int ASSET_DATA = 2;
@@ -370,17 +384,11 @@ public class MessageEvaluator extends Persister {
             }
             filter = new MessageFilter(hmap);
             hmap.clear();
-            if (filter != null) {
-                mask = EVAL_FILTER;
-                if (filter.checkBody())
-                    mask += EVAL_PATTERN;
-                else if ((dmask & MessageUtils.SHOW_BODY) > 0)
-                    mask += EVAL_PATTERN;
-            }
-            else if ((dmask & MessageUtils.SHOW_BODY) > 0)
-                mask = EVAL_PATTERN;
-            else
-                mask = 0;
+            mask = EVAL_NONE;
+            if (filter.checkBody()) // need to access message body
+                mask += EVAL_PATTERN;
+            else if ((dmask & MessageUtils.SHOW_BODY) > 0) // for display body
+                mask += EVAL_PATTERN;
             option = 0;
             asset = new Object[ASSET_CLOSE+1];
             asset[ASSET_NAME] = key;
@@ -503,29 +511,29 @@ public class MessageEvaluator extends Persister {
                 else
                     asset[ASSET_MNAME] = "body";
             }
-            else if ((o = ph.get("XSLFile")) != null) { // XSLTs
-                mask += EVAL_XSLT;
+            else if ((o = ph.get("JSONPath")) != null && o instanceof Map) {
+                mask += EVAL_JSONPATH;
+                if ((mask & EVAL_PATTERN) == 0)
+                    mask += EVAL_PATTERN;
+                asset[ASSET_TSUB] = Utils.cloneProperties((Map) o);
+            }
+            else if ((o = ph.get("JTMPFile")) != null) { // JSONT
+                mask += EVAL_JSONT;
                 if ((mask & EVAL_PATTERN) == 0)
                     mask += EVAL_PATTERN;
                 str = (String) o;
-                if (!xslMap.containsKey(str)) try {
-                    if (tFactory == null)
-                        tFactory = TransformerFactory.newInstance();
-                    o = tFactory.newTemplates(new StreamSource(str));
-                    xslMap.put(str, o);
+                if (!jsonMap.containsKey(str)) try {
+                    o = JSON2FmModel.parse(new FileReader(str));
+                    jsonMap.put(str, new JSONTemplate((Map) o));
                 }
-                catch (TransformerConfigurationException e) {
+                catch (Exception e) {
                     throw(new IllegalArgumentException(uri + " failed " +
-                         "to compile XSL template of " + str + ": " +
+                         "to compile JSON template of " + str + ": " +
                          Event.traceStack(e)));
                 }
-                catch (Error e) {
-                    throw(new IllegalArgumentException("failed to get " +
-                        "XSLT factory for "+ uri +" "+Event.traceStack(e)));
-                }
                 asset[ASSET_DATA] = str;
-                asset[ASSET_TEMP] = xslMap.get(str);
-                if ((o = ph.get("XSLParameter")) != null && o instanceof Map) {
+                asset[ASSET_TEMP] = jsonMap.get(str);
+                if ((o = ph.get("JSONParameter")) != null && o instanceof Map) {
                     String value;
                     Template tp;
                     iter = ((Map) o).keySet().iterator();
@@ -547,8 +555,17 @@ public class MessageEvaluator extends Persister {
                         asset[ASSET_TSUB] = hmap;
                 }
             }
-            else if (((o = ph.get("XPathExpression")) != null ||
-                (o = ph.get("XPath")) != null) && o instanceof Map) { // XPath
+            else if((o = ph.get("JSONFormatter")) != null && o instanceof List){
+                mask += EVAL_JSONT;
+                if ((mask & EVAL_PATTERN) == 0)
+                    mask += EVAL_PATTERN;
+                hmap = new HashMap<String, Object>();
+                hmap.put("Name", key);
+                hmap.put("JSONFormatter", (List) o);
+                asset[ASSET_TSUB] = new JSONFormatter(hmap);
+                hmap.clear();
+            }
+            else if ((o = ph.get("XPath")) != null && o instanceof Map) {//XPath
                 mask += EVAL_XPATH;
                 if ((mask & EVAL_PATTERN) == 0)
                     mask += EVAL_PATTERN;
@@ -594,8 +611,7 @@ public class MessageEvaluator extends Persister {
                 }
                 asset[ASSET_TSUB] = hmap;
             }
-            else if (((o = ph.get("XPathExpression")) != null ||
-                (o = ph.get("XPath")) != null) && o instanceof String) { // XCut
+            else if((o = ph.get("XPath")) != null && o instanceof String){//XCut
                 mask += EVAL_XPATH + EVAL_XSLT;
                 if ((mask & EVAL_PATTERN) == 0)
                     mask += EVAL_PATTERN;
@@ -694,23 +710,29 @@ public class MessageEvaluator extends Persister {
                     "true".equalsIgnoreCase((String) o))
                     option = 1;
             }
-            else if ((o = ph.get("JTMPFile")) != null) { // JSONT
-                mask += EVAL_JSONT;
+            else if ((o = ph.get("XSLFile")) != null) { // XSLTs
+                mask += EVAL_XSLT;
                 if ((mask & EVAL_PATTERN) == 0)
                     mask += EVAL_PATTERN;
                 str = (String) o;
-                if (!jsonMap.containsKey(str)) try {
-                    o = JSON2FmModel.parse(new FileReader(str));
-                    jsonMap.put(str, new JSONTemplate((Map) o));
+                if (!xslMap.containsKey(str)) try {
+                    if (tFactory == null)
+                        tFactory = TransformerFactory.newInstance();
+                    o = tFactory.newTemplates(new StreamSource(str));
+                    xslMap.put(str, o);
                 }
-                catch (Exception e) {
+                catch (TransformerConfigurationException e) {
                     throw(new IllegalArgumentException(uri + " failed " +
-                         "to compile JSON template of " + str + ": " +
+                         "to compile XSL template of " + str + ": " +
                          Event.traceStack(e)));
                 }
+                catch (Error e) {
+                    throw(new IllegalArgumentException("failed to get " +
+                        "XSLT factory for "+ uri +" "+Event.traceStack(e)));
+                }
                 asset[ASSET_DATA] = str;
-                asset[ASSET_TEMP] = jsonMap.get(str);
-                if ((o = ph.get("JSONParameter")) != null && o instanceof Map) {
+                asset[ASSET_TEMP] = xslMap.get(str);
+                if ((o = ph.get("XSLParameter")) != null && o instanceof Map) {
                     String value;
                     Template tp;
                     iter = ((Map) o).keySet().iterator();
@@ -730,52 +752,6 @@ public class MessageEvaluator extends Persister {
                     }
                     if (hmap.size() > 0)
                         asset[ASSET_TSUB] = hmap;
-                }
-            }
-            else if((o = ph.get("JSONFormatter")) != null && o instanceof List){
-                mask += EVAL_JSONT;
-                if ((mask & EVAL_PATTERN) == 0)
-                    mask += EVAL_PATTERN;
-                hmap = new HashMap<String, Object>();
-                hmap.put("Name", key);
-                hmap.put("JSONFormatter", (List) o);
-                asset[ASSET_TSUB] = new JSONFormatter(hmap);
-                hmap.clear();
-            }
-            else if ((o = ph.get("JSONPath")) != null && o instanceof Map) {
-                mask += EVAL_JSONPATH;
-                if ((mask & EVAL_PATTERN) == 0)
-                    mask += EVAL_PATTERN;
-                asset[ASSET_TSUB] = Utils.cloneProperties((Map) o);
-            }
-            else if ((o = ph.get("Loop")) != null &&
-                o instanceof List) { // for loop support
-                mask += EVAL_LOOP;
-                pl = (List) o;
-                k = pl.size();
-                String[] loopName = new String[k];
-                asset[ASSET_DATA] = loopName;
-                for (j=0; j<k; j++) {
-                    loopName[j] = null;
-                    if ((o = pl.get(j)) == null || !(o instanceof String))
-                        continue;
-                    loopName[j] = (String) o;
-                    option ++;
-                }
-            }
-            else if ((o = ph.get("Branch")) != null &&
-                o instanceof List) { // for branch support
-                mask += EVAL_BRANCH;
-                pl = (List) o;
-                k = pl.size();
-                String[] branchName = new String[k];
-                asset[ASSET_DATA] = branchName;
-                for (j=0; j<k; j++) {
-                    branchName[j] = null;
-                    if ((o = pl.get(j)) == null || !(o instanceof String))
-                        continue;
-                    branchName[j] = (String) o;
-                    option ++;
                 }
             }
             else if ((o = ph.get("ActiveTime")) != null && // for time window
@@ -967,13 +943,670 @@ public class MessageEvaluator extends Persister {
     }
 
     /**
+     * It picks up a message from input queue and evaluates its content to
+     * decide what return code to propagate.  The evaluation may
+     * modify the content.
+     */
+    public void evaluate(XQueue in) {
+        Message outMessage;
+        String key, str, msgStr = null;
+        int[] list;
+        long currentTime, count = 0;
+        int i = 0, id, mask, option, dmask;
+        int sid = -1; // the cell id of the message in input queue
+        String okRC = String.valueOf(MessageUtils.RC_OK);
+        String failRC = String.valueOf(MessageUtils.RC_MSGERROR);
+        String excpRC = String.valueOf(MessageUtils.RC_UNKNOWN);
+
+        byte[] buffer = new byte[bufferSize];
+
+        while (((mask = in.getGlobalMask()) & XQueue.KEEP_RUNNING) > 0) {
+            if ((mask & XQueue.STANDBY) > 0) // standby temporarily
+                break;
+            if ((sid = in.getNextCell(waitTime)) < 0) {
+                continue;
+            }
+
+            if ((outMessage = (Message) in.browse(sid)) == null) {
+                in.remove(sid);
+                new Event(Event.WARNING, uri + " dropped a null msg from " +
+                    in.getName()).send();
+                continue;
+            }
+
+            // copy the original RC and set the default RC
+            try {
+                msgStr = MessageUtils.getProperty(rcField, outMessage);
+                MessageUtils.setProperty(orcField, msgStr, outMessage);
+                MessageUtils.setProperty(rcField, excpRC, outMessage);
+            }
+            catch (MessageNotWriteableException e) {
+                try {
+                    MessageUtils.resetProperties(outMessage);
+                    MessageUtils.setProperty(orcField, msgStr, outMessage);
+                    MessageUtils.setProperty(rcField, excpRC, outMessage);
+                }
+                catch (Exception ex) {
+                    in.remove(sid);
+                    new Event(Event.WARNING, uri +
+                        " failed to set RC on msg from "+ in.getName()).send();
+                    outMessage = null;
+                    continue;
+                }
+            }
+            catch (Exception e) {
+                in.remove(sid);
+                new Event(Event.WARNING, uri + " failed to set RC on msg from "+
+                    in.getName()).send();
+                outMessage = null;
+                continue;
+            }
+
+            key = null;
+            try {
+                key = MessageUtils.getProperty(fieldName, outMessage);
+            }
+            catch (JMSException e) {
+            }
+
+            if (key == null || key.length() <= 0) {
+                new Event(Event.WARNING, uri + " no such key defined at " +
+                    fieldName).send();
+            }
+            else if (key.indexOf(",") > 0) { // for CommaList of multiple rules
+                int j = 0;
+                String[] keyList = Utils.split(",", key);
+                msgStr = null;
+                i = FAILURE;
+                id = -1;
+                dmask = 0;
+                for (String ky : keyList) {
+                    ky = ky.trim();
+                    if (!cache.containsKey(ky)) {
+                        new Event(Event.ERR, uri +
+                            " no such rule found for " + ky + " at " +
+                            j + " in CommaList: " + key).send();
+                        i = EXCEPTION;
+                        break;
+                    }
+                    list = cache.getMetaData(ky);
+                    id = list[0];
+                    mask = list[1];
+                    option = list[2];
+                    dmask = list[3];
+
+                    if ((mask & EVAL_PATTERN) > 0) try {
+                        msgStr = MessageUtils.processBody(outMessage, buffer);
+                    }
+                    catch (Exception e) {
+                        new Event(Event.ERR, uri + " " + ky +
+                           " failed to get message body: "+e.toString()).send();
+                        i = EXCEPTION;
+                        break;
+                    }
+
+                    currentTime = System.currentTimeMillis();
+                    i = checkRule(currentTime, id, mask, option, ky,
+                        outMessage, msgStr);
+
+                    if (i != SUCCESS) // nohit or exception
+                        break;
+                    else if (mask > EVAL_FILTER) try { // invoke formatter
+                        i = invokeRule(list, ky, outMessage, msgStr, buffer);
+                    }
+                    catch (Exception e) {
+                        i = EXCEPTION;
+                        break;
+                    }
+                    catch (Error e) {
+                        in.remove(sid);
+                        outMessage = null;
+                        Event.flush(e);
+                    }
+
+                    try {
+                        MessageUtils.setProperty(rcField, okRC, outMessage);
+                        if (dmask > 0) { // display the message
+                            Object[] asset = (Object[]) assetList.browse(id);
+                            String[] pname = (String[]) asset[ASSET_PNAME];
+                            new Event(Event.INFO, uri + " " + ky + ", " +
+                                (count+1) + "/" + sid + " " + i + " " + mask +
+                                " " + MessageUtils.display(outMessage, msgStr,
+                                dmask, pname)).send();
+                        }
+                        MessageUtils.setProperty(orcField, okRC, outMessage);
+                    }
+                    catch (Exception e) {
+                    }
+                    j++;
+                }
+                count ++;
+
+                str = (i == SUCCESS) ? okRC :((i == FAILURE) ? failRC : excpRC);
+                try {
+                    MessageUtils.setProperty(rcField, str, outMessage);
+                    if (i != SUCCESS && dmask > 0) { // display the message
+                        Object[] asset = (Object[]) assetList.browse(id);
+                        String[] pname = (String[]) asset[ASSET_PNAME];
+                        new Event(Event.INFO, uri + " " + keyList[j].trim() +
+                            ", " + count + "/" + sid + " " + i + " " + mask +
+                            " " + MessageUtils.display(outMessage, msgStr,
+                            dmask, pname)).send();
+                    }
+                }
+                catch (Exception e) {
+                }
+            }
+            else if (key.indexOf("|") > 0) { // for PipeList of multiple rules
+                int j = 0;
+                String[] keyList = Utils.split("|", key);
+                msgStr = null;
+                i = FAILURE;
+                id = -1;
+                dmask = 0;
+                for (String ky : keyList) {
+                    ky = ky.trim();
+                    if (!cache.containsKey(ky)) {
+                        new Event(Event.ERR, uri +
+                            " no such rule found for " + ky + " at " +
+                            j + " in PipeList: " + key).send();
+                        i = EXCEPTION;
+                        break;
+                    }
+                    list = cache.getMetaData(ky);
+                    id = list[0];
+                    mask = list[1];
+                    option = list[2];
+                    dmask = list[3];
+
+                    if (msgStr == null && (mask & EVAL_PATTERN) > 0) try {
+                        msgStr = MessageUtils.processBody(outMessage, buffer);
+                    }
+                    catch (Exception e) {
+                        new Event(Event.ERR, uri + " " + ky +
+                           " failed to get message body: "+e.toString()).send();
+                        i = EXCEPTION;
+                        break;
+                    }
+
+                    currentTime = System.currentTimeMillis();
+                    i = checkRule(currentTime, id, mask, option, ky,
+                        outMessage, msgStr);
+
+                    if (i == EXCEPTION)
+                        break;
+                    else if (i == FAILURE) {
+                        j ++;
+                        continue;
+                    }
+                    else if (mask > EVAL_FILTER) try { // invoke formatter
+                        i = invokeRule(list, ky, outMessage, msgStr, buffer);
+                    }
+                    catch (Exception e) {
+                        i = EXCEPTION;
+                        break;
+                    }
+                    catch (Error e) {
+                        in.remove(sid);
+                        outMessage = null;
+                        Event.flush(e);
+                    }
+
+                    if (dmask > 0) try { // display the message
+                        Object[] asset = (Object[]) assetList.browse(id);
+                        String[] pname = (String[]) asset[ASSET_PNAME];
+                        new Event(Event.INFO, uri + " " + ky + "| " +
+                            (count+1) + "/" + sid + " " + i + " " + mask +
+                            " " + MessageUtils.display(outMessage, msgStr,
+                            dmask, pname)).send();
+                    }
+                    catch (Exception e) {
+                    }
+                    break;
+                }
+                count ++;
+
+                str = (i == SUCCESS) ? okRC :((i == FAILURE) ? failRC : excpRC);
+                try {
+                    MessageUtils.setProperty(rcField, str, outMessage);
+                    if (i != SUCCESS && dmask > 0) { // display the message
+                        Object[] asset = (Object[]) assetList.browse(id);
+                        String[] pname = (String[]) asset[ASSET_PNAME];
+                        new Event(Event.INFO, uri + " " + keyList[j].trim() +
+                            "| " + count + "/" + sid + " " + i + " " + mask +
+                            " " + MessageUtils.display(outMessage, msgStr,
+                            dmask, pname)).send();
+                    }
+                }
+                catch (Exception e) {
+                }
+            }
+            else if (key.indexOf(":") > 0) { // for ColonList of multiple rules
+                int j = 0;
+                String[] keyList = Utils.split(":", key);
+                msgStr = null;
+                i = FAILURE;
+                id = -1;
+                dmask = 0;
+                for (String ky : keyList) {
+                    ky = ky.trim();
+                    if (!cache.containsKey(ky)) {
+                        new Event(Event.ERR, uri +
+                            " no such rule found for " + ky + " at " +
+                            j + " in ColonList:" + key).send();
+                        i = EXCEPTION;
+                        break;
+                    }
+                    list = cache.getMetaData(ky);
+                    id = list[0];
+                    mask = list[1];
+                    option = list[2];
+                    dmask = list[3];
+
+                    if (msgStr == null && (mask & EVAL_PATTERN) > 0) try {
+                        msgStr = MessageUtils.processBody(outMessage, buffer);
+                    }
+                    catch (Exception e) {
+                        new Event(Event.ERR, uri + " " + ky +
+                           " failed to get message body: "+e.toString()).send();
+                        i = EXCEPTION;
+                        break;
+                    }
+
+                    currentTime = System.currentTimeMillis();
+                    i = checkRule(currentTime, id, mask, option, ky,
+                        outMessage, msgStr);
+
+                    if (i == EXCEPTION)
+                        break;
+                    else if (i == FAILURE) {
+                        j ++;
+                        continue;
+                    }
+                    else if (mask > EVAL_FILTER) try { // invoke formatter
+                        i = invokeRule(list, ky, outMessage, msgStr, buffer);
+                    }
+                    catch (Exception e) {
+                        i = EXCEPTION;
+                        break;
+                    }
+                    catch (Error e) {
+                        in.remove(sid);
+                        outMessage = null;
+                        Event.flush(e);
+                    }
+
+                    if (dmask > 0) try { // display the message
+                        Object[] asset = (Object[]) assetList.browse(id);
+                        String[] pname = (String[]) asset[ASSET_PNAME];
+                        new Event(Event.INFO, uri + " " + ky + ": " +
+                            (count+1) + "/" + sid + " " + i + " " + mask +
+                            " " + MessageUtils.display(outMessage, msgStr,
+                            dmask, pname)).send();
+                    }
+                    catch (Exception e) {
+                    }
+                    j++;
+                }
+                count ++;
+
+                str = (i == SUCCESS) ? okRC :((i == FAILURE) ? failRC : excpRC);
+                try {
+                    MessageUtils.setProperty(rcField, str, outMessage);
+                    if (i != SUCCESS && dmask > 0) { // display the message
+                        Object[] asset = (Object[]) assetList.browse(id);
+                        String[] pname = (String[]) asset[ASSET_PNAME];
+                        new Event(Event.INFO, uri + " " + keyList[j].trim() +
+                            ": " + count + "/" + sid + " " + i + " " + mask +
+                            " " + MessageUtils.display(outMessage, msgStr,
+                            dmask, pname)).send();
+                    }
+                }
+                catch (Exception e) {
+                }
+            }
+            else if (!cache.containsKey(key)) { // no such rule
+                new Event(Event.WARNING, uri + " no such rule found for: " +
+                    key).send();
+            }
+            else { // for a single rule
+                list = cache.getMetaData(key);
+                id = list[0];
+                mask = list[1];
+                option = list[2];
+                dmask = list[3];
+
+                msgStr = null;
+                if ((mask & EVAL_PATTERN) > 0) try {
+                    msgStr = MessageUtils.processBody(outMessage, buffer);
+                }
+                catch (Exception e) {
+                    in.remove(sid);
+                    new Event(Event.ERR, uri + ": " + key +
+                        " failed to get message body: "+ e.toString()).send();
+                    outMessage = null;
+                    continue;
+                }
+
+                currentTime = System.currentTimeMillis();
+                i = checkRule(currentTime, id, mask, option, key,
+                    outMessage, msgStr);
+                count ++;
+
+                if (i == SUCCESS && mask > EVAL_FILTER) try { //invoke formatter
+                    i = invokeRule(list, key, outMessage, msgStr, buffer);
+                }
+                catch (Exception e) {
+                    i = EXCEPTION;
+                }
+                catch (Error e) {
+                    in.remove(sid);
+                    outMessage = null;
+                    Event.flush(e);
+                }
+
+                str = (i == SUCCESS) ? okRC :((i == FAILURE) ? failRC : excpRC);
+                try {
+                    MessageUtils.setProperty(rcField, str, outMessage);
+                    if (dmask > 0) { // display the message
+                        Object[] asset = (Object[]) assetList.browse(id);
+                        String[] pname = (String[]) asset[ASSET_PNAME];
+                        new Event(Event.INFO, uri + " " + key + " " +
+                            count + "/" + sid + " " + i + " " + mask + " " +
+                            MessageUtils.display(outMessage, msgStr,
+                            dmask, pname)).send();
+                    }
+                }
+                catch (Exception e) {
+                }
+            }
+            in.remove(sid);
+            outMessage = null;
+        }
+    }
+
+    /**
+     * checks the specific rule on the message with the filter and returns
+     * SUCCESS for hit, or FAILURE for nohit, or EXCEPTION otherwise.
+     */
+    private int checkRule(long currentTime, int id, int mask, int option,
+        String key, Message outMessage, String msgStr) {
+        int i = FAILURE;
+        MessageFilter filter = (MessageFilter) cache.get(key);
+
+        try {
+            if (filter.evaluate(outMessage, msgStr))
+                i = SUCCESS;
+        }
+        catch (Exception e) {
+            i = EXCEPTION;
+            new Event(Event.ERR, uri + " " + key +
+                ": failed to evaluate: "+Event.traceStack(e)).send();
+        }
+
+        if (i != SUCCESS) { // nohit or exceptioned
+            return i;
+        }
+        else if ((mask & EVAL_AGE) > 0) {
+            Date d = null;
+            byte[] buffer = new byte[4096];
+            Object[] asset = (Object[]) assetList.browse(id);
+            TimeWindows tw = (TimeWindows) asset[ASSET_OBJECT];
+            Template tmp = (Template) asset[ASSET_TEMP];
+            TextSubstitution sub = (TextSubstitution) asset[ASSET_TSUB];
+            DateFormat dateFormat = (DateFormat) asset[ASSET_METHOD];
+            i = EXCEPTION;
+            if (tmp != null && dateFormat != null) try {
+                String str = MessageUtils.format(outMessage, buffer, tmp);
+                if (sub != null)
+                    str = sub.substitute(str);
+                if (str != null)
+                    d = dateFormat.parse(str, new ParsePosition(0));
+            }
+            catch (Exception e) {
+                new Event(Event.ERR, uri + " " + key +
+                    ": failed to get age: "+Event.traceStack(e)).send();
+            }
+            if (d != null && tw != null) {
+                i = tw.check(currentTime, d.getTime());
+                if (option >= 2) // for age
+                    i = (i == TimeWindows.NORMAL) ? SUCCESS : FAILURE;
+                else
+                    i = (i == TimeWindows.OCCURRED) ? SUCCESS : FAILURE;
+            }
+        }
+        else if ((mask & EVAL_FILE) > 0) {
+            File file = null;
+            byte[] buffer = new byte[4096];
+            Object[] asset = (Object[]) assetList.browse(id);
+            Template tmp = (Template) asset[ASSET_TEMP];
+            TextSubstitution sub = (TextSubstitution) asset[ASSET_TSUB];
+            DataSet ds = (DataSet) asset[ASSET_OBJECT];
+            i = EXCEPTION;
+            if (tmp != null) try {
+                String str = MessageUtils.format(outMessage, buffer, tmp);
+                if (sub != null)
+                    str = sub.substitute(str);
+                if (str != null)
+                    file = new File(str);
+            }
+            catch (Exception e) {
+                new Event(Event.ERR, uri + ": " + key +
+                    " failed to get url: "+Event.traceStack(e)).send();
+            }
+
+            if (file != null && file.exists() && file.canRead()) {
+                long tm;
+                String str = (String) asset[ASSET_MNAME];
+                if (option > 0) // check file size
+                    tm = file.length();
+                else // check file age
+                    tm = currentTime - file.lastModified();
+                i = (ds.contains(tm)) ? SUCCESS : FAILURE;
+                if (str != null && str.length() > 0) try {
+                    MessageUtils.setProperty(str,String.valueOf(tm),outMessage);
+                }
+                catch (Exception e) {
+                    new Event(Event.ERR, uri + ": " + key +
+                       " failed to set property at " + str +
+                       ": "+ Event.traceStack(e)).send();
+                }
+            }
+            else if (file != null) {
+                new Event(Event.ERR, uri + ": " + key +
+                    " failed to access the file: " + file.getPath()).send();
+            }
+        }
+
+        return i;
+    }
+
+    /**
+     * invokes the formatter of the specific rule and returns SUCCESS for OK,
+     * or FAILURE for failure. Otherwise, it returns EXCEPTION.
+     */
+    private int invokeRule(int[] list, String key, Message outMessage,
+        String msgStr, byte[] buffer) {
+        int i = SUCCESS;
+
+        int id = list[0];
+        int mask = list[1];
+        int option = list[2];
+
+        Object[] asset = (Object[]) assetList.browse(id);
+
+        if ((mask & EVAL_FORMAT) > 0) {
+            MessageFilter filter = (MessageFilter) cache.get(key);
+            if (filter.hasFormatter()) try {
+                i = filter.format(outMessage, buffer);
+                if (i >= 0)
+                    i = SUCCESS;
+                else
+                    i = FAILURE;
+            }
+            catch (Exception e) {
+                i = EXCEPTION;
+                new Event(Event.ERR, uri + ": " + key +
+                    " failed to format the msg: "+ e.toString()).send();
+            }
+            if (i == SUCCESS && asset[ASSET_DATA] != null) try { // body format
+                Template tmp = (Template) asset[ASSET_TEMP];
+                msgStr = MessageUtils.format(outMessage, buffer, tmp);
+                outMessage.clearBody();
+                if (outMessage instanceof TextMessage)
+                    ((TextMessage) outMessage).setText(msgStr);
+                else
+                    ((BytesMessage) outMessage).writeBytes(msgStr.getBytes());
+            }
+            catch (Exception e) {
+                i = EXCEPTION;
+                new Event(Event.ERR, uri + ": " + key +
+                    " failed to format body: " + e.toString()).send();
+            }
+        }
+        else if ((mask & EVAL_CACHE) > 0 && asset[ASSET_DATA] != null) {
+            Template tmp = (Template) asset[ASSET_TEMP];
+            TextSubstitution sub = (TextSubstitution) asset[ASSET_TSUB];
+            Map map = (Map) asset[ASSET_DATA];
+            String str = null;
+            try {
+                str = MessageUtils.format(outMessage, buffer, tmp);
+                if (sub != null)
+                    str = sub.substitute(str);
+                if (str != null && str.length() > 0)
+                    i = SUCCESS;
+                else {
+                    i = EXCEPTION;
+                    new Event(Event.ERR, uri + ": " + key +
+                        " failed to get cache key").send();
+                }
+            }
+            catch (Exception e) {
+                i = EXCEPTION;
+                new Event(Event.ERR, uri + ": " + key +
+                    " failed to get cache key: "+ e.toString()).send();
+            }
+            if (i == SUCCESS) {
+                msgStr = (String) map.get(str);
+                if (msgStr == null) {
+                    i = EXCEPTION;
+                    new Event(Event.WARNING, uri + ": " + key +
+                        " found no cache for " + str).send();
+                }
+                else try {
+                    str = (String) asset[ASSET_MNAME];
+                    if ("body".equals(str)) {  
+                        outMessage.clearBody();
+                        if (outMessage instanceof TextMessage)
+                            ((TextMessage) outMessage).setText(msgStr);
+                        else
+                      ((BytesMessage) outMessage).writeBytes(msgStr.getBytes());
+                    }
+                    else
+                        MessageUtils.setProperty(str, msgStr, outMessage);
+                }
+                catch (Exception e) {
+                    i = EXCEPTION;
+                    new Event(Event.ERR, uri + ": " + key +
+                        " failed to set property of " + str + ": "+
+                        e.toString()).send();
+                }
+            }
+        }
+        else if ((mask & EVAL_PARSE) > 0 && asset[ASSET_TEMP] != null &&
+            option > 0) { // for parse
+            i = parse(key, msgStr, option, (SimpleParser) asset[ASSET_TEMP],
+                outMessage);
+        }
+        else if ((mask & EVAL_JSONT) > 0 && asset[ASSET_DATA] != null &&
+            asset[ASSET_TEMP] != null && msgStr != null) { // for jsont
+            i = transform(key, (String) asset[ASSET_DATA], msgStr, option,
+                (JSONTemplate) asset[ASSET_TEMP], (Map) asset[ASSET_TSUB],
+                buffer, outMessage);
+        }
+        else if ((mask & EVAL_JSONT) > 0 && asset[ASSET_TSUB] != null &&
+            asset[ASSET_TSUB] instanceof JSONFormatter) { // for json formatter
+            i = jformat(key, msgStr, (JSONFormatter) asset[ASSET_TSUB],
+                outMessage);
+        }
+        else if ((mask & EVAL_JSONPATH) > 0 && asset[ASSET_TSUB] != null &&
+            asset[ASSET_TSUB] instanceof Map) { // for json path
+            i = jparse(key, msgStr, 0, (Map)asset[ASSET_TSUB], buffer,
+                outMessage);
+        }
+        else if ((mask & EVAL_XSLT) > 0 && (mask & EVAL_XPATH) > 0 &&
+            asset[ASSET_DATA] != null && msgStr != null) { // for xmerge
+            i = xmerge(key, (String) asset[ASSET_DATA], msgStr, option,
+                (XPathExpression) asset[ASSET_TEMP],
+                (XPathExpression) asset[ASSET_TSUB], defaultTransformer,
+                outMessage);
+        }
+        else if ((mask & EVAL_XSLT) > 0 && (mask & EVAL_XPATH) > 0 &&
+            msgStr != null) { // for xcut
+            i = xcut(key, msgStr, (XPathExpression) asset[ASSET_TSUB],
+                defaultTransformer, outMessage);
+        }
+        else if ((mask & EVAL_XSLT) > 0 && asset[ASSET_DATA] != null &&
+            tFactory != null && msgStr != null) { // for xslt
+            i = transform(key, (String) asset[ASSET_DATA], msgStr, option,
+                (Templates) asset[ASSET_TEMP], (Map) asset[ASSET_TSUB],
+                buffer, outMessage);
+        }
+        else if ((mask & EVAL_XPATH) > 0 && builder != null &&
+            xpath != null && msgStr != null) { // for xpath
+            i = xparse(key, msgStr, option, (Map) asset[ASSET_TSUB], buffer,
+                outMessage);
+        }
+        else if ((mask & EVAL_TRANS) > 0 && msgStr != null) { // for translation
+            i = translation(key, option, msgStr, outMessage);
+        }
+        else if ((mask & EVAL_PLUGIN) == 0 ||
+            asset[ASSET_MNAME] == null) { // something wrong
+            i = EXCEPTION;
+            new Event(Event.WARNING, uri + ": " + key +
+                " no name defined for post process: " + mask).send();
+        }
+        else try { // for plug-ins
+            Object o;
+            java.lang.reflect.Method method =
+                (java.lang.reflect.Method) asset[ASSET_METHOD];
+            o = method.invoke(asset[ASSET_OBJECT], new Object[]{outMessage});
+            if (o != null) {
+                i = EXCEPTION;
+                new Event(Event.WARNING, uri + ": " + key +
+                    " failed to transform the msg: "+ o.toString()).send();
+            }
+        }
+        catch (Exception e) {
+            String str = uri + " " + key;
+            Exception ex = null;
+            if (e instanceof JMSException)
+                ex = ((JMSException) e).getLinkedException();
+            if (ex != null)
+                str += " Linked exception: " + ex.toString() + "\n";
+            i = EXCEPTION;
+            new Event(Event.ERR, str + " failed to transform the msg: "+
+                Event.traceStack(e)).send();
+        }
+        catch (Error e) {
+            i = EXCEPTION;
+            String str = uri + ": " + key;
+            new Event(Event.ERR, uri + ": " + key +
+                " failed to transform the msg: "+ e.toString()).send();
+            Event.flush(e);
+        }
+
+        return i;
+    }
+
+    /**
      * It transforms the XML content according to the template of xsl and the
      * parameters.  The message will be modified as the result of the
      * transformation.  Upon success, it returns SUCCESS as the index
      * of the outlink.  Otherwise, EXCEPTION is returned.
      */
-    private int transform(long currentTime, String name, String xsl, String xml,
-        int option, Templates template, Map params, byte[] buffer, Message msg){
+    private int transform(String name, String xsl, String xml, int option,
+        Templates template, Map params, byte[] buffer, Message msg) {
         int i;
         Iterator iter;
         Object o;
@@ -1078,9 +1711,8 @@ public class MessageEvaluator extends Persister {
      * transformation.  Upon success, it returns SUCCESS as the index
      * of the outlink.  Otherwise, EXCEPTION is returned.
      */
-    private int transform(long currentTime, String name, String tag,
-        String json, int option, JSONTemplate template, Map params,
-        byte[] buffer, Message msg) {
+    private int transform(String name, String tag, String json, int option,
+        JSONTemplate template, Map params, byte[] buffer, Message msg) {
         int i;
         Object o;
         Map ph = null;
@@ -1108,6 +1740,7 @@ public class MessageEvaluator extends Persister {
         if (o == null)
             return EXCEPTION;
 
+        template.clearParameter();
         if (params != null && option == 0) { // without dynamic parameters
             for (Iterator iter=params.keySet().iterator(); iter.hasNext();) {
                 key = (String) iter.next();
@@ -1187,8 +1820,8 @@ public class MessageEvaluator extends Persister {
      * returns SUCCESS as the index of the outlink.  Otherwise, EXCEPTION
      * is returned.
      */
-    private int xparse(long currentTime, String name, String xml, int option,
-        Map expression, byte[] buffer, Message msg) {
+    private int xparse(String name, String xml, int option, Map expression,
+        byte[] buffer, Message msg) {
         Iterator iter;
         Object o;
         XPathExpression xpe;
@@ -1253,8 +1886,8 @@ public class MessageEvaluator extends Persister {
      * XPath expression. Upon success, it returns SUCCESS as the index of the
      * outlink.  Otherwise, EXCEPTION is returned.
      */
-    private int xmerge(long currentTime, String name, String key, String xml,
-        int option, XPathExpression source, XPathExpression target,
+    private int xmerge(String name, String key, String xml, int option,
+        XPathExpression source, XPathExpression target,
         Transformer transformer, Message msg) {
         XPathExpression xpe;
         NodeList list, nodes;
@@ -1374,8 +2007,8 @@ public class MessageEvaluator extends Persister {
      * into the message body and returns SUCCESS as the index of the outlink.
      * Otherwise, EXCEPTION is returned.
      */
-    private int xcut(long currentTime, String name, String xml,
-        XPathExpression xpe, Transformer transformer, Message msg) {
+    private int xcut(String name, String xml, XPathExpression xpe,
+        Transformer transformer, Message msg) {
         NodeList nodes;
         Document doc;
         Object o;
@@ -1444,7 +2077,7 @@ public class MessageEvaluator extends Persister {
         return SUCCESS;
     }
 
-    private int parse(long currentTime, String name, String text, int option,
+    private int parse(String name, String text, int option,
         SimpleParser parser, Message msg) {
         int i;
         Object o;
@@ -1494,8 +2127,8 @@ public class MessageEvaluator extends Persister {
         return SUCCESS;
     }
 
-    private int jparse(long currentTime, String name, String json, int option,
-        Map expression, byte[] buffer, Message msg) {
+    private int jparse(String name, String json, int option, Map expression,
+        byte[] buffer, Message msg) {
         Iterator iter;
         Map ph = null;
         List pl = null;
@@ -1576,8 +2209,8 @@ public class MessageEvaluator extends Persister {
      * success, it loads JSON data to the message body and returns SUCCESS.
      * Otherwise, EXCEPTION is returned.
      */
-    private int jformat(long currentTime, String name, String json,
-        JSONFormatter formatter, Message msg) {
+    private int jformat(String name, String json, JSONFormatter formatter,
+        Message msg) {
         Object o;
         StringReader sr;
         int k = 0;
@@ -1621,8 +2254,7 @@ public class MessageEvaluator extends Persister {
     /**
      * It translates the text document to a different format
      */
-    private int translation(long currentTime, String name, int option,
-        String text, Message msg) {
+    private int translation(String name, int option, String text, Message msg) {
         int i;
         String value = null;
         Object o;
@@ -1680,572 +2312,6 @@ public class MessageEvaluator extends Persister {
             return EXCEPTION;
         }
         return SUCCESS;
-    }
-
-    /**
-     * It picks up a message from input queue and evaluates its content to
-     * decide what return code to propagate.  The evaluation may
-     * modify the content.
-     */
-    public void evaluate(XQueue in) {
-        Message outMessage;
-        MessageFilter filter = null;
-        String key, msgStr = null;
-        Object[] asset;
-        long currentTime;
-        long count = 0;
-        Object o = null;
-        String[] pname = null;
-        int[] list;
-        int eval_fxp = EVAL_FORMAT | EVAL_XSLT | EVAL_PARSE | EVAL_XPATH |
-            EVAL_TRANS | EVAL_PLUGIN | EVAL_JSONPATH | EVAL_JSONT | EVAL_CACHE;
-        int i = 0, ic = 0, id, mask, option, dmask;
-        int sid = -1; // the cell id of the message in input queue
-        String okRC = String.valueOf(MessageUtils.RC_OK);
-        String failRC = String.valueOf(MessageUtils.RC_MSGERROR);
-        String excpRC = String.valueOf(MessageUtils.RC_UNKNOWN);
-
-        byte[] buffer = new byte[bufferSize];
-
-        while (((mask = in.getGlobalMask()) & XQueue.KEEP_RUNNING) > 0) {
-            if ((mask & XQueue.STANDBY) > 0) // standby temporarily
-                break;
-            if ((sid = in.getNextCell(waitTime)) < 0) {
-                continue;
-            }
-
-            if ((outMessage = (Message) in.browse(sid)) == null) {
-                in.remove(sid);
-                new Event(Event.WARNING, uri + " dropped a null msg from " +
-                    in.getName()).send();
-                continue;
-            }
-
-            // copy the original RC and set the default RC
-            try {
-                msgStr = MessageUtils.getProperty(rcField, outMessage);
-                MessageUtils.setProperty(orcField, msgStr, outMessage);
-                MessageUtils.setProperty(rcField, excpRC, outMessage);
-            }
-            catch (MessageNotWriteableException e) {
-                try {
-                    MessageUtils.resetProperties(outMessage);
-                    MessageUtils.setProperty(orcField, msgStr, outMessage);
-                    MessageUtils.setProperty(rcField, excpRC, outMessage);
-                }
-                catch (Exception ex) {
-                    in.remove(sid);
-                    new Event(Event.WARNING, uri +
-                        " failed to set RC on msg from "+ in.getName()).send();
-                    outMessage = null;
-                    continue;
-                }
-            }
-            catch (Exception e) {
-                in.remove(sid);
-                new Event(Event.WARNING, uri + " failed to set RC on msg from "+
-                    in.getName()).send();
-                outMessage = null;
-                continue;
-            }
-
-            key = null;
-            try {
-                key = MessageUtils.getProperty(fieldName, outMessage);
-            }
-            catch (JMSException e) {
-            }
-
-            if (key == null || key.length() <= 0 || !cache.containsKey(key)) {
-                in.remove(sid);
-                new Event(Event.WARNING, uri + " failed to get key " +
-                    "or no such key found of " + key).send();
-                outMessage = null;
-                continue;
-            }
-            filter = (MessageFilter) cache.get(key);
-            list = cache.getMetaData(key);
-            mask = list[1];
-            id = list[0];
-            option = list[2];
-            dmask = list[3];
-
-            currentTime = System.currentTimeMillis();
-            i = FAILURE;
-            msgStr = null;
-            try {
-                if ((mask & EVAL_PATTERN) > 0)
-                    msgStr = MessageUtils.processBody(outMessage, buffer);
-                if ((mask & EVAL_FILTER) > 0) {
-                    if (filter.evaluate(outMessage, msgStr))
-                        i = SUCCESS;
-                }
-            }
-            catch (Exception e) {
-                i = EXCEPTION;
-            }
-
-            count ++;
-            if (i != SUCCESS) { // failed or exceptioned
-                try {
-                    MessageUtils.setProperty(rcField,
-                        ((i == FAILURE) ? failRC : excpRC), outMessage);
-                    if (dmask > 0) { // display the message
-                        asset = (Object[]) assetList.browse(id);
-                        pname = (String[]) asset[ASSET_PNAME];
-                        new Event(Event.INFO, uri + " " + key + ": " + count +
-                            "/" + sid + " " + i + " " + mask + " " +
-                            MessageUtils.display(outMessage, msgStr,
-                            dmask, pname)).send();
-                    }
-                }
-                catch (JMSException e) {
-                }
-                in.remove(sid);
-                outMessage = null;
-                continue;
-            }
-            else if ((mask & EVAL_LOOP) > 0) { // for loop support
-                int j;
-                String[] loopName;
-                asset = (Object[]) assetList.browse(id);
-                if (asset[ASSET_DATA] != null &&
-                    asset[ASSET_DATA] instanceof String[])
-                    loopName = (String[]) asset[ASSET_DATA];
-                else
-                    loopName = new String[0];
-                pname = (String[]) asset[ASSET_PNAME];
-
-                i = SUCCESS;
-                for (j=0; j<loopName.length; j++) {
-                    filter = (MessageFilter) cache.get(loopName[j]);
-                    list = cache.getMetaData(loopName[j]);
-                    if (list == null)
-                        continue;
-                    mask = list[1];
-                    id = list[0];
-                    option = list[2];
-                    dmask = list[3];
-                    msgStr = null;
-                    if ((mask & EVAL_FILTER) > 0) try {
-                        if (filter.checkBody() && msgStr == null)
-                            msgStr= MessageUtils.processBody(outMessage,buffer);
-                        if (!filter.evaluate(outMessage, msgStr))
-                            continue;
-                    }
-                    catch (Exception e) {
-                        i = EXCEPTION;
-                        break;
-                    }
-
-                    if ((mask & EVAL_PATTERN) > 0 && msgStr == null &&
-                        (mask & EVAL_FORMAT) == 0) try { // not for FORMAT
-                        msgStr=MessageUtils.processBody(outMessage,buffer);
-                    }
-                    catch (Exception e) {
-                    }
-
-                    // got a match so invoke the formatter here 
-                    asset = (Object[]) assetList.browse(id);
-                    if ((mask & EVAL_FORMAT) > 0) {
-                        try {
-                            i = filter.format(outMessage, buffer);
-                            if (i > 0)
-                                i = SUCCESS;
-                            else
-                                i = EXCEPTION;
-                        }
-                        catch (Exception e) {
-                            i = EXCEPTION;
-                            new Event(Event.ERR, uri + ": " + key +
-                                " failed to format the msg: "+
-                                e.toString()).send();
-                            break;
-                        }
-                    }
-                    else if ((mask & (EVAL_XSLT + EVAL_XPATH)) > 0 &&
-                        asset[ASSET_DATA] != null) {
-                        i = xmerge(currentTime, (String) asset[ASSET_NAME],
-                            (String) asset[ASSET_DATA], msgStr, option,
-                            (XPathExpression) asset[ASSET_TEMP],
-                            (XPathExpression) asset[ASSET_TSUB],
-                            defaultTransformer, outMessage);
-                    }
-                    else if ((mask & (EVAL_XSLT + EVAL_XPATH)) > 0 ) {
-                        i = xcut(currentTime, (String) asset[ASSET_NAME],
-                            msgStr, (XPathExpression) asset[ASSET_TSUB],
-                            defaultTransformer, outMessage);
-                    }
-                    else if ((mask & EVAL_XSLT) > 0 && tFactory != null &&
-                        asset[ASSET_DATA] != null) {
-                        i = transform(currentTime, (String) asset[ASSET_NAME],
-                            (String) asset[ASSET_DATA], msgStr, option,
-                            (Templates) asset[ASSET_TEMP],
-                            (Map) asset[ASSET_TSUB], buffer, outMessage);
-                    }
-                    else if((mask & EVAL_JSONT) > 0 && asset[ASSET_DATA] != null
-                        && asset[ASSET_TEMP] != null) {
-                        i = transform(currentTime, (String) asset[ASSET_NAME],
-                            (String) asset[ASSET_DATA], msgStr, option,
-                            (JSONTemplate) asset[ASSET_TEMP],
-                            (Map) asset[ASSET_TSUB], buffer, outMessage);
-                    }
-                    else if((mask & EVAL_JSONT) > 0 && asset[ASSET_TSUB] != null
-                        && asset[ASSET_TSUB] instanceof JSONFormatter) {
-                        i = jformat(currentTime, (String) asset[ASSET_NAME],
-                            msgStr, (JSONFormatter) asset[ASSET_TSUB],
-                            outMessage);
-                    }
-                    if (i != SUCCESS) // abort at failure
-                        break;
-                }
-
-                try { // nohit or exception
-                    MessageUtils.setProperty(rcField,
-                        ((i == SUCCESS) ? okRC : excpRC), outMessage);
-                    if (dmask > 0) // display the message
-                        new Event(Event.INFO, uri + " " + key + ": " + count +
-                            "/" + sid + " " + i + " " + j + " " +
-                            MessageUtils.display(outMessage, msgStr,
-                            dmask, pname)).send();
-                }
-                catch (JMSException e) {
-                }
-                in.remove(sid);
-                outMessage = null;
-                continue;
-            }
-            else if ((mask & EVAL_BRANCH) > 0) { // for branch support
-                int j;
-                String[] branchName;
-                asset = (Object[]) assetList.browse(id);
-                if (asset[ASSET_DATA] != null &&
-                    asset[ASSET_DATA] instanceof String[])
-                    branchName = (String[]) asset[ASSET_DATA];
-                else
-                    branchName = new String[0];
-                pname = (String[]) asset[ASSET_PNAME];
-                i = FAILURE;
-                for (j=0; j<branchName.length; j++) {
-                    filter = (MessageFilter) cache.get(branchName[j]);
-                    list = cache.getMetaData(branchName[j]);
-                    if (list == null)
-                        continue;
-                    mask = list[1];
-                    id = list[0];
-                    option = list[2];
-                    dmask = list[3];
-                    if ((mask & EVAL_FILTER) > 0) try {
-                        if (filter.checkBody() && msgStr == null)
-                            msgStr= MessageUtils.processBody(outMessage,buffer);
-                        if (!filter.evaluate(outMessage, msgStr))
-                            continue;
-                    }
-                    catch (Exception e) {
-                        i = EXCEPTION;
-                        break;
-                    }
-
-                    // got a match and located the key so break here
-                    i = SUCCESS;
-                    break;
-                }
-
-                if (i != SUCCESS) try { // nohit or exception
-                    MessageUtils.setProperty(rcField,
-                        ((i == FAILURE) ? failRC : excpRC), outMessage);
-                    if (dmask > 0) // display the message
-                        new Event(Event.INFO, uri + " " + key + ": " + count +
-                            "/" + sid + " " + i + " " + j + " " +
-                            MessageUtils.display(outMessage, msgStr,
-                            dmask, null)).send();
-                    in.remove(sid);
-                    outMessage = null;
-                    continue;
-                }
-                catch (JMSException e) {
-                    in.remove(sid);
-                    outMessage = null;
-                    continue;
-                }
-                key += ":" + branchName[j];
-                if ((mask & EVAL_PATTERN) > 0 && msgStr == null) try {
-                    msgStr = MessageUtils.processBody(outMessage, buffer);
-                }
-                catch (Exception e) {
-                }
-            }
-            else if ((mask & EVAL_AGE) > 0) {
-                Date d = null;
-                asset = (Object[]) assetList.browse(id);
-                TimeWindows tw = (TimeWindows) asset[ASSET_OBJECT];
-                Template tmp = (Template) asset[ASSET_TEMP];
-                TextSubstitution sub = (TextSubstitution) asset[ASSET_TSUB];
-                DateFormat dateFormat = (DateFormat) asset[ASSET_METHOD];
-                pname = (String[]) asset[ASSET_PNAME];
-                i = EXCEPTION;
-                if (tmp != null && dateFormat != null) try {
-                    String str = MessageUtils.format(outMessage, buffer, tmp);
-                    if (sub != null)
-                        str = sub.substitute(str);
-                    if (str != null)
-                        d = dateFormat.parse(str, new ParsePosition(0));
-                }
-                catch (Exception e) {
-                    new Event(Event.ERR, uri + " " + key +
-                        ": failed to get age: "+ Event.traceStack(e)).send();
-                }
-                if (d != null && tw != null) {
-                    i = tw.check(currentTime, d.getTime());
-                    if (option >= 2) // for age
-                        i = (i == TimeWindows.NORMAL) ? SUCCESS : FAILURE;
-                    else
-                        i = (i == TimeWindows.OCCURRED) ? SUCCESS : FAILURE;
-                }
-            }
-            else if ((mask & EVAL_FILE) > 0) {
-                File file = null;
-                asset = (Object[]) assetList.browse(id);
-                Template tmp = (Template) asset[ASSET_TEMP];
-                TextSubstitution sub = (TextSubstitution) asset[ASSET_TSUB];
-                DataSet ds = (DataSet) asset[ASSET_OBJECT];
-                pname = (String[]) asset[ASSET_PNAME];
-                i = EXCEPTION;
-                if (tmp != null) try {
-                    String str = MessageUtils.format(outMessage, buffer, tmp);
-                    if (sub != null)
-                        str = sub.substitute(str);
-                    if (str != null)
-                        file = new File(str);
-                }
-                catch (Exception e) {
-                    new Event(Event.ERR, uri + " " + key +
-                        ": failed to get url: "+ Event.traceStack(e)).send();
-                }
-
-                if (file != null && file.exists() && file.canRead()) {
-                    long tm;
-                    String str = (String) asset[ASSET_MNAME];
-                    if (option > 0) // check file size
-                        tm = file.length();
-                    else // check file age
-                        tm = System.currentTimeMillis() - file.lastModified();
-                    i = (ds.contains(tm)) ? SUCCESS : FAILURE;
-                    if (str != null && str.length() > 0) try {
-                        MessageUtils.setProperty(str, String.valueOf(tm),
-                            outMessage);
-                    }
-                    catch (Exception e) {
-                        new Event(Event.ERR, uri + " " + key +
-                           ": failed to set property at " + str +
-                           ": "+ Event.traceStack(e)).send();
-                    }
-                }
-                else if (file != null) {
-                    new Event(Event.ERR, uri + " " + key +
-                        ": failed to access the file: "+ file.getPath()).send();
-                }
-            }
-            else if ((mask & eval_fxp) == 0) { // no format at all
-                i = SUCCESS;
-            }
-
-            if ((mask & eval_fxp) == 0) { // no format at all
-                try {
-                    MessageUtils.setProperty(rcField, String.valueOf(i),
-                        outMessage);
-                    if (dmask > 0) // display the message
-                        new Event(Event.INFO, uri + " " + key + ": "+ count +
-                            "/" + sid + " " + i + " " + mask + " " +
-                            MessageUtils.display(outMessage, msgStr,
-                            dmask, pname)).send();
-                }
-                catch (JMSException e) {
-                }
-                in.remove(sid);
-                outMessage = null;
-                continue;
-            }
-
-            asset = (Object[]) assetList.browse(id);
-            pname = (String[]) asset[ASSET_PNAME];
-            if ((mask & EVAL_FORMAT) > 0) {
-                i = SUCCESS;
-                if (filter.hasFormatter()) try {
-                    i = filter.format(outMessage, buffer);
-                    if (i > 0)
-                        i = SUCCESS;
-                    else
-                        i = EXCEPTION;
-                }
-                catch (Exception e) {
-                    i = EXCEPTION;
-                    new Event(Event.ERR, uri + ": " + key +
-                        " failed to format the msg: "+ e.toString()).send();
-                }
-                if (i == SUCCESS && asset[ASSET_DATA] != null) try { //body temp
-                    Template tmp = (Template) asset[ASSET_TEMP];
-                    msgStr = MessageUtils.format(outMessage, buffer, tmp);
-                    outMessage.clearBody();
-                    if (outMessage instanceof TextMessage)
-                        ((TextMessage) outMessage).setText(msgStr);
-                    else
-                      ((BytesMessage) outMessage).writeBytes(msgStr.getBytes());
-                }
-                catch (Exception e) {
-                    i = EXCEPTION;
-                    new Event(Event.ERR, uri + ": " + key +
-                        " failed to format body: " + e.toString()).send();
-                }
-            }
-            else if ((mask & EVAL_CACHE) > 0 && asset[ASSET_DATA] != null) {
-                Template tmp = (Template) asset[ASSET_TEMP];
-                TextSubstitution sub = (TextSubstitution) asset[ASSET_TSUB];
-                Map map = (Map) asset[ASSET_DATA];
-                String str = null;
-                try {
-                    str = MessageUtils.format(outMessage, buffer, tmp);
-                    if (sub != null)
-                        str = sub.substitute(str);
-                    if (str != null && str.length() > 0)
-                        i = SUCCESS;
-                    else {
-                        i = EXCEPTION;
-                        new Event(Event.ERR, uri + ": " + key +
-                            " failed to get cache key").send();
-                    }
-                }
-                catch (Exception e) {
-                    i = EXCEPTION;
-                    new Event(Event.ERR, uri + ": " + key +
-                        " failed to get cache key: "+ e.toString()).send();
-                }
-                if (i == SUCCESS) {
-                    msgStr = (String) map.get(str);
-                    if (msgStr == null) {
-                        i = EXCEPTION;
-                        new Event(Event.WARNING, uri + ": " + key +
-                            " has no cache found for " + str).send();
-                    }
-                    else try {
-                        str = (String) asset[ASSET_MNAME];
-                        if ("body".equals(str)) {  
-                            outMessage.clearBody();
-                            if (outMessage instanceof TextMessage)
-                                ((TextMessage) outMessage).setText(msgStr);
-                            else
-                      ((BytesMessage) outMessage).writeBytes(msgStr.getBytes());
-                        }
-                        else
-                            MessageUtils.setProperty(str, msgStr, outMessage);
-                    }
-                    catch (Exception e) {
-                        i = EXCEPTION;
-                        new Event(Event.ERR, uri + ": " + key +
-                            " failed to set property of " + str + ": "+
-                            e.toString()).send();
-                    }
-                }
-            }
-            else if ((mask & EVAL_XSLT) > 0 && (mask & EVAL_XPATH) > 0 &&
-                asset[ASSET_DATA] != null && msgStr != null) {
-                i = xmerge(currentTime, key, (String) asset[ASSET_DATA],
-                    msgStr, option, (XPathExpression) asset[ASSET_TEMP],
-                    (XPathExpression) asset[ASSET_TSUB], defaultTransformer,
-                    outMessage);
-            }
-            else if ((mask & EVAL_XSLT) > 0 && (mask & EVAL_XPATH) > 0 &&
-                msgStr != null) {
-                i = xcut(currentTime, key, msgStr,
-                    (XPathExpression) asset[ASSET_TSUB],
-                    defaultTransformer, outMessage);
-            }
-            else if ((mask & EVAL_XSLT) > 0 && asset[ASSET_DATA] != null &&
-                tFactory != null && msgStr != null) {
-                i = transform(currentTime, key, (String) asset[ASSET_DATA],
-                    msgStr, option, (Templates) asset[ASSET_TEMP],
-                    (Map) asset[ASSET_TSUB], buffer, outMessage);
-            }
-            else if ((mask & EVAL_XPATH) > 0 && builder != null &&
-                xpath != null && msgStr != null) {
-                i = xparse(currentTime, key, msgStr, option,
-                    (Map) asset[ASSET_TSUB], buffer, outMessage);
-            }
-            else if ((mask & EVAL_PARSE) > 0 && asset[ASSET_TEMP] != null &&
-                option > 0) {
-                i = parse(currentTime, key, msgStr, option,
-                    (SimpleParser) asset[ASSET_TEMP], outMessage);
-            }
-            else if ((mask & EVAL_JSONT) > 0 && asset[ASSET_DATA] != null &&
-                asset[ASSET_TEMP] != null && msgStr != null) {
-                i = transform(currentTime, key, (String) asset[ASSET_DATA],
-                    msgStr, option, (JSONTemplate) asset[ASSET_TEMP],
-                    (Map) asset[ASSET_TSUB], buffer, outMessage);
-            }
-            else if ((mask & EVAL_JSONT) > 0 && asset[ASSET_TSUB] != null &&
-                asset[ASSET_TSUB] instanceof JSONFormatter) {
-                i = jformat(currentTime, key, msgStr,
-                    (JSONFormatter) asset[ASSET_TSUB], outMessage);
-            }
-            else if ((mask & EVAL_JSONPATH) > 0 && asset[ASSET_TSUB] != null &&
-                asset[ASSET_TSUB] instanceof Map) {
-                i = jparse(currentTime, key, msgStr, 0, (Map)asset[ASSET_TSUB],
-                    buffer, outMessage);
-            }
-            else if ((mask & EVAL_TRANS) > 0 && msgStr != null) {
-                i = translation(currentTime, key, option, msgStr, outMessage);
-            }
-            else if ((mask & EVAL_PLUGIN) == 0 ||
-                asset[ASSET_MNAME] == null) { // something wrong
-                i = EXCEPTION;
-                new Event(Event.WARNING, uri + ": missing the post " +
-                    "process on msg for " + key + " " + mask).send();
-            }
-            else try { // for plug-ins
-                java.lang.reflect.Method method =
-                    (java.lang.reflect.Method) asset[ASSET_METHOD];
-                o = method.invoke(asset[ASSET_OBJECT],
-                    new Object[]{outMessage});
-                if (o != null) {
-                    i = EXCEPTION;
-                    new Event(Event.WARNING, uri + ": " + key +
-                        " failed to transform the msg: "+ o.toString()).send();
-                }
-            }
-            catch (Exception e) {
-                String str = uri + " " + key;
-                Exception ex = null;
-                if (e instanceof JMSException)
-                    ex = ((JMSException) e).getLinkedException();
-                if (ex != null)
-                    str += " Linked exception: " + ex.toString() + "\n";
-                i = EXCEPTION;
-                new Event(Event.ERR, str + " failed to transform the msg: "+
-                    Event.traceStack(e)).send();
-            }
-            catch (Error e) {
-                in.remove(sid);
-                i = EXCEPTION;
-                String str = uri + " " + key;
-                new Event(Event.ERR, str + " failed to transform the msg: "+
-                    e.toString()).send();
-                Event.flush(e);
-            }
-
-            try {
-                MessageUtils.setProperty(rcField,
-                   ((i == SUCCESS) ? okRC : excpRC), outMessage);
-                if (dmask > 0) // display the message
-                    new Event(Event.INFO, uri + " " + key + ": " + count +
-                        "/" + sid + " " + i + " " + mask + " " +
-                        MessageUtils.display(outMessage, msgStr,
-                        dmask, pname)).send();
-            }
-            catch (Exception e) {
-            }
-            in.remove(sid);
-            outMessage = null;
-        }
     }
 
     public String getRuleName(int i) {

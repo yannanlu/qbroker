@@ -33,7 +33,6 @@ import org.qbroker.common.TextSubstitution;
 import org.qbroker.common.Utils;
 import org.qbroker.common.Requester;
 import org.qbroker.json.JSON2Map;
-import org.qbroker.json.JSONFormatter;
 import org.qbroker.net.JMXRequester;
 import org.qbroker.monitor.MonitorUtils;
 import org.qbroker.monitor.Report;

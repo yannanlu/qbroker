@@ -327,7 +327,7 @@ public class MonitorAgent implements Service, Runnable {
         h.put("OS_ARCH", MonitorUtils.OS_ARCH);
         h.put("OS_VERSION", MonitorUtils.OS_VERSION);
         h.put("JAVA_VERSION", MonitorUtils.JAVA_VERSION);
-        h.put("RELEASE_TAG", org.qbroker.common.ReleaseTag.getReleaseTag());
+        h.put("RELEASE_TAG", ReleaseTag.getReleaseTag());
         h.put("USER_NAME", MonitorUtils.USER_NAME);
         h.put("HOSTNAME", Event.getHostName());
         h.put("IP", Event.getIPAddress());
@@ -1874,7 +1874,18 @@ public class MonitorAgent implements Service, Runnable {
                 h = queryInfo(currentTime, sessionTime, target, key, type);
             }
             if (h != null) {
-                if ((type & Utils.RESULT_XML) > 0) {
+                if ((type & Utils.RESULT_JSON) > 0) { // for json
+                    if ("XQUEUE".equals(target)) // for XQ of a flow
+                        text = (h.size() != 1) ? JSON2Map.toJSON(h) :
+                            "{\"Record\": " + (String) h.get("XQ") + "}";
+                    else if (h.size() == 1) // for list of records
+                        text = "{\"Record\": " + (String) h.get(target) + "}";
+                    else // for hash
+                        text = JSON2Map.toJSON(h);
+                    ev = new Event(Event.INFO, text);
+                    h.clear();
+                }
+                else if ((type & Utils.RESULT_XML) > 0) { // for xml
                     if ("XQUEUE".equals(target)) // for XQ of a flow
                         text = (h.size() == 1) ? (String) h.get("XQ") :
                             JSON2Map.toXML(h);
@@ -1883,17 +1894,6 @@ public class MonitorAgent implements Service, Runnable {
                     else // for hash
                         text = JSON2Map.toXML(h);
                     ev = new Event(Event.INFO, "<Result>" + text + "</Result>");
-                    h.clear();
-                }
-                else if ((type & Utils.RESULT_JSON) > 0) {
-                    if ("XQUEUE".equals(target)) // for XQ of a flow
-                        text = (h.size() == 1) ? (String) h.get("XQ") :
-                            JSON2Map.toJSON(h);
-                    else if (h.size() == 1) // for list of records
-                        text = (String) h.get(target);
-                    else // for hash
-                        text = JSON2Map.toJSON(h);
-                    ev = new Event(Event.INFO, text);
                     h.clear();
                 }
                 else if (isRemote) {
@@ -1915,13 +1915,13 @@ public class MonitorAgent implements Service, Runnable {
                 ev = new Event(Event.INFO, text);
             }
             else {
-                if (isRemote && (type & Utils.RESULT_XML) > 0) {
-                    ev = new Event(Event.ERR, "<Result><Error>" + target +
-                        ": not found " + key + "</Error><RC>-1</RC></Result>");
-                }
-                else if (isRemote && (type & Utils.RESULT_JSON) > 0) {
+                if (isRemote && (type & Utils.RESULT_JSON) > 0) {
                     ev = new Event(Event.ERR, "{\"Error\":\"" + target +
                         ": not found " + key + "\",\"RC\":-1}");
+                }
+                else if (isRemote && (type & Utils.RESULT_XML) > 0) {
+                    ev = new Event(Event.ERR, "<Result><Error>" + target +
+                        ": not found " + key + "</Error><RC>-1</RC></Result>");
                 }
                 else if (isRemote) {
                     ev = new Event(Event.ERR, target+": not found "+key);
@@ -2147,7 +2147,7 @@ public class MonitorAgent implements Service, Runnable {
         display(DEBUG_INIT);
         new Event(Event.INFO, name + ": " + activeGroup.length +
             " groups started with the build of " +
-            org.qbroker.common.ReleaseTag.getReleaseTag()).send();
+            ReleaseTag.getReleaseTag()).send();
 
         strBuf = new StringBuffer();
         browser = groupList.browser();
@@ -3406,7 +3406,7 @@ public class MonitorAgent implements Service, Runnable {
                         strBuf.append("\"Type\":\"" +
                             Utils.escapeJSON((String) g.get("Type")) + "\",");
                         strBuf.append("\"Heartbeat\":\"" +
-                            (String) g.get("Heartbeat") + "\",");
+                            (String) cachedProps.get("Heartbeat") + "\",");
                         strBuf.append("\"MonitorGroup\":\"N/A\",");
                         strBuf.append("\"Description\":\"" +
                             Utils.escapeJSON((String) g.get("Description")) +
@@ -3893,7 +3893,7 @@ public class MonitorAgent implements Service, Runnable {
         else if ("AGENT".equals(target) || "STATUS".equals(target)){//for status
             h = new HashMap<String, String>();
             h.put("Name", name);
-            h.put("ReleaseTag", org.qbroker.common.ReleaseTag.getReleaseTag());
+            h.put("ReleaseTag", ReleaseTag.getReleaseTag());
             h.put("CurrentStatus", statusText[currentStatus]);
             h.put("PreviousStatus", statusText[previousStatus]);
             h.put("GroupSize", String.valueOf(groupList.size()));

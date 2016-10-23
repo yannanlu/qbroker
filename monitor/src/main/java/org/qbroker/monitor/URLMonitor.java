@@ -337,7 +337,8 @@ public class URLMonitor extends Monitor {
                         strBuf.toString()));
             }
             else {
-                throw(new IOException("failed to match mtime: " + response));
+                throw(new IOException("failed to match mtime with " +
+                    pattern.getPattern() + ": " + response));
             }
             if (size < 0) {
                 throw(new IOException("failed to get size: " + size));

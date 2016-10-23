@@ -21,8 +21,25 @@ import org.qbroker.json.JSON2FmModel;
 import org.qbroker.json.JSONSection;
 
 /**
- * JSONTemaplte is a template that formats JSON data. It contains a template
- * and a list of JSONSections.
+ * JSONTemaplte is a template that formats JSON data. It contains a simple
+ * template with parameters or varibales and a list of JSONSections. The
+ * parameter is a place holder with name spaces such as "s:" for section, "p:"
+ * for quoted text or "P:" for unquoted text. The values for "p:" or "P:" can
+ * be set via the method of setParameter() before the format operation. The
+ * other type of place holders is the variable with the name space of "v:" or
+ * "V:". It is actually a JSON path for retrieving the value from the JSON data.
+ * All the variables in the root level must be defined in a map with the name
+ * of "variable". It contains key-value pairs with the name of the variable as
+ * the key and the json path as the value. In the runtime, the values of the
+ * variables will be loaded as normal parameters before the operation. After
+ * the operation, they will be cleaned up.
+ *<br/><br/>
+ * JSONSection represents a portion of JSON data as the value in the template.
+ * It supports various operations on JSON data. Some of the operations allow
+ * to update the JSON data with override parameters. An override parameter has
+ * valid a JSON path as the name. Its value can be any non-null JSON object.
+ * It can be set via the method of setParameter() before the operation. A
+ * JSONTemplate may contain multiple well defined sections. 
  *<br/>
  * @author yannanlu@yahoo.com
  */
@@ -83,6 +100,7 @@ public class JSONTemplate extends AssetList {
             o instanceof String && "true".equals((String) o))
             keepOriginalOrder = true;
 
+        // init variables with the json path to root and the value
         if ((o = props.get("variable")) != null && o instanceof Map) {
             Map map = (Map) o;
             for (Object obj : map.keySet()) {
@@ -90,6 +108,7 @@ public class JSONTemplate extends AssetList {
             }
         }
 
+        // init sections
         if ((o = props.get("sections")) != null && o instanceof List)
             list = (List) o;
         else
@@ -118,12 +137,23 @@ public class JSONTemplate extends AssetList {
 
     public void setParameter(String key, Object value) {
         if (key != null && key.length() > 0 && value != null &&
-            !key.startsWith("r:") && !key.startsWith("v:"))
-            params.put(key, value);
+            !key.startsWith("r:") && !key.startsWith("v:")) {
+            if (key.charAt(0) == '.' || key.charAt(0) == '[') // for override
+                params.put("o:" + key, value);
+            else // normal parameter for substitutions
+                params.put(key, value);
+        }
     }
 
     public Object getParameter(String key) {
-        return params.get(key);
+        if (key != null && key.length() > 0 && !key.startsWith("r:") &&
+            !key.startsWith("v:")) {
+            if (key.charAt(0) == '.' || key.charAt(0) == '[') // for override
+                return params.get("o:" + key);
+            else // normal parameter for substitutions
+                return params.get(key);
+        }
+        return null;
     }
 
     public void clearParameter() {
@@ -154,10 +184,10 @@ public class JSONTemplate extends AssetList {
         if (json == null || json.size() <= 0)
             return null;
 
-        // add JSON data
+        // add root JSON data
         params.put("r:_JSON_", json);
-        for (String key : varMap.keySet()) { // load values for variables
-            if (key == null || key.length() <= 0 || key.startsWith("r:"))
+        for (String key : varMap.keySet()) { // load variables from JSON data
+            if (key == null || key.length() <= 0)
                 continue;
             path = varMap.get(key);
             o = JSON2FmModel.get(json, path);
@@ -178,6 +208,26 @@ public class JSONTemplate extends AssetList {
             }
             else if (key.startsWith("P:")) { // for a parameter without quotes
                 o = params.get(key.substring(2));
+                if (o == null)
+                    value = "null";
+                else if (o instanceof String)
+                    value = (String) o;
+                else
+                    value = o.toString();
+                text = temp.substitute(pm, key, value, text);
+            }
+            else if (key.startsWith("v:")) { // for a variable
+                o = params.get(key);
+                if (o == null)
+                    value = "null";
+                else if (o instanceof String)
+                    value = "\"" + (String) o + "\"";
+                else
+                    value = o.toString();
+                text = temp.substitute(pm, key, value, text);
+            }
+            else if (key.startsWith("V:")) { // for a variable without quotes
+                o = params.get("v:"+key.substring(2));
                 if (o == null)
                     value = "null";
                 else if (o instanceof String)
@@ -268,6 +318,26 @@ public class JSONTemplate extends AssetList {
             }
             else if (key.startsWith("P:")) { // for a parameter without quotes
                 o = params.get(key.substring(2));
+                if (o == null)
+                    value = "null";
+                else if (o instanceof String)
+                    value = (String) o;
+                else
+                    value = o.toString();
+                text = temp.substitute(pm, key, value, text);
+            }
+            else if (key.startsWith("v:")) { // for a variable
+                o = params.get(key);
+                if (o == null)
+                    value = "null";
+                else if (o instanceof String)
+                    value = "\"" + (String) o + "\"";
+                else
+                    value = o.toString();
+                text = temp.substitute(pm, key, value, text);
+            }
+            else if (key.startsWith("V:")) { // for a variable without quotes
+                o = params.get("v:"+key.substring(2));
                 if (o == null)
                     value = "null";
                 else if (o instanceof String)

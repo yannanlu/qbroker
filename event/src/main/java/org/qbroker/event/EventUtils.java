@@ -10,8 +10,6 @@ import java.util.Iterator;
 import java.util.Date;
 import java.text.SimpleDateFormat;
 import java.text.ParsePosition;
-import javax.jms.TextMessage;
-import javax.jms.JMSException;
 import org.apache.oro.text.regex.Perl5Matcher;
 import org.qbroker.common.Utils;
 import org.qbroker.common.RunCommand;
@@ -28,7 +26,6 @@ import org.qbroker.event.Event;
 
 @SuppressWarnings("unchecked")
 public class EventUtils {
-    private static Class<?> cls = null;
     public final static String LINE_SEPARATOR =
         System.getProperty("line.separator");
     public final static String FILE_SEPARATOR =
@@ -863,32 +860,5 @@ public class EventUtils {
             return template.substitute(input, map);
         else
             return template.substitute(input, defaultMap);
-    }
-
-    /** returns an instance of TextMessage with TextEvent */
-    public static TextMessage newTextEvent() throws JMSException {
-        if (cls == null)
-            initTextEventClass();
-        TextMessage msg;
-        try {
-            msg = (TextMessage) cls.newInstance();
-        }
-        catch (Exception e) {
-            throw (new JMSException("failed to get instance of TextEvent: " +
-                e.toString()));
-        }
-        return msg;
-    }
-
-    private synchronized static void initTextEventClass() throws JMSException {
-        if (cls != null)
-            return;
-        try {
-            cls = Class.forName("org.qbroker.jms.TextEvent");
-        }
-        catch (Exception e) {
-            throw (new JMSException("failed to init class for TextEvent: " +
-                e.toString()));
-        }
     }
 }

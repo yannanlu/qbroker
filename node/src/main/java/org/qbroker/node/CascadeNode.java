@@ -34,7 +34,7 @@ import org.qbroker.monitor.ConfigList;
 import org.qbroker.json.JSON2Map;
 import org.qbroker.json.JSON2FmModel;
 import org.qbroker.json.JSONTemplate;
-import org.qbroker.json.JSONFormatter;
+import org.qbroker.jms.JSONFormatter;
 import org.qbroker.jms.MessageUtils;
 import org.qbroker.jms.MessageFilter;
 import org.qbroker.jms.JMSEvent;

@@ -515,7 +515,7 @@ public class MongoDBMessenger extends MongoDBConnector {
                     msgStr = MessageUtils.processBody(outMessage, buffer);
                     if (msgStr == null || msgStr.length() <= 0)
                         filters = null;
-                    else if (msgStr.indexOf("<Filters>") < 0)
+                    else if (msgStr.indexOf("Ruleset") < 0)
                         filters = null;
                     else if (cache.containsKey(msgStr) &&
                         !cache.isExpired(msgStr, currentTime))

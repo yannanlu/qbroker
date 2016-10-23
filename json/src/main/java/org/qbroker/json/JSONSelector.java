@@ -1,6 +1,6 @@
 package org.qbroker.json;
 
-/* JSONSelector.java - a filter to select JSON data in JMS Messages */
+/* JSONSelector.java - a filter to select JSON data */
 
 import java.io.Reader;
 import java.io.FileReader;

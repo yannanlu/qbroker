@@ -598,16 +598,25 @@ public class MsgServlet extends HttpServlet {
         return event;
     }
 
+    /**
+     * With the existing event or the event built from the HTTP request
+     * according to the request path, the method sends it to the backend for
+     * the response. Once response is back, it packs the response into a
+     * data map and saves the map to the request as the attribute with the
+     * key of the context path.  Upon success, it returns either the JSP path
+     * so that the data will be formatted for output with the given jsp, or
+     * the context path for caller to retrieve the data for output. Otherwise,
+     * it returns null to indicate failure so that the caller can retrieve
+     * the error message.
+     */
+    @SuppressWarnings("unchecked")
     private String processRequest(HttpServletRequest request,
         HttpServletResponse response, Event event)
         throws ServletException, IOException {
         Object o;
-        Map template = null;
-        Map<String, Object> ph = null;
-        String key = null, uri = null, msg = null, str = null, port = null,
-            target = null, action = null, category = null, jsp = null;
+        String key = null, uri = null, msg = null, str = null, port = null;
+        String target = null, action = null, category = null, jsp = null;
         String clientIP, path, sessionId, status, username = null, type=null;
-        int i, k = 0, sid = -1;
         int priority = Event.INFO;
         long tm = 0L;
         boolean isJMS = false;        // an event is a JMS event or not
@@ -681,7 +690,7 @@ public class MsgServlet extends HttpServlet {
                 message.setAttribute("sessionid", sessionId);
                 message.setAttribute("useragent",
                     request.getHeader("User-Agent"));
-                for (i=0; i<propertyName.length; i++)
+                for (int i=0; i<propertyName.length; i++)
                     message.setAttribute(propertyName[i], propertyValue[i]);
                 service.doRequest(message, timeout);
                 o = props.get("operation");
@@ -707,13 +716,11 @@ public class MsgServlet extends HttpServlet {
             if ("POST".equals(request.getMethod()) &&
                 !"text/xml".equals(str) && !"application/json".equals(str)) {
                 isFileUpload = true;
-                target = event.getAttribute("name");
                 if (event.attributeExists("jsp"))
                     jsp = event.getAttribute("jsp");
             }
             else try { // raw request from POST or PUT
                 isFileUpload = false;
-                target = path;
                 event.setAttribute("_clientIP", clientIP);
                 ((JMSEvent) event).setJMSType(path);
             }
@@ -733,7 +740,6 @@ public class MsgServlet extends HttpServlet {
             if (event.attributeExists("jsp"))
                 jsp = event.getAttribute("jsp");
             category = event.getAttribute("category");
-            target = event.getAttribute("name");
             action = event.getAttribute("operation");
             port = event.getAttribute("port");
         }
@@ -755,7 +761,6 @@ public class MsgServlet extends HttpServlet {
             if (event.attributeExists("jsp"))
                 jsp = event.getAttribute("jsp");
             event.setAttribute("hostname", clientIP);
-            target = event.getAttribute("name");
             action = event.getAttribute("operation");
             category = event.getAttribute("category");
         }
@@ -768,7 +773,6 @@ public class MsgServlet extends HttpServlet {
             event.setAttribute("hostname", clientIP);
             if (event.attributeExists("jsp"))
                 jsp = event.getAttribute("jsp");
-            target = event.getAttribute("name");
         }
         else if (path.startsWith("/stream")) { //JMS event for stream operations
             isJMS = true;
@@ -776,7 +780,6 @@ public class MsgServlet extends HttpServlet {
             isStream = true;
             event = getEvent(props, true);
             event.setAttribute("hostname", clientIP);
-            target = event.getAttribute("name");
         }
         else if (restURILen > 0 && path.startsWith(restURI)) { // REST requests
             Iterator iter = props.keySet().iterator();
@@ -807,7 +810,6 @@ public class MsgServlet extends HttpServlet {
             }
             catch (Exception e) {
             }
-            target = path;
             if ("STREAM".equals(event.getAttribute("type"))) // for stream
                 isStream = true;
         }
@@ -824,7 +826,6 @@ public class MsgServlet extends HttpServlet {
             event.setAttribute("type",
                 (("/xml".equals(path)) ? "text" : "application") + path);
             event.setAttribute("path", path);
-            target = path;
         }
         else { // ad hoc form request
             isJMS = false;
@@ -869,14 +870,16 @@ public class MsgServlet extends HttpServlet {
                 isCollectible = true;
 
             if ((o = props.get("name")) != null)
-                target = ((String[]) o)[0];
+                key = ((String[]) o)[0];
+            else
+                key = null;
 
             if ((o = props.get("view")) != null)
                 str = ((String[]) o)[0];
             if (str != null && str.length() > 0) { // ad hoc jms event
                 isJMS = true;
                 event = new TextEvent();
-                event.setAttribute("name", target);
+                event.setAttribute("name", key);
                 event.setAttribute("type", type);
                 event.setAttribute("view", str);
                 event.setAttribute("category", category);
@@ -920,9 +923,9 @@ public class MsgServlet extends HttpServlet {
                 catch (Exception e) {
                 }
             }
-            else if (target != null && target.length() > 0) { // non-JMS event
+            else if (key != null && key.length() > 0) { // non-JMS event
                 event = new Event(priority);
-                event.setAttribute("name", target);
+                event.setAttribute("name", key);
                 event.setAttribute("type", type);
                 event.setAttribute("category", category);
                 event.setAttribute("operation", action);
@@ -957,8 +960,9 @@ public class MsgServlet extends HttpServlet {
             }
         }
 
-        k = 0;
         if (event != null) {
+            int i;
+            Map<String, Object> ph = null;
             if (jaasLogin != null)
                 event.setAttribute("login", username);
             else
@@ -966,7 +970,6 @@ public class MsgServlet extends HttpServlet {
             if (isJMS || isCollectible) { // JMS or non-JMS collectible event
                 JMSEvent message;
                 tm = 0L;
-                i = -1;
                 if (event instanceof JMSEvent) {
                     message = (JMSEvent) event;
                     tm = event.getExpiration();
@@ -974,7 +977,6 @@ public class MsgServlet extends HttpServlet {
                         tm -= System.currentTimeMillis();
                     for (i=0; i<propertyName.length; i++)
                         message.setAttribute(propertyName[i], propertyValue[i]);
-                    i = -1;
                 }
                 else try { // ad hoc request
                     key = zonedDateFormat.format(new Date()) + " " +
@@ -1006,12 +1008,12 @@ public class MsgServlet extends HttpServlet {
                     event.setAttribute("text", "failed to load message: "+
                         Event.traceStack(e));
                     message = null;
-                    ph = null;
-                    i = -1;
                 }
+
                 if (tm <= timeout)
                     tm = timeout;
-                if (message != null) {
+                i = -1;
+                if (message != null) { //send the request and wait until timeout
                     i = service.doRequest(message, (int) tm);
                 }
 
@@ -1059,8 +1061,11 @@ public class MsgServlet extends HttpServlet {
                         }
                         catch (Exception ex) {
                         }
+                        key = event.getAttribute("name");
+                        if (key == null)
+                            key = path;
                         new Event(Event.ERR, getServletName() +
-                           " failed to write " + len + " bytes for " + target +
+                           " failed to write " + len + " bytes for " + key +
                            ": " + Event.traceStack(e)).send();
                         response.sendError(response.SC_INTERNAL_SERVER_ERROR);
                     }
@@ -1081,7 +1086,10 @@ public class MsgServlet extends HttpServlet {
 
                     key = null;
                     if (isFileUpload) { // for upload
-                        key = target + " has been uploaded. " +
+                        key = event.getAttribute("name");
+                        if (key == null)
+                            key = path;
+                        key = key + " has been uploaded. " +
                             "Please close the popup and refresh the page";
                     }
                     else if (message instanceof TextEvent) try { // for body
@@ -1130,7 +1138,7 @@ public class MsgServlet extends HttpServlet {
                     event.setAttribute(propertyName[i], propertyValue[i]);
                 i = service.doRequest(event, timeout);
                 if (i > 0) {
-                    ph = Utils.cloneProperties((Map) event.getBody());
+                    ph = (Map) event.getBody();
                     if (event.attributeExists("rc"))
                         str = event.getAttribute("rc");
                     else
@@ -1146,37 +1154,32 @@ public class MsgServlet extends HttpServlet {
                 msg = "ph is empty due to " + i + ": " +
                     event.getAttribute("text");
                 request.setAttribute("error", msg);
-                k = 4;
+                target = null;
             }
             else if (isCollectible && "query".equals(action)) {
                 JSON2Map.flatten(ph);
                 if ((service.getDebugMode() & service.DEBUG_TRAN) > 0)
-                    new Event(Event.DEBUG, getServletName() +
-                        " sent back to " + username +
-                        " with requested content: "+
+                    new Event(Event.DEBUG, getServletName() + " sent back to " +
+                        username + " with requested content: "+
                         (String) ph.get("text")).send();
             }
             else if ((service.getDebugMode() & service.DEBUG_TRAN) > 0)
-                new Event(Event.DEBUG, getServletName() +
-                    " sent back to " + username +
-                    " with requested content: " +
+                new Event(Event.DEBUG, getServletName() + " sent back to " +
+                    username + " with requested content: " +
                     (String) ph.get("text")).send();
+
+            if (ph != null) { // save the data map as the attribute of context
+                target = request.getContextPath();
+                request.setAttribute(target, ph);
+            }
         }
-        else {
+        else { // no event for the request
             target = null;
             msg = "empty target";
             request.setAttribute("error", msg);
-            k = 5;
         }
 
-        if (k == 0) {
-            request.setAttribute(target, ph);
-        }
-
-        if (jsp != null)
-            return jsp;
-        else
-            return target;
+        return (jsp != null) ? jsp : target;
     }
 
     public void setService(Service service) {
@@ -1191,56 +1194,56 @@ public class MsgServlet extends HttpServlet {
             if (uri.charAt(4) == 'C') { // for child
                 if ("/getChildJSON.jsp".equals(uri)) {
                     response.setContentType("application/json");
-                    return getChild("NAME", request, Utils.RESULT_JSON);
+                    return getChild(request, Utils.RESULT_JSON);
                 }
                 else if ("/getChildXML.jsp".equals(uri)) {
                     response.setContentType("text/xml");
-                    return getChild("NAME", request, Utils.RESULT_XML);
+                    return getChild(request, Utils.RESULT_XML);
                 }
                 else if ("/getChildText.jsp".equals(uri)) {
                     response.setContentType("text/plain");
-                    return getChild("NAME", request, Utils.RESULT_TEXT);
+                    return getChild(request, Utils.RESULT_TEXT);
                 }
             }
             else if ("/getJSON.jsp".equals(uri)) {
                 response.setContentType("application/json");
-                return getMsg("NAME", request, Utils.RESULT_JSON);
+                return getMsg(request, Utils.RESULT_JSON);
             }
             else if ("/getXML.jsp".equals(uri)) {
                 response.setContentType("text/xml");
-                return getMsg("NAME", request, Utils.RESULT_XML);
+                return getMsg(request, Utils.RESULT_XML);
             }
             else if ("/getText.jsp".equals(uri)) {
                 response.setContentType("text/plain");
-                return getMsg("NAME", request, Utils.RESULT_TEXT);
+                return getMsg(request, Utils.RESULT_TEXT);
             }
         }
         else if (uri.charAt(1) == 't') { // for to
             if (uri.charAt(3) == 'R') { // for rc
                 if ("/toRCJSON.jsp".equals(uri)) {
                     response.setContentType("application/json");
-                    return toRC("NAME", request, Utils.RESULT_JSON);
+                    return toRC(request, Utils.RESULT_JSON);
                 }
                 else if ("/toRCXML.jsp".equals(uri)) {
                     response.setContentType("text/xml");
-                    return toRC("NAME", request, Utils.RESULT_XML);
+                    return toRC(request, Utils.RESULT_XML);
                 }
                 else if ("/toRCText.jsp".equals(uri)) {
                     response.setContentType("text/plain");
-                    return toRC("NAME", request, Utils.RESULT_TEXT);
+                    return toRC(request, Utils.RESULT_TEXT);
                 }
             }
             else if ("/toJSON.jsp".equals(uri)) {
                 response.setContentType("application/json");
-                return toMsg("NAME", request, Utils.RESULT_JSON);
+                return toMsg(request, Utils.RESULT_JSON);
             }
             else if ("/toXML.jsp".equals(uri)) {
                 response.setContentType("text/xml");
-                return toMsg("NAME", request, Utils.RESULT_XML);
+                return toMsg(request, Utils.RESULT_XML);
             }
             else if ("/toText.jsp".equals(uri)) {
                 response.setContentType("text/plain");
-                return toMsg("NAME", request, Utils.RESULT_TEXT);
+                return toMsg(request, Utils.RESULT_TEXT);
             }
         }
 
@@ -1284,11 +1287,9 @@ public class MsgServlet extends HttpServlet {
         return ic;
     }
 
-    private String toMsg(String name, HttpServletRequest req, int type) {
+    private String toMsg(HttpServletRequest req, int type) {
         Map data = null;
-        String msg = null, key = (String) req.getParameter(name);
-        if (key == null) // try lower case
-            key = (String) req.getParameter(name.toLowerCase());
+        String msg = null, key = req.getContextPath();
         data = (Map) req.getAttribute(key);
         if (data == null || data.size() <= 0) {
             if ((type & Utils.RESULT_JSON) > 0) {
@@ -1343,11 +1344,9 @@ public class MsgServlet extends HttpServlet {
         return msg;
     }
 
-    private String toRC(String name, HttpServletRequest req, int type) {
+    private String toRC(HttpServletRequest req, int type) {
         Map data = null;
-        String msg = null, key = (String) req.getParameter(name);
-        if (key == null) // try lower case
-            key = (String) req.getParameter(name.toLowerCase());
+        String msg = null, key = req.getContextPath();
         data = (Map) req.getAttribute(key);
         if (data == null || !data.containsKey("name")) {
             if ((type & Utils.RESULT_JSON) > 0) {
@@ -1383,11 +1382,9 @@ public class MsgServlet extends HttpServlet {
         return msg;
     }
 
-    private String getMsg(String name, HttpServletRequest req, int type) {
+    private String getMsg(HttpServletRequest req, int type) {
         Map data = null;
-        String msg = null, key = (String) req.getParameter(name);
-        if (key == null) // try lower case
-            key = (String) req.getParameter(name.toLowerCase());
+        String msg = null, key = req.getContextPath();
         data = (Map) req.getAttribute(key);
         if (data == null || !data.containsKey("text")) {
             if ((type & Utils.RESULT_JSON) > 0) {
@@ -1422,11 +1419,9 @@ public class MsgServlet extends HttpServlet {
         return msg;
     }
 
-    private String getChild(String name, HttpServletRequest req, int type) {
+    private String getChild(HttpServletRequest req, int type) {
         Map data = null;
-        String msg = null, key = (String) req.getParameter(name);
-        if (key == null) // try lower case
-            key = (String) req.getParameter(name.toLowerCase());
+        String msg = null, key = req.getContextPath();
         data = (Map) req.getAttribute(key);
         if (data == null || !data.containsKey("text")) {
             if ((type & Utils.RESULT_JSON) > 0) {

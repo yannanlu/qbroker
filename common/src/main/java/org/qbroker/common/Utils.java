@@ -250,9 +250,8 @@ public class Utils {
      * each key separated by the delimiters.
      */
     public static String[] split(String s, String text) {
-        String[] keys;
         String key;
-        ArrayList<String> list;
+        List<String> list;
         int len, i, j = 0;
 
         if (text == null || s == null)
@@ -270,12 +269,7 @@ public class Utils {
         }
         key = text.substring(j);
         list.add(key);
-        len = list.size();
-        keys = new String[len];
-        for (i=0; i<len; i++)
-            keys[i] = list.get(i);
-
-        return keys;
+        return list.toArray(new String[list.size()]);
     }
 
     /**
