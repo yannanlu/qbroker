@@ -2951,7 +2951,13 @@ public class QFlow implements Service, Runnable {
                         EventUtils.compact(event)).send();
                 if("HELP".equals(target) || "USAGE".equals(target) || key==null)
                     key = target;
-                Map h = queryInfo(currentTime, sessionTime, target, key, type);
+
+                Map h = null;
+                if ("PROPERTIES".equals(target) && // for a specific property
+                    (o = cachedProps.get(key)) != null && o instanceof Map)
+                    h = Utils.cloneProperties((Map) o);
+                else
+                    h = queryInfo(currentTime, sessionTime, target, key, type);
 
                 if (h != null) { // got response
                     if ((type & Utils.RESULT_JSON) > 0) { // json
@@ -3131,8 +3137,11 @@ public class QFlow implements Service, Runnable {
             key = target;
         if ("PROPERTIES".equals(target)) { // for properties
             o = cachedProps.get(key);
-            if (o != null && o instanceof Map) // for a specific obj
-                map = Utils.cloneProperties((Map) o);
+            if (o != null && o instanceof Map) { // for a specific property
+                // since it is a Map<String, Object>, it should be handled
+                // else where already, so return null here
+                return null;
+            }
             else if (key.equals(name)) { // for master config file
                 List list = null;
                 map =  Utils.cloneProperties(cachedProps);

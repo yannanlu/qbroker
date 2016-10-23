@@ -3,11 +3,12 @@ package org.qbroker.flow;
 /* ReleaseTag.java - release tag for all the packages of qbroker */
 
 /**
- * V1.1.3 (2016/10/22): fixed the issue with queryInfo in MonitorAgent and
+ * V1.1.4 (2016/10/23): fixed the issue with queryInfo in MonitorAgent and
  * QFlow where the key of Record is missing for JSON, added the missing part
  * to clear parameters for JSONTemplate in MessageEvaluator, added RCRequired
  * to MapReduceNode to handle the case of missing RC, added to include the
- * pattern text if the pattern failed to match in URLMonitor
+ * pattern text if the pattern failed to match in URLMonitor, fixed the query
+ * issue with PROPERTY for QFlow and MonitorAgent
  *<br/>
  * V1.1.3 (2016/10/16): cleaned up all the pom.xml, removed unused import
  * from GenericList, moved JSONFormatter from json to jms and updated JSONTNode,
@@ -49,7 +50,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V 1.1.4 2016/10/22 20:11:06";
+    private static String ReleaseTAG = "QBroker V 1.1.4 2016/10/23 08:45:28";
 
     public ReleaseTag() {
     }

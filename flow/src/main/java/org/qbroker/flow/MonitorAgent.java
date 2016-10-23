@@ -1860,7 +1860,7 @@ public class MonitorAgent implements Service, Runnable {
             if ((debug & DEBUG_UPDT) > 0 && (debug & DEBUG_TRAN) > 0)
                 new Event(Event.DEBUG, name + " got an escalation: " +
                     EventUtils.compact(event)).send();
-            Map<String, String> h = null;
+            Map h = null;
             status = currentStatus;
             if ("HELP".equals(target) || "USAGE".equals(target) || key == null)
                 key = target;
@@ -1869,6 +1869,10 @@ public class MonitorAgent implements Service, Runnable {
                 flow = (MessageFlow) flowList.get(key);
                 if (flow != null)
                     text = flow.list();
+            }
+            else if ("PROPERTIES".equals(target) && // for a specific property
+                (o = cachedProps.get(key)) != null && o instanceof Map) {
+                h = Utils.cloneProperties((Map) o);
             }
             else {
                 h = queryInfo(currentTime, sessionTime, target, key, type);
@@ -1899,8 +1903,13 @@ public class MonitorAgent implements Service, Runnable {
                 else if (isRemote) {
                     ev = new Event(Event.INFO, target + ": query OK");
                     ev.setAttribute("rc", "0");
-                    for (String ky : h.keySet()) {
-                        ev.setAttribute(ky, h.get(ky)); 
+                    Iterator iter = h.keySet().iterator();
+                    while (iter.hasNext()) {
+                        str = (String) iter.next();
+                        o = h.get(str);
+                        if (o == null || !(o instanceof String))
+                            continue;
+                        ev.setAttribute(str, (String) o);
                     }
                     h.clear();
                 }
@@ -3279,8 +3288,11 @@ public class MonitorAgent implements Service, Runnable {
             key = target;
         if ("PROPERTIES".equals(target)) { // for properties
             o = cachedProps.get(key);
-            if (o != null && o instanceof Map) // for a specific obj
-                map = Utils.cloneProperties((Map) o);
+            if (o != null && o instanceof Map) { // for a specific property
+                // since it is a Map<String, Object>, it should be handled
+                // else where already, so return null here
+                return null;
+            }
             else if ("Agent".equals(key)) { // for master config file
                 Map g = null;
                 List pl, list = null;
