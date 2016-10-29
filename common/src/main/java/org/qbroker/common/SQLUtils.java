@@ -342,7 +342,7 @@ public class SQLUtils {
             entry[i-1] = (str != null && str.length() > 0) ?
                 str : rsmd.getColumnName(i);
         }
-        if ((type & Utils.RESULT_XML) > 0) {
+        if ((type & Utils.RESULT_XML) > 0 || (type & Utils.RESULT_JSON) > 0) {
             while (rset.next()) {
                 Map<String, String> h = new HashMap<String, String>();
                 for (i=1; i<=n; i++) {

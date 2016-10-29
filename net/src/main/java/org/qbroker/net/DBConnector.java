@@ -292,7 +292,8 @@ public class DBConnector implements Connector {
     }
 
     /** returns a string buffer with info on all objects for the types */
-    public StringBuffer list(String[] types, int[] rc) throws SQLException {
+    public StringBuffer list(String pattern, String[] types, int[] rc)
+        throws SQLException {
         ResultSet rset = null;
         DatabaseMetaData dbm = null;
         StringBuffer strBuf = null;
@@ -301,8 +302,11 @@ public class DBConnector implements Connector {
             (types[0] == null || types[0].length() <= 0)))
             types = new String[]{"TABLE"};
 
+        if (pattern == null || pattern.length() <= 0)
+            pattern = "%";
+
         dbm = conn.getMetaData();
-        rset = dbm.getTables(null, null, "%", types);
+        rset = dbm.getTables(null, null, pattern, types);
 
         try {
             strBuf = SQLUtils.getResult(resultType, rset, rc);
@@ -339,7 +343,7 @@ public class DBConnector implements Connector {
         rset = dbm.getTables(null, null, pattern, types);
 
         try {
-            n = SQLUtils.getResult(Utils.RESULT_XML, rset, list);
+            n = SQLUtils.getResult(resultType, rset, list);
         }
         catch (IOException e) {
             try {
@@ -440,7 +444,7 @@ public class DBConnector implements Connector {
         int i, timeout = 60;
         int[] rc = new int[]{-1, 0};
         String action = "list", uri = null, str = null, sqlStr = null;
-        String table = null;
+        String table = null, pattern = null;
         DBConnector conn = null;
         if (args.length == 0) {
             printUsage();
@@ -488,6 +492,10 @@ public class DBConnector implements Connector {
                 if (i+1 < args.length)
                     props.put("DBDriver", args[++i]);
                 break;
+              case 'm':
+                if (i+1 < args.length)
+                    pattern = args[++i];
+                break;
               case 'q':
                 if (i+1 < args.length)
                     sqlStr = args[++i];
@@ -516,7 +524,7 @@ public class DBConnector implements Connector {
             StringBuffer strBuf = null;
             conn = new DBConnector(props);
             if ("list".equalsIgnoreCase(action) && table == null) {
-                strBuf = conn.list(new String[]{"TABLE"}, rc);
+                strBuf = conn.list(pattern, new String[]{"TABLE"}, rc);
                 if (strBuf == null)
                     str = action + " failed";
                 else if (rc[0] <= 0)
@@ -566,15 +574,16 @@ public class DBConnector implements Connector {
     private static void printUsage() {
         System.out.println("DBConnector Version 1.0 (written by Yannan Lu)");
         System.out.println("DBConnector: a JDBC client for DB operations");
-        System.out.println("Usage: java org.qbroker.net.DBConnector -u uri -t timeout -n username -p password -d driver -a action -r TEXT -q query");
+        System.out.println("Usage: java org.qbroker.net.DBConnector -u uri -t timeout -n username -p password -d driver -a action -r json -q query");
         System.out.println("  -?: print this message");
-        System.out.println("  -r: set result type (default: text)");
+        System.out.println("  -r: type of result in json, xml or text (default: text)");
         System.out.println("  -a: action (default: select)");
         System.out.println("  -u: uri");
         System.out.println("  -n: username");
         System.out.println("  -p: password");
         System.out.println("  -t: timeout in sec (default: 60)");
         System.out.println("  -d: DB driver name (optional)");
+        System.out.println("  -m: table name pattern (default: %)");
         System.out.println("  -q: SQL query statement");
         System.out.println("  -T: table name to list columns");
     }

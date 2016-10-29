@@ -2953,9 +2953,77 @@ public class QFlow implements Service, Runnable {
                     key = target;
 
                 Map h = null;
-                if ("PROPERTIES".equals(target) && // for a specific property
-                    (o = cachedProps.get(key)) != null && o instanceof Map)
-                    h = Utils.cloneProperties((Map) o);
+                if ("PROPERTIES".equals(target) && key != null) {
+                    // for a specific property
+                    if ((o = cachedProps.get(key)) != null && o instanceof Map)
+                        h = Utils.cloneProperties((Map) o);
+                    else if (name.equals(key)) { // for master properties
+                        List list = null;
+                        h =  Utils.cloneProperties(cachedProps);
+                        if (configRepository != null &&
+                            (o = configRepository.get("Name")) != null)
+                            h.remove((String) o);
+
+                        o = h.get("Reporter");
+                        if (o != null && o instanceof List) {
+                            list = (List) o;
+                            size = list.size();
+                        }
+                        else
+                            size = 0;
+                        for (i=0; i<size; i++) {
+                            o = list.get(i);
+                            if (o == null)
+                                continue;
+                            if (o instanceof Map)
+                                str = (String) ((Map) o).get("Name"); 
+                            else
+                                str = (String) o;
+                            h.remove(str);
+                        }
+                        o = h.get("Receiver");
+                        if (o != null && o instanceof List) {
+                            list = (List) o;
+                            size = list.size();
+                        }
+                        else
+                            size = 0;
+                        for (i=0; i<size; i++) {
+                            o = list.get(i);
+                            if (o == null || !(o instanceof String))
+                                continue;
+                            h.remove((String) o);
+                        }
+                        o = h.get("Node");
+                        if (o != null && o instanceof List) {
+                            list = (List) o;
+                            size = list.size();
+                        }
+                        else
+                            size = 0;
+                        for (i=0; i<size; i++) {
+                            o = list.get(i);
+                            if (o == null || !(o instanceof String))
+                                continue;
+                            h.remove((String) o);
+                        }
+                        o = h.get("Persister");
+                        if (o != null && o instanceof List) {
+                            list = (List) o;
+                            size = list.size();
+                        }
+                        else
+                            size = 0;
+                        for (i=0; i<size; i++) {
+                            o = list.get(i);
+                            if (o == null || !(o instanceof String))
+                                continue;
+                            h.remove((String) o);
+                        }
+                    }
+                    else // try queryInfo
+                        h = queryInfo(currentTime,sessionTime,target,key,type);
+                }
                 else
                     h = queryInfo(currentTime, sessionTime, target, key, type);
 
@@ -3136,82 +3204,7 @@ public class QFlow implements Service, Runnable {
         if (key == null)
             key = target;
         if ("PROPERTIES".equals(target)) { // for properties
-            o = cachedProps.get(key);
-            if (o != null && o instanceof Map) { // for a specific property
-                // since it is a Map<String, Object>, it should be handled
-                // else where already, so return null here
-                return null;
-            }
-            else if (key.equals(name)) { // for master config file
-                List list = null;
-                map =  Utils.cloneProperties(cachedProps);
-                if (configRepository != null &&
-                    (o = configRepository.get("Name")) != null)
-                    map.remove((String) o);
-
-                o = map.get("Reporter");
-                if (o != null && o instanceof List) {
-                    list = (List) o;
-                    size = list.size();
-                }
-                else
-                    size = 0;
-                for (i=0; i<size; i++) {
-                    o = list.get(i);
-                    if (o == null)
-                        continue;
-                    if (o instanceof Map)
-                        str = (String) ((Map) o).get("Name"); 
-                    else
-                        str = (String) o;
-                    map.remove(str);
-                }
-                o = map.get("Receiver");
-                if (o != null && o instanceof List) {
-                    list = (List) o;
-                    size = list.size();
-                }
-                else
-                    size = 0;
-                for (i=0; i<size; i++) {
-                    o = list.get(i);
-                    if (o == null || !(o instanceof String))
-                        continue;
-                    map.remove((String) o);
-                }
-                o = map.get("Node");
-                if (o != null && o instanceof List) {
-                    list = (List) o;
-                    size = list.size();
-                }
-                else
-                    size = 0;
-                for (i=0; i<size; i++) {
-                    o = list.get(i);
-                    if (o == null || !(o instanceof String))
-                        continue;
-                    map.remove((String) o);
-                }
-                o = map.get("Persister");
-                if (o != null && o instanceof List) {
-                    list = (List) o;
-                    size = list.size();
-                }
-                else
-                    size = 0;
-                for (i=0; i<size; i++) {
-                    o = list.get(i);
-                    if (o == null || !(o instanceof String))
-                        continue;
-                    map.remove((String) o);
-                }
-                JSON2Map.flatten(map);
-                h = new HashMap<String, String>();
-                for (String ky : map.keySet()) {
-                    h.put(ky, (String) map.get(ky));
-                }
-            }
-            else if ("PROPERTIES".equals(key)) { // list all properties
+            if ("PROPERTIES".equals(key)) { // list all properties
                 StringBuffer strBuf = new StringBuffer();
                 List list = null;
                 Map g = null;

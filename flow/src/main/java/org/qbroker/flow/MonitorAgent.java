@@ -1868,11 +1868,76 @@ public class MonitorAgent implements Service, Runnable {
             if (isFlow && action == EventAction.ACTION_LIST) {
                 flow = (MessageFlow) flowList.get(key);
                 if (flow != null)
-                    text = flow.list();
+                    text = flow.list(type);
             }
-            else if ("PROPERTIES".equals(target) && // for a specific property
-                (o = cachedProps.get(key)) != null && o instanceof Map) {
-                h = Utils.cloneProperties((Map) o);
+            else if ("PROPERTIES".equals(target) && key != null) {
+                // for a specific property
+                if ((o = cachedProps.get(key)) != null && o instanceof Map)
+                    h = Utils.cloneProperties((Map) o);
+                else if (name.equals(key)) { // for master config file
+                    Map g = null;
+                    List pl, list = null;
+                    h = Utils.cloneProperties(cachedProps);
+                    if (configRepository != null &&
+                        (o = configRepository.get("Name")) != null)
+                        h.remove((String) o);
+
+                    o = h.get("MonitorGroup");
+                    if (o != null && o instanceof List) {
+                        list = (List) o;
+                        size = list.size();
+                    }
+                    else
+                        size = 0;
+                    for (i=0; i<size; i++) { // clean up monitors
+                        g = (Map) list.get(i);
+                        o = g.get("Monitor");
+                        if (o != null && o instanceof List) {
+                            pl = (List) o;
+                            n = pl.size(); 
+                            for (int j=0; j<n; j++) {
+                                o = pl.get(j);
+                                if (o == null)
+                                    continue;
+                                if (o instanceof Map)
+                                    str = (String) ((Map) o).get("Name");
+                                else
+                                    str = (String) o;
+                                h.remove(str);
+                            }
+                        }
+                    }
+                    o = h.get("MessageFlow");
+                    if (o != null && o instanceof List) {
+                        list = (List) o;
+                        size = list.size();
+                    }
+                    else
+                        size = 0;
+                    for (i=0; i<size; i++) { // clean up flow components
+                        g = (Map) list.get(i);
+                        o = g.get("Receiver");
+                        if (o != null && o instanceof List) {
+                            n = ((List) o).size(); 
+                            for (int j=0; j<n; j++)
+                                h.remove(((List) o).get(j));
+                        }
+                        o = g.get("Node");
+                        if (o != null && o instanceof List) {
+                            n = ((List) o).size(); 
+                            for (int j=0; j<n; j++)
+                                h.remove(((List) o).get(j));
+                        }
+                        o = g.get("Persister");
+                        if (o != null && o instanceof List) {
+                            n = ((List) o).size(); 
+                            for (int j=0; j<n; j++)
+                                h.remove(((List) o).get(j));
+                        }
+                    }
+                }
+                else // try queryInfo
+                    h = queryInfo(currentTime, sessionTime, target, key, type);
             }
             else {
                 h = queryInfo(currentTime, sessionTime, target, key, type);
@@ -3287,80 +3352,7 @@ public class MonitorAgent implements Service, Runnable {
         if (key == null)
             key = target;
         if ("PROPERTIES".equals(target)) { // for properties
-            o = cachedProps.get(key);
-            if (o != null && o instanceof Map) { // for a specific property
-                // since it is a Map<String, Object>, it should be handled
-                // else where already, so return null here
-                return null;
-            }
-            else if ("Agent".equals(key)) { // for master config file
-                Map g = null;
-                List pl, list = null;
-                map = Utils.cloneProperties(cachedProps);
-                if (configRepository != null &&
-                    (o = configRepository.get("Name")) != null)
-                    map.remove((String) o);
-
-                o = map.get("MonitorGroup");
-                if (o != null && o instanceof List) {
-                    list = (List) o;
-                    size = list.size();
-                }
-                else
-                    size = 0;
-                for (i=0; i<size; i++) { // clean up monitors
-                    g = (Map) list.get(i);
-                    o = g.get("Monitor");
-                    if (o != null && o instanceof List) {
-                        pl = (List) o;
-                        n = pl.size(); 
-                        for (j=0; j<n; j++) {
-                            o = pl.get(j);
-                            if (o == null)
-                                continue;
-                            if (o instanceof Map)
-                                str = (String) ((Map) o).get("Name");
-                            else
-                                str = (String) o;
-                            map.remove(str);
-                        }
-                    }
-                }
-                o = map.get("MessageFlow");
-                if (o != null && o instanceof List) {
-                    list = (List) o;
-                    size = list.size();
-                }
-                else
-                    size = 0;
-                for (i=0; i<size; i++) { // clean up flow components
-                    g = (Map) list.get(i);
-                    o = g.get("Receiver");
-                    if (o != null && o instanceof List) {
-                        n = ((List) o).size(); 
-                        for (j=0; j<n; j++)
-                            map.remove(((List) o).get(j));
-                    }
-                    o = g.get("Node");
-                    if (o != null && o instanceof List) {
-                        n = ((List) o).size(); 
-                        for (j=0; j<n; j++)
-                            map.remove(((List) o).get(j));
-                    }
-                    o = g.get("Persister");
-                    if (o != null && o instanceof List) {
-                        n = ((List) o).size(); 
-                        for (j=0; j<n; j++)
-                            map.remove(((List) o).get(j));
-                    }
-                }
-                JSON2Map.flatten(map);
-                h = new HashMap<String, String>();
-                for (String ky : map.keySet()) {
-                    h.put(ky, (String) map.get(ky));
-                }
-            }
-            else if ("PROPERTIES".equals(key)) { // for list 
+            if ("PROPERTIES".equals(key)) { // for list 
                 StringBuffer strBuf = new StringBuffer();
                 h = new HashMap<String, String>();
                 Map g = null;

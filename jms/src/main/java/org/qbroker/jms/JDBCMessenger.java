@@ -284,7 +284,11 @@ public class JDBCMessenger extends DBConnector {
 
         offset = 1;
         timestamp = 0;
-        if ("select".equals(operation)) try {
+        if ("list".equals(operation) && (resultType & Utils.RESULT_XML) == 0 &&
+            (resultType & Utils.RESULT_JSON) == 0)
+            throw(new IllegalArgumentException(uri +
+                " illegal ResultType for list: "+ resultType));
+        else if ("select".equals(operation)) try {
             if ((o = props.get("ReferenceFile")) != null)
                 referenceFile = (String) o;
 
@@ -2067,13 +2071,26 @@ public class JDBCMessenger extends DBConnector {
                         continue;
                     }
                     str = (String) ph.get("TABLE_NAME");
+                    if (str == null) { // in case of lower case
+                        str = (String) ph.remove("table_name");
+                        if (str != null && str.length() > 0) {
+                            ph.put("TABLE_NAME", str);
+                            ph.put("TABLE_TYPE", ph.remove("table_type"));
+                            ph.put("TABLE_SCHEM", ph.remove("table_schem"));
+                            ph.put("REMARKS", ph.remove("remarks"));
+                        }
+                    }
                     if (str == null || str.length() <= 0) {
                         list.remove(i);
                         continue;
                     }
-                    sqlStr = (String) ph.get("TABLE_SCHEMA");
+                    sqlStr = (String) ph.get("TABLE_SCHEM");
                     if (sqlStr != null && sqlStr.length() > 0)
                         str = sqlStr + "." + str;
+                    if (str.startsWith("SYS.HS_PARTITION_COL_")){//for ORA-22812
+                        list.remove(i);
+                        continue;
+                    }
                     if (hasFilter) { // apply filters
                         int j;
                         for (j=0; j<filters.length; j++) {
@@ -2155,7 +2172,7 @@ public class JDBCMessenger extends DBConnector {
                 currentTime = System.currentTimeMillis();
                 k = list.size();
                 strBuf = SQLUtils.getResult(resultType,
-                    new String[]{"TABLE_NAME", "TABLE_TYPE", "REMARK", "COUNT"},
+                    new String[]{"TABLE_NAME", "TABLE_TYPE", "REMARKS","COUNT"},
                     list);
                 list.clear();
             }

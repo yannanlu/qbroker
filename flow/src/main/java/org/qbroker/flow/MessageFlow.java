@@ -3257,8 +3257,99 @@ public class MessageFlow implements Runnable {
         return h;
     }
 
+    /** returns a text of list with all nodes in either JSON or XML */
+    public String list(int type) {
+        if ((type & Utils.RESULT_JSON) > 0)
+            return listJSON();
+        else if ((type & Utils.RESULT_XML) > 0)
+            return listXML();
+        else
+            return null;
+    }
+
+    /** returns a JSON text of list with all nodes */
+    private String listJSON() {
+        StringBuffer strBuf;
+        Browser browser;
+        int i, k, n;
+        strBuf = new StringBuffer();
+        n = receiverList.size();
+        k = 0;
+        if (n > 0) {
+            browser = receiverList.browser();
+            strBuf.append("\"File\":[{");
+            strBuf.append("\"DirName\":\"Receiver\",");
+            strBuf.append("\"File\":[");
+            k = 0;
+            while ((i = browser.next()) >= 0) {
+                if (k++ > 0)
+                    strBuf.append(",");
+                strBuf.append("\"" + receiverList.getKey(i) + " (" + i + ")\"");
+            }
+            strBuf.append("]}");
+            k = 1;
+        }
+        n = nodeList.size();
+        if (n > 0) {
+            browser = nodeList.browser();
+            if (k > 0)
+                strBuf.append(",{");
+            else
+                strBuf.append("\"File\":[{");
+            strBuf.append("\"DirName\":\"Node\",");
+            strBuf.append("\"File\":[");
+            k = 0;
+            while ((i = browser.next()) >= 0) {
+                if (k++ > 0)
+                    strBuf.append(",");
+                strBuf.append("\"" + nodeList.getKey(i) + " (" + i + ")\"");
+            }
+            strBuf.append("]}");
+            k = 1;
+        }
+        n = persisterList.size();
+        if (n > 0) {
+            browser = persisterList.browser();
+            if (k > 0)
+                strBuf.append(",{");
+            else
+                strBuf.append("\"File\":[{");
+            strBuf.append("\"DirName\":\"Persister\",");
+            strBuf.append("\"File\":[");
+            k = 0;
+            while ((i = browser.next()) >= 0) {
+                if (k++ > 0)
+                    strBuf.append(",");
+                strBuf.append("\""+ persisterList.getKey(i) + " (" + i + ")\"");
+            }
+            strBuf.append("]}");
+            k = 1;
+        }
+        Map<String, String> h = queryInfo(0L, 0L, "XQ", "XQ",Utils.RESULT_TEXT);
+        if (h != null && h.size() > 0) {
+            if (k > 0)
+                strBuf.append(",{");
+            else
+                strBuf.append("\"File\":[{");
+            strBuf.append("\"DirName\":\"XQueue\",");
+            strBuf.append("\"File\":[");
+            k = 0;
+            for (String key : h.keySet()) {
+                if (k++ > 0)
+                    strBuf.append(",");
+                strBuf.append("\"" + key + "\"");
+            }
+            strBuf.append("]}");
+        }
+        if (strBuf.length() > 0)
+            return "{\"Name\":\""+ name + "\",\"DirName\":\"FLOW\"," +
+                strBuf.toString() + "]}";
+        else
+            return null;
+    }
+
     /** returns an XML text of list with all nodes */
-    public String list() {
+    private String listXML() {
         StringBuffer strBuf;
         Browser browser;
         int i, n;

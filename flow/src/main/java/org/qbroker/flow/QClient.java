@@ -369,6 +369,7 @@ public class QClient {
         String propertyName=null, propertyValue=null;
         int retCode = 0;
         int removeSource = 0;
+        int resultType = 1;
         String sBCQ = null, tBCQ = null;
         String storeOption = null, realSubQmgr = null;
         String brokerVersion = null, str;
@@ -549,6 +550,7 @@ public class QClient {
                 if (i + 1 >= args.length)
                     continue;
                 props.put("TextMode", args[++i]);
+                resultType = Integer.parseInt(args[i]);
                 break;
               case 'N':
                 if (i + 1 >= args.length)
@@ -1212,6 +1214,14 @@ public class QClient {
                 tProps.put("Capacity", o);
         }
 
+        // check overloading on -W for collect operations
+        operation = (String) sProps.get("Operation");
+        if ("collect".equals(operation) && resultType > 1) { //check resultType
+            uri = (String) tProps.get("URI");
+            if (uri != null && tProps.size() > 3) // override
+                tProps.put("ResultType", String.valueOf(resultType));
+        }
+
         return retCode;
     }
 
@@ -1226,7 +1236,7 @@ System.out.println("QClient: pub/sub/browse/copy/get/move/put/read/write JMS mes
         System.out.println("  -G: run in daemon mode");
         System.out.println("  -S: Capacity of XQueue (default: 1)");
         System.out.println("  -L: LogDir (default: no logging)");
-        System.out.println("  -W: TextMode (0: jms_bytes, 1: jms_text, default: 1)");
+        System.out.println("  -W: TextMode or ResultType for collect (0: jms_bytes, 1: jms_text, 4: xml, 8: json, default: 1)");
         System.out.println("  -N: NumberThread (default: 1)");
         System.out.println("  -I: ConfigFile (default: Client.json)");
         System.out.println("  -A: SOTBytes (eg: 0x01)");

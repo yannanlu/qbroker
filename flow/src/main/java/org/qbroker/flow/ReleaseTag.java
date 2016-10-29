@@ -50,7 +50,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V 1.1.4 2016/10/23 08:45:28";
+    private static String ReleaseTAG = "QBroker V 1.1.4 2016/10/23 17:45:28";
 
     public ReleaseTag() {
     }
