@@ -503,12 +503,13 @@ public class AgeMonitor extends Monitor {
         previousRefTime = -1L;
     }
 
+    @SuppressWarnings("unchecked")
     public Map<String, Object> generateReport(long currentTime)
         throws IOException {
         long leadingTime = -1L;
         int init = -1, returnCode = -1, n;
         Map<String, Object> r = null;
-        List<Object> dataBlock = new ArrayList<Object>();
+        List dataBlock = new ArrayList();
         Object o;
         String str;
         StringBuffer strBuf;
@@ -568,6 +569,7 @@ public class AgeMonitor extends Monitor {
           case OBJ_FILE:
           case OBJ_FTP:
             dataBlock.add(String.valueOf(((long[]) r.get("SampleTime"))[0]));
+            r.clear();
             break;
           case OBJ_TCP:
           case OBJ_UDP:
@@ -576,34 +578,42 @@ public class AgeMonitor extends Monitor {
                 n = requester.getResponse(queryStr, strBuf, true);
             }
             catch (Exception e) {
+                r.clear();
                 throw(new IOException("failed on request of '" + queryStr +
                     "' for " + uri + ": " + Event.traceStack(e)));
             }
-            if (n < 0)
+            if (n < 0) {
+                r.clear();
                 throw(new IllegalArgumentException(name +
                     ": failed to get response with " + n));
+            }
             else if (n > 0)
                 n =GenericList.pickupList(strBuf.toString(),jsonPath,dataBlock);
-            if (n < 0)
+            r.clear();
+            if (n < 0) {
                 throw(new IOException(name + ": unexpected json response '"+
                     strBuf.toString() + "'"));
+            }
             break;
           case OBJ_HTTP:
             if (r.get("ReturnCode") != null) {
                 returnCode = Integer.parseInt((String) r.get("ReturnCode"));
             }
             else {
+                r.clear();
                 throw(new IOException("web test failed on " + uri));
             }
 
             if (returnCode == 0)
                 Util.split(dataBlock, pm, patternLF, (String)r.get("Response"));
+            r.clear();
             break;
           case OBJ_SCRIPT:
             if (r.get("ReturnCode") != null) {
                 returnCode = Integer.parseInt((String) r.get("ReturnCode"));
             }
             else {
+                r.clear();
                 throw(new IOException("script failed on " + uri));
             }
 
@@ -624,40 +634,50 @@ public class AgeMonitor extends Monitor {
                     }
                 }
             }
+            r.clear();
             break;
           case OBJ_REPORT:
             o = r.get(keyList[0]);
-            if (o == null)
+            if (o == null) {
+                r.clear();
                 throw(new IOException("got null value on " + keyList[0] +
                     " from " + uri));
+            }
             else if (o instanceof String)
                 Util.split(dataBlock, pm, patternLF, (String) o);
             else if (o instanceof List)
-                dataBlock = Utils.cloneProperties((List) o);
+                dataBlock = (List) o;
             else if (o instanceof long[])
                 dataBlock.add(String.valueOf(((long[]) o)[0]));
             else if (o instanceof int[])
                 dataBlock.add(String.valueOf(((int[]) o)[0]));
-            else
+            else {
+                r.clear();
                 throw(new IOException("unexpected data type on " +
                     keyList[0] + " from " + uri));
+            }
+            r.clear();
             break;
           case OBJ_PROC:
             if (r.get("NumberPids") != null) {
                 returnCode = Integer.parseInt((String) r.get("NumberPids"));
             }
             else {
+                r.clear();
                 throw(new IOException("ps failed on " + uri));
             }
 
             if (returnCode > 0)
-                dataBlock = Utils.cloneProperties((List) r.get("PSLines"));
+                dataBlock = (List) r.get("PSLines");
+            r.clear();
             break;
           case OBJ_LOG:
-            dataBlock = Utils.cloneProperties((List) r.get("LogBuffer"));
+            dataBlock = (List) r.get("LogBuffer");
+            r.clear();
             break;
           case OBJ_JDBC:
-            dataBlock = Utils.cloneProperties((List) r.get("RecordBuffer"));
+            dataBlock = (List) r.get("RecordBuffer");
+            r.clear();
             break;
           case OBJ_SNMP:
             if (!snmp.isListening())
@@ -676,6 +696,7 @@ public class AgeMonitor extends Monitor {
                 if (i > 0)
                     dataBlock.add(str.substring(0, i));
             }
+            r.clear();
             break;
           case OBJ_JMX:
             jmxReq.reconnect();
@@ -788,9 +809,13 @@ public class AgeMonitor extends Monitor {
         }
         else if (emptyDataIgnored) // ignoring empty data
             skip = DISABLED;
-        else
+        else {
+            str = (String) dataBlock.get(0);
+            dataBlock.clear();
             throw(new IOException(name + " failed to get mtime from " + uri +
-                ": " + (String) dataBlock.get(0)));
+                ": " + str));
+        }
+        dataBlock.clear();
 
         if (disableMode != 0) {
             if (reference != null) { // compare against reference

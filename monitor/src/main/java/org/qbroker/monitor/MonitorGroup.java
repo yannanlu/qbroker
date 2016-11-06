@@ -477,26 +477,25 @@ public class MonitorGroup {
      * from change.  It returns the number of monitors deleted from
      * the group.
      */
-    private int deleteMonitors(List list, Map change) {
+    private int deleteMonitors(List list, Map<String, Object> change) {
         Object o;
-        Object[] keys;
+        String[] keys;
         Map ph, c;
         ConfigTemplate temp = null;
         String key, str, operation;
         int i, k, n, size;
 
         if (change == null)
-            change = new HashMap();
+            change = new HashMap<String, Object>();
 
         k = 0;
         // look for keys with null content to remove those deleted components
-        keys = change.keySet().toArray();
-        n = keys.length;
+        n = change.size();
+        keys = change.keySet().toArray(new String[n]);
         for (i=0; i<n; i++) {
-            o = keys[i];
-            if (o == null || !(o instanceof String))
+            key = keys[i];
+            if (key == null || key.length() <= 0)
                 continue;
-            key = (String) o;
             if ((o = change.get(key)) == null) { // null for deletion
                 o = cachedProps.remove(key);
                 change.remove(key);
@@ -666,7 +665,7 @@ public class MonitorGroup {
      * done, props should have all property Map for the group.
      */
     @SuppressWarnings("unchecked")
-    private void updateMonitors(Map props, Map change) {
+    private void updateMonitors(Map props, Map<String, Object> change) {
         Object o;
         Object[] keys;
         MonitorAction action = null;
@@ -1276,25 +1275,23 @@ public class MonitorGroup {
     }
 
     /** It loggs the details of the change returned by diff()  */
-    public void showChange(String prefix, String base, Map change,
+    public void showChange(String prefix, String base, Map<String,Object>change,
         boolean detail) {
         Object o;
         Map h;
-        String key;
         StringBuffer strBuf = new StringBuffer();
         int n = 0;
         if (change == null)
             return;
-        for (Iterator iter=change.keySet().iterator(); iter.hasNext();) {
-            key = (String) iter.next();
+        for (String key : change.keySet()) {
             if (key == null || key.length() <= 0)
                 continue;
             o = change.get(key);
             n ++;
             if (o == null)
-                strBuf.append("\n\t"+n+": "+ key + " has been removed");
+                strBuf.append("\n\t" + n + ": " + key + " has been removed");
             else if (key.equals(base)) {
-                strBuf.append("\n\t"+n+": "+ key + " has changes");
+                strBuf.append("\n\t" + n + ": "+ key + " has changes");
                 if(!detail)
                     continue;
                 if (!"GROUP".equals(type)) // for reporters
@@ -1306,13 +1303,13 @@ public class MonitorGroup {
                     JSON2Map.diff(h, (Map) o, "")).send();
             }
             else if (!cachedProps.containsKey(key))
-                strBuf.append("\n\t"+n+": "+ key + " is new");
+                strBuf.append("\n\t" + n + ": "+ key + " is new");
             else if ((h = (Map) cachedProps.get(key)) == null || h.size() <= 0)
-                strBuf.append("\n\t"+n+": "+ key + " was empty");
+                strBuf.append("\n\t" + n + ": " + key + " was empty");
             else if (h.equals((Map) o))
-                strBuf.append("\n\t"+n+": "+ key + " has no diff");
+                strBuf.append("\n\t" + n + ": " + key + " has no diff");
             else {
-                strBuf.append("\n\t"+n+": "+ key + " has been changed");
+                strBuf.append("\n\t" + n + ": " + key + " has been changed");
                 if (!detail)
                     continue;
                 new Event(Event.DEBUG, prefix + ": " + key +
@@ -1327,7 +1324,7 @@ public class MonitorGroup {
     /**
      * It reloads the changes for the entire group.
      */
-    public int reload(Map change) {
+    public int reload(Map<String, Object> change) {
         Object o;
         Map master = null;
         List list = null;

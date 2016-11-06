@@ -497,7 +497,7 @@ public class QServlet extends HttpServlet {
                         catch (Exception ex) {
                         }
                         key += " has been uploaded with "+rc+" record updated";
-                        if ((qf.getDebugMode() & QFlow.DEBUG_TRAN) > 0)
+                        if ((qf.getDebugMode() & QFlow.DEBUG_UPDT) > 0)
                             new Event(Event.DEBUG, name + ": " + key).send();
                         key += ". You may need to refresh to see the change.";
                         response.getWriter().print(key);
@@ -884,6 +884,8 @@ public class QServlet extends HttpServlet {
         if (path == null)
             path = "";
         if (event != null) { // JMS event for file upload or raw request
+            if ((qf.getDebugMode() & QFlow.DEBUG_CTRL) > 0)
+                new Event(Event.DEBUG, name + " with event: " + path).send();
             isJMS = true;
             isCollectible = false;
             str = request.getContentType();
@@ -902,6 +904,8 @@ public class QServlet extends HttpServlet {
             }
         }
         else if (path.startsWith("/collectible")) { //JMS event for collectibles
+            if ((qf.getDebugMode() & QFlow.DEBUG_CTRL) > 0)
+                new Event(Event.DEBUG, name + " collectible: " + path).send();
             isCollectible = true;
             isJMS = true;
             event = getEvent(props, true);
@@ -918,6 +922,8 @@ public class QServlet extends HttpServlet {
             port = event.getAttribute("port");
         }
         else if (path.startsWith("/event")) { // non-JMS event only
+            if ((qf.getDebugMode() & QFlow.DEBUG_CTRL) > 0)
+                new Event(Event.DEBUG, name + " event: " + path).send();
             isJMS = false;
             isCollectible = false;
             event = getEvent(props, false);
@@ -939,6 +945,8 @@ public class QServlet extends HttpServlet {
             category = event.getAttribute("category");
         }
         else if (path.startsWith("/jms")) { // JMS event without collectibles
+            if ((qf.getDebugMode() & QFlow.DEBUG_CTRL) > 0)
+                new Event(Event.DEBUG, name + " jms: " + path).send();
             isJMS = true;
             isCollectible = false;
             event = getEvent(props, true);
@@ -949,6 +957,8 @@ public class QServlet extends HttpServlet {
                 jsp = event.getAttribute("jsp");
         }
         else if (path.startsWith("/stream")) { //JMS event for stream operations
+            if ((qf.getDebugMode() & QFlow.DEBUG_CTRL) > 0)
+                new Event(Event.DEBUG, name + " stream: " + path).send();
             isJMS = true;
             isCollectible = false;
             isStream = true;
@@ -956,6 +966,8 @@ public class QServlet extends HttpServlet {
             event.setAttribute("hostname", clientIP);
         }
         else if (restURILen > 0 && path.startsWith(restURI)) { // REST requests
+            if ((qf.getDebugMode() & QFlow.DEBUG_CTRL) > 0)
+                new Event(Event.DEBUG, name + " rest: " + path).send();
             Iterator iter = props.keySet().iterator();
             isJMS = true;
             isCollectible = false;
@@ -989,6 +1001,8 @@ public class QServlet extends HttpServlet {
         }
         else if ("POST".equals(request.getMethod()) && // xml or json form data
             ("/xml".equals(path) || "/json".equals(path))) {
+            if ((qf.getDebugMode() & QFlow.DEBUG_CTRL) > 0)
+                new Event(Event.DEBUG, name + " raw data: " + path).send();
             if ((o = props.get(path.substring(1))) != null)
                 str = ((String[]) o)[0];
             else
@@ -1002,6 +1016,8 @@ public class QServlet extends HttpServlet {
             event.setAttribute("path", path);
         }
         else { // ad hoc form request
+            if ((qf.getDebugMode() & QFlow.DEBUG_CTRL) > 0)
+                new Event(Event.DEBUG, name + " ad hoc: " + path).send();
             isJMS = false;
             isCollectible = false;
             if ((o = props.get("jsp")) != null)
@@ -1222,7 +1238,7 @@ public class QServlet extends HttpServlet {
                         }
                         catch (Exception ex) {
                         }
-                        if ((qf.getDebugMode() & QFlow.DEBUG_TRAN) > 0)
+                        if ((qf.getDebugMode() & QFlow.DEBUG_UPDT) > 0)
                             new Event(Event.DEBUG, name + " queried " + len +
                                 " bytes from SQL: " + str).send();
                     }
@@ -1329,11 +1345,11 @@ public class QServlet extends HttpServlet {
             }
             else if (isCollectible && "query".equals(action)) {
                 JSON2Map.flatten(ph);
-                if ((qf.getDebugMode() & QFlow.DEBUG_TRAN) > 0)
+                if ((qf.getDebugMode() & QFlow.DEBUG_REPT) > 0)
                     new Event(Event.DEBUG, "sent back to " + username + " with"+
                         " requested content: "+ (String) ph.get("text")).send();
             }
-            else if ((qf.getDebugMode() & QFlow.DEBUG_TRAN) > 0)
+            else if ((qf.getDebugMode() & QFlow.DEBUG_REPT) > 0)
                 new Event(Event.DEBUG, "sent back to " + username +
                     " requested content: " + (String) ph.get("text")).send();
 

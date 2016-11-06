@@ -1314,7 +1314,7 @@ public class SonicMQRequester implements Requester, Comparator<IMetric> {
                         key = keys[3];
                     ph.put("name", key);
                 }
-                ph.put(keys[1] + "." + keys[2], String.valueOf(me.getValue()));
+                ph.put(keys[1] + "_" + keys[2], String.valueOf(me.getValue()));
             }
         }
 

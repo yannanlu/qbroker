@@ -3588,7 +3588,8 @@ public class MessageFlow implements Runnable {
      * it is for either a new rule or an existing rule.  It returns the number
      * of failures.
      */
-    private int updateNode(MessageNode node, Map props, Map change) {
+    private int updateNode(MessageNode node, Map props,
+        Map<String, Object> change) {
         Object o;
         XQueue in = null;
         List list = null;
@@ -3660,13 +3661,12 @@ public class MessageFlow implements Runnable {
                     node.getName() + ": " + e.toString()).send();
             }
 
-            Object[] keys = change.keySet().toArray();
-            n = keys.length;
+            n = change.size();
+            String[] keys = change.keySet().toArray(new String[n]);
             for (i=0; i<n; i++) {
-                o = keys[i];
-                if (o == null || !(o instanceof String))
+                key = keys[i];
+                if (key == null || key.length() <= 0)
                     continue;
-                key = (String) o;
                 if ((o = change.get(key)) == null) try { // null for deletion
                     in = (XQueue) linkList.get(node.getLinkName());
                     change.remove(key);
@@ -3850,7 +3850,8 @@ public class MessageFlow implements Runnable {
      * It looks for missing generated nodes to delete and returns the number of
      * nodes deleted.
      */
-    private int deleteMissingNodes(Map props, Map change, int type) {
+    private int deleteMissingNodes(Map props, Map<String, Object> change,
+        int type) {
         Object o;
         Map ph, c;
         List list;
@@ -3881,7 +3882,7 @@ public class MessageFlow implements Runnable {
             return -1;
 
         if (change == null)
-            change = new HashMap();
+            change = new HashMap<String, Object>();
 
         k = 0;
         // remove missing generated nodes
@@ -4004,7 +4005,7 @@ public class MessageFlow implements Runnable {
 
     @SuppressWarnings("unchecked")
     private int reloadExistingNodes(long currentTime, Map props,
-        Map change, int type, boolean isNewMaster) {
+        Map<String, Object> change, int type, boolean isNewMaster) {
         Object o;
         Map<String, String> ph;
         Map h;
@@ -4421,7 +4422,7 @@ public class MessageFlow implements Runnable {
      * failures.
      */
     @SuppressWarnings("unchecked")
-    public int reload(Map change) {
+    public int reload(Map<String, Object> change) {
         Object o;
         Map ph, props = null;
         List list;
@@ -4481,14 +4482,13 @@ public class MessageFlow implements Runnable {
         mtime = System.currentTimeMillis();
 
         if (isNewMaster) { // check for deletion first
-            Object[] keys = change.keySet().toArray();
-            n = keys.length;
+            n = change.size();
+            String[] keys = change.keySet().toArray(new String[n]);
             // look for keys with null value for deletion
             for (i=0; i<n; i++) {
-                o = keys[i];
-                if (o == null || !(o instanceof String))
+                key = keys[i];
+                if (key == null || key.length() <= 0)
                     continue;
-                key = (String) o;
                 if ((o = change.get(key)) == null) { // null for deletion
                     o = cachedProps.remove(key);
                     change.remove(key);
@@ -4699,7 +4699,7 @@ public class MessageFlow implements Runnable {
                     }
                 }
                 else if ((id = nodeList.getID(key)) >= 0) { // with changes
-                    Map ch;
+                    Map<String, Object> ch;
                     o = cachedProps.remove(key);            // original props
                     ph = (Map) change.remove(key);          // new props
                     props.put(key, ph);                     // copy it over
@@ -4845,7 +4845,7 @@ public class MessageFlow implements Runnable {
      * items will be set to null in the returned Map.  If the container
      * has been changed, it will be reflected by the object keyed by base.
      */
-    public Map diff(Map props) {
+    public Map<String, Object> diff(Map props) {
         if (cachedProps.equals(props))
             return null;
         return Utils.diff("FLOW", componentMap, cachedProps, props);
@@ -4857,11 +4857,11 @@ public class MessageFlow implements Runnable {
      * or disable the flow, it returns true.  Otherwise, it returns false to
      * indicate the reload of the flow is good enough.
      */
-    public boolean hasMajorChange(Map change) {
+    public boolean hasMajorChange(Map<String, Object> change) {
         Object o;
         Map ph, ch, props;
         Iterator iter;
-        String key, str, value;
+        String str, value;
 
         if (change == null || change.size() <= 0)
             return false;
@@ -4872,11 +4872,7 @@ public class MessageFlow implements Runnable {
         else
             props = new HashMap();
 
-        for (iter = change.keySet().iterator(); iter.hasNext();) {
-            o = iter.next();
-            if (o == null || !(o instanceof String))
-                continue;
-            key = (String) o;
+        for (String key : change.keySet()) {
             if (key.length() <= 0)
                 continue;
             if ((o = change.get(key)) == null || "FLOW".equals(key))
@@ -5014,7 +5010,6 @@ public class MessageFlow implements Runnable {
                 h.put("OutLink", ch.get("OutLink"));
                 ch = Utils.diff("LINK", linkMap, h, map);
                 map.clear();
-                ph.clear();
                 h.clear();
                 if (ch != null && ch.size() > 0) { // with changes on outlinks
                     if ((debug & Service.DEBUG_DIFF) > 0)
@@ -5213,40 +5208,38 @@ public class MessageFlow implements Runnable {
     }
 
     /** It loggs the details of the change returned by diff()  */
-    public void showChange(String prefix, String base, Map change,
+    public void showChange(String prefix, String base, Map<String,Object>change,
         boolean detail) {
         Object o;
         Map h;
-        String key;
         StringBuffer strBuf = new StringBuffer();
         int n = 0;
         if (change == null)
             return;
-        for (Iterator iter=change.keySet().iterator(); iter.hasNext();) {
-            key = (String) iter.next();
+        for (String key : change.keySet()) {
             if (key == null || key.length() <= 0)
                 continue;
             o = change.get(key);
             n ++;
             if (o == null)
-                strBuf.append("\n\t"+n+": "+ key + " has been removed");
+                strBuf.append("\n\t" + n + ": " + key + " has been removed");
             else if ("FLOW".equals(key)) {
-                strBuf.append("\n\t"+n+": "+ key + " has changes");
+                strBuf.append("\n\t" + n + ": " + key + " has changes");
                 if(!detail)
                     continue;
-                h =Utils.getMasterProperties("FLOW", componentMap, cachedProps);
+                h = Utils.getMasterProperties("FLOW", componentMap,cachedProps);
                 new Event(Event.DEBUG, prefix + ": " + key +
                     " has been changed with detailed diff:\n" +
                     JSON2Map.diff(h, (Map) o, "")).send();
             }
             else if (!cachedProps.containsKey(key))
-                strBuf.append("\n\t"+n+": "+ key + " is new");
+                strBuf.append("\n\t" + n + ": " + key + " is new");
             else if ((h = (Map) cachedProps.get(key)) == null || h.size() <= 0)
-                strBuf.append("\n\t"+n+": "+ key + " was empty");
+                strBuf.append("\n\t" + n + ": " + key + " was empty");
             else if (h.equals((Map) o))
-                strBuf.append("\n\t"+n+": "+ key + " has no diff");
+                strBuf.append("\n\t" + n + ": " + key + " has no diff");
             else {
-                strBuf.append("\n\t"+n+": "+ key + " has been changed");
+                strBuf.append("\n\t" + n + ": " + key + " has been changed");
                 if (!detail)
                     continue;
                 new Event(Event.DEBUG, prefix + ": " + key +
@@ -5259,25 +5252,23 @@ public class MessageFlow implements Runnable {
     }
 
     /** It loggs the details of the change on node returned by diff()  */
-    private void showNodeChange(String prefix, Map change, Map ph,
-        boolean detail) {
+    private void showNodeChange(String prefix, Map<String, Object> change,
+        Map ph, boolean detail) {
         Object o;
         Map h;
-        String key;
         StringBuffer strBuf = new StringBuffer();
         int n = 0;
         if (change == null)
             return;
-        for (Iterator iter=change.keySet().iterator(); iter.hasNext();) {
-            key = (String) iter.next();
+        for (String key : change.keySet()) {
             if (key == null || key.length() <= 0)
                 continue;
             o = change.get(key);
             n ++;
             if (o == null)
-                strBuf.append("\n\t"+n+": "+ key + " has been removed");
+                strBuf.append("\n\t" + n + ": " + key + " has been removed");
             else if ("NODE".equals(key)) {
-                strBuf.append("\n\t"+n+": "+ key + " has changes");
+                strBuf.append("\n\t" + n + ": " + key + " has changes");
                 if(!detail)
                     continue;
                 h = Utils.getMasterProperties("NODE", includeMap, ph);
@@ -5286,13 +5277,13 @@ public class MessageFlow implements Runnable {
                     JSON2Map.diff(h, (Map) o, "")).send();
             }
             else if (!ph.containsKey(key))
-                strBuf.append("\n\t"+n+": "+ key + " is new");
+                strBuf.append("\n\t" + n + ": " + key + " is new");
             else if ((h = (Map) ph.get(key)) == null || h.size() <= 0)
-                strBuf.append("\n\t"+n+": "+ key + " was empty");
+                strBuf.append("\n\t" + n + ": " + key + " was empty");
             else if (h.equals((Map) o))
-                strBuf.append("\n\t"+n+": "+ key + " has no diff");
+                strBuf.append("\n\t" + n + ": " + key + " has no diff");
             else {
-                strBuf.append("\n\t"+n+": "+ key + " has been changed");
+                strBuf.append("\n\t" + n + ": " + key + " has been changed");
                 if (!detail)
                     continue;
                 new Event(Event.DEBUG, prefix + ": " + key +

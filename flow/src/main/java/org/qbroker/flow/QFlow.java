@@ -510,11 +510,8 @@ public class QFlow implements Service, Runnable {
             h.put("Timeout", o);
         if ((o = props.get("MaxRetry")) != null)
             h.put("MaxRetry", o);
-        if (debug > 0) {
-            k = (DEBUG_INIT & debug) | (DEBUG_DIFF & debug) |
-                (DEBUG_LOAD & debug);
-            h.put("Debug", String.valueOf(k));
-        }
+        if ((o = props.get("GroupDebug")) != null)
+            h.put("Debug", o);
         if ((o = props.get("Reporter")) != null) {
             h.put("Reporter", o);
             k = Utils.copyListProps("Reporter", h, props);
@@ -591,7 +588,7 @@ public class QFlow implements Service, Runnable {
                 ph.put("PauseTime", o);
             if ((o = props.get("StandbyTime")) != null)
                 ph.put("StandbyTime", o);
-            if ((o = props.get("Debug")) != null)
+            if ((o = props.get("FlowDebug")) != null)
                 ph.put("Debug", o);
             if ((o = props.get("Receiver")) != null)
                 ph.put("Receiver", o);
@@ -789,7 +786,8 @@ public class QFlow implements Service, Runnable {
                 Map ph = null;
                 if (reports.containsKey("GlobalProperties"))
                     ph = (Map) reports.remove("GlobalProperties");
-                if ((o = props.get("global_var")) != null && o instanceof Map) {
+                if ((o = props.get("rpt_global_var")) != null &&
+                    o instanceof Map) {
                     Map map = (Map) o;
                     if((o=map.get("ReportName"))!=null && o instanceof String &&
                         "GlobalProperties".equals((String) o) &&
@@ -804,7 +802,7 @@ public class QFlow implements Service, Runnable {
                         if (ph != null) // rollback
                             reports.put("GlobalProperties", ph);
                         new Event(Event.ERR, name +
-                            " failed to init global_var: " +
+                            " failed to init rpt_global_var: " +
                             Event.traceStack(e)).send();
                     }
                 }
@@ -925,7 +923,7 @@ public class QFlow implements Service, Runnable {
             return null;
         else { // with changes, so return the new properties
             if ((debug & DEBUG_DIFF) > 0) {
-                Map change = (Map) o;
+                Map<String, Object> change = Utils.migrateProperties((Map) o);
                 if (orig != null)
                     showChange("Init", change, orig, false);
                 else
@@ -938,25 +936,23 @@ public class QFlow implements Service, Runnable {
     }
 
     /** It loggs the details of the change returned by diff()  */
-    private void showChange(String prefix, Map change, Map props,
+    private void showChange(String prefix, Map<String,Object> change, Map props,
         boolean detail) {
         Object o;
         Map h;
-        String key;
         StringBuffer strBuf = new StringBuffer();
         int n = 0;
         if (change == null)
             return;
-        for (Iterator iter=change.keySet().iterator(); iter.hasNext();) {
-            key = (String) iter.next();
+        for (String key : change.keySet()) {
             if (key == null || key.length() <= 0)
                 continue;
             o = change.get(key);
             n ++;
             if (o == null)
-                strBuf.append("\n\t"+n+": "+ key + " has been removed");
+                strBuf.append("\n\t" + n + ": " + key + " has been removed");
             else if (name.equals(key)) {
-                strBuf.append("\n\t"+n+": "+ key + " has changes");
+                strBuf.append("\n\t" + n + ": " + key + " has changes");
                 if(!detail || props == null)
                     continue;
                 h = Utils.getMasterProperties(name, includeMap, props);
@@ -965,15 +961,15 @@ public class QFlow implements Service, Runnable {
                     JSON2Map.diff(h, (Map) o, "")).send();
             }
             else if (props == null)
-                strBuf.append("\n\t"+n+": "+ key + " seems new");
+                strBuf.append("\n\t" + n + ": " + key + " seems new");
             else if (!props.containsKey(key))
-                strBuf.append("\n\t"+n+": "+ key + " is new");
+                strBuf.append("\n\t" + n + ": " + key + " is new");
             else if ((h = (Map) props.get(key)) == null || h.size() <= 0)
-                strBuf.append("\n\t"+n+": "+ key + " was empty");
+                strBuf.append("\n\t" + n + ": " + key + " was empty");
             else if (h.equals((Map) o))
-                strBuf.append("\n\t"+n+": "+ key + " has no diff");
+                strBuf.append("\n\t" + n + ": " + key + " has no diff");
             else {
-                strBuf.append("\n\t"+n+": "+ key + " has been changed");
+                strBuf.append("\n\t" + n + ": " + key + " has been changed");
                 if (!detail)
                     continue;
                 new Event(Event.DEBUG, prefix + ": " + key +
@@ -990,7 +986,7 @@ public class QFlow implements Service, Runnable {
      */
     private int reload(Map props) {
         Object o;
-        Map change = null;
+        Map<String, Object> change = null;
         List list;
         Browser browser;
         String key, basename = name;
@@ -1041,11 +1037,8 @@ public class QFlow implements Service, Runnable {
                 ph.put("Timeout", o);
             if ((o = props.get("MaxRetry")) != null)
                 ph.put("MaxRetry", o);
-            if (debug > 0) {
-                k = (DEBUG_INIT & debug) | (DEBUG_DIFF & debug) |
-                    (DEBUG_LOAD & debug);
-                ph.put("Debug", String.valueOf(k));
-            }
+            if ((o = props.get("GroupDebug")) != null)
+                ph.put("Debug", o);
             k = Utils.copyListProps("Reporter", ph, props);
             if (group == null) { // new group
                 group = new MonitorGroup(ph);
@@ -1085,9 +1078,9 @@ public class QFlow implements Service, Runnable {
             else { // existing group with changes
                 change = group.diff(ph);
                 if (change != null && change.size() > 0) {
-                    if ((debug & DEBUG_DIFF) > 0)
+                    if ((group.getDebugMode() & DEBUG_DIFF) > 0)
                         group.showChange("reporter", "Reporter",
-                            change, ((debug & DEBUG_TRAN) > 0));
+                            change, ((group.getDebugMode() & DEBUG_TRAN) > 0));
                     stopRunning(pool);
                     pool.clear();
                     if (monitor != null && monitor.isAlive()) {
@@ -1170,7 +1163,7 @@ public class QFlow implements Service, Runnable {
         if (flowList.getCapacity() == 1) { // for legacy
             MessageFlow flow = null;
             long[] flowInfo;
-            Map<String, Object>ph = new HashMap<String, Object>();
+            Map<String, Object> ph = new HashMap<String, Object>();
             ph.put("Name", "default");
             if ((o = props.get("Type")) != null)
                 ph.put("Type", o);
@@ -1196,7 +1189,7 @@ public class QFlow implements Service, Runnable {
                 ph.put("PauseTime", o);
             if ((o = props.get("StandbyTime")) != null)
                 ph.put("StandbyTime", o);
-            if ((o = props.get("Debug")) != null)
+            if ((o = props.get("FlowDebug")) != null)
                 ph.put("Debug", o);
             if ((o = props.get("Receiver")) != null)
                 ph.put("Receiver", o);
@@ -1215,9 +1208,9 @@ public class QFlow implements Service, Runnable {
             if (change == null || change.size() <= 0) // with no change
                 flowList.rotate(id);
             else if (flow.hasMajorChange(change)) { // replace the flow
-                if ((debug & DEBUG_DIFF) > 0)
+                if ((flow.getDebugMode() & DEBUG_DIFF) > 0)
                     flow.showChange("flow "+ key, "FLOW", change,
-                        ((debug & DEBUG_TRAN) > 0));
+                        ((flow.getDebugMode() & DEBUG_TRAN) > 0));
                 flow.stop();
                 flow.close();
                 flowList.remove(id);
@@ -1267,10 +1260,10 @@ public class QFlow implements Service, Runnable {
                     new Event(Event.ERR, name + " failed to recreate flow "+
                         key + ": " + k + "/" + id).send();
             }
-            else { // reload the flow without node changed
-                if ((debug & DEBUG_DIFF) > 0)
+            else { // reload the flow without major changed
+                if ((flow.getDebugMode() & DEBUG_DIFF) > 0)
                     flow.showChange("flow "+ key, "FLOW", change,
-                        ((debug & DEBUG_TRAN) > 0));
+                        ((flow.getDebugMode() & DEBUG_TRAN) > 0));
                 flowList.rotate(id);
                 try {
                     flow.reload(change);
@@ -1291,13 +1284,13 @@ public class QFlow implements Service, Runnable {
                 }
             }
         }
-        else if ((o = props.get("MessageFlow")) != null &&
-            o instanceof List) { // for MessageFlow
+        else if ((o = props.get("MessageFlow")) != null && o instanceof List) {
+            // for MessageFlow
             MessageFlow flow = null;
             long[] flowInfo;
             list = (List) o;
             n = list.size();
-            Map<String, Object>ph = new HashMap<String, Object>();
+            Map<String, Object> ph = new HashMap<String, Object>();
             for (i=0; i<n; i++) { // init map for flow names
                 o = list.get(i);
                 if (o == null || !(o instanceof Map))
@@ -1376,9 +1369,9 @@ public class QFlow implements Service, Runnable {
                     if (change == null || change.size() <= 0) // with no change
                         flowList.rotate(id);
                     else if (flow.hasMajorChange(change)) { // replace the flow
-                        if ((debug & DEBUG_DIFF) > 0)
+                        if ((flow.getDebugMode() & DEBUG_DIFF) > 0)
                             flow.showChange("flow "+ key, "FLOW", change,
-                                ((debug & DEBUG_TRAN) > 0));
+                                ((flow.getDebugMode() & DEBUG_TRAN) > 0));
                         flow.stop();
                         flow.close();
                         flowList.remove(id);
@@ -1429,9 +1422,9 @@ public class QFlow implements Service, Runnable {
                                 "flow " + key + ": " + k + "/" + id).send();
                     }
                     else { // reload the flow without node changed
-                        if ((debug & DEBUG_DIFF) > 0)
+                        if ((flow.getDebugMode() & DEBUG_DIFF) > 0)
                             flow.showChange("flow "+ key, "FLOW", change,
-                                ((debug & DEBUG_TRAN) > 0));
+                                ((flow.getDebugMode() & DEBUG_TRAN) > 0));
                         flowList.rotate(id);
                         try {
                             flow.reload(change);
@@ -1656,7 +1649,8 @@ public class QFlow implements Service, Runnable {
             if (i < 0)
                 new Event(Event.ERR, name + " failed to ack a request at "+
                     state[0]).send();
-            else if ((debug & (DEBUG_TRAN + DEBUG_TRAN)) > 0)
+            else if ((debug & (DEBUG_TRAN + DEBUG_TRAN)) > 0 &&
+                (debug & DEBUG_TRAN) > 0)
                 new Event(Event.DEBUG, name + " acked a request at " +
                     state[0] + " with " + i + " pending").send();
         }
@@ -2307,12 +2301,11 @@ public class QFlow implements Service, Runnable {
         Object o;
         MessageFlow flow = null;
         int i, n, role = -1, size = -1, sid, id = -2, status = -1, action, type;
-        boolean isExternal, isRemote, isFlow;
+        boolean isExternal, isFlow;
         if (event == null)
             return brokerRole;
 
-        isRemote = (event instanceof TextEvent);
-        isExternal = (isRemote) ? true : false;
+        isExternal = (event instanceof TextEvent);
         if ((str = event.getAttribute("reqID")) != null) {
             try {
                 sid = Integer.parseInt(str);
@@ -2427,7 +2420,7 @@ public class QFlow implements Service, Runnable {
             else if (name.equals(key)) // for QB
                 id = -1;
 
-            if (isExternal) switch (action) {
+            if (isExternal) switch (action) { // external event
               case EventAction.ACTION_RESTART:
                 if (isFlow) { // for flow
                     if (id >= 0) {
@@ -2451,30 +2444,16 @@ public class QFlow implements Service, Runnable {
                     else { // no such flow
                         text = "no such flow for " + key;
                     }
-                    if (isRemote) {
-                        ev = new Event(Event.INFO, text);
-                        ev.setAttribute("rc", "0");
-                    }
-                    else if (isExternal) { // external event
-                        event.setPriority(Event.INFO);
-                        event.setAttribute("text", text);
-                        event.setAttribute("rc", "0");
-                    }
+                    ev = new Event(Event.INFO, text);
+                    ev.setAttribute("rc", "0");
                     role = brokerRole;
                     break;
                 }
                 // for container
                 if (restartScript == null) {
                     text = "restart script not defined";
-                    if (isRemote) {
-                        ev = new Event(Event.WARNING, target + ": " + text);
-                        ev.setAttribute("rc", "-1");
-                    }
-                    else if (isExternal) { // external event
-                        event.setPriority(Event.WARNING);
-                        event.setAttribute("text", target + ": " + text);
-                        event.setAttribute("rc", "-1");
-                    }
+                    ev = new Event(Event.WARNING, target + ": " + text);
+                    ev.setAttribute("rc", "-1");
                     break;
                 }
                 status = ClusterNode.NODE_DOWN;
@@ -2483,27 +2462,13 @@ public class QFlow implements Service, Runnable {
                 }
                 catch (Exception e) {
                     text = "restart script failed: " + e.toString();
-                    if (isRemote) {
-                        ev = new Event(Event.WARNING, target + ": " + text);
-                        ev.setAttribute("rc", "-1");
-                    }
-                    else if (isExternal) { // external event
-                        event.setPriority(Event.WARNING);
-                        event.setAttribute("text", target + ": " + text);
-                        event.setAttribute("rc", "-1");
-                    }
+                    ev = new Event(Event.WARNING, target + ": " + text);
+                    ev.setAttribute("rc", "-1");
                     break;
                 }
-                // should not reach here if restart script works
-                if (isRemote) {
-                    ev = new Event(Event.WARNING, target+" restarting: "+text);
-                    ev.setAttribute("rc", "-1");
-                }
-                else if (isExternal) { // external event
-                    event.setPriority(Event.WARNING);
-                    event.setAttribute("text", target + " restarting: " + text);
-                    event.setAttribute("rc", "-1");
-                }
+                // should never reach here if restart script works
+                ev = new Event(Event.WARNING, target+" restarting: "+text);
+                ev.setAttribute("rc", "-1");
                 break;
               case EventAction.ACTION_STOP:
                 if (isFlow) { // for flow
@@ -2527,43 +2492,22 @@ public class QFlow implements Service, Runnable {
                     else { // no such flow
                         text = "no such flow for " + key;
                     }
-                    if (isRemote) {
-                        ev = new Event(Event.INFO, text);
-                        ev.setAttribute("rc", "0");
-                    }
-                    else if (isExternal) { // external event
-                        event.setPriority(Event.INFO);
-                        event.setAttribute("text", text);
-                        event.setAttribute("rc", "0");
-                    }
+                    ev = new Event(Event.INFO, text);
+                    ev.setAttribute("rc", "0");
                     role = brokerRole;
                     break;
                 }
                 // for container
                 text = "stopping";
-                if (isRemote) {
-                    ev = new Event(Event.INFO, target + ": " + text);
-                    ev.setAttribute("rc", "0");
-                }
-                else {
-                    event.setPriority(Event.INFO);
-                    event.setAttribute("text", target + ": " + text);
-                    event.setAttribute("rc", "0");
-                }
+                ev = new Event(Event.INFO, target + ": " + text);
+                ev.setAttribute("rc", "0");
                 status = ClusterNode.NODE_DOWN;
                 break;
               case EventAction.ACTION_FAILOVER:
                 if (isFlow) { // for flow
                     text = "failover on " + key + " is not supported";
-                    if (isRemote) {
-                        ev = new Event(Event.INFO, text);
-                        ev.setAttribute("rc", "0");
-                    }
-                    else if (isExternal) { // external event
-                        event.setPriority(Event.INFO);
-                        event.setAttribute("text", text);
-                        event.setAttribute("rc", "0");
-                    }
+                    ev = new Event(Event.INFO, text);
+                    ev.setAttribute("rc", "0");
                     role = brokerRole;
                 }
                 else if (clusterNode != null) { // for container
@@ -2583,28 +2527,14 @@ public class QFlow implements Service, Runnable {
                         event.setAttribute("text", text);
                         text = "failover request forwarded";
                     }
-                    if (isRemote) {
-                        ev = new Event(Event.INFO, target + ": " + text);
-                        ev.setAttribute("rc", "0");
-                    }
-                    else if (brokerRole == 0) {
-                        event.setPriority(Event.INFO);
-                        event.setAttribute("text", target + ": " + text);
-                        event.setAttribute("rc", "0");
-                    }
+                    ev = new Event(Event.INFO, target + ": " + text);
+                    ev.setAttribute("rc", "0");
                     status = ClusterNode.NODE_RUNNING;
                 }
                 else {
                     text = "not a cluster";
-                    if (isRemote) {
-                        ev = new Event(Event.WARNING, target + ": " + text);
-                        ev.setAttribute("rc", "-1");
-                    }
-                    else {
-                        event.setPriority(Event.WARNING);
-                        event.setAttribute("text", target + ": " + text);
-                        event.setAttribute("rc", "-1");
-                    }
+                    ev = new Event(Event.WARNING, target + ": " + text);
+                    ev.setAttribute("rc", "-1");
                 }
                 break;
               case EventAction.ACTION_ENABLE:
@@ -2648,17 +2578,9 @@ public class QFlow implements Service, Runnable {
                 }
                 else
                     text = "no default flow";
-                if (isRemote) {
-                    ev = new Event(Event.INFO, target + ": " + text +
-                        " for " + key);
-                    ev.setAttribute("rc", "0");
-                }
-                else {
-                    event.setPriority(Event.INFO);
-                    event.setAttribute("text", target + ": " + text +
-                        " for " + key);
-                    event.setAttribute("rc", "0");
-                }
+                ev = new Event(Event.INFO, target + ": " + text +
+                    " for " + key);
+                ev.setAttribute("rc", "0");
                 break;
               case EventAction.ACTION_STANDBY:
               case EventAction.ACTION_DISABLE:
@@ -2703,15 +2625,8 @@ public class QFlow implements Service, Runnable {
                 }
                 else
                     text = "no default flow";
-                if (isRemote) {
-                    ev = new Event(Event.INFO, target + ": " + text);
-                    ev.setAttribute("rc", "0");
-                }
-                else {
-                    event.setPriority(Event.INFO);
-                    event.setAttribute("text", target + ": " + text);
-                    event.setAttribute("rc", "0");
-                }
+                ev = new Event(Event.INFO, target + ": " + text);
+                ev.setAttribute("rc", "0");
                 break;
               case EventAction.ACTION_RELOAD:
                 if ("RULE".equals(target)) { // refresh the rule
@@ -2734,7 +2649,7 @@ public class QFlow implements Service, Runnable {
                     retry = 0;
                     props = getNewProperties(tm, null);
                     retry = 0;
-                    if (props != null && props.size() > 0) {
+                    if (props != null && props.size() > 0) { // with changes
                         reload(props);
                         props = null;
                         text = "changes have been reloaded";
@@ -2745,27 +2660,13 @@ public class QFlow implements Service, Runnable {
                 }
                 else
                     text = "repository is not defined";
-                if (isRemote) {
-                    ev = new Event(Event.INFO, target + ": " + text);
-                    ev.setAttribute("rc", "0");
-                }
-                else {
-                    event.setPriority(Event.INFO);
-                    event.setAttribute("text", target + ": " + text);
-                    event.setAttribute("rc", "0");
-                }
+                ev = new Event(Event.INFO, target + ": " + text);
+                ev.setAttribute("rc", "0");
                 break;
               default:
                 text = "bad request";
-                if (isRemote) {
-                    ev = new Event(Event.WARNING, target + ": " + text);
-                    ev.setAttribute("rc", "-1");
-                }
-                else {
-                    event.setPriority(Event.WARNING);
-                    event.setAttribute("text", target + ": " + text);
-                    event.setAttribute("rc", "-1");
-                }
+                ev = new Event(Event.WARNING, target + ": " + text);
+                ev.setAttribute("rc", "-1");
                 break;
             }
             if (!isFlow) switch (status) { // take actions
@@ -2783,14 +2684,9 @@ public class QFlow implements Service, Runnable {
                 else if (isExternal && brokerRole > 0) { // forward to master
                     clusterNode.relay(event, 500);
                     role = brokerRole;
-                    if (isRemote) {
-                        event.setAttribute("text", " ");
-                    }
-                    else { // external event
-                        event.setPriority(Event.INFO);
-                        event.setAttribute("text", target + ": " + text);
-                        event.setAttribute("rc", "0");
-                    }
+                    event.setPriority(Event.INFO);
+                    event.setAttribute("text", target + ": " + text);
+                    event.setAttribute("rc", "0");
                 }
                 break;
               case ClusterNode.NODE_STANDBY:
@@ -2824,16 +2720,16 @@ public class QFlow implements Service, Runnable {
             }
             break;
           case Event.NOTICE: // node events for state changes
+            if ((debug & DEBUG_UPDT) > 0)
+                new Event(Event.DEBUG, name + " got an escalation: " +
+                    EventUtils.compact(event)).send();
+
             if (isFlow && (str = event.getAttribute("status")) != null) {
                 if ("disabled".equalsIgnoreCase(str))
                     status = SERVICE_DISABLED;
                 else if ("normal".equalsIgnoreCase(str))
                     status = SERVICE_RUNNING;
             }
-
-            if ((debug & DEBUG_CTRL) > 0 && (debug & DEBUG_UPDT) > 0)
-                new Event(Event.DEBUG, name + " got a message: " +
-                    EventUtils.compact(event)).send();
 
             if (isFlow) switch (status) { // for flow
               case SERVICE_RUNNING:
@@ -2919,7 +2815,7 @@ public class QFlow implements Service, Runnable {
             if (isExternal) { // external query or flow escalation
                 if ("CLUSTER".equals(target) && clusterNode != null) {
                     // for relaying event to cluster
-                    if ((debug & DEBUG_UPDT) > 0)
+                    if ((debug & DEBUG_REPT) > 0)
                         new Event(Event.DEBUG, name + " got an escalation: " +
                             EventUtils.compact(event)).send();
                     StringBuffer strBuf = new StringBuffer();
@@ -2946,7 +2842,7 @@ public class QFlow implements Service, Runnable {
                 }
 
                 // for queries
-                if ((debug & DEBUG_UPDT) > 0 && (debug & DEBUG_TRAN) > 0)
+                if ((debug & DEBUG_REPT) > 0 && (debug & DEBUG_TRAN) > 0)
                     new Event(Event.DEBUG, name + " got a request: " +
                         EventUtils.compact(event)).send();
                 if("HELP".equals(target) || "USAGE".equals(target) || key==null)
@@ -3045,7 +2941,7 @@ public class QFlow implements Service, Runnable {
                             "</Result>");
                         h.clear();
                     }
-                    else if (isRemote) {
+                    else {
                         ev = new Event(Event.INFO, target + ": query OK");
                         ev.setAttribute("rc", "0");
                         Iterator iter = h.keySet().iterator();
@@ -3058,12 +2954,6 @@ public class QFlow implements Service, Runnable {
                         }
                         h.clear();
                     }
-                    else { // external event
-                        event.setPriority(Event.INFO);
-                        event.setAttribute("text", target + ": query OK");
-                        event.setAttribute("rc", "0");
-                        event.setBody(h);
-                    }
                 }
                 else if ((type & Utils.RESULT_JSON) > 0) { // failed to get json
                     ev = new Event(Event.ERR, "{\"Error\":\"" + target +
@@ -3073,15 +2963,9 @@ public class QFlow implements Service, Runnable {
                     ev = new Event(Event.ERR, "<Result><Error>" + target +
                         ": not found " + key + "</Error><RC>-1</RC></Result>");
                 }
-                else if (isRemote) {
+                else {
                     ev = new Event(Event.WARNING, key +" not found in "+target);
                     ev.setAttribute("rc", "-1");
-                }
-                else { // external event
-                    event.setPriority(Event.ERR);
-                    event.setAttribute("text", target+": not found "+key);
-                    event.setAttribute("rc", "-1");
-                    event.setBody(null);
                 }
             }
             else { // for relayed report and event
@@ -3105,7 +2989,7 @@ public class QFlow implements Service, Runnable {
                         if (i < 0)
                             new Event(Event.ERR, name +
                                 ": failed to ingest an event into "+key).send();
-                        else if ((debug & DEBUG_UPDT) > 0)
+                        else if ((debug & DEBUG_REPT) > 0)
                             new Event(Event.DEBUG, name +
                                 " ingested an event at " + i + " into " + key+
                                 ": " + EventUtils.compact(msg)).send();
@@ -3147,7 +3031,7 @@ public class QFlow implements Service, Runnable {
             break;
         }
 
-        if (isRemote) {
+        if (isExternal) { // for external response
             str = event.getAttribute("operation");
             if (ev == null)
                 ev = new Event(Event.WARNING, "bad request on " + target);
@@ -3178,7 +3062,7 @@ public class QFlow implements Service, Runnable {
                     + Event.traceStack(e)).send();
             }
             ev.clearAttributes();
-            if ((debug & DEBUG_CTRL) > 0 && (debug & DEBUG_TRAN) > 0)
+            if ((debug & (DEBUG_TRAN + DEBUG_TRAN)) > 0)
                 new Event(Event.DEBUG, name + " responded with: " + str).send();
         }
 

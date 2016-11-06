@@ -3,6 +3,14 @@ package org.qbroker.flow;
 /* ReleaseTag.java - release tag for all the packages of qbroker */
 
 /**
+ * V1.1.5 (2016/11/05): added GroupDebug and FlowDebug to QFlow, added cleanup
+ * on report for MonitorAgent, added cleanup on dataBlock in AgeMonitor,
+ * NumberMonitor and IncrementalMonitor, renamed some metric keys in
+ * SonicMQRequester such as from messages.Count to messages_Count, etc, updated
+ * SonicMQMonitor for this rename, fixed a deep bug of empty changes in
+ * hasMajorChange() of MessageFlow, normalized the debug logging in QFlow
+ * MonitorAgent and QServlet
+ *<br/>
  * V1.1.4 (2016/10/23): fixed the issue with queryInfo in MonitorAgent and
  * QFlow where the key of Record is missing for JSON, added the missing part
  * to clear parameters for JSONTemplate in MessageEvaluator, added RCRequired
@@ -50,7 +58,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V 1.1.4 2016/10/23 17:45:28";
+    private static String ReleaseTAG = "QBroker V 1.1.5 2016/11/05 15:08:05";
 
     public ReleaseTag() {
     }

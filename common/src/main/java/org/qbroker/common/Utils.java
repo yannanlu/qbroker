@@ -796,6 +796,26 @@ public class Utils {
         return ph;
     }
 
+    /** It returns a Map with migrated properties */
+    public static Map<String, Object> migrateProperties(Map props) {
+        Object o;
+        String key;
+        Map<String, Object> ph;
+
+        if (props == null)
+            return null;
+
+        ph = new HashMap<String, Object>();
+        for (Iterator iter=props.keySet().iterator(); iter.hasNext();) {
+            o = iter.next();
+            if (o == null || !(o instanceof String))
+                continue;
+            key = (String) o;
+            ph.put(key, props.remove(key));
+        }
+        return ph;
+    }
+
     /** It returns a Map with fully cloned properties */
     public static Map<String, Object> cloneProperties(Map props) {
         Object o;

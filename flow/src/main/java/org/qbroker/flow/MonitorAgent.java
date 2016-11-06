@@ -797,6 +797,7 @@ public class MonitorAgent implements Service, Runnable {
                     taskInfo[MonitorGroup.TASK_COUNT] ++;
                     taskInfo[MonitorGroup.TASK_TIME] = currentTime;
                 }
+                latest.clear();
                 continue;
             }
 
@@ -808,6 +809,11 @@ public class MonitorAgent implements Service, Runnable {
             if (skippingStatus == MonitorReport.SKIPPED ||
                 skip == MonitorReport.SKIPPED) {
                 xq.remove(sid);
+                if (taskInfo != null) {
+                    taskInfo[MonitorGroup.TASK_COUNT] ++;
+                    taskInfo[MonitorGroup.TASK_TIME] = currentTime;
+                }
+                latest.clear();
                 continue;
             }
 
@@ -847,6 +853,7 @@ public class MonitorAgent implements Service, Runnable {
                         taskInfo[MonitorGroup.TASK_COUNT] ++;
                         taskInfo[MonitorGroup.TASK_TIME] = currentTime;
                     }
+                    latest.clear();
                     continue;
                 }
             }
@@ -862,6 +869,7 @@ public class MonitorAgent implements Service, Runnable {
                     taskInfo[MonitorGroup.TASK_COUNT] ++;
                     taskInfo[MonitorGroup.TASK_TIME] = currentTime;
                 }
+                latest.clear();
                 continue;
             }
 
@@ -870,6 +878,7 @@ public class MonitorAgent implements Service, Runnable {
                 taskInfo[MonitorGroup.TASK_COUNT] ++;
                 taskInfo[MonitorGroup.TASK_TIME] = currentTime;
             }
+            latest.clear();
 
             if (event != null) { // escalation
                 if (defaultXQ != null) try { // escalate to the default flow
@@ -1171,6 +1180,8 @@ public class MonitorAgent implements Service, Runnable {
             if (cid >= 0)
                 escalation.add(event, cid);
         }
+        else
+            return;
 
         if ((debug & DEBUG_REPT) > 0)
             new Event(Event.DEBUG,"report: "+event.getAttribute("text")).send();
@@ -1307,13 +1318,12 @@ public class MonitorAgent implements Service, Runnable {
         long tm;
         Object o;
         Browser browser;
-        boolean isExternal, isRemote, isFlow = false;
+        boolean isExternal, isFlow = false;
         int i, k, n, action, status, size, id, type = 0;
         if (event == null)
             return currentStatus;
 
-        isRemote = (event instanceof TextEvent);
-        isExternal = (isRemote) ? true : false;
+        isExternal = (event instanceof TextEvent);
         if ((str = event.getAttribute("reqID")) != null) {
             try {
                 id = Integer.parseInt(str);
@@ -1443,11 +1453,11 @@ public class MonitorAgent implements Service, Runnable {
                         text = "no such flow for " + key;
                     }
                     status = currentStatus;
-                    if (isRemote) {
+                    if (isExternal) { // external event
                         ev = new Event(Event.INFO, target + ": " + text);
                         ev.setAttribute("rc", "0");
                     }
-                    else if (isExternal) { // external event
+                    else {
                         event.setPriority(Event.INFO);
                         event.setAttribute("text", target + ": " + text);
                         event.setAttribute("rc", "0");
@@ -1457,11 +1467,11 @@ public class MonitorAgent implements Service, Runnable {
                 else if (id >= 0) { // for group
                     status = currentStatus;
                     text = "restart on group is not supported";
-                    if (isRemote) {
+                    if (isExternal) { // external event
                         ev = new Event(Event.INFO, target + ": " + text);
                         ev.setAttribute("rc", "0");
                     }
-                    else if (isExternal) { // external event
+                    else {
                         event.setPriority(Event.INFO);
                         event.setAttribute("text", target + ": " + text);
                         event.setAttribute("rc", "0");
@@ -1471,11 +1481,11 @@ public class MonitorAgent implements Service, Runnable {
                 // for container
                 if (restartScript == null) {
                     text = "restart script is not defined";
-                    if (isRemote) {
+                    if (isExternal) { // external event
                         ev = new Event(Event.WARNING, target + ": " + text);
                         ev.setAttribute("rc", "-1");
                     }
-                    else if (isExternal) { // external event
+                    else {
                         event.setPriority(Event.WARNING);
                         event.setAttribute("text", target + ": " + text);
                         event.setAttribute("rc", "-1");
@@ -1489,11 +1499,11 @@ public class MonitorAgent implements Service, Runnable {
                 }
                 catch (Exception e) {
                     text = "restart script failed: " + e.toString();
-                    if (isRemote) {
+                    if (isExternal) { // external event
                         ev = new Event(Event.WARNING, target + ": " + text);
                         ev.setAttribute("rc", "-1");
                     }
-                    else if (isExternal) { // external event
+                    else {
                         event.setPriority(Event.WARNING);
                         event.setAttribute("text", target + ": " + text);
                         event.setAttribute("rc", "-1");
@@ -1501,11 +1511,11 @@ public class MonitorAgent implements Service, Runnable {
                     break;
                 }
                 // should not reach here if restart script works
-                if (isRemote) {
+                if (isExternal) { // external event
                     ev = new Event(Event.WARNING, target+" restarted: "+text);
                     ev.setAttribute("rc", "-1");
                 }
-                else if (isExternal) { // external event
+                else {
                     event.setPriority(Event.WARNING);
                     event.setAttribute("text", target + " restarted: " + text);
                     event.setAttribute("rc", "-1");
@@ -1545,11 +1555,11 @@ public class MonitorAgent implements Service, Runnable {
                     previousStatus = currentStatus;
                     mtime = currentTime;
                 }
-                if (isRemote) {
+                if (isExternal) { // external event
                     ev = new Event(Event.INFO, target + ": " + text);
                     ev.setAttribute("rc", "0");
                 }
-                else if (isExternal) { // external event
+                else {
                     event.setPriority(Event.INFO);
                     event.setAttribute("text", target + ": " + text);
                     event.setAttribute("rc", "0");
@@ -1623,11 +1633,11 @@ public class MonitorAgent implements Service, Runnable {
                     text = "stopped or closed";
                     status = currentStatus;
                 }
-                if (isRemote) {
+                if (isExternal) { // external event
                     ev = new Event(Event.INFO, target + ": " + text);
                     ev.setAttribute("rc", "0");
                 }
-                else if (isExternal) { // external event
+                else {
                     event.setPriority(Event.INFO);
                     event.setAttribute("text", target + ": " + text);
                     event.setAttribute("rc", "0");
@@ -1703,11 +1713,11 @@ public class MonitorAgent implements Service, Runnable {
                     text = "not necessary since it is stopped or closed"; 
                     status = currentStatus;
                 }
-                if (isRemote) {
+                if (isExternal) { // external event
                     ev = new Event(Event.INFO, target + ": " + text);
                     ev.setAttribute("rc", "0");
                 }
-                else if (isExternal) { // external event
+                else {
                     event.setPriority(Event.INFO);
                     event.setAttribute("text", target + ": " + text);
                     event.setAttribute("rc", "0");
@@ -1715,11 +1725,11 @@ public class MonitorAgent implements Service, Runnable {
                 break;
               default:
                 text = "bad request";
-                if (isRemote) {
+                if (isExternal) { // external event
                     ev = new Event(Event.WARNING, target + ": " + text);
                     ev.setAttribute("rc", "-1");
                 }
-                else if (isExternal) { // external event
+                else {
                     event.setPriority(Event.WARNING);
                     event.setAttribute("text", target + ": " + text);
                     event.setAttribute("rc", "-1");
@@ -1729,6 +1739,10 @@ public class MonitorAgent implements Service, Runnable {
             }
             break;
           case Event.NOTICE: // internal event to update state
+            if ((debug & DEBUG_UPDT) > 0)
+                new Event(Event.DEBUG, name + " got an escalation: " +
+                    EventUtils.compact(event)).send();
+
             if ((str = event.getAttribute("status")) != null) {
                 if ("disabled".equalsIgnoreCase(str))
                     status = SERVICE_DISABLED;
@@ -1739,10 +1753,6 @@ public class MonitorAgent implements Service, Runnable {
             }
             else
                 return currentStatus;
-
-            if ((debug & DEBUG_CTRL) > 0 && (debug & DEBUG_UPDT) > 0)
-                new Event(Event.DEBUG, name + " got an escalation: " +
-                    EventUtils.compact(event)).send();
 
             if (isFlow) // for FLOW
                 id = flowList.getID(key);
@@ -1857,8 +1867,8 @@ public class MonitorAgent implements Service, Runnable {
             }
             break;
           case Event.INFO: // query event
-            if ((debug & DEBUG_UPDT) > 0 && (debug & DEBUG_TRAN) > 0)
-                new Event(Event.DEBUG, name + " got an escalation: " +
+            if ((debug & DEBUG_REPT) > 0 && (debug & DEBUG_TRAN) > 0)
+                new Event(Event.DEBUG, name + " got a request: " +
                     EventUtils.compact(event)).send();
             Map h = null;
             status = currentStatus;
@@ -1965,7 +1975,7 @@ public class MonitorAgent implements Service, Runnable {
                     ev = new Event(Event.INFO, "<Result>" + text + "</Result>");
                     h.clear();
                 }
-                else if (isRemote) {
+                else if (isExternal) { // external event
                     ev = new Event(Event.INFO, target + ": query OK");
                     ev.setAttribute("rc", "0");
                     Iterator iter = h.keySet().iterator();
@@ -1978,7 +1988,7 @@ public class MonitorAgent implements Service, Runnable {
                     }
                     h.clear();
                 }
-                else if (isExternal) { // external event
+                else {
                     event.setPriority(Event.INFO);
                     event.setAttribute("text", target + ": query OK");
                     event.setAttribute("rc", "0");
@@ -1988,25 +1998,25 @@ public class MonitorAgent implements Service, Runnable {
             else if (text != null) { // for list
                 ev = new Event(Event.INFO, text);
             }
-            else {
-                if (isRemote && (type & Utils.RESULT_JSON) > 0) {
+            else if (isExternal) { // external event
+                if ((type & Utils.RESULT_JSON) > 0) {
                     ev = new Event(Event.ERR, "{\"Error\":\"" + target +
                         ": not found " + key + "\",\"RC\":-1}");
                 }
-                else if (isRemote && (type & Utils.RESULT_XML) > 0) {
+                else if ((type & Utils.RESULT_XML) > 0) {
                     ev = new Event(Event.ERR, "<Result><Error>" + target +
                         ": not found " + key + "</Error><RC>-1</RC></Result>");
                 }
-                else if (isRemote) {
+                else {
                     ev = new Event(Event.ERR, target+": not found "+key);
                     ev.setAttribute("rc", "-1");
                 }
-                else if (isExternal) { // external event
-                    event.setPriority(Event.ERR);
-                    event.setAttribute("text",target+": not found "+key);
-                    event.setAttribute("rc", "-1");
-                    event.setBody(null);
-                }
+            }
+            else {
+                event.setPriority(Event.ERR);
+                event.setAttribute("text",target+": not found "+key);
+                event.setAttribute("rc", "-1");
+                event.setBody(null);
             }
             break;
           default:
@@ -2014,7 +2024,7 @@ public class MonitorAgent implements Service, Runnable {
             break;
         }
 
-        if (isRemote) {
+        if (isExternal) { // for response on external request
             if (ev == null) {
                 ev = new Event(Event.WARNING, "bad request on " + target);
                 ev.setAttribute("rc", "-1");
@@ -2040,11 +2050,11 @@ public class MonitorAgent implements Service, Runnable {
                 ((TextEvent) event).setText(str);
             }
             catch (JMSException e) {
-                new Event(Event.WARNING,name+" failed to set response: "
+                new Event(Event.WARNING, name + " failed to set response: "
                     + Event.traceStack(e)).send();
             }
             ev.clearAttributes();
-            if ((debug & DEBUG_CTRL) > 0 && (debug & DEBUG_TRAN) > 0)
+            if ((debug & (DEBUG_TRAN + DEBUG_TRAN)) > 0)
                 new Event(Event.DEBUG, name + " responded with: " + str).send();
         }
 
@@ -2778,7 +2788,7 @@ public class MonitorAgent implements Service, Runnable {
             return null;
         else {
             if ((debug & DEBUG_DIFF) > 0) {
-                Map change = (Map) o;
+                Map<String, Object> change = Utils.migrateProperties((Map) o);
                 if (orig != null)
                     showChange("Init", change, orig, false);
                 else
@@ -2791,25 +2801,23 @@ public class MonitorAgent implements Service, Runnable {
     }
 
     /** It loggs the details of the change returned by diff()  */
-    private void showChange(String prefix, Map change, Map props,
+    private void showChange(String prefix, Map<String,Object> change, Map props,
         boolean detail) {
         Object o;
         Map h;
-        String key;
         StringBuffer strBuf = new StringBuffer();
         int n = 0;
         if (change == null)
             return;
-        for (Iterator iter=change.keySet().iterator(); iter.hasNext();) {
-            key = (String) iter.next();
+        for (String key : change.keySet()) {
             if (key == null || key.length() <= 0)
                 continue;
             o = change.get(key);
             n ++;
             if (o == null)
-                strBuf.append("\n\t"+n+": "+ key + " has been removed");
+                strBuf.append("\n\t" + n + ": " + key + " has been removed");
             else if ("Agent".equals(key)) {
-                strBuf.append("\n\t"+n+": "+ key + " has changes");
+                strBuf.append("\n\t" + n + ": " + key + " has changes");
                 if(!detail || props == null)
                     continue;
                 h = Utils.getMasterProperties("Agent", includeMap, props);
@@ -2818,15 +2826,15 @@ public class MonitorAgent implements Service, Runnable {
                     JSON2Map.diff(h, (Map) o, "")).send();
             }
             else if (props == null)
-                strBuf.append("\n\t"+n+": "+ key + " seems new");
+                strBuf.append("\n\t" + n + ": " + key + " seems new");
             else if (!props.containsKey(key))
-                strBuf.append("\n\t"+n+": "+ key + " is new");
+                strBuf.append("\n\t" + n + ": " + key + " is new");
             else if ((h = (Map) props.get(key)) == null || h.size() <= 0)
-                strBuf.append("\n\t"+n+": "+ key + " was empty");
+                strBuf.append("\n\t" + n + ": " + key + " was empty");
             else if (h.equals((Map) o))
-                strBuf.append("\n\t"+n+": "+ key + " has no diff");
+                strBuf.append("\n\t" + n + ": " + key + " has no diff");
             else {
-                strBuf.append("\n\t"+n+": "+ key + " has been changed");
+                strBuf.append("\n\t" + n + ": " + key + " has been changed");
                 if (!detail)
                     continue;
                 new Event(Event.DEBUG, prefix + ": " + key +
@@ -2845,7 +2853,7 @@ public class MonitorAgent implements Service, Runnable {
         Object o;
         MonitorGroup group;
         long[] groupInfo;
-        Map change = null;
+        Map<String, Object> change = null;
         List list;
         Browser browser;
         String key, basename = "Agent";
@@ -2935,9 +2943,9 @@ public class MonitorAgent implements Service, Runnable {
                     change = group.diff(ph);
                     groupList.rotate(id);
                     if (change != null && change.size() > 0) { // with changes
-                        if ((debug & DEBUG_DIFF) > 0)
+                        if ((group.getDebugMode() & DEBUG_DIFF) > 0)
                             group.showChange("group "+key, "GROUP", change,
-                                ((debug & DEBUG_TRAN) > 0));
+                                ((group.getDebugMode() & DEBUG_TRAN) > 0));
                         groupInfo =  groupList.getMetaData(id);
                         k = (int) groupInfo[GROUP_TID];
                         if (k >= 0) {// restart thread if group is still running
@@ -3105,9 +3113,9 @@ public class MonitorAgent implements Service, Runnable {
                     if (change == null || change.size() <= 0) // with no change
                         flowList.rotate(id);
                     else if (flow.hasMajorChange(change)) { // replace the flow
-                        if ((debug & DEBUG_DIFF) > 0) // with changes
+                        if ((flow.getDebugMode() & DEBUG_DIFF) > 0)//with change
                             flow.showChange("flow "+ key, "FLOW", change,
-                                ((debug & DEBUG_TRAN) > 0));
+                                ((flow.getDebugMode() & DEBUG_TRAN) > 0));
                         flow.stop();
                         flow.close();
                         flowList.remove(id);
@@ -3151,9 +3159,9 @@ public class MonitorAgent implements Service, Runnable {
                                 "flow " + key + ": " + k + "/" + id).send();
                     }
                     else { // reload the flow without node changed
-                        if ((debug & DEBUG_DIFF) > 0) // with changes
+                        if ((flow.getDebugMode() & DEBUG_DIFF) > 0)//with change
                             flow.showChange("flow "+ key, "FLOW", change,
-                                ((debug & DEBUG_TRAN) > 0));
+                                ((flow.getDebugMode() & DEBUG_TRAN) > 0));
                         flowList.rotate(id);
                         try {
                             flow.reload(change);

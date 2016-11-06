@@ -612,15 +612,8 @@ public class PropertyMonitor extends Monitor {
         else
             response = null;
 
-        if ((o = latest.get("Properties")) != null && o instanceof Map) {
-            props = (Map) o;
-            latest.remove("Properties");
-        }
-        else {
-            props = null;
-            if (latest.containsKey("Properties"))
-                latest.remove("Properties");
-        }
+        o = latest.remove("Properties");
+        props = (o != null && o instanceof Map) ? (Map) o : null;
 
         // check the test status and exceptions, figure out the priority
         switch (status) {
@@ -647,7 +640,8 @@ public class PropertyMonitor extends Monitor {
             strBuf.append(uri);
             strBuf.append(" has been updated recently");
             if (props != null) {
-                Map change = Utils.diff(basename, includeGroup, property,props);
+                Map<String, Object> change =
+                    Utils.diff(basename, includeGroup, property, props);
                 if (change == null || change.size() <= 0) { // no changes at all
                     change = null;
                     actionCount ++;

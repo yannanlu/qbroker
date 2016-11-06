@@ -240,11 +240,11 @@ public class SonicMQMonitor extends Monitor {
                         new Event(Event.ERR, name + " got a different queue: " +
                             str).send();
                 }
-                str = (String) map.get("messages.Count");
+                str = (String) map.get("messages_Count");
                 curDepth = Long.parseLong(str);
-                str = (String) map.get("messages.DeliveredPerSecond");
+                str = (String) map.get("messages_DeliveredPerSecond");
                 outMsgs = Long.parseLong(str);
-                str = (String) map.get("messages.ReceivedPerSecond");
+                str = (String) map.get("messages_ReceivedPerSecond");
                 inMsgs = Long.parseLong(str);
                 ippsCount = 0;
                 oppsCount = 0;
@@ -257,17 +257,17 @@ public class SonicMQMonitor extends Monitor {
                     qStatus = "OK";
             }
             else { // for broker metrics
-                str = (String) map.get("bytes.TopicDBSize");
+                str = (String) map.get("bytes_TopicDBSize");
                 curDepth = Long.parseLong(str);
-                str = (String) map.get("connections.Count");
+                str = (String) map.get("connections_Count");
                 ippsCount = Long.parseLong(str);
-                str = (String) map.get("messages.Received");
+                str = (String) map.get("messages_Received");
                 inMsgs = Long.parseLong(str);
-                str = (String) map.get("messages.Delivered");
+                str = (String) map.get("messages_Delivered");
                 outMsgs = Long.parseLong(str);
-                str = (String) map.get("messages.ReceivedPerSecond");
+                str = (String) map.get("messages_ReceivedPerSecond");
                 oppsCount = Long.parseLong(str);
-                str = (String) map.get("messages.DeliveredPerSecond");
+                str = (String) map.get("messages_DeliveredPerSecond");
                 totalMsgs = Long.parseLong(str);
                 if (watermark > 0 && curDepth > watermark)
                     qStatus = "BUSY";
