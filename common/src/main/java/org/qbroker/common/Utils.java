@@ -748,7 +748,7 @@ public class Utils {
         if (key == null || props == null || props.get(key) == null)
             return null;
         ph = cloneProperties(props);
-        o = ph.get(key);
+        o = ph.remove(key);
         if (!(o instanceof List))
             return null;
         list = (List) o;
@@ -757,11 +757,16 @@ public class Utils {
         ph.put(key, pl);
         for (i=0; i<n; i++) {
             o = list.get(i);
-            if (o == null || !(o instanceof Map))
+            if (o == null)
                 continue;
-            key = (String) ((Map) o).get("Name");
-            ph.put(key, o);
-            pl.add(key);
+            else if (o instanceof Map) { // real object
+                key = (String) ((Map) o).get("Name");
+                ph.put(key, o);
+                pl.add(key);
+            }
+            else if (o instanceof String) { // name only
+                pl.add((String) o);
+            }
         }
         return ph;
     }
@@ -798,7 +803,6 @@ public class Utils {
 
     /** It returns a Map with migrated properties */
     public static Map<String, Object> migrateProperties(Map props) {
-        Object o;
         String key;
         Map<String, Object> ph;
 
@@ -806,8 +810,7 @@ public class Utils {
             return null;
 
         ph = new HashMap<String, Object>();
-        for (Iterator iter=props.keySet().iterator(); iter.hasNext();) {
-            o = iter.next();
+        for (Object o : props.keySet().toArray()) {
             if (o == null || !(o instanceof String))
                 continue;
             key = (String) o;

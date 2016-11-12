@@ -402,7 +402,7 @@ public class UnixlogMonitor extends Monitor {
         List logBuffer;
         StringBuffer strBuf = new StringBuffer();
         Object o;
-        if ((o = latest.get("LogBuffer")) != null && o instanceof List) {
+        if ((o = latest.remove("LogBuffer")) != null && o instanceof List) {
             logBuffer = (List) o;
         }
         else
@@ -414,6 +414,7 @@ public class UnixlogMonitor extends Monitor {
           case TimeWindows.DISABLED:
             if (previousStatus == status) { // always disabled
                 exceptionCount = 0;
+                logBuffer.clear();
                 return null;
             }
             else { // just disabled
@@ -497,14 +498,17 @@ public class UnixlogMonitor extends Monitor {
                 level = Event.WARNING;
                 if (count == 1 || count == tolerance) // react only 
                     break;
+                logBuffer.clear();
                 return null;
             }
             count -= tolerance;
             if (repeatPeriod >= maxRetry && repeatPeriod > 0)
                 count = (count - 1) % repeatPeriod + 1;
             if (count > maxRetry) { // upgraded to CRIT
-                if (count > maxRetry + maxPage)
+                if (count > maxRetry + maxPage) {
+                    logBuffer.clear();
                     return null;
+                }
                 level = Event.CRIT;
             }
             break;
@@ -515,17 +519,23 @@ public class UnixlogMonitor extends Monitor {
                 if (repeatPeriod >= maxRetry && repeatPeriod > 0)
                     count = (count - 1) % repeatPeriod + 1;
                 if (count > maxRetry) { // upgraded to CRIT
-                    if (count > maxRetry + maxPage)
+                    if (count > maxRetry + maxPage) {
+                        logBuffer.clear();
                         return null;
+                    }
                     level = Event.CRIT;
                 }
             }
-            else if (actionCount > 1 || exceptionCount > 1)
+            else if (actionCount > 1 || exceptionCount > 1) {
+                logBuffer.clear();
                 return null;
+            }
             break;
           default:
-            if (actionCount > 1 || exceptionCount > 1)
+            if (actionCount > 1 || exceptionCount > 1) {
+                logBuffer.clear();
                 return null;
+            }
             break;
         }
 
@@ -576,6 +586,8 @@ public class UnixlogMonitor extends Monitor {
 
         event.setAttribute("actionScript", actionStatus);
         event.send();
+
+        logBuffer.clear();
 
         if ("skipped".equals(actionStatus)) {
             actionGroup.disableActionScript();

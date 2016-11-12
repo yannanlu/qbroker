@@ -3,13 +3,19 @@ package org.qbroker.flow;
 /* ReleaseTag.java - release tag for all the packages of qbroker */
 
 /**
+ * V1.1.6 (2016/11/12): added logBuffer.clear() to close() in NewlogFeture,
+ * replaced get() with remove() for dataBlock in NumberMonitor, AgeMonitor and
+ * IncrementalMonitor, added logBuffer.clear() to performAction() in
+ * UnixlogMonitor
+ *<br/>
  * V1.1.5 (2016/11/05): added GroupDebug and FlowDebug to QFlow, added cleanup
  * on report for MonitorAgent, added cleanup on dataBlock in AgeMonitor,
  * NumberMonitor and IncrementalMonitor, renamed some metric keys in
  * SonicMQRequester such as from messages.Count to messages_Count, etc, updated
  * SonicMQMonitor for this rename, fixed a deep bug of empty changes in
  * hasMajorChange() of MessageFlow, normalized the debug logging in QFlow
- * MonitorAgent and QServlet
+ * MonitorAgent and QServlet, added debug logging on changes of base properties,
+ * fixed a bug on the list of keys in normalize() of Utils
  *<br/>
  * V1.1.4 (2016/10/23): fixed the issue with queryInfo in MonitorAgent and
  * QFlow where the key of Record is missing for JSON, added the missing part
@@ -58,7 +64,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V 1.1.5 2016/11/05 15:08:05";
+    private static String ReleaseTAG = "QBroker V 1.1.6 2016/11/12 13:48:21";
 
     public ReleaseTag() {
     }

@@ -605,7 +605,7 @@ public class AgeMonitor extends Monitor {
             }
 
             if (returnCode == 0)
-                Util.split(dataBlock, pm, patternLF, (String)r.get("Response"));
+                Util.split(dataBlock,pm,patternLF,(String)r.remove("Response"));
             r.clear();
             break;
           case OBJ_SCRIPT:
@@ -618,7 +618,7 @@ public class AgeMonitor extends Monitor {
             }
 
             if (returnCode != 0) {
-                Util.split(dataBlock, pm, patternLF, (String) r.get("Output"));
+                Util.split(dataBlock, pm, patternLF,(String)r.remove("Output"));
                 if (aPatternGroup.length > 0 || xPatternGroup.length > 0) {
                     n = dataBlock.size();
                     for (int i=n-1; i>=0; i--) { // select lines on patterns
@@ -637,7 +637,7 @@ public class AgeMonitor extends Monitor {
             r.clear();
             break;
           case OBJ_REPORT:
-            o = r.get(keyList[0]);
+            o = r.remove(keyList[0]);
             if (o == null) {
                 r.clear();
                 throw(new IOException("got null value on " + keyList[0] +
@@ -668,15 +668,15 @@ public class AgeMonitor extends Monitor {
             }
 
             if (returnCode > 0)
-                dataBlock = (List) r.get("PSLines");
+                dataBlock = (List) r.remove("PSLines");
             r.clear();
             break;
           case OBJ_LOG:
-            dataBlock = (List) r.get("LogBuffer");
+            dataBlock = (List) r.remove("LogBuffer");
             r.clear();
             break;
           case OBJ_JDBC:
-            dataBlock = (List) r.get("RecordBuffer");
+            dataBlock = (List) r.remove("RecordBuffer");
             r.clear();
             break;
           case OBJ_SNMP:

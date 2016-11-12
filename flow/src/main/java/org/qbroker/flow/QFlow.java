@@ -944,7 +944,21 @@ public class QFlow implements Service, Runnable {
         int n = 0;
         if (change == null)
             return;
-        for (String key : change.keySet()) {
+        if (flowList.getCapacity() == 1) { // for lagacy of single flow
+            if (change.containsKey(name)) {
+                n ++;
+                strBuf.append("\n\t" + n + ": " + name + " has changes");
+                if (change.size() > 1) {
+                    n ++;
+                    strBuf.append("\n\t" + n + ": default has been changed");
+                }
+            }
+            else if (change.size() > 0) {
+                n ++;
+                strBuf.append("\n\t" + n + ": default has been changed");
+            }
+        }
+        else for (String key : change.keySet()) { // multiple flows
             if (key == null || key.length() <= 0)
                 continue;
             o = change.get(key);
@@ -991,36 +1005,78 @@ public class QFlow implements Service, Runnable {
         Browser browser;
         String key, basename = name;
         long tm;
-        int i, k, n, id, size;
+        int i, k, n, id, size, m = 0;
 
         size = props.size();
 
-        if ((o = props.get("Heartbeat")) != null)
-            heartbeat = 1000 * Integer.parseInt((String) o);
+        if ((o = props.get("Debug")) != null) {
+            i = Integer.parseInt((String) o);
+            if (i != debug) {
+                m += 1;
+                debug = i;
+            }
+        }
+        else if (debug > 0) {
+            m += 1;
+            debug = 0;
+        }
 
-        if (heartbeat <= 0)
-            heartbeat = 300000;
+        if ((o = props.get("Heartbeat")) != null) {
+            i = 1000 * Integer.parseInt((String) o);
+            if (i <= 0)
+                i = 300000;
 
-        if ((o = props.get("Timeout")) != null)
-            timeout = 1000 * Integer.parseInt((String) o);
-        else
-            timeout = heartbeat + heartbeat;
+            if (i != heartbeat) {
+                m += 2;
+                heartbeat = i;
+            }
+        }
+        else if (heartbeat != 30000) {
+            m += 2;
+            heartbeat = 30000;
+        }
 
-        if (timeout < 0)
-            timeout = heartbeat + heartbeat;
-
-        if ((o = props.get("MaxRetry")) != null)
-            maxRetry = Integer.parseInt((String) o);
-        else
+        if ((o = props.get("MaxRetry")) != null) {
+            i = Integer.parseInt((String) o);
+            if (i != maxRetry) {
+                m += 4;
+                maxRetry = i;
+            }
+        }
+        else if (maxRetry != 3) {
+            m += 4;
             maxRetry = 3;
+        }
 
-        if ((o = props.get("Debug")) != null)
-            debug = Integer.parseInt((String) o);
+        if ((o = props.get("Timeout")) != null) {
+            i = 1000 * Integer.parseInt((String) o);
+            if (i < 0)
+                i = heartbeat + heartbeat;
+            if (i != timeout) {
+                m += 8;
+                timeout = i;
+            }
+        }
+        else if (timeout != heartbeat + heartbeat) {
+            m += 8;
+            timeout = heartbeat + heartbeat;
+        }
 
-        if ((o = props.get("CompletedFile")) != null)
-            completedFile = new File((String) o);
-        else
+        if ((o = props.get("CompletedFile")) != null) {
+            if (completedFile == null ||
+                !completedFile.getPath().equals((String) o)) {
+                m += 16;
+                completedFile = new File((String) o);
+            }
+        }
+        else if (completedFile != null) {
+            m += 16;
             completedFile = null;
+        }
+
+        if (m > 0 && (debug & DEBUG_DIFF) > 0)
+            new Event(Event.DEBUG, name + " base properties got updated " +
+                "with mask of " + m).send();
 
         n = 0;
         tm = System.currentTimeMillis();

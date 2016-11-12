@@ -2857,43 +2857,102 @@ public class MonitorAgent implements Service, Runnable {
         List list;
         Browser browser;
         String key, basename = "Agent";
-        int i, k, n, id;
+        int i, k, n, id, m = 0;
 
         n = props.size();
-        if ((o = props.get("StatsURL")) != null && o instanceof String)
-            statsURL = (String) o;
+        if ((o = props.get("Debug")) != null) {
+            i = Integer.parseInt((String) o);
+            if (i != debug) {
+                m += 1;
+                debug = i;
+            }
+        }
+        else if (debug > 0) {
+            m += 1;
+            debug = 0;
+        }
 
-        if ((o = props.get("MaxNumberThread")) != null)
-            maxNumberThread = Integer.parseInt((String) o);
-        if (maxNumberThread <= 0)
-            maxNumberThread = 2;
+        if ((o = props.get("Heartbeat")) != null) {
+            i = 1000 * Integer.parseInt((String) o);
+            if (i <= 0)
+                i = 300000;
 
-        if ((o = props.get("Heartbeat")) != null)
-            defaultHeartbeat = 1000 * Integer.parseInt((String) o);
+            if (i != defaultHeartbeat) {
+                m += 2;
+                defaultHeartbeat = i;
+            }
+        }
+        else if (defaultHeartbeat != 30000) {
+            m += 2;
+            defaultHeartbeat = 30000;
+        }
 
-        if (defaultHeartbeat <= 0)
-            defaultHeartbeat = 300000;
-
-        if ((o = props.get("Timeout")) != null)
-            defaultTimeout = 1000 * Integer.parseInt((String) o);
-        else
-            defaultTimeout = defaultHeartbeat + defaultHeartbeat;
-
-        if (defaultTimeout < 0)
-            defaultTimeout = defaultHeartbeat + defaultHeartbeat;
-
-        if ((o = props.get("MaxRetry")) != null)
-            maxRetry = Integer.parseInt((String) o);
-        else
+        if ((o = props.get("MaxRetry")) != null) {
+            i = Integer.parseInt((String) o);
+            if (i != maxRetry) {
+                m += 4;
+                maxRetry = i;
+            }
+        }
+        else if (maxRetry != 3) {
+            m += 4;
             maxRetry = 3;
+        }
 
-        if ((o = props.get("Debug")) != null)
-            debug = Integer.parseInt((String) o);
+        if ((o = props.get("Timeout")) != null) {
+            i = 1000 * Integer.parseInt((String) o);
+            if (i < 0)
+                i = defaultHeartbeat + defaultHeartbeat;
+            if (i != defaultTimeout) {
+                m += 8;
+                defaultTimeout = i;
+            }
+        }
+        else if (defaultTimeout != defaultHeartbeat + defaultHeartbeat) {
+            m += 8;
+            defaultTimeout = defaultHeartbeat + defaultHeartbeat;
+        }
 
-        if ((o = props.get("CompletedFile")) != null)
-            completedFile = new File((String) o);
-        else
+        if ((o = props.get("MaxNumberThread")) != null) {
+            i = Integer.parseInt((String) o);
+            if (i <= 0)
+                i = 2;
+            if (i != maxNumberThread) {
+                m += 16;
+                maxNumberThread = 2;
+            }
+        }
+        else if (maxNumberThread != 2) {
+            m += 16;
+            maxNumberThread = 2;
+        }
+
+        if ((o = props.get("StatsURL")) != null && o instanceof String) {
+            if (statsURL == null || !statsURL.equals((String) o)) {
+                m += 32;
+                statsURL = (String) o;
+            }
+        }
+        else if (statsURL != null) {
+            m += 32;
+            statsURL = null;
+        }
+
+        if ((o = props.get("CompletedFile")) != null) {
+            if (completedFile == null ||
+                !completedFile.getPath().equals((String) o)) {
+                m += 64;
+                completedFile = new File((String) o);
+            }
+        }
+        else if (completedFile != null) {
+            m += 64;
             completedFile = null;
+        }
+
+        if (m > 0 && (debug & DEBUG_DIFF) > 0)
+            new Event(Event.DEBUG, name + " base properties got updated " +
+                "with mask of " + m).send();
 
         if (control.size() > 0)
             update(control, jobPool);

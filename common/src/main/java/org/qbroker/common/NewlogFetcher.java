@@ -1008,6 +1008,9 @@ public class NewlogFetcher {
         leftover = 0;
         startBytes = 0;
 
+        if (logBuffer != null)
+            logBuffer.clear();
+
         if (fin != null) try {
             fin.close();
         }

@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Date;
 import java.io.File;
@@ -3594,7 +3595,7 @@ public class MessageFlow implements Runnable {
         XQueue in = null;
         List list = null;
         String key = null;
-        int i, k, n, id;
+        int i, k, n, id, m = 0;
 
         if (node == null || change == null || change.size() <= 0) // no change
             return 0;
@@ -3608,29 +3609,50 @@ public class MessageFlow implements Runnable {
 
         if (change.containsKey("NODE")) { // find keys with null value to remove
             Map master = (Map) change.remove("NODE"); 
-            if ((o = master.get("Debug")) != null) try {
+            if ((o = master.get("Debug")) == null) {
+                if (node.getDebugMode() != 0) {
+                    m += 1;
+                    node.setDebugMode(0);
+                }
+            }
+            else try {
                 i = Integer.parseInt((String) o);
-                node.setDebugMode(i);
+                if (i != node.getDebugMode()) {
+                    m += 1;
+                    node.setDebugMode(i);
+                }
             }
             catch (Exception e) {
                 new Event(Event.ERR, name + ": failed to reset debug on " +
                     node.getName() + ": " + e.toString()).send();
             }
 
-            if ((o = master.get("DisplayMask")) != null) try {
+            if ((o = master.get("DisplayMask")) == null) {
+                if (node.getDisplayMask() != 0) {
+                    m += 2;
+                    node.setDisplayMask(0);
+                }
+            }
+            else try {
                 i = Integer.parseInt((String) o);
-                node.setDisplayMask(i);
+                if (i != node.getDisplayMask()) {
+                    m += 2;
+                    node.setDisplayMask(i);
+                }
             }
             catch (Exception e) {
                 new Event(Event.ERR, name + ": failed to reset displayMask on "+
                     node.getName() + ": " + e.toString()).send();
             }
 
-            if ((o = master.get("StringProperty")) == null) {
-                if (master.containsKey("StringProperty")) // remove it
+            if ((o = master.get("StringProperty")) == null ||
+                !(o instanceof Map)) {
+                if ((o = node.getDisplayProperties()) != null) {
+                    m += 4;
                     node.setDisplayProperties(null);
+                }
             }
-            else if (o instanceof Map) try {
+            else try {
                 Iterator iter = ((Map) o).keySet().iterator();
                 i = ((Map) o).size();
                 String[] pn = new String[i];
@@ -3641,10 +3663,37 @@ public class MessageFlow implements Runnable {
                         pn[i] = key;
                     i ++;
                 }
-                if (i > 0)
-                    node.setDisplayProperties(pn);
-                else
+                if (i > 0) {
+                    if ((o = node.getDisplayProperties()) != null) {
+                        HashSet<String> hSet = new HashSet<String>();
+                        for (String ky : (String[]) o)
+                            hSet.add(ky);
+
+                        for (String ky : pn) {
+                            if (hSet.contains(ky))
+                                continue;
+                            m += 4;
+                            node.setDisplayProperties(pn);
+                            break;
+                        }
+                        hSet.clear();
+                    }
+                    else {
+                        m += 4;
+                        node.setDisplayProperties(pn);
+                    }
+                }
+                else if ((o = node.getDisplayProperties()) != null) {
+                    pn = (String[]) o; 
+                    if (pn.length > 0) {
+                        m += 4;
+                        node.setDisplayProperties(new String[0]);
+                    }
+                }
+                else {
+                    m += 4;
                     node.setDisplayProperties(new String[0]);
+                }
             }
             catch (Exception e) {
                 new Event(Event.ERR, name + ": failed to update " +
@@ -3654,12 +3703,18 @@ public class MessageFlow implements Runnable {
 
             try { // update the other parameters for the node
                 i = node.updateParameters(master);
+                if (i > 0)
+                    m += 8;
             }
             catch (Exception e) {
                 new Event(Event.ERR, name +
                     ": failed to update base properties for " +
                     node.getName() + ": " + e.toString()).send();
             }
+
+            if (m > 0 && (debug & Service.DEBUG_DIFF) > 0)
+                new Event(Event.DEBUG, name + " node " + node.getName() +
+                    " has base properties updated with mask of " + m).send();
 
             n = change.size();
             String[] keys = change.keySet().toArray(new String[n]);
@@ -4432,43 +4487,97 @@ public class MessageFlow implements Runnable {
         MessageReceiver rcvr;
         String key, basename = "FLOW";
         long[] info;
-        int i, j, k, n, id;
+        int i, j, k, n, id, m = 0;
         boolean isNewMaster = false;
 
         if (change.containsKey(basename)) {
             props = (Map) change.remove(basename);
             if (props != null) {
+                if ((o = props.get("Debug")) != null) {
+                    i = Integer.parseInt((String) o);
+                    if (i != debug) {
+                        m += 1;
+                        debug = i;
+                    }
+                }
+                else if (debug > 0) {
+                    m += 1;
+                    debug = 0;
+                }
+
                 if ((o = props.get("WaitTime")) != null) {
                     i = Integer.parseInt((String) o);
-                    if (i > 0)
+                    if (i <= 0)
+                        i = 500;
+                    if (i != waitTime) {
+                        m += 2;
                         waitTime = i;
+                    }
+                }
+                else if (waitTime != 500L) {
+                    m += 2;
+                    waitTime = 500L;
                 }
 
                 if ((o = props.get("PauseTime")) != null) {
                     i = Integer.parseInt((String) o);
-                    if (i > 0)
+                    if (i <= 0)
+                        i = 5000;
+                    if (i != pauseTime) {
+                        m += 4;
                         pauseTime = i;
+                    }
+                }
+                else if (pauseTime != 5000) {
+                    m += 4;
+                    pauseTime = 5000;
                 }
 
                 if ((o = props.get("StandbyTime")) != null) {
                     i = Integer.parseInt((String) o);
-                    if (i > 0)
+                    if (i <= 0)
+                        i = 15000;
+                    if (i != standbyTime) {
+                        m += 8;
                         standbyTime = i;
+                    }
+                }
+                else if (standbyTime != 15000) {
+                    m += 8;
+                    standbyTime = 15000;
                 }
 
-                if ((o = props.get("Debug")) != null)
-                    debug = Integer.parseInt((String) o);
-
-                if ((o = props.get("TakebackEnabled")) != null &&
-                    "true".equalsIgnoreCase((String) o))
-                    takebackEnabled = true;
-                else
+                if ((o = props.get("TakebackEnabled")) != null) {
+                    if ("true".equalsIgnoreCase((String) o)) {
+                        if (!takebackEnabled) {
+                            m += 16;
+                            takebackEnabled = true;
+                        }
+                    }
+                    else if (takebackEnabled) {
+                        m += 16;
+                        takebackEnabled = false;
+                    }
+                }
+                else if (takebackEnabled) {
+                    m += 16;
                     takebackEnabled = false;
+                }
 
-                if ((o = props.get("CheckpointDir")) != null)
-                    checkpointDir = (String) o;
-                else
+                if ((o = props.get("CheckpointDir")) != null) {
+                    if(checkpointDir==null || !checkpointDir.equals((String)o)){
+                        m += 32;
+                        checkpointDir = (String) o;
+                    }
+                }
+                else if (checkpointDir != null) {
+                    m += 32;
                     checkpointDir = null;
+                }
+
+                if (m > 0 && (debug & Service.DEBUG_DIFF) > 0)
+                    new Event(Event.DEBUG, name + " base properties got "+
+                        "updated with mask of " + m).send();
 
                 isNewMaster = true;
             }
@@ -4497,7 +4606,7 @@ public class MessageFlow implements Runnable {
                         ConfigTemplate temp = null;
                         AssetList myList = null;
                         String str, myNode = "none";
-                        int m, type = -1;
+                        int type = -1;
                         info = templateList.getMetaData(key);
                         temp = (ConfigTemplate) templateList.remove(key);
                         if (temp != null) {

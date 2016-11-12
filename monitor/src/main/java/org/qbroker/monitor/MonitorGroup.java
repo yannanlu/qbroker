@@ -1329,31 +1329,81 @@ public class MonitorGroup {
         Map master = null;
         List list = null;
         String key, basename = "GROUP";
-        int i, j, k, n, size;
+        int i, j, k, n, size, m = 0;
 
         k = 0;
         if (change.containsKey(basename)) { // for new master
             master = (Map) change.remove(basename);
             if (master != null) {
-                if ((o = master.get("Heartbeat")) != null)
-                    heartbeat = 1000 * Integer.parseInt((String) o);
+                if ((o = master.get("Debug")) != null) {
+                    i = Integer.parseInt((String) o);
+                    if (i != debug) {
+                        m += 1;
+                        debug = i;
+                    }
+                }
+                else if (debug > 0) {
+                    m += 1;
+                    debug = 0;
+                }
 
-                if ((o = master.get("Timeout")) != null)
-                    timeout = 1000 * Integer.parseInt((String) o);
+                if ((o = master.get("Heartbeat")) != null) {
+                    i = 1000 * Integer.parseInt((String) o);
+                    if (i <= 0)
+                        i = 30000;
+                    if (i != heartbeat) {
+                        m += 2;
+                        heartbeat = i;
+                    }
+                }
+                else if (heartbeat != 30000) {
+                    m += 2;
+                    heartbeat = 30000;
+                }
 
-                if ((o = master.get("MaxRetry")) != null)
-                    maxRetry = Integer.parseInt((String) o);
+                if ((o = master.get("maxRetry")) != null) {
+                    i = Integer.parseInt((String) o);
+                    if (i != maxRetry) {
+                        m += 4;
+                        maxRetry = i;
+                    }
+                }
+                else if (maxRetry != 3) {
+                    m += 4;
+                    maxRetry = 3;
+                }
 
-                if ((o = master.get("Debug")) != null)
-                    debug = Integer.parseInt((String) o);
+                if ((o = master.get("Timeout")) != null) {
+                    i = 1000 * Integer.parseInt((String) o);
+                    if (i <= 0)
+                        i = heartbeat + heartbeat;
+                    if (i != timeout) {
+                        m += 8;
+                        timeout = i;
+                    }
+                }
+                else if (timeout != heartbeat + heartbeat) {
+                    m += 8;
+                    timeout = heartbeat + heartbeat;
+                }
 
-                if ((o = master.get("CheckpointDir")) != null)
-                    checkpointDir = (String) o;
-                else
+                if ((o = master.get("CheckpointDir")) != null) {
+                    if (checkpointDir == null ||
+                        !checkpointDir.equals((String) o)) {
+                        m += 16;
+                        checkpointDir = (String) o;
+                    }
+                }
+                else if (checkpointDir != null) {
+                    m += 16;
                     checkpointDir = null;
+                }
 
-                if ((o = master.get("Monitor")) != null &&
-                    o instanceof List)
+                if (m > 0 && (debug & Service.DEBUG_DIFF) > 0)
+                    new Event(Event.DEBUG, name + " base properties got " +
+                        "updated with mask of " + m).send();
+
+                if ((o = master.get("Monitor")) != null && o instanceof List)
                     list = (List) o;
 
                 k = deleteMonitors(list, change);
