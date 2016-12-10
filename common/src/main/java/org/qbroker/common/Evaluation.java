@@ -3,16 +3,22 @@ package org.qbroker.common;
 /* Evaluation.java - an evaluator on a simple numeric or a boolean expression */
 
 /**
- * Evaluation evaluates a simple expression with just numbers and the 5 basic
- * numeric operations, such as addition, substruction, multiplication, division,
- * modulation, or a boolean expression or a combined ternary operation. The API
- * method of evaluate() takes a string as the input expression and returns
- * either a Long or a Double for a numeric expression, or an Integer for a
- * boolean expression. In case of a boolean expression, the Integer 1 is for
- * true and the Integer 0 for false.
+ * Evaluation evaluates a simple numeric expression, or a boolean expression
+ * with either numbers or quoted strings, or a ternary expression for either 
+ * numbers or quoted strings. In case of the numeric expression, it supports
+ * 5 basic numeric operations, such as addition, substruction, multiplication,
+ * division, and modulation. For a boolean expression, it supports basic
+ * numeric comparisons and 4 string comparisons for quoted strings, such as
+ * "==", "!=", "=~" and "!~". The match operation is based on String.match().
  *<br/><br/>
- * In boolean expressions or ternary expressions, parentheses are required to
- * group terms and operations.
+ * There are 3 public methods, evaluate(), choose() and isStringExpression().
+ * They all take a text as the input expression. The first returns either a
+ * Long or a Double for a numeric expression, or an Integer for a boolean
+ * expression. In case of a boolean expression, Integer 1 is for true and
+ * Integer 0 for false. The second evaluates a ternary expression with a boolan
+ * expression and two quoted strings. It returns one of the quoted strings
+ * based on evaluation of the boolean experssion. The last returns true if the
+ * expression is a ternary expression for quoted strings, or false otherwise.
  *<br/>
  * @author yannanlu@yahoo.com
  */
@@ -32,6 +38,10 @@ public class Evaluation {
     private static final int EVAL_GE = 11;
     private static final int EVAL_LT = 12;
     private static final int EVAL_LE = 13;
+    private static final int EVAL_EQS = 14;
+    private static final int EVAL_NES = 15;
+    private static final int EVAL_MTS = 16;
+    private static final int EVAL_NMS = 17;
     private final static int ACTION_NONE = 0;    // for parsing failure
     private final static int ACTION_SKIP = 1;    // for a char not a white space
     private final static int ACTION_FIND = 2;    // for operator
@@ -44,17 +54,26 @@ public class Evaluation {
     private final static int ACTION_MORE = 9;    // for larger than
     private final static int ACTION_LESS = 10;   // for less than
     private final static int ACTION_COLON = 11;  // for ternery expression
-    private final static int ACTION_AND = 12;    // for logic AND
-    private final static int ACTION_OR = 13;     // for logic OR
+    private final static int ACTION_QUOTE = 12;  // for string
+    private final static int ACTION_AND = 13;    // for logic AND
+    private final static int ACTION_OR = 14;     // for logic OR
+    private final static Integer TRUE = new Integer(1);
+    private final static Integer FALSE = new Integer(0);
 
     private Evaluation() { // static only
     }
 
+    /**
+     * It evaluates a numeric expression or a boolean expression and returns a
+     * Number as the result up on success. Otherwise it returns a null or
+     * throws an IllegalArgumentException for failure. For a numeric expression,
+     * the result is either a Long or a Double. In case of a boolean expression,
+     * the result is an Integer of either 1 for TRUE or 0 for FALSE.
+     */
     public static Number evaluate(String expr) {
         int i, k, n, action, offset, position, sign = 1;
-        String str;
+        String str, key = null;
         char[] buffer;
-        Number r = null;
         Number[] number = new Number[SIZE];
         int[] operation = new int[SIZE];
 
@@ -68,6 +87,7 @@ public class Evaluation {
         buffer = expr.toCharArray();
         action = ACTION_SKIP;
         k = 0;
+        i = k;
         offset = 0;
         position = 0;
         do {
@@ -86,6 +106,9 @@ public class Evaluation {
                 break;
               case ACTION_COLON:
                 position = look(buffer, position, n);
+                break;
+              case ACTION_QUOTE:
+                position = locate(buffer, position, n);
                 break;
               case ACTION_SAME:
               case ACTION_DIFF:
@@ -112,6 +135,7 @@ public class Evaluation {
                   case '9':
                   case '.':
                     if (action == ACTION_SKIP) { // begin of the first number
+                        i = k;
                         offset = position;
                         action = ACTION_LOOK;
                     }
@@ -146,6 +170,12 @@ public class Evaluation {
                         position ++;
                         offset = position;
                         action = ACTION_NEXT;
+                    }
+                    else if (action == ACTION_MORE) {
+                        position ++;
+                    }
+                    else if (action == ACTION_LESS) {
+                        position ++;
                     }
                     else if (action == ACTION_FIND) { // for a expression
                         operation[k] = EVAL_ADD;
@@ -286,11 +316,35 @@ public class Evaluation {
                         offset = position;
                         action = ACTION_COLON;
                     }
+                    else if (action == ACTION_LOOK) { // end of condition
+                        str = new String(buffer, offset, position - offset); 
+                        number[k++] = parse(str);
+                        position ++;
+                        offset = position;
+                        action = ACTION_COLON;
+                        if (k > i + 1) { // more than one numbers
+                            number[i] = evaluate(i, k, number, operation);
+                            for (int j=i+1; j<k; j++) { // reset
+                                number[j] = null;
+                                operation[j] = 0;
+                            }
+                            k = ++i;
+                        }
+                        if (k > 1) {
+                            Boolean b;
+                            k --;
+                            b = evaluate(operation[k], number[k-1], number[k]);
+                            number[k-1] = b.booleanValue() ? TRUE : FALSE;
+                            number[k] = null;
+                            operation[k] = 0;
+                            i = k;
+                        }
+                    }
                     break;
                   case ':':
                     if (action == ACTION_COLON) { // end of first expression
                         if (number[k-1].intValue() != 0) { // condition is true
-                            str = new String(buffer, offset, position - offset); 
+                            str = new String(buffer, offset, position - offset);
                             number[k-1] = evaluate(str);
                         }
                         else { // ternery condition is false
@@ -304,21 +358,44 @@ public class Evaluation {
                     }
                     break;
                   case '=':
-                    if (action == ACTION_LOOK) { // end of number
+                    if (action == ACTION_LOOK) { // end of 1st group of numbers
                         str = new String(buffer, offset, position - offset); 
                         number[k++] = parse(str);
                         position ++;
                         offset = position;
                         action = ACTION_SAME;
+                        if (k > i + 1) {
+                            number[i] = evaluate(i, k, number, operation);
+                            for (int j=i+1; j<k; j++) { // reset
+                                number[j] = null;
+                                operation[j] = 0;
+                            }
+                            k = ++i;
+                        }
+                        else
+                            i ++;
+                    }
+                    else if (action == ACTION_FIND) { // end of 1st group
+                        position ++;
+                        offset = position;
+                        action = ACTION_SAME;
+                        if (k > i + 1) {
+                            number[i] = evaluate(i, k, number, operation);
+                            for (int j=i+1; j<k; j++) { // reset
+                                number[j] = null;
+                                operation[j] = 0;
+                            }
+                            k = ++i;
+                        }
                     }
                     else if (action == ACTION_SAME) { // end of equal
-                        operation[k] = EVAL_EQ;
+                        operation[k] = (key == null) ? EVAL_EQ : EVAL_EQS;
                         position ++;
                         offset = position;
                         action = ACTION_NEXT;
                     }
                     else if (action == ACTION_DIFF) { // end of not equal
-                        operation[k] = EVAL_NE;
+                        operation[k] = (key == null) ? EVAL_NE : EVAL_NES;
                         position ++;
                         offset = position;
                         action = ACTION_NEXT;
@@ -337,64 +414,259 @@ public class Evaluation {
                     }
                     break;
                   case '!':
-                    if (action == ACTION_LOOK) { // end of number
+                    if (action == ACTION_LOOK) { // end of 1st group of numbers
                         str = new String(buffer, offset, position - offset); 
                         number[k++] = parse(str);
                         position ++;
                         offset = position;
                         action = ACTION_DIFF;
+                        if (k > i + 1) {
+                            number[i] = evaluate(i, k, number, operation);
+                            for (int j=i+1; j<k; j++) { // reset
+                                number[j] = null;
+                                operation[j] = 0;
+                            }
+                            k = ++i;
+                        }
+                        else
+                            i ++;
+                    }
+                    else if (action == ACTION_FIND) { // end of 1st group
+                        position ++;
+                        offset = position;
+                        action = ACTION_DIFF;
+                        if (k > i + 1) {
+                            number[i] = evaluate(i, k, number, operation);
+                            for (int j=i+1; j<k; j++) { // reset
+                                number[j] = null;
+                                operation[j] = 0;
+                            }
+                            k = ++i;
+                        }
                     }
                     break;
                   case '>':
-                    if (action == ACTION_LOOK) { // end of number
+                    if (action == ACTION_LOOK) { // end of 1st group of numbers
                         str = new String(buffer, offset, position - offset); 
                         number[k++] = parse(str);
                         position ++;
                         offset = position;
                         action = ACTION_MORE;
+                        if (k > i + 1) {
+                            number[i] = evaluate(i, k, number, operation);
+                            for (int j=i+1; j<k; j++) { // reset
+                                number[j] = null;
+                                operation[j] = 0;
+                            }
+                            k = ++i;
+                        }
+                        else
+                            i ++;
+                    }
+                    else if (action == ACTION_FIND) { // end of 1st group
+                        position ++;
+                        offset = position;
+                        action = ACTION_MORE;
+                        if (k > i + 1) {
+                            number[i] = evaluate(i, k, number, operation);
+                            for (int j=i+1; j<k; j++) { // reset
+                                number[j] = null;
+                                operation[j] = 0;
+                            }
+                            k = ++i;
+                        }
                     }
                     break;
                   case '<':
-                    if (action == ACTION_LOOK) { // end of number
+                    if (action == ACTION_LOOK) { // end of 1st group of numbers
                         str = new String(buffer, offset, position - offset); 
                         number[k++] = parse(str);
                         position ++;
                         offset = position;
                         action = ACTION_LESS;
+                        if (k > i + 1) {
+                            number[i] = evaluate(i, k, number, operation);
+                            for (int j=i+1; j<k; j++) { // reset
+                                number[j] = null;
+                                operation[j] = 0;
+                            }
+                            k = ++i;
+                        }
+                        else
+                            i ++;
+                    }
+                    else if (action == ACTION_FIND) { // end of 1st group
+                        position ++;
+                        offset = position;
+                        action = ACTION_LESS;
+                        if (k > i + 1) {
+                            number[i] = evaluate(i, k, number, operation);
+                            for (int j=i+1; j<k; j++) { // reset
+                                number[j] = null;
+                                operation[j] = 0;
+                            }
+                            k = ++i;
+                        }
+                    }
+                    break;
+                  case '~':
+                    if (action == ACTION_SAME) { // pattern match
+                        operation[k] = EVAL_MTS;
+                        position ++;
+                        offset = position;
+                        action = ACTION_NEXT;
+                    }
+                    else if (action == ACTION_DIFF) { // pattern not match
+                        operation[k] = EVAL_NMS;
+                        position ++;
+                        offset = position;
+                        action = ACTION_NEXT;
                     }
                     break;
                   case '&':
-                    if (action == ACTION_FIND) { // start of AND
+                    if (action == ACTION_LOOK) { // end of 2nd group of numbers
+                        str = new String(buffer, offset, position - offset); 
+                        number[k++] = parse(str);
                         position ++;
                         offset = position;
                         action = ACTION_AND;
+                        if (k > i + 1) { // more than one numbers
+                            number[i] = evaluate(i, k, number, operation);
+                            for (int j=i+1; j<k; j++) { // reset
+                                number[j] = null;
+                                operation[j] = 0;
+                            }
+                            k = ++i;
+                        }
+                        if (k > 1) {
+                            Boolean b;
+                            k --;
+                            b = evaluate(operation[k], number[k-1], number[k]);
+                            number[k-1] = b.booleanValue() ? TRUE : FALSE;
+                            number[k] = null;
+                            operation[k] = 0;
+                            i = k;
+                        }
+                    }
+                    else if (action == ACTION_FIND) { // end of 2nd group
+                        position ++;
+                        offset = position;
+                        action = ACTION_AND;
+                        if (k > 1) {
+                            Boolean b;
+                            k --;
+                            b = evaluate(operation[k], number[k-1], number[k]);
+                            number[k-1] = b.booleanValue() ? TRUE : FALSE;
+                            number[k] = null;
+                            operation[k] = 0;
+                            i = k;
+                        }
                     }
                     else if (action == ACTION_AND) { // end of AND
                         operation[k] = EVAL_AND;
-                        if (number[k-1].intValue() == 0) { // no need to go on
+                        i = k;
+                        if (k > 0 && number[k-1].intValue() == 0) { // no go on
                              offset = n;
                              break;
                         }
                         position ++;
                         offset = position;
-                        action = ACTION_NEXT;
+                        action = ACTION_SKIP;
                     }
                     break;
                   case '|':
-                    if (action == ACTION_FIND) { // start of OR
+                    if (action == ACTION_LOOK) { // end of 2nd group of numbers
+                        str = new String(buffer, offset, position - offset); 
+                        number[k++] = parse(str);
                         position ++;
                         offset = position;
                         action = ACTION_OR;
+                        if (k > i + 1) { // more than one numbers
+                            number[i] = evaluate(i, k, number, operation);
+                            for (int j=i+1; j<k; j++) { // reset
+                                number[j] = null;
+                                operation[j] = 0;
+                            }
+                            k = ++i;
+                        }
+                        if (k > 1) {
+                            Boolean b;
+                            k --;
+                            b = evaluate(operation[k], number[k-1], number[k]);
+                            number[k-1] = b.booleanValue() ? TRUE : FALSE;
+                            number[k] = null;
+                            operation[k] = 0;
+                            i = k;
+                         }
+                    }
+                    else if (action == ACTION_FIND) { // end of 2nd group
+                        position ++;
+                        offset = position;
+                        action = ACTION_OR;
+                        if (k > 1) {
+                            Boolean b;
+                            k --;
+                            b = evaluate(operation[k], number[k-1], number[k]);
+                            number[k-1] = b.booleanValue() ? TRUE : FALSE;
+                            number[k] = null;
+                            operation[k] = 0;
+                            i = k;
+                        }
                     }
                     else if (action == ACTION_OR) { // end of OR
                         operation[k] = EVAL_OR;
-                        if (number[k-1].intValue() != 0) { // no need to go on
+                        i = k;
+                        if (k > 0 && number[k-1].intValue() != 0) { // no go on
                              offset = n;
                              break;
                         }
                         position ++;
                         offset = position;
-                        action = ACTION_NEXT;
+                        action = ACTION_SKIP;
+                    }
+                    break;
+                  case '\'':
+                    if (action == ACTION_SKIP) { // start of 1st string
+                        position ++;
+                        offset = position;
+                        action = ACTION_QUOTE;
+                    }
+                    else if (action == ACTION_NEXT) { // start of 2nd string
+                        position ++;
+                        offset = position;
+                        action = ACTION_QUOTE;
+                    }
+                    else if (action == ACTION_QUOTE) { // end of string
+                        int j = operation[k];
+                        str = new String(buffer, offset, position - offset);
+                        action = ACTION_FIND;
+                        if (j == 0) // end of 1st string
+                            key = str;
+                        else if (j == EVAL_EQS) { // for ==
+                            number[k] = key.equals(str) ? TRUE : FALSE;
+                            key = null;
+                            operation[k++] = 0;
+                        }
+                        else if (j == EVAL_NES) { // for !=
+                            number[k] = key.equals(str) ? FALSE : TRUE;
+                            key = null;
+                            operation[k++] = 0;
+                        }
+                        else if (j == EVAL_MTS) { // for =~
+                            number[k] = key.matches(str) ? TRUE : FALSE;
+                            key = null;
+                            operation[k++] = 0;
+                        }
+                        else if (j == EVAL_NMS) { // for !~
+                            number[k] = key.matches(str) ? FALSE : TRUE;
+                            key = null;
+                            operation[k++] = 0;
+                        }
+                        else {
+                            action = ACTION_NONE;
+                        }
+                        position ++;
+                        offset = position;
                     }
                     break;
                   case ' ':  // for white spaces
@@ -433,60 +705,155 @@ public class Evaluation {
             return null;
         else if (k == 1)
             return number[0];
-        else if (k == 2) {
-            if (operation[1] < EVAL_AND)
-                return evaluate(number[0], operation[1], number[1]);
-            else if (operation[1] > EVAL_OR) {
-                Boolean b = evaluate(operation[1], number[0], number[1]);
-                if (b == null)
-                    return null;
-                else if (b.booleanValue())
-                    return new Integer(1);
-                else
-                    return new Integer(0);
+        else if (operation[1] < EVAL_AND) // for numeric
+            return evaluate(0, k, number, operation);
+        else { // for boolean
+            if (operation[k-1] < EVAL_AND) { // last numeric
+                number[i] = evaluate(i, k, number, operation);
+                k = ++i;
             }
+            if (k == 1)
+                return number[0];
+            else if (operation[k-1] > EVAL_OR) { // last boolean
+                Boolean b;
+                k --;
+                b = evaluate(operation[k], number[k-1], number[k]);
+                number[k-1] =b.booleanValue() ? TRUE : FALSE;
+            }
+            if (k == 1)
+                return number[0];
+            else {
+                Number r;
+                for (i=1; i<k; i++) { // eval on AND first
+                    if (operation[i] == EVAL_AND) {
+                        r = evaluate(number[i-1], operation[i], number[i]);
+                        number[i] = r;
+                        number[i-1] = FALSE;
+                        if (i > 1) {
+                            operation[i] = operation[i-1];
+                            operation[i-1] = EVAL_OR;
+                        }
+                        else
+                            operation[i] = EVAL_OR;
+                    }
+                }
+
+                r = number[0];
+                for (i=1; i<k; i++) // or over on all terms
+                    r = evaluate(r, operation[i], number[i]);
+                return r;
+            }
+        }
+    }
+
+    /**
+     * It evaluates a ternary expression with a boolean expression and two
+     * single quoted strings and returns one of the strings with quotes as
+     * the result upon success. Otherwise it returns null or just throws an
+     * IllegalArgumentException to indicate failure. Any single quoted string
+     * can be replaced by a ternary expression as long as its result is also
+     * a quoted string.
+     */
+    public static String choose(String expr) {
+        int i, j, n;
+        Number r;
+        char[] buffer;
+
+        if (expr == null || (n = expr.length()) <= 0)
+            return null;
+
+        buffer = expr.toCharArray();
+        i = search(buffer, 0, n);
+        if (i < 0) { // not a ternary expression
+            i = expr.indexOf('\'');
+            j = expr.lastIndexOf('\'');
+            return (i >= 0 && j >= i) ? expr.substring(i, j+1) : null;
+        }
+        else if ((j = look(buffer, i+1, n)) < 0) // ':' not found
+            return null;
+        else if (evaluate(expr.substring(0, i)).intValue() != 0)
+            return choose(expr.substring(i+1, j));
+        else
+            return choose(expr.substring(j+1));
+    }
+
+    /** returns true if expression is a ternary expression for quoted strings */
+    public static boolean isStringExpression(String expr) {
+        int i;
+        if (expr == null || (i = expr.lastIndexOf('\'')) <= 0 ||
+            expr.indexOf('?', i+1) > 0)
+            return false;
+        else if (expr.lastIndexOf('?', i) > 0)
+            return true;
+        else if ((i = expr.lastIndexOf('\'', i-1)) < 0) // single quote?
+            return false;
+        else if (i == 0)
+            return true;
+        else if (expr.charAt(i-1) == '\\') { // escaped
+            int k = 1;
+            char c = expr.charAt(0);
+            for (int j=0; j<i; j++) {
+                if (expr.charAt(i) == '\'') { // founded
+                    if (c != '\\') { // not escaped
+                        if (++k > 2)
+                            return false;
+                    }
+                }
+            }
+            return true;
+        }
+        else { // look for extra single quotes
+            for (int j=0; j<i; j++) {
+                if (expr.charAt(i) == '\'') // founded
+                    return false;
+            }
+            return true;
+        }
+    }
+
+    public static String unquote(String expr) {
+        if (expr == null)
+            return null;
+        else {
+            int i = expr.indexOf('\'');
+            int j = expr.lastIndexOf('\'');
+            if (i >= 0 && j > i)
+                return expr.substring(i+1, j);
             else
-                return evaluate(number[0], operation[1], number[1]);
+                return expr;
         }
-        else if (operation[1] < EVAL_AND) { // for numbers
-            for (i=1; i<k; i++) { // eval on MUL, DIV and MOD first
-                if (operation[i] >= EVAL_MUL) {
-                    r = evaluate(number[i-1], operation[i], number[i]);
-                    number[i] = r;
-                    number[i-1] = new Long(0);
-                    if (i > 1) {
-                        operation[i] = operation[i-1];
-                        operation[i-1] = EVAL_ADD;
+    }
+
+    /** returns a number of the evaluation on a numeric expression */
+    private static Number evaluate(int i, int j, Number[] number,
+        int[] operation) {
+        int k = j - i;
+        if (i < 0 || j <= i || number == null || operation == null ||
+            number.length < k || number.length != operation.length)
+            return null;
+        else if (k == 1)
+            return number[i];
+        else if (k == 2)
+            return evaluate(number[i], operation[i+1], number[i+1]);
+        else { // for numbers
+            Number r = null;
+            for (j=1; j<k; j++) { // eval on MUL, DIV and MOD first
+                if (operation[i+j] >= EVAL_MUL) {
+                    r = evaluate(number[i+j-1], operation[i+j], number[i+j]);
+                    number[i+j] = r;
+                    number[i+j-1] = new Long(0);
+                    if (j > 1) {
+                        operation[i+j] = operation[i+j-1];
+                        operation[i+j-1] = EVAL_ADD;
                     }
                     else
-                        operation[i] = EVAL_ADD;
+                        operation[i+j] = EVAL_ADD;
                 }
             }
 
             r = number[0];
-            for (i=1; i<k; i++) // sum over on all terms
-                r = evaluate(r, operation[i], number[i]);
-
-            return r;
-        }
-        else { // for booleans
-            for (i=1; i<k; i++) { // eval on AND first
-                if (operation[i] == EVAL_AND) {
-                    r = evaluate(number[i-1], operation[i], number[i]);
-                    number[i] = r;
-                    number[i-1] = new Integer(0);
-                    if (i > 1) {
-                        operation[i] = operation[i-1];
-                        operation[i-1] = EVAL_OR;
-                    }
-                    else
-                        operation[i] = EVAL_OR;
-                }
-            }
-
-            r = number[0];
-            for (i=1; i<k; i++) // or over on all terms
-                r = evaluate(r, operation[i], number[i]);
+            for (j=1; j<k; j++) // sum over on all terms
+                r = evaluate(r, operation[i+j], number[i+j]);
 
             return r;
         }
@@ -544,14 +911,14 @@ public class Evaluation {
             }
           case EVAL_OR:
              if (a.intValue() == 0 && b.intValue() == 0)
-                 return new Integer(0);
+                 return FALSE;
              else
-                 return new Integer(1);
+                 return TRUE;
           case EVAL_AND:
              if (a.intValue() == 0 || b.intValue() == 0)
-                 return new Integer(0);
+                 return FALSE;
              else
-                 return new Integer(1);
+                 return TRUE;
           default:
         }
         throw new IllegalArgumentException("operation not supported: " + oper);
@@ -609,7 +976,7 @@ public class Evaluation {
         else if (a instanceof Long)
             return new Long(-a.longValue());
         else // for boolean
-            return new Integer((a.intValue() == 0) ? 1 : 0);
+            throw new IllegalArgumentException("nagative sign not allowed");
     }
 
     private static Number parse(String value) {
@@ -652,27 +1019,86 @@ public class Evaluation {
 
     /** returns the position of the corresponding ')' or -1 if not found */
     private static int find(char[] buffer, int offset, int length) {
-        int i, level = 0;
-        char c;
-        for (i=offset; i<length; i++) {
+        int level = 0;
+        char c, b = buffer[offset];
+        boolean inQuotes = false;
+        for (int i=offset; i<length; i++) {
             c = buffer[i];
-            if (c == '(')
-                level ++;
-            else if (c == ')') {
-                if (level > 0)
-                    level --;
-                else
-                    return i;
+            if (c == '\'') { // found a quote
+                if (b != '\\') // not escaped
+                    inQuotes = !inQuotes;
             }
+            else if (!inQuotes) { // not in quotes
+                if (c == '(')
+                    level ++;
+                else if (c == ')') {
+                    if (level > 0)
+                        level --;
+                    else
+                        return i;
+                }
+            }
+            b = c;
         }
         return -1;
     }
 
-    /** returns the position of the first ':' or -1 if not found */
+    /** returns the position of the corresponding ':' or -1 if not found */
     private static int look(char[] buffer, int offset, int length) {
+        int level = 0;
+        char c, b = buffer[offset];
+        boolean inQuotes = false;
         for (int i=offset; i<length; i++) {
-            if (buffer[i] == ':')
-                return i;
+            c = buffer[i];
+            if (c == '\'') { // found a quote
+                if (b != '\\') // not escaped
+                    inQuotes = !inQuotes;
+            }
+            else if (!inQuotes) { // not in quotes
+                if (c == '?')
+                    level ++;
+                else if (c == ':') {
+                    if (level > 0)
+                        level --;
+                    else
+                        return i;
+                }
+            }
+            b = c;
+        }
+        return -1;
+    }
+
+    /** returns the position of the corresponding '?' or -1 if not found */
+    private static int search(char[] buffer, int offset, int length) {
+        int level = 0;
+        char c, b = buffer[offset];
+        boolean inQuotes = false;
+        for (int i=offset; i<length; i++) {
+            c = buffer[i];
+            if (c == '\'') { // found a quote
+                if (b != '\\') // not escaped
+                    inQuotes = !inQuotes;
+            }
+            else if (!inQuotes) { // not in quotes
+                if (c == '?')
+                    return i;
+            }
+            b = c;
+        }
+        return -1;
+    }
+
+    /** returns the position of the unescaped '\'' or -1 if not found */
+    private static int locate(char[] buffer, int offset, int length) {
+        int level = 0;
+        char c = buffer[offset];
+        for (int i=offset; i<length; i++) {
+            if (buffer[i] == '\'') {
+                if (c != '\\') // not escaped
+                    return i;
+            }
+            c = buffer[i];
         }
         return -1;
     }
@@ -717,7 +1143,7 @@ public class Evaluation {
     }
 
     public static void main(String[] args) {
-        Number o = null;
+        Number r = null;
         String expr = null;
         if (args.length > 0)
             expr = args[0];
@@ -727,16 +1153,28 @@ public class Evaluation {
             System.exit(0);
         }
 
-        try {
-            o = evaluate(expr);
-            if (o == null)
+        if (isStringExpression(expr)) { // for string expression
+            try {
+                String str = choose(expr);
+                if (str == null)
+                    System.out.println("got null from: " + expr);
+                else
+                    System.out.println(expr + " = " + str);
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        else try { // for numeric or boolean expression
+            r = evaluate(expr);
+            if (r == null)
                 System.out.println("null for: " + expr);
-            else if (o instanceof Double)
-                System.out.println(expr + " = " + ((Double) o).doubleValue());
-            else if (o instanceof Long)
-                System.out.println(expr + " = " + ((Long) o).longValue());
+            else if (r instanceof Double)
+                System.out.println(expr + " = " + ((Double) r).doubleValue());
+            else if (r instanceof Long)
+                System.out.println(expr + " = " + ((Long) r).longValue());
             else { // Integer for boolean values
-                Boolean b = new Boolean(((Integer) o).intValue() != 0);
+                Boolean b = new Boolean(((Integer) r).intValue() != 0);
                 System.out.println(expr + " = " + b.booleanValue());
             }
         }

@@ -792,7 +792,7 @@ public class QServlet extends HttpServlet {
         String key = null, uri = null, msg = null, str = null, port = null;
         String target = null, action = null, category = null, jsp = null;
         String clientIP, path, sessionId, status, username = null, type=null;
-        int priority = Event.INFO;
+        int l, priority = Event.INFO;
         long tm = 0L;
         boolean isJMS = false;        // an event is a JMS event or not
         boolean isCollectible = true; // a non-JMS event is collectible or not
@@ -883,6 +883,7 @@ public class QServlet extends HttpServlet {
 
         if (path == null)
             path = "";
+        l = path.length();
         if (event != null) { // JMS event for file upload or raw request
             if ((qf.getDebugMode() & QFlow.DEBUG_CTRL) > 0)
                 new Event(Event.DEBUG, name + " with event: " + path).send();
@@ -903,12 +904,17 @@ public class QServlet extends HttpServlet {
             catch (Exception e) {
             }
         }
-        else if (path.startsWith("/collectible")) { //JMS event for collectibles
+        else if (path.startsWith("/collectible") && (l == 12 ||
+            path.charAt(13) == '/')) { //JMS event for collectibles
             if ((qf.getDebugMode() & QFlow.DEBUG_CTRL) > 0)
                 new Event(Event.DEBUG, name + " collectible: " + path).send();
             isCollectible = true;
             isJMS = true;
             event = getEvent(props, true);
+            if (event == null) { // null event
+                response.sendError(response.SC_BAD_REQUEST);
+                return null;
+            }
             if (event.getAttribute("status") == null)
                 event.setAttribute("status", "Normal");
             event.setAttribute("hostname", clientIP);
@@ -921,12 +927,17 @@ public class QServlet extends HttpServlet {
             action = event.getAttribute("operation");
             port = event.getAttribute("port");
         }
-        else if (path.startsWith("/event")) { // non-JMS event only
+        else if (path.startsWith("/event") && (l == 6 ||
+            path.charAt(7) == '/')) { // non-JMS event only
             if ((qf.getDebugMode() & QFlow.DEBUG_CTRL) > 0)
                 new Event(Event.DEBUG, name + " event: " + path).send();
             isJMS = false;
             isCollectible = false;
             event = getEvent(props, false);
+            if (event == null) { // null event
+                response.sendError(response.SC_BAD_REQUEST);
+                return null;
+            }
             event.removeAttribute("text");
             if (event.getAttribute("status") == null)
                 event.setAttribute("status", "Normal");
@@ -944,19 +955,23 @@ public class QServlet extends HttpServlet {
             action = event.getAttribute("operation");
             category = event.getAttribute("category");
         }
-        else if (path.startsWith("/jms")) { // JMS event without collectibles
+        else if (path.startsWith("/jms") && (l == 4 ||
+            path.charAt(5) == '/')) { // JMS event without collectibles
             if ((qf.getDebugMode() & QFlow.DEBUG_CTRL) > 0)
                 new Event(Event.DEBUG, name + " jms: " + path).send();
             isJMS = true;
             isCollectible = false;
             event = getEvent(props, true);
-            if (event == null) // null event
+            if (event == null) { // null event
+                response.sendError(response.SC_BAD_REQUEST);
                 return null;
+            }
             event.setAttribute("hostname", clientIP);
             if (event.attributeExists("jsp"))
                 jsp = event.getAttribute("jsp");
         }
-        else if (path.startsWith("/stream")) { //JMS event for stream operations
+        else if (path.startsWith("/stream") && (l == 7 ||
+            path.charAt(8) == '/')) { //JMS event for stream operations
             if ((qf.getDebugMode() & QFlow.DEBUG_CTRL) > 0)
                 new Event(Event.DEBUG, name + " stream: " + path).send();
             isJMS = true;
@@ -965,7 +980,8 @@ public class QServlet extends HttpServlet {
             event = getEvent(props, true);
             event.setAttribute("hostname", clientIP);
         }
-        else if (restURILen > 0 && path.startsWith(restURI)) { // REST requests
+        else if (restURILen > 0 && path.startsWith(restURI) && (l==restURILen ||
+            path.charAt(restURILen+1) == '/')) { // REST requests
             if ((qf.getDebugMode() & QFlow.DEBUG_CTRL) > 0)
                 new Event(Event.DEBUG, name + " rest: " + path).send();
             Iterator iter = props.keySet().iterator();

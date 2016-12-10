@@ -5,6 +5,7 @@ package org.qbroker.jms;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Date;
 import java.io.IOException;
@@ -97,18 +98,17 @@ public class EventTracker implements EventEscalation {
         else
             ttl = 0;
 
-        if ((o = props.get("CopiedProperty")) != null && o instanceof Map) {
+        if ((o = props.get("CopiedProperty")) != null && o instanceof List) {
             String key;
-            Map map = (Map) o;
-            Iterator iter = map.keySet().iterator();
-            n = map.size();
-            copiedProperty = new String[n];
-            n = 0;
-            while (iter.hasNext()) {
-                key = (String) iter.next();
-                if (key != null && key.length() > 0)
-                    copiedProperty[n++] = key;
-            }
+            List<String> pl = new ArrayList<String>();
+            for (Object ky : (List) o) {
+                if (!(ky instanceof String))
+                    continue;
+                key = (String) ky; 
+                if (key.length() > 0)
+                    pl.add(key);
+            }   
+            copiedProperty = pl.toArray(new String[pl.size()]);
         }
         else
             copiedProperty = new String[0];

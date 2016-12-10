@@ -74,14 +74,16 @@ import org.qbroker.event.Event;
  * defines a unique message group.  The ruleset also defines the operations
  * to select content from the messages and other parameters for the group.
  * If a ruleset has the preferredOutLink defined, SelectNode will route the
- * messages to its outlink without any actions.  StringProperty determines what
+ * messages to its outlink without any actions. Otherwise, each selected item
+ * will be built into a message for delivery. StringProperty determines what
  * properties to be copied over from the original message to the new messages.
  * If it is null, nothing will be copied over.  If it is empty, all properties
  * will be copied over.  Otherwise, only those properties defined in
  * StringProperty will be copied over. If StoreField is defined for a ruleset,
  * it must be a full path to a local file. SelectNode will retrieve the content
  * from the external file. This is good in case the size of content is too
- * large for a message.
+ * large for a message. All the delivered new messages will be tracked by
+ * RULE_PEND of their rulesets.
  *<br/><br/>
  * The default operation is to split the content via the given delimiters.
  * The split items will be selected for the ruleset. Alternatively, SelectNode
@@ -89,11 +91,11 @@ import org.qbroker.event.Event;
  * payload. They are based on Pattern, XPath or JSONPath. For example,
  * if Pattern is defined in a ruleset, SelectNode will parse the content with
  * the pattern. All the matched items will be selected for the ruleset. If
- * XPathExpression is defined, SelectNode will use it to select DOM nodes from
+ * XPath is defined, SelectNode will use it to select DOM nodes from
  * the XML document. The text representation of each selected DOM node will be
  * stored to every outgoing message. Both Pattern and XPath support selections
  * with dynamic variables. For Pattern or XPath, the value can be a Map
- * contains multiple static patterns or XPathExpressions. SelectNode will use
+ * contains multiple static patterns or XPaths. SelectNode will use
  * each of them to select items. Their keys will be set to the TagField on the
  * item messages.
  *<br/><br/>
@@ -1314,10 +1316,14 @@ public class SelectNode extends Node {
         String[] keys) throws JMSException {
         int i, j, n, count = 0;
         TextMessage outMessage;
-        String ruleName = ruleList.getKey(rid); 
+        String ruleName;
+        long[] ruleInfo;
 
         if (in == null || list == null || (n = list.length) <= 0)
             return 0;
+
+        ruleName = ruleList.getKey(rid); 
+        ruleInfo = ruleList.getMetaData(rid);
 
         for (i=0; i<n; i++) {
             outMessage = new TextEvent();
@@ -1343,8 +1349,10 @@ public class SelectNode extends Node {
             }
 
             j = passthru(currentTime, outMessage, in, rid, oid, -1, 0);
-            if (j > 0)
+            if (j > 0) {
                 count ++;
+                ruleInfo[RULE_PEND] ++;
+            }
             else
                 new Event(Event.ERR, name + ": " + ruleName +
                     " failed to flush msg " + i).send();

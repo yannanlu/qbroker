@@ -75,6 +75,13 @@ import org.qbroker.event.Event;
  * vendors implement message acknowledgement via sessions. The acknowledgement
  * by ScreenNode may upset the XA control of the message flow.
  *<br/><br/>
+ * ScreenNode also supports the termination rulesets. A terminate ruleset is
+ * similar to a screen ruleset.  The only difference is that the former has
+ * also defined TargetRule that specifies the name of a screen ruleset for
+ * caching terminations. Its KeyTemplate is used to generate the screen key
+ * so that the withheld message will be flushed to terminate its session. Each
+ * message of a termination ruleset will be routed to the outlink of done.
+ *<br/></br>
  * ScreenNode is also able to monitor the load level report of its first
  * outlink if its report is defined. In this case, all cache sessions will be
  * frozen temporarily if the load level is too high.  It means ScreenNode will
@@ -368,12 +375,46 @@ public class ScreenNode extends Node {
             ruleInfo[RULE_OID] = assetList.getID(preferredOutName);
             ruleInfo[RULE_PID] = TYPE_BYPASS;
         }
+        else if ((o = ph.get("TargetRule")) != null) { //for termination ruleset
+            str = (String) o;
+            rule.put("TargetRule", str);
+            i = ruleList.getID(str);
+            if (i <= 0) {
+                new Event(Event.ERR, name + ": " + ruleName +
+                    " failed to find TargetRule " + str).send();
+                ruleInfo[RULE_PID] = 0;
+            }
+            else {
+                long[] ri = ruleList.getMetaData(i);
+                if ((int) ri[RULE_PID] != TYPE_SCREEN)
+                    new Event(Event.ERR, name + ": " + ruleName +
+                        " found TargetRule " + str + " with wrong option " +
+                        ri[RULE_PID]).send();
+                ruleInfo[RULE_PID] = i;
+            }
+            if ((o = ph.get("KeyTemplate")) != null && o instanceof String) {
+                rule.put("KeyTemplate", new Template((String) o));
+                if((o = ph.get("KeySubstitution"))!=null && o instanceof String)
+                    rule.put("KeySubstitution",new TextSubstitution((String)o));
+            }
+            else {
+                new Event(Event.WARNING, name + ": KeyTemplate is not well " +
+                    " defined. Instead, the default will be used for " +
+                    ruleName).send();
+            }
+            ruleInfo[RULE_OID] = outLinkMap[RESULT_OUT];
+        }
         else { // for screen ruleset
             int option;
             if ((o = ph.get("KeyTemplate")) != null && o instanceof String) {
                 rule.put("KeyTemplate", new Template((String) o));
                 if((o = ph.get("KeySubstitution"))!=null && o instanceof String)
                     rule.put("KeySubstitution",new TextSubstitution((String)o));
+            }
+            else {
+                new Event(Event.WARNING, name + ": KeyTemplate is not well " +
+                    " defined. Instead, the default will be used for " +
+                    ruleName).send();
             }
 
             if ((o = ph.get("TimePattern")) != null && o instanceof String)
@@ -434,9 +475,9 @@ public class ScreenNode extends Node {
             ruleInfo[RULE_OPTION] = option;
 
             if (option == OPTION_FIRST_LAST)
-                cache = new QuickCache(ruleName, QuickCache.META_MCMT, 0,0);
+                cache = new QuickCache(ruleName, QuickCache.META_MCMT, 0, 0);
             else if (option != OPTION_NONE)
-                cache= new QuickCache(ruleName,QuickCache.META_DEFAULT,0,0);
+                cache = new QuickCache(ruleName, QuickCache.META_DEFAULT, 0, 0);
             if (cache != null)
                 rule.put("Cache", cache);
             ruleInfo[RULE_OID] = outLinkMap[RESULT_OUT];
@@ -535,6 +576,8 @@ public class ScreenNode extends Node {
             Map rule = initRuleset(tm, ph, meta);
             if (rule != null && rule.containsKey("Name")) {
                 Object o;
+                StringBuffer strBuf = ((debug & DEBUG_DIFF) <= 0) ? null :
+                    new StringBuffer();
                 if ((o = cacheList.browse(id)) != null) { // flush old cache
                     byte[] buffer = new byte[8192];
                     tm = flush(tm, in, id, buffer, (QuickCache) o);
@@ -556,8 +599,11 @@ public class ScreenNode extends Node {
                       default:
                         ruleInfo[i] = meta[i];
                     }
+                    strBuf.append(" " + ruleInfo[i]);
                 }
-
+                if ((debug & DEBUG_DIFF) > 0)
+                    new Event(Event.DEBUG, name + "/" + key + " ruleInfo:" +
+                        strBuf).send();
                 return id;
             }
         }
@@ -1007,6 +1053,24 @@ public class ScreenNode extends Node {
                     template = (Template) rule.get("KeyTemplate");
                     sub = (TextSubstitution) rule.get("KeySubstitution");
                 }
+                else if (ruleInfo[RULE_PID] >= 0) { // termination ruleset
+                    String str = (String) rule.get("TargetRule");
+                    long[] ri = ruleList.getMetaData((int) ruleInfo[RULE_PID]);
+                    Map h = (Map) ruleList.get((int) ruleInfo[RULE_PID]);
+                    cache = (h != null) ? (QuickCache) h.get("Cache") : null;
+                    if (cache == null)
+                        new Event(Event.ERR, name + ": " + ruleName +
+                            " failed to find TargetRule " + str + " at " +
+                            ruleInfo[RULE_PID]).send();
+                    else if ((int) ri[RULE_PID] != TYPE_SCREEN) {
+                        cache = null;
+                        new Event(Event.ERR, name + ": " + ruleName +
+                            " found TargetRule " + str + " with wrong option " +
+                            ri[RULE_PID] + " at " + ruleInfo[RULE_PID]).send();
+                    }
+                    template = (Template) rule.get("KeyTemplate");
+                    sub = (TextSubstitution) rule.get("KeySubstitution");
+                }
                 previousRid = rid;
             }
 
@@ -1093,6 +1157,90 @@ public class ScreenNode extends Node {
                 ruleInfo[RULE_OID] = oid;
                 ruleInfo[RULE_GID] = 0;
             }
+            else if (ruleInfo[RULE_PID] >= 0) { // for termination ruleset
+                Message msg;
+                String key;
+
+                key = MessageUtils.format(inMessage, buffer, template);
+                if (sub != null && key != null)
+                    key = sub.substitute(key);
+
+                if (cache != null &&
+                    (msg = (Message) cache.get(key, currentTime)) != null) {
+                    if (!cache.isExpired(key, currentTime)) { // termination
+                        int j;
+                        long[] ri;
+                        int[] ts;
+                        String rn;
+                        i = (int) ruleInfo[RULE_PID];
+                        rn = ruleList.getKey(i);
+                        ri = ruleList.getMetaData(i);
+                        ts = cache.getMetaData(key);
+                        cache.touch(key, 0L, currentTime);
+                        if ((debug & DEBUG_PROP) > 0)
+                            new Event(Event.DEBUG, name + " propagate: cid=" +
+                                ts[0] + " rid=" + i + " oid=" +
+                                outLinkMap[BYPASS_OUT] +
+                                " status=" + cacheStatus).send();
+                        if (ri[RULE_DMASK] > 0) try {  // display the message
+                            String str = null;
+                            Map h = (Map) ruleList.get(i);
+                            String[] pn = (String[]) h.get("PropertyName");
+                            if ((ruleInfo[RULE_DMASK] & dspBody) > 0)
+                                str = MessageUtils.processBody(msg, buffer);
+                            new Event(Event.INFO, name + ": " + rn +
+                                " terminated screened msg " + (count + 1) + ":"+
+                                MessageUtils.display(msg, str,
+                                (int) ri[RULE_DMASK], pn)).send();
+                        }
+                        catch (Exception e) {
+                            new Event(Event.WARNING, name + ": " + rn +
+                                " failed to display msg: "+e.toString()).send();
+                        }
+                        if (ri[RULE_MODE] > 0) { // XA is on
+                            j = passthru(currentTime, msg, in, i,
+                                outLinkMap[BYPASS_OUT], ts[0], -1);
+                            if (j > 0) {
+                                ri[RULE_PEND] --;
+                                count ++;
+                            }
+                            else { // failed to passthru,force it to FAILURE_OUT
+                                j = forcethru(currentTime, msg, in, i,
+                                    outLinkMap[FAILURE_OUT], ts[0]);
+                                if (j > 0)
+                                    new Event(Event.ERR, name + ": " + rn +
+                                        " failed to passthru the msg for "+key+
+                                        " with msg redirected to " +
+                                        outLinkMap[FAILURE_OUT]).send();
+                                else if (j == 0)
+                                    new Event(Event.ERR, name + ": " + rn +
+                                        " failed to passthru the msg for "+key+
+                                        " with msg flushed to " +
+                                        outLinkMap[FAILURE_OUT]).send();
+                                else
+                                    new Event(Event.ERR, name + ": " + rn +
+                                        " failed to passthru the msg for "+key+
+                                        " with msg dropped").send();
+                            }
+                        }
+                        else { // it had already been removed from the uplink
+                            j = passthru(currentTime, msg, in, i,
+                                outLinkMap[BYPASS_OUT], -1, 0);
+                            if (j > 0) {
+                                ri[RULE_PEND] --;
+                                ri[RULE_COUNT] ++;
+                                ri[RULE_TIME] = currentTime;
+                                count ++;
+                            }
+                            else {
+                                new Event(Event.ERR, name + ": " + rn +
+                                    " failed to flush the msg for "+key).send();
+                            }
+                        }
+                    }
+                }
+                oid = outLinkMap[RESULT_OUT];
+            }
             else { // preferred ruleset or nohit
                 oid = (int) ruleInfo[RULE_OID];
             }
@@ -1159,6 +1307,7 @@ public class ScreenNode extends Node {
             inMessage = null;
         }
     }
+
 
     /**
      * returns number of withheld messages flushed

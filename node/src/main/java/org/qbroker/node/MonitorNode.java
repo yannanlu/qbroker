@@ -454,6 +454,8 @@ public class MonitorNode extends Node {
                 ruleInfo[RULE_PID] == meta[RULE_PID]) { // same type of rules
                 int i;
                 Map orig = (Map) ruleList.set(id, rule);
+                StringBuffer strBuf = ((debug & DEBUG_DIFF) <= 0) ? null :
+                    new StringBuffer();
                 for (i=0; i<RULE_TIME; i++) { // update metadata
                     switch (i) {
                       case RULE_SIZE:
@@ -463,6 +465,7 @@ public class MonitorNode extends Node {
                       default:
                         ruleInfo[i] = meta[i];
                     }
+                    strBuf.append(" " + ruleInfo[i]);
                 }
                 if (meta[RULE_PID] == TYPE_ACTION && ruleInfo[RULE_PEND] > 0) {
                     AssetList taskList = (AssetList) orig.get("TaskList");
@@ -481,6 +484,9 @@ public class MonitorNode extends Node {
                         }
                     }
                 }
+                if ((debug & DEBUG_DIFF) > 0)
+                    new Event(Event.DEBUG, name + "/" + key + " ruleInfo:" +
+                        strBuf).send();
                 return id;
             }
         }

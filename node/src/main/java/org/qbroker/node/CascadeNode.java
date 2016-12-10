@@ -810,6 +810,8 @@ public class CascadeNode extends Node {
             if (rule != null && rule.containsKey("Name")) {
                 String str = (String) rule.get("GroupKeyPattern");
                 if (tp.equals(str)) { // same groupKeyPattern
+                    StringBuffer strBuf = ((debug & DEBUG_DIFF) <= 0) ? null :
+                        new StringBuffer();
                     long[] ruleInfo = ruleList.getMetaData(id);
                     ruleList.set(key, rule);
                     for (int i=0; i<RULE_TIME; i++) { // update metadata
@@ -822,7 +824,11 @@ public class CascadeNode extends Node {
                           default:
                             ruleInfo[i] = meta[i];
                         }
+                        strBuf.append(" " + ruleInfo[i]);
                     }
+                    if ((debug & DEBUG_DIFF) > 0)
+                        new Event(Event.DEBUG, name + "/" + key + " ruleInfo:" +
+                            strBuf).send();
                 }
                 else { // GroupKeyPattern changed
                     Pattern ps;
@@ -837,15 +843,16 @@ public class CascadeNode extends Node {
                     }
                     ruleList.remove(key);
                     id = ((CachedList) ruleList).add(key, meta, ps, rule, id);
-                    if (id > 0) {
-                        meta[RULE_GID] = id;
-                        meta[RULE_PEND] =
-                            ((CachedList) ruleList).getTopicCount(id);
-                    }
-                    else // failed to add the rule to the list
-                        new Event(Event.ERR, name + " failed to add rule " +
+                    if (id <= 0) { // failed to add the rule to the list
+                        new Event(Event.ERR, name + " failed to replace rule " +
                             key).send();
-
+                        return -1;
+                    }
+                    meta[RULE_GID] = id;
+                    meta[RULE_PEND] = ((CachedList) ruleList).getTopicCount(id);
+                    if ((debug & DEBUG_DIFF) > 0)
+                        new Event(Event.DEBUG, name + "/" + key + ": " +
+                            "groupKeyPattern has been changed to " +str).send();
                 }
                 return id;
             }

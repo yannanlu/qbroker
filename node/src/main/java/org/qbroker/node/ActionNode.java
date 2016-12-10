@@ -60,8 +60,8 @@ import org.qbroker.event.Event;
  * Apart from the user defined rulesets, ActionNode always creates one extra
  * ruleset, nohit.  The ruleset of nohit is for those messages not hitting any
  * patterns.  Please remember, there is no one-to-one relationship between the
- * candidate messages and the escalation messages.  The escalation messages
- * will be stored into the RULE_PEND field of the rulesets.
+ * candidate messages and the escalation messages.  The total number of
+ * escalation messages will be stored into the RULE_PEND field of the rulesets.
  *<br/><br/>
  * Each ruleset contains the name of the rule, the classname of the action and
  * a Map of ActionArgument.  The ActionArgument has the configuration
@@ -254,12 +254,12 @@ public class ActionNode extends Node {
                 ruleInfo = ruleList.getMetaData(i);
                 strBuf.append("\n\t" + ruleList.getKey(i) + ": " + i + " " +
                     ruleInfo[RULE_PID] + " " + ruleInfo[RULE_MODE] + " " +
-                    ruleInfo[RULE_EXTRA] + " " + ruleInfo[RULE_DMASK] + " " + 
-                    ruleInfo[RULE_OPTION] + " - " +
+                    ruleInfo[RULE_GID] + " " + ruleInfo[RULE_EXTRA] + " " +
+                    ruleInfo[RULE_DMASK] + " " + ruleInfo[RULE_OPTION] + " - " +
                     assetList.getKey((int) ruleInfo[RULE_OID]));
             }
             new Event(Event.DEBUG, name+
-                " RuleName: RID PID MODE EXTRA MASK OPTION - OutName" +
+                " RuleName: RID PID MODE GID EXTRA MASK OPTION - OutName" +
                 strBuf.toString()).send();
         }
     }
@@ -346,9 +346,9 @@ public class ActionNode extends Node {
                 ruleInfo[RULE_EXTRA] = -1;
         }
 
-        // action delay in ms stored in TTL
+        // action delay in ms stored in RULE_GID
         if ((o = ph.get("ActionDelay")) != null)
-            ruleInfo[RULE_TTL] = Long.parseLong((String) o);
+            ruleInfo[RULE_GID] = Long.parseLong((String) o);
 
         if (preferredOutName != null) { // for bypass
             ruleInfo[RULE_OID] = assetList.getID(preferredOutName);
@@ -642,25 +642,28 @@ public class ActionNode extends Node {
                     msg = (Message) o;
                     if (ruleInfo[RULE_EXTRA] > 0) { // action first
                         oid = RESULT_OUT;
+                        // use cid to track the flushed msg externally
                         k = flush(currentTime, cid, rid, msg, in, out[oid],
                             oid, buffer);
                         if (k <= 0)
                             new Event(Event.ERR, name + ": " + ruleName +
-                                " failed to flush escalation msg at " +
-                                cid).send();
+                                " failed to flush escalation msg to " +
+                                oid + " so it got dropped").send();
                         else { // flush is done
                             long[] state = msgList.getMetaData(cid);
                             k = (int) state[MSG_BID];
+                            // clean up msgList right away
+                            msgList.remove(cid);
                             do { // wait for its delivery to complete
                                 if (out[oid].collect(10*waitTime, k) >= 0)
                                     break;
                                 mask = in.getGlobalMask();
                             } while((mask & XQueue.KEEP_RUNNING) > 0 &&
                                 (mask & XQueue.STANDBY) == 0);
-                            if (ruleInfo[RULE_TTL] > 0 && // for delay
+                            if (ruleInfo[RULE_GID] > 0 && // for delay
                                 (mask & XQueue.KEEP_RUNNING) > 0 &&
                                 (mask & XQueue.STANDBY) == 0) try {
-                                Thread.sleep(ruleInfo[RULE_TTL]);
+                                Thread.sleep(ruleInfo[RULE_GID]);
                             }
                             catch (Exception e) {
                             }
@@ -695,7 +698,7 @@ public class ActionNode extends Node {
             count += passthru(currentTime, inMessage, in, rid, oid, cid, 0);
             if (ruleInfo[RULE_EXTRA] == 0 && msg != null) {
                 oid = RESULT_OUT; 
-                i = flush(currentTime, cid, rid, msg, in, out[oid], oid,buffer);
+                i = flush(currentTime, -1, rid, msg, in, out[oid], oid, buffer);
                 if (i <= 0)
                     new Event(Event.ERR, name + ": " + ruleName +
                         " failed to flush escalation msg at " + cid).send();
@@ -715,7 +718,8 @@ public class ActionNode extends Node {
     /**
      * It displays and sets properties on the escalation message according to
      * its ruleset and puts it to the specified outlink. It returns the number
-     * of messages flushed.
+     * of messages flushed. If cid >= 0, it will update msgList to track its
+     * delivery. There is no rollback to cid in any case.
      */
     private int flush(long currentTime, int cid, int rid, Message msg,
         XQueue in, XQueue out, int oid, byte[] buffer) {
@@ -764,7 +768,7 @@ public class ActionNode extends Node {
         }
 
         // flush the escalation msg
-        i = passthru(currentTime, msg, in, rid, oid, -1, 0);
+        i = passthru(currentTime, msg, in, rid, oid, cid, -1);
         if (i > 0) { // update escalation count on the rule
             ruleInfo[RULE_PEND] ++;
             ruleInfo[RULE_TIME] = currentTime;
@@ -777,7 +781,12 @@ public class ActionNode extends Node {
      * It passes the message from the input XQueue over to an output XQueue and
      * returns 1 upon success or 0 otherwise. In case of cid < 0, the message
      * has nothing to do with the input XQueue. Nothing will be added to
-     * msgList for tracking. No update on stats of ruleset either.
+     * msgList for tracking. No callbacks and no update on rule stats either.
+     * If tid < 0, message will not be put back to uplink in case of failure.
+     * There is no callbacks and no update on rule stats either. In case of
+     * cid >= 0 and tid < 0, it will add msg stats to msgList for external
+     * tracking. But the user has to clean it up after the usage since it is
+     * not collectible by feedback() without the callback.
      */
     protected int passthru(long currentTime, Message msg, XQueue in,
         int rid, int oid, int cid, int tid) {
@@ -788,12 +797,12 @@ public class ActionNode extends Node {
         asset = (Object[]) assetList.get(oid);
         if (asset == null) {
             if (cid >= 0) // incoming msg
-                k = in.putback(cid);
+                k = (tid >= 0) ? in.putback(cid) : -2;
             else
                 k = -1;
             new Event(Event.ERR, name + ": asset is null on " +
                 assetList.getKey(oid) + " of " + oid + " for " +
-                rid + " with msg at " + cid).send();
+                rid + " with msg at " + cid + "/" + tid).send();
             try {
                 Thread.sleep(500);
             }
@@ -869,9 +878,9 @@ public class ActionNode extends Node {
                 ruleInfo = ruleList.getMetaData(k);
                 if (ruleInfo[RULE_EXTRA] < 0 && o instanceof Message) {
                     mask = in.getGlobalMask();
-                    if(ruleInfo[RULE_TTL] > 0 && (mask & XQueue.STANDBY) == 0 &&
+                    if(ruleInfo[RULE_GID] > 0 && (mask & XQueue.STANDBY) == 0 &&
                         (mask & XQueue.KEEP_RUNNING) > 0) try { // for delay
-                        Thread.sleep(ruleInfo[RULE_TTL]);
+                        Thread.sleep(ruleInfo[RULE_GID]);
                     }
                     catch (Exception e) {
                     }
@@ -898,13 +907,13 @@ public class ActionNode extends Node {
             }
             if (cid >= 0 && mid < 0) { // failed to add state info to msgList
                 out.cancel(id);
-                k = in.putback(cid);
+                k = (tid >= 0) ? in.putback(cid) : -2;
                 new Event(Event.ERR, name + ": failed to add to MSGLIST at " +
                     mid + ":" + cid + " with " + key + " for " +
-                    ruleList.getKey(rid) + ": " + msgList.size()).send();
+                    ruleList.getKey(rid) + ": " + msgList.size() +","+k).send();
                 return 0;
             }
-            if (cid >= 0) { // incoming msg
+            if (cid >= 0 && tid >= 0) { // incoming msg
                 k = out.add(msg, id, cbw);
                 ruleInfo = ruleList.getMetaData(rid);
                 ruleInfo[RULE_SIZE] ++;
@@ -926,10 +935,11 @@ public class ActionNode extends Node {
                     " " + outInfo[OUT_SIZE] + " " + out.size() + ":" +
                     out.depth() + " " + msgList.size()).send();
             }
+            return 1;
         }
         else { // reservation failed
             if (cid >= 0) // incoming msg
-                k = in.putback(cid);
+                k = (tid >= 0) ? in.putback(cid) : -2;
             else // generated msg
                 k = -1;
             ruleInfo = ruleList.getMetaData(rid);
@@ -940,7 +950,6 @@ public class ActionNode extends Node {
                 ruleInfo[RULE_SIZE] + ": " + k).send();
             return 0;
         }
-        return 1;
     }
 
     /**
@@ -980,23 +989,24 @@ public class ActionNode extends Node {
             ruleInfo = ruleList.getMetaData(rid);
             // check for action msg
             if (ruleInfo[RULE_EXTRA] < 0 && o instanceof Message) {
-                if (ruleInfo[RULE_TTL] > wt) { // for delay only once
+                if (ruleInfo[RULE_GID] > wt) { // for delay only once
                     int mask = in.getGlobalMask();
                     if ((mask & XQueue.KEEP_RUNNING) > 0 &&
                         (mask & XQueue.STANDBY) == 0) try {
-                        Thread.sleep(ruleInfo[RULE_TTL] - wt);
+                        Thread.sleep(ruleInfo[RULE_GID] - wt);
                     }
                     catch (Exception e) {
                     }
                     // reset wt for its maximum value
-                    wt = ruleInfo[RULE_TTL];
+                    wt = ruleInfo[RULE_GID];
                 }
                 asset = (Object[]) assetList.get(RESULT_OUT);
-                int i = flush(t, mid, rid, (Message) o, in,
+                int i = flush(t, -1, rid, (Message) o, in,
                     (XQueue) asset[ASSET_XQ], RESULT_OUT, buffer);
                 if (i <= 0)
                     new Event(Event.ERR, name + ": " + ruleList.getKey(rid) +
-                        " failed to flush escalation msg at " + mid).send();
+                        " failed to flush escalation msg to " + RESULT_OUT +
+                        " so it got dropped").send();
             }
             ruleInfo[RULE_SIZE] --;
             ruleInfo[RULE_COUNT] ++;

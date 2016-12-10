@@ -760,6 +760,8 @@ public class EventDispatcher extends Node {
             if (rule != null && rule.containsKey("Name")) {
                 String str = (String) rule.get("TopicPattern");
                 if (tp.equals(str)) { // same TopicPattern
+                    StringBuffer strBuf = ((debug & DEBUG_DIFF) <= 0) ? null :
+                        new StringBuffer();
                     long[] ruleInfo = ruleList.getMetaData(id);
                     ruleList.set(key, rule);
                     for (int i=0; i<RULE_TIME; i++) { // update metadata
@@ -772,7 +774,11 @@ public class EventDispatcher extends Node {
                           default:
                             ruleInfo[i] = meta[i];
                         }
+                        strBuf.append(" " + ruleInfo[i]);
                     }
+                    if ((debug & DEBUG_DIFF) > 0)
+                        new Event(Event.DEBUG, name + "/" + key + " ruleInfo:" +
+                            strBuf).send();
                 }
                 else { // TopicPattern changed
                     Pattern ps;
@@ -787,14 +793,16 @@ public class EventDispatcher extends Node {
                     }
                     ruleList.remove(key);
                     id = ((CachedList) ruleList).add(key, meta, ps, rule, id);
-                    if (id > 0) {
-                        meta[RULE_GID] = id;
-                        meta[RULE_PEND] =
-                            ((CachedList) ruleList).getTopicCount(id);
-                    }
-                    else // failed to add the rule to the list
-                        new Event(Event.ERR, name + " failed to add rule " +
+                    if (id <= 0) { // failed to add the rule to the list
+                        new Event(Event.ERR, name + " failed to replace rule " +
                             key).send();
+                        return -1;
+                    }
+                    meta[RULE_GID] = id;
+                    meta[RULE_PEND] = ((CachedList) ruleList).getTopicCount(id);
+                    if ((debug & DEBUG_DIFF) > 0)
+                        new Event(Event.DEBUG, name + "/" + key +
+                            ": topicPattern has been changed to " + str).send();
                 }
                 return id;
             }
@@ -1135,7 +1143,7 @@ public class EventDispatcher extends Node {
         int i, dmask;
         long[] ruleInfo;
         Map rule;
-        String[] propertyName;
+        String[] pn;
 
         if (msg == null) {
             new Event(Event.WARNING, name + " null msg in flush: cid=" + cid +
@@ -1148,14 +1156,14 @@ public class EventDispatcher extends Node {
 
         ruleInfo = ruleList.getMetaData(rid);
         rule = (Map) ruleList.get(rid);
-        propertyName = (String[]) rule.get("PropertyName");
+        pn = (String[]) rule.get("PropertyName");
         // retrieve displayMask from RULE_DMASK
         dmask = (int) ruleInfo[RULE_DMASK];
 
         if (dmask > 0) try { // display the task message
             new Event(Event.INFO, name + ": " + ruleList.getKey(rid) +
                 " dispatched a msg:"+ MessageUtils.display(msg, topicStr,
-                dmask, propertyName)).send();
+                dmask, pn)).send();
         }
         catch (Exception e) {
             new Event(Event.WARNING, name + ": " + ruleList.getKey(rid) +

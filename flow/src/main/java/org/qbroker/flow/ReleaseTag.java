@@ -3,10 +3,21 @@ package org.qbroker.flow;
 /* ReleaseTag.java - release tag for all the packages of qbroker */
 
 /**
+ * V1.1.7 (2016/11/17): fixed the external tracking issue in flush() for
+ * EventMonitor and ActionNode, added stats tracking on new messages for
+ * SelectNode and DuplicateNode, added timeout ruleset to EventMonitor,
+ * added protection on request path in processRequest() of QServlet,
+ * refactored evaluate() in Evaluation for boolean operations, added the
+ * support for string comparisons to boolean operations, added From to
+ * EventFormatterMailer, added DEBUG_DIFF to Node for replaceRule() logging,
+ * updated PublishNode, EventDisaptcher, AggregateNode, ScreenNode and
+ * CascadeNode for DEBUG_DIFF
+ *<br/>
  * V1.1.6 (2016/11/12): added logBuffer.clear() to close() in NewlogFeture,
  * replaced get() with remove() for dataBlock in NumberMonitor, AgeMonitor and
  * IncrementalMonitor, added logBuffer.clear() to performAction() in
- * UnixlogMonitor
+ * UnixlogMonitor, added support for termination ruleset to ScreenNode, added
+ * support for reset of COUNT to touch() of QuickCache
  *<br/>
  * V1.1.5 (2016/11/05): added GroupDebug and FlowDebug to QFlow, added cleanup
  * on report for MonitorAgent, added cleanup on dataBlock in AgeMonitor,
@@ -64,7 +75,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V 1.1.6 2016/11/12 13:48:21";
+    private static String ReleaseTAG = "QBroker V 1.1.7 2016/11/17 23:42:57";
 
     public ReleaseTag() {
     }

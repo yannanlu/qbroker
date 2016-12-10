@@ -146,7 +146,7 @@ public class IncrementalMonitor extends Monitor {
             throw(new IllegalArgumentException("wrong scheme: " +
                 u.getScheme()));
 
-        if ((o = props.get("Pattern")) == null || !(o instanceof String))
+        if ((o = MonitorUtils.select(props.get("Pattern"))) == null)
             throw(new IllegalArgumentException("Pattern is not well defined"));
 
         try {

@@ -651,6 +651,8 @@ public class AggregateNode extends Node {
             Map rule = initRuleset(tm, ph, meta);
             if (rule != null && rule.containsKey("Name")) {
                 Object o;
+                StringBuffer strBuf = ((debug & DEBUG_DIFF) <= 0) ? null :
+                    new StringBuffer();
                 o = ruleList.set(id, rule);
                 if (o != null && o instanceof Map) {
                     Aggregation aggr =
@@ -671,6 +673,7 @@ public class AggregateNode extends Node {
                       default:
                         ruleInfo[i] = meta[i];
                     }
+                    strBuf.append(" " + ruleInfo[i]);
                 }
                 if ((o = cacheList.remove(id)) != null) { // active cache
                     QuickCache cache = (QuickCache) rule.get("Cache");
@@ -690,7 +693,9 @@ public class AggregateNode extends Node {
                 }
                 catch (Throwable t) {
                 }
-
+                if ((debug & DEBUG_DIFF) > 0)
+                    new Event(Event.DEBUG, name + "/" + key + " ruleInfo:" +
+                        strBuf).send();
                 return id;
             }
         }

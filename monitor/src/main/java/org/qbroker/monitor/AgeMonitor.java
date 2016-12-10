@@ -173,7 +173,7 @@ public class AgeMonitor extends Monitor {
         if ((o = props.get("TimeZone")) != null)
             dateFormat.setTimeZone(TimeZone.getTimeZone((String) o));
 
-        if ((o = props.get("Pattern")) == null || !(o instanceof String))
+        if ((o = MonitorUtils.select(props.get("Pattern"))) == null)
             throw(new IllegalArgumentException("Pattern is not well defined"));
 
         try {

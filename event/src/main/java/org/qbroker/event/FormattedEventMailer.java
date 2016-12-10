@@ -50,7 +50,7 @@ public class FormattedEventMailer implements EventAction {
         TextSubstitution[] msgSub = null;
         Map h;
         Map<String, Object> map;
-        String str, key, value;
+        String str, key, value, owner = null;
         String[] addressList = null;
         int i, n;
 
@@ -80,6 +80,9 @@ public class FormattedEventMailer implements EventAction {
             addressList[0] == null || addressList[0].length() <= 0)
             throw(new IllegalArgumentException(name +
                 ": null or empty recipients"));
+
+        if ((o = props.get("From")) != null)
+            owner = (String) o;
 
         sender = new HashMap<String, Map>();
         key = (String) props.get("Subject");
@@ -154,10 +157,12 @@ public class FormattedEventMailer implements EventAction {
         for (i=0; i<addressList.length; i++)
             recipients[i]= MessageMailer.getMailAddress(addressList[i]);
 
-        String owner = System.getProperty("user.name");
-        String hostName = Event.getHostName();
-        if (hostName != null && hostName.length() > 0)
-            owner += "@" + hostName;
+        if (owner == null || owner.length() <= 0) {
+            String hostName = Event.getHostName();
+            owner = System.getProperty("user.name");
+            if (hostName != null && hostName.length() > 0)
+                owner += "@" + hostName;
+        }
 
         mailer = new MessageMailer(addressList[0], owner, null);
 

@@ -98,6 +98,7 @@ public abstract class Node implements MessageNode {
     protected final static int DEBUG_COLL = 16;
     protected final static int DEBUG_PASS = 32;
     protected final static int DEBUG_FBAK = 64;
+    protected final static int DEBUG_DIFF = 128;
 
     // node type
     protected final static int TYPE_NONE = -1;
@@ -212,7 +213,7 @@ public abstract class Node implements MessageNode {
      * It passes the message from the input XQueue over to an output XQueue and
      * returns 1 upon success or 0 otherwise. In case of cid < 0, the message
      * has nothing to do with the input XQueue. Nothing will be added to
-     * msgList for tracking. No update on stats of ruleset either.
+     * msgList for tracking. No callbacks and no update on rule stats either.
      * If tid < 0, msg will not be put back to uplink in case of failure.
      */
     protected int passthru(long currentTime, Message msg, XQueue in,
@@ -846,6 +847,8 @@ public abstract class Node implements MessageNode {
                 return -1;
             }
             if (rule != null && rule.containsKey("Name")) {
+                StringBuffer strBuf = ((debug & DEBUG_DIFF) <= 0) ? null :
+                    new StringBuffer();
                 ruleList.set(id, rule);
                 tm = ruleInfo[RULE_PID];
                 for (int i=0; i<RULE_TIME; i++) { // update metadata
@@ -859,7 +862,11 @@ public abstract class Node implements MessageNode {
                       default:
                         ruleInfo[i] = meta[i];
                     }
+                    strBuf.append(" " + ruleInfo[i]);
                 }
+                if ((debug & DEBUG_DIFF) > 0)
+                    new Event(Event.DEBUG, name + "/" + key + " ruleInfo:" +
+                        strBuf).send();
                 return id;
             }
             else

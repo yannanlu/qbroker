@@ -31,7 +31,7 @@ import org.qbroker.event.Event;
  * the total number of the events in the session if TrackedField is
  * not defined.  The method of escalate() will calculate the number
  * based on the incoming event and the session cache.  If the number falls
- * into the predefined DataRange, a new event will be generated as the
+ * into the predefined EscalationRange, a new event will be generated as the
  * escalation.  If Type is set to MessageEscalator, the returned event
  * will be a TextEvent as a JMS Message.
  *<br/><br/>
@@ -85,7 +85,7 @@ public class EventEscalator implements EventEscalation {
             description = "respond to an event";
 
         List<String> list = new ArrayList<String>();
-        if ((o = props.get("DataRange")) != null)
+        if ((o = props.get("EscalationRange")) != null)
             list.add((String) o);
         else // default
             list.add("[1,)");
@@ -101,18 +101,17 @@ public class EventEscalator implements EventEscalation {
         if (sessionTimeout < 0)
             sessionTimeout = 0;
 
-        if ((o = props.get("CopiedProperty")) != null && o instanceof Map) {
+        if ((o = props.get("CopiedProperty")) != null && o instanceof List) {
             String key;
-            Map map = (Map) o;
-            Iterator iter = map.keySet().iterator();
-            n = map.size();
-            copiedProperty = new String[n];
-            n = 0;
-            while (iter.hasNext()) {
-                key = (String) iter.next();
-                if (key != null && key.length() > 0)
-                    copiedProperty[n++] = key;
+            List<String> pl = new ArrayList<String>();
+            for (Object ky : (List) o) {
+                if (!(ky instanceof String))
+                    continue;
+                key = (String) ky;
+                if (key.length() > 0)
+                    pl.add(key);
             }
+            copiedProperty = pl.toArray(new String[pl.size()]);
         }
         else
             copiedProperty = new String[0];
@@ -167,9 +166,10 @@ public class EventEscalator implements EventEscalation {
 
         serialNumber ++;
 
-        if (sessionTimeout > 0 && currentTime - sessionTime >= sessionTimeout) {
+        if (sessionTimeout == 0) // no session
             resetSession(currentTime);
-        }
+        else if (currentTime - sessionTime >= sessionTimeout)
+            resetSession(currentTime);
 
         // check the status
         switch (status) {
@@ -189,15 +189,15 @@ public class EventEscalator implements EventEscalation {
                 trackedNumber = escalationCount;
             }
 
-            if (dataSet.contains(trackedNumber)) { // out of range
+            if (dataSet.contains(trackedNumber)) { // out of the normal range
                 if (status != TimeWindows.BLACKOUT)
                     level = Event.ERR;
-                strBuf.append(name + " is out of range");
+                strBuf.append(name + " is out of normal range");
             }
             else if (status == TimeWindows.BLACKOUT)
                 strBuf.append(name + " is blacked out");
             else
-                strBuf.append(name + " is in the range");
+                strBuf.append(name + " is in the normal range");
             break;
           case TimeWindows.DISABLED:
           default:

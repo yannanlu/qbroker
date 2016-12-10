@@ -687,7 +687,7 @@ public class EventCorrelator extends Node {
             currentTime = System.currentTimeMillis();
             if (currentTime - previousTime >= sessionTimeout) {
                 i = correlate(currentTime, ruleMap, filter, eventList);
-                size = flush(currentTime, in, out[0], 0, eventList, buffer);
+                size = flush(currentTime, in, out[0], 0, eventList);
                 if (size > 0)
                     new Event(Event.INFO, name + ": flushed " +
                         size + " msgs due to overtime").send();
@@ -800,7 +800,7 @@ public class EventCorrelator extends Node {
                 i = size - sessionSize;
                 currentTime = System.currentTimeMillis();
                 i = correlate(currentTime, ruleMap, filter, eventList);
-                size = flush(currentTime, in, out[0], 0, eventList, buffer);
+                size = flush(currentTime, in, out[0], 0, eventList);
                 if (size > 0)
                     new Event(Event.INFO, name + ": flushed " +
                         size + " msgs due to oversize: " +i).send();
@@ -821,11 +821,11 @@ public class EventCorrelator extends Node {
      * returning the number of events flushed.
      */
     private int flush(long currentTime, XQueue in, XQueue out, int oid,
-        List<Event> eventList, byte[] buffer) {
+        List<Event> eventList) {
         int i, n, cid, rid, dmask, count = 0, dspBody;
         Map rule;
         EventMerger merger;
-        String[] propertyName;
+        String[] pn;
         long[] ruleInfo;
         String ruleName;
         Event event;
@@ -850,7 +850,7 @@ public class EventCorrelator extends Node {
             groupList.takeback(rid);
             ruleName = ruleList.getKey(rid);
             rule = (Map) ruleList.get(rid);
-            propertyName = (String[]) rule.get("PropertyName");
+            pn = (String[]) rule.get("PropertyName");
             merger = (EventMerger) rule.get("Merger");
             try {
                 event = merger.merge(currentTime, eventGroup);
@@ -871,10 +871,10 @@ public class EventCorrelator extends Node {
             if (dmask != 0) try {  // display the message
                 String msgStr = null;
                 if((dmask & dspBody) > 0)
-                    msgStr = MessageUtils.processBody((JMSEvent) event, buffer);
+                    msgStr = ((TextEvent) event).getText();
                 new Event(Event.INFO, name + ": " + ruleName + " correlated " +
-                    (count+1) + ":" + MessageUtils.display((JMSEvent) event,
-                    msgStr, dmask, propertyName)).send();
+                    (count+1) + ":" + MessageUtils.display((TextEvent) event,
+                    msgStr, dmask, pn)).send();
             }
             catch (Exception e) {
                 new Event(Event.WARNING, name + ": " + ruleName +

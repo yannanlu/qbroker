@@ -66,19 +66,22 @@ import org.qbroker.common.Evaluation;
  * <tr><td>s//:=sqrt/e</td><td>Square Root</td><td>Number</td><td>s//:=sqrt/e</td></tr>
  * <tr><td>s//:=abs/e</td><td>Absolute Value</td><td>Number</td><td>s//:=abs/e</td></tr>
  * <tr><td>s//:=eval/e</td><td>Evaluation</td><td>Number</td><td>s//:=eval/e</td></tr>
+ * <tr><td>s//:=choose/e</td><td>Choose between two quoted strings</td><td>String</td><td>s//:=choose/e</td></tr>
  * <tr><td>s//:=md5/e</td><td>MD5 Checksum</td><td>String</td><td>s//:=md5/e</td></tr>
  * <tr><td>s//:=chop/e</td><td>Chop</td><td>String</td><td>s//:=chop/e</td></tr>
  * <tr><td>s//:=replace d/e</td><td>Search Replace</td><td>String</td><td>s//:=replace !/e</td></tr>
  * <tr><td>s//:=sub d/e</td><td>regex replaceFirst</td><td>String</td><td>s//:=sub !/e</td></tr>
  * <tr><td>s//:=gsub d/e</td><td>regex replaceAll</td><td>String</td><td>s//:=gsub !/e</td></tr>
  * </table>
- * For eval(), it applies on a template with a simple expression for numbers
- * only. For replace(), the following parameter, d, is the delimiter used to
- * parse the text of the template. The text of the template should contain 3
- * parts delimitered by the delimiter, d. The first part is the original text
- * to be processed. The second part is the string to search for in the first
- * part. The last part is the string as the replacement. For sub() or gsub(),
- * it replaces either the first regex match or all the regex maches with the
+ * For eval(), it applies on a template with a simple numeric expression for
+ * numbers. For choose(), it applies on a template with a ternary expression
+ * for quoted strings. The result string will have the quotes trimmed off.
+ * For replace(), the following parameter, d, is the delimiter used to parse
+ * the text of the template. The text of the template should contain 3 parts
+ * delimitered by the delimiter, d. The first part is the original text to be
+ * processed. The second part is the string to search for in the first part.
+ * The last part is the string as the replacement. For sub() or gsub(), it
+ * replaces either the first regex match or all the regex maches with the
  * replacement. So the second part is a regex string.
  * <br/><br/>
  * The constructor may throw any errors in initialization of the substitution.
@@ -131,8 +134,9 @@ public class TextSubstitution {
     private static final int EXPR_MD5 = 24;
     private static final int EXPR_CHOP = 25;
     private static final int EXPR_REPLACE = 26;
-    private static final int EXPR_RSUB = 27;
-    private static final int EXPR_GSUB = 28;
+    private static final int EXPR_CHOOSE = 27;
+    private static final int EXPR_RSUB = 28;
+    private static final int EXPR_GSUB = 29;
     private static final int OP_EXPR = 0;
     private static final int OP_SUB = 1;
     private static final int OP_N2R = 2;
@@ -422,6 +426,9 @@ public class TextSubstitution {
                     expr = EXPR_REPLACE;
                     d1 = "!";
                 }
+                else if ("choose".equalsIgnoreCase(text)) {
+                    expr = EXPR_CHOOSE;
+                }
                 else if ("sub".equalsIgnoreCase(text)) {
                     expr = EXPR_RSUB;
                     d1 = "!";
@@ -670,6 +677,16 @@ public class TextSubstitution {
                     str = o.toString();
                 else
                     str = null;
+            }
+            catch (Exception e) {
+                str = null;
+            }
+            break;
+          case EXPR_CHOOSE:
+            try {
+                str = Evaluation.choose(input);
+                if (str != null)
+                    str = Evaluation.unquote(str);
             }
             catch (Exception e) {
                 str = null;

@@ -366,7 +366,7 @@ public class QuickCache implements Comparator<long[]> {
     }
 
     /**
-     * It updates mtime of the key if it has not expired at the given
+     * It updates mtime or mcount of the key if it has not expired at the given
      * currentTime yet.  It retruns 0 on success, -1 if no key is found or 1
      * if the object has expired already.
      */
@@ -376,12 +376,13 @@ public class QuickCache implements Comparator<long[]> {
             if (isTime) { // TTL is for TIME
                 if (ts[QC_TTL] > 0 && currentTime >= ts[QC_TIME] + ts[QC_TTL])
                     return 1;
+                ts[QC_TIME] = timestamp;
             }
             else { // TTL is for COUNT
                 if (ts[QC_TTL] > 0 && ts[QC_COUNT] <= ts[QC_TTL])
                     return 1;
+                ts[QC_COUNT] = timestamp;
             }
-            ts[QC_TIME] = timestamp;
             return 0;
         }
         return -1;
@@ -416,14 +417,16 @@ public class QuickCache implements Comparator<long[]> {
 
     /**
      * It replaces the existing object or inserts as the new object if there
-     * is no such key in the cache.  It updates the metadata and checks the
-     * TTL to determine what to return.  If the existing object has expired,
-     * it just returns null.  If it has not expired, the method returns the
-     * original object.  If the object does not exist, it just returns the new
-     * object back after the insert.
+     * is no such key in the cache. It updates the metadata and checks the
+     * TTL to determine what to return. If the object does not exist, it just
+     * returns the new object back. If the existing object has not expired yet,
+     * it just returns the replaced object. If the existing object has expired,
+     * normally the method returns null except for the case that TTL is on count
+     * and COUNT is reset to 0 by touch(). In that case, it returns the new
+     * object, just like the original object does not exist.
      *<br/><br/>
      * returned object:<br/>
-     * itself: new object inserted successfully<br/>
+     * itself: new object inserted successfully or invalid object replaced<br/>
      * null: object expired and replaced<br/>
      * other: replaced object, its meta data updated
      */
@@ -443,8 +446,8 @@ public class QuickCache implements Comparator<long[]> {
                     o = null;
             }
             else { // TTL is for COUNT
-                if (ts[QC_TTL] > 0 && ts[QC_COUNT] <= ts[QC_TTL])
-                    o = null;
+                if (ts[QC_TTL] > 0 && ts[QC_COUNT] <= ts[QC_TTL]) // expired
+                    o = (ts[QC_COUNT] == 0L) ? obj : null;
             }
             ts[QC_TTL] = ttl;
             ts[QC_TIME] = timestamp;

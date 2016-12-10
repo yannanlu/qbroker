@@ -39,7 +39,9 @@ import org.qbroker.event.Event;
  * will route the messages of the group to the primay outlink without any
  * duplicate actions as a bypass.  Any other bypass will be forced to the
  * primary outlink since the messages going out of non-primary outlinks are
- * not collectible.
+ * not collectible. Otherwise, the original message will be duplicated into
+ * copies for delivery. The total number of duplicated messages are tracked
+ * by RULE_PEND of their rulesets.
  *<br/><br/>
  * A ruleset may define a list of the outlinks as the selected non-primary
  * outlinks for the duplicated messages.  If any selected outlink is either
@@ -552,8 +554,12 @@ public class DuplicateNode extends Node {
         int n, int[] oids, byte[] buffer) {
         Message msg;
         int i, k, count, oid;
+        String ruleName;
+        long[] ruleInfo;
         if (message == null || oids == null || n <= 0 || oids.length < n)
             return 0;
+        ruleName = ruleList.getKey(rid);
+        ruleInfo = ruleList.getMetaData(rid);
         count = 0;
         for (i=0; i<n; i++) {
             oid = oids[i];
@@ -563,16 +569,20 @@ public class DuplicateNode extends Node {
                 msg = MessageUtils.duplicate(message, buffer);
             }
             catch (Exception e) {
-                new Event(Event.WARNING, name + ": failed to copy msg to " +
-                    assetList.getKey(oid) + ": " + Event.traceStack(e)).send();
+                new Event(Event.ERR, name + ": " + ruleName +
+                    " failed to duplicate msg to " + assetList.getKey(oid) +
+                    ": " + Event.traceStack(e)).send();
                 continue;
             }
             k = passthru(currentTime, msg, in, rid, oid, -1, 0);
             if (k <= 0)
-                new Event(Event.WARNING, name + ": failed to copy msg to " +
+                new Event(Event.ERR, name + ": " + ruleName + 
+                    " failed to passthru copied msg to " +
                     assetList.getKey(oid) + " " + k).send();
-            else
+            else {
                 count ++;
+                ruleInfo[RULE_PEND] ++;
+            }
         }
 
         return count;

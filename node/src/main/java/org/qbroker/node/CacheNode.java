@@ -68,7 +68,7 @@ import org.qbroker.event.Event;
  * has also defined TargetRule. TargetRule specifies the name of a cache
  * ruleset for invaliadations. Its KeyTemplate is used to generate group keys
  * for invalidations. Each message of an invalidation ruleset will be routed
- * to the outlink directly. Once the response is successfully collected,
+ * to its outlink directly. Once the response is successfully collected,
  * CacheNode will invalidate the cache of the target ruleset based on the
  * group keys.
  *<br/><br/>
@@ -440,7 +440,7 @@ public class CacheNode extends Node {
                 rule.put("Cache", cache);
             }
 
-            // store RCrequired in RULE_MODE field
+            // store RCRequired in RULE_MODE field
             if((o = ph.get("RCRequired")) != null && "false".equals((String) o))
                 ruleInfo[RULE_MODE] = 0;
             else
