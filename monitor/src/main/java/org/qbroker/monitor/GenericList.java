@@ -1,6 +1,6 @@
 package org.qbroker.monitor;
 
-/* GenericList.java - a monitor checking on a list of names or data */
+/* GenericList.java - a reporter checking on a list of names or data */
 
 import java.util.HashMap;
 import java.util.Map;
@@ -44,7 +44,7 @@ import org.qbroker.event.Event;
  * GenericList queries a data source for a list of keys. The list of the keys
  * will be stored in a List under the key of "List" in the report. 
  *<br/><br/>
- * This needs more work on the support of other data sources.
+ * This needs more work to support other data sources.
  *<br/>
  * @author yannanlu@yahoo.com
  */
@@ -104,12 +104,6 @@ public class GenericList extends Report {
 
         if ("http".equals(u.getScheme()) || "https".equals(u.getScheme()))
             oid = OBJ_HTTP;
-        else if ("service".equals(u.getScheme()) || "imq".equals(u.getScheme()))
-            oid = OBJ_JMX;
-        else if ("jdbc".equals(u.getScheme()))
-            oid = OBJ_JDBC;
-        else if ("pcf".equals(u.getScheme()))
-            oid = OBJ_PCF;
         else if ("script".equals(u.getScheme()))
             oid = OBJ_SCRIPT;
         else if ("report".equals(u.getScheme()))
@@ -120,8 +114,6 @@ public class GenericList extends Report {
             oid = OBJ_FILE;
         else if ("ftp".equals(u.getScheme()) || "sftp".equals(u.getScheme()))
             oid = OBJ_FTP;
-        else if ("wmq".equals(u.getScheme()))
-            oid = OBJ_JMS;
         else if ("tcp".equals(u.getScheme())) {
             if ((o = props.get("ConnectionFactoryName")) != null)
                 oid = OBJ_JMS;
@@ -134,8 +126,16 @@ public class GenericList extends Report {
             oid = OBJ_UDP;
         else if ("log".equals(u.getScheme()))
             oid = OBJ_LOG;
+        else if ("jdbc".equals(u.getScheme()))
+            oid = OBJ_JDBC;
         else if ("snmp".equals(u.getScheme()))
             oid = OBJ_SNMP;
+        else if ("service".equals(u.getScheme()) || "imq".equals(u.getScheme()))
+            oid = OBJ_JMX;
+        else if ("pcf".equals(u.getScheme()))
+            oid = OBJ_PCF;
+        else if ("wmq".equals(u.getScheme()))
+            oid = OBJ_JMS;
         else if ((o = props.get("RequesterClass")) != null)
             oid = OBJ_REQ;
         else if ((o = props.get("ConnectionFactoryName")) != null)
@@ -237,16 +237,12 @@ public class GenericList extends Report {
                 h.put("Username", o);
                 h.put("Password", props.get("Password"));
             }
-            if ((o = props.get("Resolution")) != null)
-                h.put("Resolution", o);
             reporter = new WebTester(h);
             break;
           case OBJ_SCRIPT:
             if ((o = props.get("Script")) != null)
                 h.put("Script", o);
             h.put("ScriptTimeout", props.get("Timeout"));
-            if ((o = props.get("Resolution")) != null)
-                h.put("Resolution", o);
             reporter = new ScriptLauncher(h);
             break;
           case OBJ_REPORT:
@@ -268,8 +264,35 @@ public class GenericList extends Report {
                 h.put("PidPattern", o);
             if ((o = props.get("PSFile")) != null)
                 h.put("PSFile", o);
+            if ((o = props.get("PatternGroup")) != null)
+                h.put("PatternGroup", o);
+            if ((o = props.get("XPatternGroup")) != null)
+                h.put("XPatternGroup", o);
             h.put("PSTimeout", (String) props.get("Timeout"));
             reporter = new ProcessMonitor(h);
+            break;
+          case OBJ_LOG:
+            if ((o = props.get("TimePattern")) != null)
+                h.put("TimePattern", o);
+            if ((o = props.get("OrTimePattern")) != null)
+                h.put("OrTimePattern", o);
+            if ((o = props.get("ReferenceFile")) != null)
+                h.put("ReferenceFile", o);
+            if ((o = props.get("OldLogFile")) != null)
+                h.put("OldLogFile", o);
+            if ((o = props.get("LogSize")) != null)
+                h.put("LogSize", o);
+            if ((o = props.get("PatternGroup")) != null)
+                h.put("PatternGroup", o);
+            if ((o = props.get("XPatternGroup")) != null)
+                h.put("XPatternGroup", o);
+            if ((o = props.get("MaxNumberLogs")) != null)
+                h.put("MaxNumberLogs", o);
+            if ((o = props.get("MaxScannedLogs")) != null)
+                h.put("MaxScannedLogs", o);
+            if ((o = props.get("NumberDataFields")) != null)
+                h.put("NumberDataFields", o);
+            reporter = new UnixlogMonitor(h);
             break;
           case OBJ_JDBC:
             if ((o = props.get("DBDriver")) != null)
@@ -280,12 +303,18 @@ public class GenericList extends Report {
             }
             if ((o = props.get("SQLQuery")) != null)
                 h.put("SQLQuery", o);
+            if ((o = props.get("PatternGroup")) != null)
+                h.put("PatternGroup", o);
+            if ((o = props.get("XPatternGroup")) != null)
+                h.put("XPatternGroup", o);
+            if ((o = props.get("FieldSeparator")) != null)
+                h.put("FieldSeparator", o);
+            if ((o = props.get("StatsURI")) != null)
+                h.put("StatsURI", o);
             if ((o = props.get("Timeout")) != null)
                 h.put("Timeout", o);
             if ((o = props.get("SQLExecTimeout")) != null)
                 h.put("SQLExecTimeout", o);
-            if ((o = props.get("Resolution")) != null)
-                h.put("Resolution", o);
             reporter = new DBRecord(h);
             break;
           case OBJ_PCF:
@@ -419,46 +448,70 @@ public class GenericList extends Report {
                 returnCode = Integer.parseInt((String) r.get("ReturnCode"));
             }
             else {
+                r.clear();
                 throw(new IOException("web test failed on " + uri));
             }
 
             if (returnCode == 0)
                 n = getResult(dataBlock, resultType, (String) r.get("Output"));
+            r.clear();
             break;
           case OBJ_SCRIPT:
             if (r.get("ReturnCode") != null) {
                 returnCode = Integer.parseInt((String) r.get("ReturnCode"));
             }
             else {
+                r.clear();
                 throw(new IOException(name + ": script failed on " + uri));
             }
 
             if (returnCode != 0)
                 n = getResult(dataBlock, resultType, (String) r.get("Output"));
+            r.clear();
+            break;
+          case OBJ_PROC:
+            if (r.get("NumberPids") != null) {
+                returnCode = Integer.parseInt((String) r.get("NumberPids"));
+            }
+            else {
+                r.clear();
+                throw(new IOException("ps failed on " + uri));
+            }
+
+            if (returnCode > 0)
+                dataBlock = (List) r.remove("PSLines");
+            r.clear();
             break;
           case OBJ_REPORT:
             o = r.get(keyList[0]);
-            if (o == null)
+            if (o == null) {
+                r.clear();
                 throw(new IOException(name + " got null value on " +
                     keyList[0] + " from " + reporter.getReportName()));
+            }
             else if (o instanceof List) {
                 for (Object obj : (List) o)
                     dataBlock.add(obj);
             }
-            else
+            else {
+                r.clear();
                 throw(new IOException(name + " got unexpected data type on " +
                     keyList[0] + " from " + reporter.getReportName()));
+            }
+            r.clear();
             break;
           case OBJ_JDBC:
             if (r.get("ReturnCode") != null) {
                 returnCode = Integer.parseInt((String) r.get("ReturnCode"));
             }
             else {
+                r.clear();
                 throw(new IOException(name + ": db query failed on " + uri));
             }
 
             if (returnCode == 0)
                 dataBlock = Utils.cloneProperties((List) r.get("RecordBuffer"));
+            r.clear();
             break;
           case OBJ_PCF:
           case OBJ_REQ:
@@ -747,26 +800,15 @@ public class GenericList extends Report {
     }
 
     public static void main(String[] args) {
-        String url = null;
-        String username = null;
-        String password = null;
-        String request = null;
-        String classname = null;
-        String type = "json";
-        String pattern = null;
-        String xpattern = null;
-        String substitution = null;
-        String template = null;
+        String filename = null;
         MonitorReport report = null;
-        Map<String, Object> ph;
-        int i, n = 0;
 
         if (args.length <= 1) {
             printUsage();
             System.exit(0);
         }
 
-        for (i=0; i<args.length; i++) {
+        for (int i=0; i<args.length; i++) {
             if (args[i].charAt(0) != '-' || args[i].length() != 2) {
                 continue;
             }
@@ -775,101 +817,32 @@ public class GenericList extends Report {
                 printUsage();
                 System.exit(0);
                 break;
-              case 'u':
+              case 'I':
                 if (i+1 < args.length)
-                    url = args[++i];
-                break;
-              case 'n':
-                if (i+1 < args.length)
-                    username = args[++i];
-                break;
-              case 'p':
-                if (i+1 < args.length)
-                    password = args[++i];
-                break;
-              case 'd':
-                if (i+1 < args.length)
-                    type = args[++i];
-                break;
-              case 'r':
-                if (i+1 < args.length)
-                    request = args[++i];
-                break;
-              case 'c':
-                if (i+1 < args.length)
-                    classname = args[++i];
-                break;
-              case 'x':
-                if (i+1 < args.length)
-                    xpattern = args[++i];
-                break;
-              case 'y':
-                if (i+1 < args.length)
-                    pattern = args[++i];
-                break;
-              case 't':
-                if (i+1 < args.length)
-                    template = args[++i];
-                break;
-              case 's':
-                if (i+1 < args.length)
-                    substitution = args[++i];
+                    filename = args[++i];
                 break;
               default:
             }
         }
 
-        ph = new HashMap<String, Object>();
-        ph.put("Name", "Test");
-        ph.put("URI", url);
-        if (username != null) {
-            ph.put("Username", username);
-            ph.put("Password", password);
-        }
-        if ("json".equalsIgnoreCase(type))
-            ph.put("ResultType", String.valueOf(Utils.RESULT_JSON));
-        else if ("xml".equalsIgnoreCase(type))
-            ph.put("ResultType", String.valueOf(Utils.RESULT_XML));
-        else
-            ph.put("ResultType", String.valueOf(Utils.RESULT_TEXT));
-        ph.put("RequestCommand", request);
-        if (classname != null)
-            ph.put("RequestClass", classname);
-        if (pattern != null) { // primary pattern
-            List<String> pl = new ArrayList<String>();
-            pl.add(pattern);
-            Map<String, List> map = new HashMap<String, List>();
-            map.put("Pattern", pl);
-            List<Map> list = new ArrayList<Map>();
-            list.add(map);
-            ph.put("PatternGroup", list);
-        }
-        if (xpattern != null) { // primary xpattern
-            List<String> pl = new ArrayList<String>();
-            pl.add(xpattern);
-            Map<String, List> map = new HashMap<String, List>();
-            map.put("Pattern", pl);
-            List<Map> list = new ArrayList<Map>();
-            list.add(map);
-            ph.put("XPatternGroup", list);
-        }
-        if (template != null)
-            ph.put("KeyTemplate", template);
-        if (substitution != null)
-            ph.put("KeySubstitution", substitution);
+        if (filename == null)
+            printUsage();
+        else try {
+            java.io.FileReader fr = new java.io.FileReader(filename);
+            Map ph = (Map) JSON2Map.parse(fr);
+            fr.close();
 
-        try {
             report = new GenericList(ph);
             Map r = report.generateReport(0L);
             List list = (List) r.get("List");
-            i = 0;
             if (list != null) {
+                int i = 0;
                 for (Object o : list) {
                     System.out.println(i++ + ": " + (String) o);
                 }
             }
             else
-                System.out.println("request failed: " + r.get("ReturnCode"));
+                System.out.println("failed to get the list");
             if (report != null)
                 report.destroy();
         }
@@ -883,18 +856,6 @@ public class GenericList extends Report {
     private static void printUsage() {
         System.out.println("GenericList Version 1.0 (written by Yannan Lu)");
         System.out.println("GenericList: for a list of generic items");
-        System.out.println("Usage: java org.qbroker.monitor.GenericList -u url -n username -p password -t target -a attributes");
-        System.out.println(" -?: print this message");
-        System.out.println("  u: service url");
-        System.out.println("  n: username");
-        System.out.println("  p: password");
-        System.out.println("  r: request command");
-        System.out.println("  c: request classname");
-        System.out.println("  d: data type");
-        System.out.println("  y: matching pattern");
-        System.out.println("  x: excluding pattern");
-        System.out.println("  t: key template");
-        System.out.println("  s: key substitution");
-        System.out.println("\nExample: java org.qbroker.monitor.SonicMQRequester -u tcp://intsonicqa1:2506 -n Administrator -p xxxx -r 'DISPLAY Domain1.brQA01:ID=brQA01,category=queue,queue=*'");
+        System.out.println("Usage: java org.qbroker.monitor.GenericList -I cfg.json");
     }
 }

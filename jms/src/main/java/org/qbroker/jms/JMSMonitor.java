@@ -1088,4 +1088,64 @@ public class JMSMonitor extends Monitor {
     protected void finalize() {
         destroy();
     }
+
+    public static void main(String args[]) {
+        String filename = null;
+        MonitorReport report = null;
+
+        if (args.length == 0) {
+            printUsage();
+            System.exit(0);
+        }
+        for (int i=0; i<args.length; i++) {
+            if (args[i].charAt(0) != '-' || args[i].length() != 2) {
+                continue;
+            }
+            switch (args[i].charAt(1)) {
+              case '?':
+                printUsage();
+                System.exit(0);
+                break;
+              case 'I':
+                if (i+1 < args.length)
+                    filename = args[++i];
+                break;
+              default:
+            }
+        }
+
+        if (filename == null)
+            printUsage();
+        else try {
+            java.io.FileReader fr = new java.io.FileReader(filename);
+            Map ph = (Map) org.qbroker.json.JSON2Map.parse(fr);
+            fr.close();
+
+            report = (MonitorReport) new JMSMonitor(ph);
+            Map r = report.generateReport(0L);
+            String str = (String) r.get("CurrentDepth");
+            if (str != null) {
+                System.out.println(str + " " + r.get("InMessages") + " " +
+                    r.get("OutMessages"));
+                str = (String) r.get("MsgString");
+                if (str != null)
+                    System.out.println(str);
+            }
+            else
+                System.out.println("failed to get queue stats");
+            if (report != null)
+                report.destroy();
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            if (report != null)
+                report.destroy();
+        }
+    }
+
+    private static void printUsage() {
+        System.out.println("JMSMonitor Version 1.0 (written by Yannan Lu)");
+        System.out.println("JMSMonitor: monitor a JMS queue");
+        System.out.println("Usage: java org.qbroker.jms.JMSMonitor -I cfg.json");
+    }
 }

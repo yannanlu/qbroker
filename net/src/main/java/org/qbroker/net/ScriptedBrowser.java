@@ -16,7 +16,6 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.support.ui.WebDriverWait;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import com.gargoylesoftware.htmlunit.BrowserVersion;
-//import com.gargoylesoftware.htmlunit.WebClient;
 
 public class ScriptedBrowser {
     protected String uri;
@@ -44,6 +43,7 @@ public class ScriptedBrowser {
     public final static int WAIT_CLICK = 7;
     public final static int WAIT2_CLICK = 8;
     public final static int WAIT_SEND = 9;
+    public final static int WAIT_FIND = 10;
 
     /** create a new ScriptedBrowser */
     public ScriptedBrowser(Map props) {
@@ -138,6 +138,23 @@ public class ScriptedBrowser {
             else
                 return null;
         }
+    }
+
+    public String waitAndFind(int type, String text, int sec, long tm) {
+        WebElement element = waitAndFind(type, text, sec);
+        if (element != null) {
+            String str = element.getText();
+            if (str == null || str.length() <= 0)
+                str = element.getTagName();
+            if (tm > 0) try {
+                Thread.sleep(tm);
+            }
+            catch (Exception e) {
+            }
+            return str;
+        }
+        else
+            return null;
     }
 
     public String waitAndClick(int type, String text, int sec, long tm) {
@@ -331,6 +348,8 @@ public class ScriptedBrowser {
             return FIND_SEND;
         else if ("waitandsend".equalsIgnoreCase(str))
             return WAIT_SEND;
+        else if ("waitandfind".equalsIgnoreCase(str))
+            return WAIT_FIND;
         else
             return -1;
     }
@@ -529,6 +548,11 @@ public class ScriptedBrowser {
                     str = browser.waitAndSend(taskInfo[i][TASK_TYPE],
                         taskData[i][TASK_TYPE], taskInfo[i][TASK_WAIT],
                         taskData[i][TASK_ID]);
+                    break;
+                  case WAIT_FIND:
+                    str = browser.waitAndFind(taskInfo[i][TASK_TYPE],
+                        taskData[i][TASK_TYPE], taskInfo[i][TASK_WAIT],
+                        (long) taskInfo[i][TASK_PAUSE]);
                     break;
                   default:
                     k = -1;

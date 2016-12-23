@@ -139,14 +139,12 @@ public class AgeMonitor extends Monitor {
             oid = OBJ_FILE;
         else if ("ftp".equals(u.getScheme()) || "sftp".equals(u.getScheme()))
             oid = OBJ_FTP;
-/*
-        else if ("wmq".equals(u.getScheme()))
-            oid = OBJ_JMS;
-*/
         else if ("tcp".equals(u.getScheme())) {
-//            if ((o = props.get("ConnectionFactoryName")) != null)
-//                oid = OBJ_JMS;
-//            else
+            if ((o = props.get("ConnectionFactoryName")) != null)
+                oid = OBJ_JMS;
+            else if ((o = props.get("RequestCommand")) != null)
+                oid = OBJ_SONIC;
+            else
                 oid = OBJ_TCP;
         }
         else if ("udp".equals(u.getScheme()))
@@ -157,10 +155,16 @@ public class AgeMonitor extends Monitor {
             oid = OBJ_JDBC;
         else if ("snmp".equals(u.getScheme()))
             oid = OBJ_SNMP;
-        else if ("service".equals(u.getScheme()))
+        else if ("service".equals(u.getScheme()) || "imq".equals(u.getScheme()))
             oid = OBJ_JMX;
-//        else if ((o = props.get("ConnectionFactoryName")) != null)
-//            oid = OBJ_JMS;
+        else if ("pcf".equals(u.getScheme()))
+            oid = OBJ_PCF;
+        else if ("wmq".equals(u.getScheme()))
+            oid = OBJ_JMS;
+        else if ((o = props.get("RequesterClass")) != null)
+            oid = OBJ_REQ;
+        else if ((o = props.get("ConnectionFactoryName")) != null)
+            oid = OBJ_JMS;
         else
             throw(new IllegalArgumentException("wrong scheme: " +
                 u.getScheme()));
@@ -1580,5 +1584,69 @@ public class AgeMonitor extends Monitor {
 
     protected void finalize() {
         destroy();
+    }
+
+    public static void main(String[] args) {
+        String filename = null;
+        MonitorReport report = null;
+
+        if (args.length <= 1) {
+            printUsage();
+            System.exit(0);
+        }
+
+        for (int i=0; i<args.length; i++) {
+            if (args[i].charAt(0) != '-' || args[i].length() != 2) {
+                continue;
+            }
+            switch (args[i].charAt(1)) {
+              case '?':
+                printUsage();
+                System.exit(0);
+                break;
+              case 'I':
+                if (i+1 < args.length)
+                    filename = args[++i];
+                break;
+              default:
+            }
+        }
+
+        if (filename == null)
+            printUsage();
+        else try {
+            long tm = -1L;
+            Object o;
+            java.io.FileReader fr = new java.io.FileReader(filename);
+            Map ph = (Map) org.qbroker.json.JSON2Map.parse(fr);
+            fr.close();
+
+            report = (MonitorReport) new AgeMonitor(ph);
+            Map r = report.generateReport(0L);
+            if ((o = r.get("SampleTime")) != null && o instanceof long[] &&
+                ((long[]) o).length > 0)
+                tm = ((long[]) o)[0];
+            if (tm > 0) {
+                String block = (String) r.get("LeadingBlock");
+                System.out.println(Event.dateFormat(new Date(tm)));
+                if (block != null)
+                    System.out.println(block);
+            }
+            else
+                System.out.println("failed to get the age");
+            if (report != null)
+                report.destroy();
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            if (report != null)
+                report.destroy();
+        }
+    }
+
+    private static void printUsage() {
+        System.out.println("AgeMonitor Version 1.0 (written by Yannan Lu)");
+        System.out.println("AgeMonitor: monitor the age of something");
+        System.out.println("Usage: java org.qbroker.monitor.AgeMonitor -I cfg.json");
     }
 }

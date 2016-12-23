@@ -1,5 +1,6 @@
- package org.qbroker.monitor;
-/* ReportQuery.java - a generic monitor watching internal reports */
+package org.qbroker.monitor;
+
+/* ReportQuery.java - a generic reporter watching internal reports */
 
 import java.util.HashMap;
 import java.util.Map;

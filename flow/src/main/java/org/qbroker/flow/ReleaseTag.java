@@ -3,6 +3,10 @@ package org.qbroker.flow;
 /* ReleaseTag.java - release tag for all the packages of qbroker */
 
 /**
+ * V1.1.8 (2016/12/23): fixed a bug in deleteMonitors() of MonitorGroup for
+ * not updating the list of items for generated monitors, normalized the debug
+ * logging in MonitorGroup, added main() to most of monitors for testing
+ *<br/>
  * V1.1.7 (2016/11/17): fixed the external tracking issue in flush() for
  * EventMonitor and ActionNode, added stats tracking on new messages for
  * SelectNode and DuplicateNode, added timeout ruleset to EventMonitor,
@@ -11,7 +15,8 @@ package org.qbroker.flow;
  * support for string comparisons to boolean operations, added From to
  * EventFormatterMailer, added DEBUG_DIFF to Node for replaceRule() logging,
  * updated PublishNode, EventDisaptcher, AggregateNode, ScreenNode and
- * CascadeNode for DEBUG_DIFF
+ * CascadeNode for DEBUG_DIFF, added WAIT_FIND to ScriptedBrowser and
+ * SyntheticMonitor, added OBJ_PROC to GenericList
  *<br/>
  * V1.1.6 (2016/11/12): added logBuffer.clear() to close() in NewlogFeture,
  * replaced get() with remove() for dataBlock in NumberMonitor, AgeMonitor and
@@ -75,7 +80,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V 1.1.7 2016/11/17 23:42:57";
+    private static String ReleaseTAG = "QBroker V 1.1.8 2016/12/23 09:20:07";
 
     public ReleaseTag() {
     }

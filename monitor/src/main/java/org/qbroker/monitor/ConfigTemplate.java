@@ -668,6 +668,7 @@ public class ConfigTemplate {
      * map for the reporter and the evaluations. If the value is a String,
      * it means the instance of ConfigTemplate has swapped the dynamic role.
      * In this case, the instance of ConfigTemplate has to be deleted.
+     * If the name template is different, it will also be included.
      */
     public Map<String, Object> diff(Map props) {
         Object o;
@@ -695,12 +696,12 @@ public class ConfigTemplate {
                     list.add(items[i]);
                 ph.remove(items[i]);
             }
-            if (ph.size() > 0) { // has new ones
+            if (list.size() > 0) // with deleted
+                ph.put("Item", list);
+            else if (ph.size() > 0) { // has new ones
                 ph.clear();
                 ph.put("Item", list);
             }
-            else if (list.size() > 0) // with deleted
-                ph.put("Item", list);
         }
         else if (o instanceof Map) {
             if (!isDynamic) { // switched to dynamic list
@@ -713,7 +714,7 @@ public class ConfigTemplate {
         else
             throw(new IllegalArgumentException(name + ": bad Item defined"));
 
-        if ((o = props.get("Template")) != null) {
+        if ((o = props.get("Template")) != null) { // compare name template
             if (!template.copyText().equals((String) o))
                 ph.put("Template", o);
         }
@@ -811,7 +812,6 @@ public class ConfigTemplate {
         builder = null;
         xpe = null;
     }
-
 
     protected void finalize() {
         close();

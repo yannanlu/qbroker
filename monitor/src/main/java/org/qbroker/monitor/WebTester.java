@@ -599,4 +599,61 @@ public class WebTester extends Report {
             }
         }
     }
+
+    public static void main(String[] args) {
+        String filename = null;
+        MonitorReport report = null;
+        int i, n = 0;
+
+        if (args.length <= 1) {
+            printUsage();
+            System.exit(0);
+        }
+
+        for (i=0; i<args.length; i++) {
+            if (args[i].charAt(0) != '-' || args[i].length() != 2) {
+                continue;
+            }
+            switch (args[i].charAt(1)) {
+              case '?':
+                printUsage();
+                System.exit(0);
+                break;
+              case 'I':
+                if (i+1 < args.length)
+                    filename = args[++i];
+                break;
+              default:
+            }
+        }
+
+        if (filename == null)
+            printUsage();
+        else try {
+           java.io.FileReader fr = new java.io.FileReader(filename);
+            Map ph = (Map) org.qbroker.json.JSON2Map.parse(fr);
+            fr.close();
+
+            report = new WebTester(ph);
+            Map r = report.generateReport(0L);
+            String str = (String) r.get("ReturnCode");
+            if (str != null)
+                System.out.println(str + ": " + r.get("Response"));
+            else
+                System.out.println("failed to get the response");
+            if (report != null)
+                report.destroy();
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            if (report != null)
+                report.destroy();
+        }
+    }
+
+    private static void printUsage() {
+        System.out.println("WebTester Version 1.0 (written by Yannan Lu)");
+        System.out.println("WebTester: monitor a web site via http");
+        System.out.println("Usage: java org.qbroker.monitor.WebTester -I cfg.json");
+    }
 }

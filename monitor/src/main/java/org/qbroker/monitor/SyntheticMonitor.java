@@ -26,7 +26,7 @@ import org.qbroker.net.ScriptedBrowser;
  * defined in the config, each of the tasks will be executed one after another
  * in the listed order. If any task fails, the entire test will be fail.
  *<br/><br/>
- * Each member of NextTask will contain Operation, LocateType, LocatorValue,
+ * Each member of NextTask will contain Operation, LocatorType, LocatorValue,
  * SleepTime in ms and WaitTime in sec.
  *<br/>
  * @author yannanlu@yahoo.com
@@ -217,6 +217,11 @@ public class SyntheticMonitor extends Monitor {
                     str = browser.waitAndSend(taskInfo[i][TASK_TYPE],
                         taskData[i][TASK_TYPE], taskInfo[i][TASK_WAIT],
                         taskData[i][TASK_ID]);
+                    break;
+                  case ScriptedBrowser.WAIT_FIND:
+                    str = browser.waitAndFind(taskInfo[i][TASK_TYPE],
+                        taskData[i][TASK_TYPE], taskInfo[i][TASK_WAIT],
+                        (long) taskInfo[i][TASK_PAUSE]);
                     break;
                   default:
                     rc = -1;
@@ -518,5 +523,60 @@ public class SyntheticMonitor extends Monitor {
 
     protected void finalize() {
         destroy();
+    }
+
+    public static void main(String args[]) {
+        String filename = null;
+        MonitorReport report = null;
+
+        if (args.length == 0) {
+            printUsage();
+            System.exit(0);
+        }
+        for (int i=0; i<args.length; i++) {
+            if (args[i].charAt(0) != '-' || args[i].length() != 2) {
+                continue;
+            }
+            switch (args[i].charAt(1)) {
+              case '?':
+                printUsage();
+                System.exit(0);
+                break;
+              case 'I':
+                if (i+1 < args.length)
+                    filename = args[++i];
+                break;
+              default:
+            }
+        }
+
+        if (filename == null)
+            printUsage();
+        else try {
+            java.io.FileReader fr = new java.io.FileReader(filename);
+            Map ph = (Map) org.qbroker.json.JSON2Map.parse(fr);
+            fr.close();
+
+            report = (MonitorReport) new SyntheticMonitor(ph);
+            Map r = report.generateReport(0L);
+            String str = (String) r.get("ReturnCode");
+            if ("0".equals(str))
+                System.out.println("returnCode: " + str);
+            else
+                System.out.println("error: " + r.get("Error"));
+            if (report != null)
+                report.destroy();
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            if (report != null)
+                report.destroy();
+        }
+    }
+
+    private static void printUsage() {
+        System.out.println("SyntheticMonitor Version 1.0 (written by Yannan Lu)");
+        System.out.println("SyntheticMonitor: run a Selenium script on a website");
+        System.out.println("Usage: java org.qbroker.monitor.SyntheticMonitor -I cfg.json");
     }
 }

@@ -1,4 +1,5 @@
- package org.qbroker.monitor;
+package org.qbroker.monitor;
+
 /* ReportAggregator.java - an aggregator on internal reports */
 
 import java.util.HashMap;
