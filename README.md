@@ -22,6 +22,7 @@ In case you do not need to work with WebSphereMQ and SonicMQ, you can remove the
 ## Status
 
 ## Description
+To build the project, just run "mvn pacakge". The result of the build is the jar file of qbroker-x.y.z.jar in dist/target.
 
 ## Author
 Yannan Lu <yannanlu@yahoo.com>

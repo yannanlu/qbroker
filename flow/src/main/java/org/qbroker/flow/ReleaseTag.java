@@ -5,7 +5,8 @@ package org.qbroker.flow;
 /**
  * V1.1.8 (2016/12/23): fixed a bug in deleteMonitors() of MonitorGroup for
  * not updating the list of items for generated monitors, normalized the debug
- * logging in MonitorGroup, added main() to most of monitors for testing
+ * logging in MonitorGroup, added main() to most of monitors for testing,
+ * added output of pagesource and title to SyntheticMonitor for testings
  *<br/>
  * V1.1.7 (2016/11/17): fixed the external tracking issue in flush() for
  * EventMonitor and ActionNode, added stats tracking on new messages for
@@ -80,7 +81,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V 1.1.8 2016/12/23 09:20:07";
+    private static String ReleaseTAG = "QBroker V 1.1.8 2016/12/23 11:00:27";
 
     public ReleaseTag() {
     }

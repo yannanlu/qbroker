@@ -505,20 +505,25 @@ public class ScriptedBrowser {
             try {
                 switch (taskInfo[i][TASK_ID]) {
                   case GET:
-                    str = browser.get(taskData[i][TASK_ID]);
-                    break;
+                  case GETTITLE:
+                  case GETSOURCE:
                   case PAUSE:
                     if (taskInfo[i][TASK_PAUSE] > 0) try {
                         Thread.sleep((long) taskInfo[i][TASK_PAUSE]);
                     }
                     catch (Exception e) {
                     }
-                    break;
-                  case GETTITLE:
-                    str = browser.getTitle();
-                    break;
-                  case GETSOURCE:
-                    str = browser.getPageSource();
+                    if (taskInfo[i][TASK_ID] == GET) {
+                        str = browser.get(taskData[i][TASK_ID]);
+                    }
+                    else if (taskInfo[i][TASK_ID] == GETTITLE) {
+                        str = browser.getTitle();
+                        System.out.println("title: " + str);
+                    }
+                    else if (taskInfo[i][TASK_ID] == GETSOURCE) {
+                        str = browser.getPageSource();
+                        System.out.println("source: " + str);
+                    }
                     break;
                   case FIND_CLICK:
                     str = browser.findAndClick(taskInfo[i][TASK_TYPE],

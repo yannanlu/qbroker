@@ -9,7 +9,7 @@ import java.util.List;
  * RRDParser parses the RRDTool fetch result into a JSON document.
  * By default, the returned JSON is in matrix format with the key name on
  * each column. If the type is defined and it is not "1", the returned JSON
- * will be in arrsy format.
+ * will be in array format.
  *<br/>
  * @author yannanlu@yahoo.com
  */

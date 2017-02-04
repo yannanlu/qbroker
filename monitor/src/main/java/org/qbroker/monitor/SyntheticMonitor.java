@@ -174,20 +174,25 @@ public class SyntheticMonitor extends Monitor {
             try {
                 switch (taskInfo[i][TASK_ID]) {
                   case ScriptedBrowser.GET:
-                    str = browser.get(taskData[i][TASK_ID]);
-                    break;
+                  case ScriptedBrowser.GETTITLE:
+                  case ScriptedBrowser.GETSOURCE:
                   case ScriptedBrowser.PAUSE:
                     if (taskInfo[i][TASK_PAUSE] > 0) try {
                         Thread.sleep((long) taskInfo[i][TASK_PAUSE]);
                     }
                     catch (Exception e) {
                     }
-                    break;
-                  case ScriptedBrowser.GETTITLE:
-                    str = browser.getTitle();
-                    break;
-                  case ScriptedBrowser.GETSOURCE:
-                    str = browser.getPageSource();
+                    if (taskInfo[i][TASK_ID] == ScriptedBrowser.GET) {
+                        str = browser.get(taskData[i][TASK_ID]);
+                    }
+                    else if (taskInfo[i][TASK_ID] == ScriptedBrowser.GETTITLE) {
+                        str = browser.getTitle();
+                        report.put("Title", str);
+                    }
+                    else if (taskInfo[i][TASK_ID] == ScriptedBrowser.GETSOURCE){
+                        str = browser.getPageSource();
+                        report.put("PageSource", str);
+                    }
                     break;
                   case ScriptedBrowser.FIND_CLICK:
                     str = browser.findAndClick(taskInfo[i][TASK_TYPE],
@@ -564,6 +569,10 @@ public class SyntheticMonitor extends Monitor {
                 System.out.println("returnCode: " + str);
             else
                 System.out.println("error: " + r.get("Error"));
+            if (r.containsKey("Title"))
+                System.out.println("title: " + r.get("Title"));
+            if (r.containsKey("PageSource"))
+                System.out.println("source: " + r.get("PageSource"));
             if (report != null)
                 report.destroy();
         }
