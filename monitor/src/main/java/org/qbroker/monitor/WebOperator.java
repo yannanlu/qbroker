@@ -187,10 +187,10 @@ public class WebOperator extends Monitor {
 
         report = httpTester.generateReport(currentTime);
 
-        int returnCode =
-            Integer.parseInt((String) report.get("ReturnCode"));
-
         if (disableMode != 0) {
+            int returnCode =
+                Integer.parseInt((String) report.get("ReturnCode"));
+
             if (returnCode == WebTester.TESTOK)
                 skip = (disableMode > 0) ? NOSKIP : DISABLED;
             else if (returnCode == WebTester.PATTERNNOHIT)

@@ -3,6 +3,11 @@ package org.qbroker.flow;
 /* ReleaseTag.java - release tag for all the packages of qbroker */
 
 /**
+ * V1.1.9 (2017/02/12): rewritten JSONParser to add the support for JSONPath, 
+ * Pattern and Substitution, added two headers to WebTester to support soap
+ * testing, added try-catch block to CACHE rule of EventMonitor in case of
+ * Exceptions
+ *<br/>
  * V1.1.8 (2016/12/23): fixed a bug in deleteMonitors() of MonitorGroup for
  * not updating the list of items for generated monitors, normalized the debug
  * logging in MonitorGroup, added main() to most of monitors for testing,
@@ -81,7 +86,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V 1.1.8 2016/12/23 11:00:27";
+    private static String ReleaseTAG = "QBroker V 1.1.9 2017/02/12 12:08:07";
 
     public ReleaseTag() {
     }

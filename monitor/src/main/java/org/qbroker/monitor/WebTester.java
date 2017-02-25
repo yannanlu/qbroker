@@ -83,7 +83,7 @@ public class WebTester extends Report {
     private SimpleDateFormat dateFormat;
     private Pattern httpPattern = null;
     private Pattern pattern = null;
-    private String data, cookie = null;
+    private String data, cookie = null, contentType = null;
     public final static int TESTFAILED = -1;
     public final static int TESTOK = 0;
     public final static int PROTOCOLERROR = 1;
@@ -227,9 +227,18 @@ public class WebTester extends Report {
             if ((o = props.get("Connection")) != null)
                 strBuf.append("Connection: " + (String) o + "\r\n");
 
+            if ((o = props.get("Accept")) != null)
+                strBuf.append("Accept: " + (String) o + "\r\n");
+
+            if ((o = props.get("ContentType")) != null)
+                contentType = (String) o;
+
             if (isPost) {
                 if ((o = props.get("Data")) != null)
                     data = (String) o;
+            }
+            else if (contentType != null) {
+                strBuf.append("ContentType: " + (String) o + "\r\n\r\n");
             }
             else {
                 strBuf.append("\r\n");
@@ -370,6 +379,9 @@ public class WebTester extends Report {
             if (cookie != null)
                 strBuf.append("Cookie: " + cookie + "\r\n");
             strBuf.append("Content-Length: " + data.length() + "\r\n");
+            if (contentType != null)
+                strBuf.append("Content-Type: " + contentType + "\r\n");
+            else // for default content type
            strBuf.append("Content-Type: application/x-www-form-urlencoded\r\n");
             strBuf.append("\r\n" + data);
             webRequest = new byte[request.length + strBuf.length()];

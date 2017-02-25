@@ -484,7 +484,7 @@ public class TextSubstitution {
         String str = null;
         double x0;
         long m0;
-        if (input == null || input.length() <= 0)
+        if (input == null)
             return null;
         switch (expr) {
           case EXPR_ADD:
