@@ -26,6 +26,9 @@ import org.qbroker.monitor.WebTester;
  * WebOperator responses to operation problems of a web server, such as
  * it hangs or it is down.  If SessionInitializer is defined, it will get
  * the session cookie and maintains the session while testing.
+ *<br/><br/>
+ * WebOperator may get READFAILED error sometimes. ReadErrorIgnored is used to
+ * ignore the error if it is larger than zero.
  *<br/>
  * @author yannanlu@yahoo.com
  */
@@ -33,7 +36,7 @@ import org.qbroker.monitor.WebTester;
 public class WebOperator extends Monitor {
     private String uri;
     private WebTester httpTester, sessionInitializer = null;
-    private int previousWebStatus, webStatusOffset;
+    private int previousWebStatus, webStatusOffset, readErrorIgnored;
     private long sessionTimeout = 0, previousTime = 0;
     private String sessionCookie = null;
     private Pattern cookiePattern = null;
@@ -82,6 +85,11 @@ public class WebOperator extends Monitor {
             throw(new IllegalArgumentException("wrong scheme: " +
                 u.getScheme()));
 
+        if ((o = props.get("ReadErrorIgnored")) != null)
+            readErrorIgnored = Integer.parseInt((String) o);
+        else
+            readErrorIgnored = 0;
+
         // for session initializer
         if((o = props.get("SessionInitializer")) != null &&
             o instanceof Map) try {
@@ -104,6 +112,7 @@ public class WebOperator extends Monitor {
         h.put("Step", "1");
         h.remove("DependencyGroup");
         h.remove("DisabeMode");
+        h.remove("ActiveTime");
         h.remove("SessionInitializer");
         h.remove("SessionTimeout");
         httpTester = new WebTester(h);
@@ -278,6 +287,10 @@ public class WebOperator extends Monitor {
                     level = Event.ERR;
                     if (step > 0)
                         step = 0;
+                    if (webStatus == WebTester.READFAILED) { // check downgrade
+                        if (readErrorIgnored>0 && actionCount<=readErrorIgnored)
+                            level = Event.WARNING;
+                    }
                 }
             }
             else if (previousWebStatus != WebTester.TESTOK) {

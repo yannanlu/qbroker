@@ -101,7 +101,7 @@ public class PropertyMonitor extends Monitor {
     private Map property = null;
     private Map<String, Object> baseMap, includeGroup, includeMap;
     private Map<String, List> secondaryMap;
-    private String uri, basename, configDir, authString;
+    private String uri, basename, configDir;
     private String dataField = null;
     private File propertyFile = null;
     private WebTester webTester;
@@ -144,34 +144,44 @@ public class PropertyMonitor extends Monitor {
             throw(new IllegalArgumentException(e.toString()));
         }
 
-        authString = null;
         if ("http".equals(u.getScheme()) || "https".equals(u.getScheme())) {
             isRemote = true;
             if ((o = props.get("EncryptedAuthorization")) != null) {
-                authString = MonitorUtils.select(o);
-                h.put("EncryptedAuthorization", authString);
+                h.put("EncryptedAuthorization", MonitorUtils.select(o));
             }
             else if ((o = props.get("AuthString")) != null) {
-                authString = MonitorUtils.select(o);
-                h.put("AuthString", authString);
+                h.put("AuthString", MonitorUtils.select(o));
             }
             else if ((o = props.get("Username")) != null) {
-                authString = MonitorUtils.select(o);
-                h.put("Username", authString);
-                authString = MonitorUtils.select(props.get("Password"));
-                h.put("Password", authString);
+                h.put("Username", MonitorUtils.select(o));
+                o = props.get("Password");
+                h.put("Password", MonitorUtils.select(o));
             }
+
+            if ((o = props.get("Request")) != null)
+                h.put("Request", MonitorUtils.select(o));
+            else if ((o = props.get("Operation")) != null)
+                h.put("Operation", MonitorUtils.select(o));
+
+            if ((o = props.get("Accept")) != null)
+                h.put("Accept", o);
+
+            if ((o = props.get("ContentType")) != null)
+                h.put("ContentType", o);
+
+            if ((o = props.get("Data")) != null)
+                h.put("Data", o);
 
             h.put("Name", name);
             h.put("URI", uri);
+            h.put("Step", "1");
             h.put("Timeout", (String) props.get("Timeout"));
             if ((o = props.get("MaxBytes")) != null)
                 h.put("MaxBytes", o);
             else
                 h.put("MaxBytes", "0");
-            if ((o = props.get("Debug")) != null)
+            if ((o = props.get("WebDebug")) != null)
                 h.put("Debug", o);
-            h.put("Step", "1");
             webTester = new WebTester(h);
 
             gmtOffset = Calendar.getInstance().get(Calendar.ZONE_OFFSET) +
@@ -329,12 +339,12 @@ public class PropertyMonitor extends Monitor {
                 catch (Exception e) {
                 }
                 r = webTester.generateReport(currentTime);
-            }
-            if ((o = r.get("ReturnCode")) != null) {
-                returnCode = Integer.parseInt((String) o);
-            }
-            else {
-                throw(new IOException("web test failed on " + uri));
+                if ((o = r.get("ReturnCode")) != null) {
+                    returnCode = Integer.parseInt((String) o);
+                }
+                else {
+                    throw(new IOException("web test failed on " + uri));
+                }
             }
 
             if (returnCode == 0) { // got the web page

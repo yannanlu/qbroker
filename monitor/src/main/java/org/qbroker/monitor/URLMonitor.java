@@ -94,7 +94,7 @@ public class URLMonitor extends Monitor {
     public URLMonitor(Map props) {
         super(props);
         Object o;
-        Map<String, Object> h = new HashMap<String, Object>();
+        Map<String, Object> h;
         URI u;
         String className;
         int n;
@@ -123,6 +123,7 @@ public class URLMonitor extends Monitor {
         if ((o = props.get("DateFormat")) == null || !(o instanceof String))
           throw(new IllegalArgumentException("DateFormat is not well defined"));
         dateFormat = new SimpleDateFormat((String) o);
+
         if ((o = props.get("TimeZone")) != null)
             dateFormat.setTimeZone(TimeZone.getTimeZone((String) o));
 
@@ -139,36 +140,16 @@ public class URLMonitor extends Monitor {
             throw(new IllegalArgumentException(e.toString()));
         }
 
-        h.put("Name", name);
+        h = Utils.cloneProperties(props);
         h.put("URI", uri);
-        h.put("Timeout", (String) props.get("Timeout"));
-        if ((o = props.get("Request")) != null) {
-            String str = (String) o;
-            h.put("Request", str);
-            if (disableMode != 0 && str.startsWith("HEAD "))
-                checkETag = ((o = props.get("CheckETag")) != null &&
-                    "true".equalsIgnoreCase((String) o));
-        }
-        else if ((o = props.get("Operation")) != null) {
-            String str = (String) o;
-            h.put("Operation", str);
-            if (disableMode != 0 && str.equals("HEAD"))
-                checkETag = ((o = props.get("CheckETag")) != null &&
-                    "true".equalsIgnoreCase((String) o));
-        }
-        if ((o = props.get("MaxBytes")) != null)
-            h.put("MaxBytes", o);
-        else
-            h.put("MaxBytes", "0");
-        if ((o = props.get("EncryptedAuthorization")) != null)
-            h.put("EncryptedAuthorization", o);
-        else if ((o = props.get("AuthString")) != null)
-            h.put("AuthString", o);
-        else if ((o = props.get("Username")) != null) {
-            h.put("Username", o);
-            h.put("Password", props.get("Password"));
-        }
         h.put("Step", "1");
+        h.remove("DependencyGroup");
+        h.remove("DisabeMode");
+        h.remove("ActiveTime");
+        h.remove("DateFormat");
+        h.remove("TimeZone");
+        h.remove("TimeDifference");
+        h.remove("Pattern");
         webTester = new WebTester(h);
 
         timeDifference = 0L;

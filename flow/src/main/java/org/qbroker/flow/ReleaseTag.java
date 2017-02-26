@@ -6,7 +6,11 @@ package org.qbroker.flow;
  * V1.1.9 (2017/02/12): rewritten JSONParser to add the support for JSONPath, 
  * Pattern and Substitution, added two headers to WebTester to support soap
  * testing, added try-catch block to CACHE rule of EventMonitor in case of
- * Exceptions
+ * Exceptions, added ReadErrorIgnored to WebOperator, added detail log for
+ * debug mode to WebTester, modified reactions on EXCEPTION for checks of
+ * DependencyGroup in MonitorUtils, changed URLMonitor to use the cloned
+ * property map for WebTester, added support for Accept and ContentType headers
+ * to PropertyMonitor for HTTP/HTTPS
  *<br/>
  * V1.1.8 (2016/12/23): fixed a bug in deleteMonitors() of MonitorGroup for
  * not updating the list of items for generated monitors, normalized the debug
@@ -86,7 +90,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V 1.1.9 2017/02/12 12:08:07";
+    private static String ReleaseTAG = "QBroker V 1.1.9 2017/02/12 16:11:50";
 
     public ReleaseTag() {
     }

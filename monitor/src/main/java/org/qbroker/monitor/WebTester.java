@@ -317,8 +317,6 @@ public class WebTester extends Report {
             returnCode = testHTTPD();
         }
         catch (Exception e) {
-            if (response != null && debug != 0)
-                System.out.print(name + ": " + response);
             throw(new IOException("testHTTP: " + Event.traceStack(e)));
         }
 
@@ -364,7 +362,7 @@ public class WebTester extends Report {
     private int testHTTPD() {
         StringBuffer strBuf;
         long timeStart;
-        int i, httpStatus, bytesRead, timeLeft;
+        int i, k = 0, httpStatus, bytesRead, timeLeft;
         byte[] webRequest;
         boolean hasNew = false;
         Socket s = null;
@@ -480,6 +478,7 @@ public class WebTester extends Report {
                 }
                 catch (Exception ex) {
                 }
+                responseTime = timeout - timeLeft;
                 try {
                     while ((bytesRead = in.read(buffer, 0, bufferSize)) > 0) {
                         strBuf.append(new String(buffer, 0, bytesRead));
@@ -493,6 +492,7 @@ public class WebTester extends Report {
                 }
                 catch (InterruptedIOException ex) {
                 }
+                k ++;
                 if (maxBytes > 0 && totalBytes >= maxBytes)
                     break;
                 timeLeft = timeout-(int) (System.currentTimeMillis()-timeStart);
@@ -500,8 +500,9 @@ public class WebTester extends Report {
         }
         catch (IOException e) {
             if (debug != 0)
-                new Event(Event.DEBUG, name + ": read failed: " + e.toString() +
-                    "\n" + strBuf).send();
+                new Event(Event.DEBUG, name + " read failed: " +
+                    Event.traceStack(e) + "\n" + totalBytes + " " + timeLeft +
+                    "/" + k + ": " + strBuf).send();
             close(out);
             close(in);
             close(s);
@@ -512,8 +513,9 @@ public class WebTester extends Report {
         }
         catch (Exception e) {
             if (debug != 0)
-                new Event(Event.DEBUG, name + ": read failed: " + e.toString() +
-                    "\n" + strBuf).send();
+                new Event(Event.DEBUG, name + " read failed: " +
+                    Event.traceStack(e) + "\n" + totalBytes + " " + timeLeft +
+                    "/" + k + ": " + strBuf).send();
             close(out);
             close(in);
             close(s);
@@ -535,7 +537,8 @@ public class WebTester extends Report {
         if (!isHTTP) { // for generic tcp test like aggie
             if (!pm.contains(response, pattern)) {
                 if (debug != 0)
-                    System.out.print(name + ": " + response);
+                    new Event(Event.DEBUG, name + " pattern not found: " +
+                        response).send();
                 return PATTERNNOHIT;
             }
             return TESTOK;
@@ -544,7 +547,9 @@ public class WebTester extends Report {
         i = response.indexOf("\n");
         if (i <= 0) {
             if (debug != 0)
-                System.out.print(name + ": " + response);
+                new Event(Event.DEBUG, name + " " +
+                    ((timeLeft <= 0L) ? "read failed" : "protocol error") +
+                    ": " + response).send();
             return ((timeLeft <= 0L) ? READFAILED : PROTOCOLERROR);
         }
 
@@ -552,7 +557,8 @@ public class WebTester extends Report {
             MatchResult mr = pm.getMatch();
             if ((! "HTTP".equals(mr.group(1))) || mr.group(2) == null) {
                 if (debug != 0)
-                    System.out.print(name + ": " + response);
+                    new Event(Event.DEBUG, name + " wrong protocol: " +
+                        response).send();
                 return PROTOCOLERROR;
             }
             try {
@@ -560,29 +566,33 @@ public class WebTester extends Report {
             }
             catch (NumberFormatException e) {
                 if (debug != 0)
-                    System.out.print(name + ": NumberFormatException: " +
-                        mr.group(2) + "\n" + response);
+                    new Event(Event.DEBUG, name + " NumberFormatException: " +
+                        mr.group(2) + "\n" + response).send();
                 return PROTOCOLERROR;
             }
             if (httpStatus >= 500) {
                 if (debug != 0)
-                    System.out.print(name + ": " + response);
+                    new Event(Event.DEBUG, name + " server error: " +
+                        response).send();
                 return SERVERERROR;
             }
             else if (httpStatus >= 400) {
                 if (debug != 0)
-                    System.out.print(name + ": " + response);
+                    new Event(Event.DEBUG, name + " client error: " +
+                        response).send();
                 return CLIENTERROR;
             }
             else if (!pm.contains(response, pattern)) {
                 if (debug != 0)
-                    System.out.print(name + ": " + response);
+                    new Event(Event.DEBUG, name + " pattern not found: " +
+                        response).send();
                 return PATTERNNOHIT;
             }
             return TESTOK;
         }
         if (debug != 0)
-            System.out.print(name + ": " + response);
+            new Event(Event.DEBUG, name + " prototol not supported: " +
+                response).send();
         return PROTOCOLERROR;
     }
 

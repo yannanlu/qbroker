@@ -147,13 +147,14 @@ public class MonitorUtils {
     }
 
     /**
-     * It returns MonitorReport.EXCEPTION in case that there is
-     * at least one exception and the skip is not MonitorReport.NOSKIP.
-     * Otherwise, it returns the skip.
-     *
-     * NOSKIP:             true
-     * SKIPPED, DISABLED:  false
-     * EXCEPTION:          exception
+     * It returns MonitorReport.NOSKIP if there is at least one group of
+     * dependencies with status of NOSKIP. Otherwise, it returns either
+     * MonitorReport.DISABLED without exceptions or MonitorReport.EXCEPTION
+     * with exceptions.
+     *<br/><br/>
+     * NOSKIP:             true<br/>
+     * SKIPPED, DISABLED:  false<br/>
+     * EXCEPTION:          exception<br/>
      */
     public static int checkDependencies(long currentTime, List[] dependencies,
         String prefix) {
@@ -179,24 +180,25 @@ public class MonitorUtils {
                     skip = MonitorReport.EXCEPTION;
                     new Event(Event.ERR, prefix +
                         " failed to generate report for dependency " +
-                        dep.getReportName() + ": " + e.toString()).send();
+                        dep.getReportName() + " at " + i + ":" + j + " of " +
+                        dep.getClass().getName() + ": " + e.toString()).send();
                     break;
                 }
                 skip = dep.getSkippingStatus();
                 if (skip != MonitorReport.NOSKIP)
                     break;
             }
-            if (skip == MonitorReport.EXCEPTION)
-                numException ++;
-            else if (skip == MonitorReport.NOSKIP)
+            if (skip == MonitorReport.NOSKIP) // found one group NOSKIP
                 break;
+            else if (skip == MonitorReport.EXCEPTION) // count number of ex
+                numException ++;
         }
 
-        if (skip == MonitorReport.NOSKIP || numException <= 0)
+        if (skip == MonitorReport.NOSKIP) // at least one group with NOSKIP
             return skip;
-        else if (numException > 0)
+        else if (numException > 0) // failed to get conclusion due to exception
             return MonitorReport.EXCEPTION;
-        else
+        else // all groups are disabled
             return MonitorReport.DISABLED;
     }
 
