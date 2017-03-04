@@ -364,7 +364,6 @@ public class WebTester extends Report {
         long timeStart;
         int i, k = 0, httpStatus, bytesRead, timeLeft;
         byte[] webRequest;
-        boolean hasNew = false;
         Socket s = null;
         InputStream in = null;
         OutputStream out = null;
@@ -456,38 +455,18 @@ public class WebTester extends Report {
         }
 
         try {
-            for (i=0; i<300; i++) {
-                if (in.available() > 0)
-                    break;
-                try {
-                    Thread.sleep(5);
-                }
-                catch (Exception ex) {
-                }
-            }
             do { // read everything until EOF or timeout
                 bytesRead = 0;
-                hasNew = false;
-                if (in.available() <= 0) try {
-                    Thread.sleep(20);
-                }
-                catch (Exception ex) {
-                }
+                responseTime = timeout - timeLeft;
                 if (s != null) try {
                     s.setSoTimeout(500);
                 }
                 catch (Exception ex) {
                 }
-                responseTime = timeout - timeLeft;
                 try {
-                    while ((bytesRead = in.read(buffer, 0, bufferSize)) > 0) {
+                    if ((bytesRead = in.read(buffer, 0, bufferSize)) > 0) {
                         strBuf.append(new String(buffer, 0, bytesRead));
                         totalBytes += bytesRead;
-                        hasNew = true;
-                        if (in.available() <= 0)
-                            break;
-                        if (maxBytes > 0 && totalBytes >= maxBytes)
-                            break;
                     }
                 }
                 catch (InterruptedIOException ex) {
@@ -500,9 +479,9 @@ public class WebTester extends Report {
         }
         catch (IOException e) {
             if (debug != 0)
-                new Event(Event.DEBUG, name + " read failed: " +
-                    Event.traceStack(e) + "\n" + totalBytes + " " + timeLeft +
-                    "/" + k + ": " + strBuf).send();
+                new Event(Event.DEBUG, name + " read failed at loop " + k +
+                    " with " + timeLeft + "/" + totalBytes + ": " +
+                    e.toString() + "\n" + strBuf).send();
             close(out);
             close(in);
             close(s);
@@ -513,9 +492,9 @@ public class WebTester extends Report {
         }
         catch (Exception e) {
             if (debug != 0)
-                new Event(Event.DEBUG, name + " read failed: " +
-                    Event.traceStack(e) + "\n" + totalBytes + " " + timeLeft +
-                    "/" + k + ": " + strBuf).send();
+                new Event(Event.DEBUG, name + " read failed at loop " + k +
+                    " with " + timeLeft + "/" + totalBytes + ": " +
+                    e.toString() + "\n" + strBuf).send();
             close(out);
             close(in);
             close(s);

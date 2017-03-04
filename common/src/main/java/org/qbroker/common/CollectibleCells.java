@@ -5,9 +5,9 @@ package org.qbroker.common;
 import org.qbroker.common.XQueue;
 
 /**
- * CollectibleCells are bunch of indexed cells that are collectible with
- * associated unigue IDs. All the collectible (TAKEN) cells are always kept in
- * their natural order.
+ * CollectibleCells are a fixed numner of indexed cells that are collectible
+ * with the associated unigue IDs. All the collectible (TAKEN) cells are always
+ * kept in their natural order.
  *<br/><br/>
  * A cell is always in one of the two different status, EMPTY, and TAKEN. All
  * cells line up in a circular array.  The cells in the same status always stay

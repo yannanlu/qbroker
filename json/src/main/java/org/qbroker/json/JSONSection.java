@@ -239,17 +239,21 @@ public class JSONSection {
     /**
      * returns the copied JSON content for the JSON map with the order
      * support on all the keys. The given parameter map contains the values
-     * and their JSON paths for updates.
+     * and their JSON paths for updates. But only values for those existing
+     * keys will get updated. There is no insert on new keys.
      */
     private String copy(Map json, Map<String, Object> params) {
         if (json == null)
             return "";
 
         if (params != null) { // set the values of parameters with valid path
+            String str;
             for (String key : params.keySet()) {
                 if (key == null || !key.startsWith("o:" + path))
                     continue;
-                JSON2FmModel.put(json, key.substring(2), params.get(key));
+                str = key.substring(2);
+                if (JSON2Map.containsKey(json, str)) //only existing key updated
+                    JSON2FmModel.put(json, str, params.get(key));
             }
         }
         return (withOrder) ? JSON2Map.toJSON(json, indent, end, true) :
@@ -259,17 +263,21 @@ public class JSONSection {
     /**
      * returns the copied JSON content for the JSON list with the order
      * support on all the keys. The given parameter map contains the values
-     * and their JSON paths for updates.
+     * and their JSON paths for updates. But only values for those existing
+     * keys will get updated. There is no insert on new keys.
      */
     private String copy(List json, Map<String, Object> params) {
         if (json == null)
             return "";
 
         if (params != null) {
+            String str;
             for (String key : params.keySet()) {
                 if (key == null || !key.startsWith("o:" + path))
                     continue;
-                JSON2FmModel.put(json, key.substring(2), params.get(key));
+                str = key.substring(2);
+                if (JSON2Map.containsKey(json, str)) //only existing key updated
+                    JSON2FmModel.put(json, str, params.get(key));
             }
         }
         return (withOrder) ? JSON2Map.toJSON(json, indent, end, true) :

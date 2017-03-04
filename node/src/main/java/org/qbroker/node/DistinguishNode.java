@@ -662,7 +662,8 @@ public class DistinguishNode extends Node {
                     try {
                         i = cache.insert(key, currentTime,
                             (int) ruleInfo[RULE_TTL],
-                            new int[]{rid, outLinkMap[RESULT_OUT]}, versionStr);
+                            new int[]{rid, outLinkMap[RESULT_OUT]},
+                            versionStr, currentTime);
                         ruleInfo[RULE_PEND] ++;
                         i = RESULT_OUT;
                         if (cacheTimeout == 0 && cache.size() == 1)
@@ -686,7 +687,8 @@ public class DistinguishNode extends Node {
                     try {
                         i = cache.insert(key, currentTime,
                             (int) ruleInfo[RULE_TTL],
-                            new int[]{rid, outLinkMap[RESULT_OUT]}, versionStr);
+                            new int[]{rid, outLinkMap[RESULT_OUT]},
+                            versionStr, currentTime);
                         ruleInfo[RULE_PEND] ++;
                         i = RESULT_OUT;
                         if (cacheTimeout == 0 && cache.size() == 1)
@@ -705,7 +707,8 @@ public class DistinguishNode extends Node {
                     != null && versionStr.compareTo(str) > 0) {// newer version
                     try {
                         cache.replace(key, currentTime, (int)ruleInfo[RULE_TTL],
-                            new int[]{rid, outLinkMap[RESULT_OUT]}, versionStr);
+                            new int[]{rid, outLinkMap[RESULT_OUT]},
+                            versionStr, currentTime);
                         i = RESULT_OUT;
                     }
                     catch (Exception e) {
@@ -759,7 +762,8 @@ public class DistinguishNode extends Node {
                     try {
                         i = cache.insert(key, currentTime,
                             (int) ruleInfo[RULE_TTL],
-                            new int[]{rid, outLinkMap[NOHIT_OUT]}, versionStr);
+                            new int[]{rid, outLinkMap[NOHIT_OUT]},
+                            versionStr, currentTime);
                         ruleInfo[RULE_PEND] ++;
                         i = NOHIT_OUT;
                         if (cacheTimeout == 0 && cache.size() == 1)
@@ -783,7 +787,8 @@ public class DistinguishNode extends Node {
                     try {
                         i = cache.insert(key, currentTime,
                             (int) ruleInfo[RULE_TTL],
-                            new int[]{rid, outLinkMap[NOHIT_OUT]}, versionStr);
+                            new int[]{rid, outLinkMap[NOHIT_OUT]},
+                            versionStr, currentTime);
                         ruleInfo[RULE_PEND] ++;
                         i = NOHIT_OUT;
                         if (cacheTimeout == 0 && cache.size() == 1)
@@ -802,7 +807,8 @@ public class DistinguishNode extends Node {
                     != null && versionStr.compareTo(str) > 0) {// newer version
                     try {
                         cache.replace(key, currentTime, (int)ruleInfo[RULE_TTL],
-                            new int[]{rid, outLinkMap[NOHIT_OUT]}, versionStr);
+                            new int[]{rid, outLinkMap[NOHIT_OUT]},
+                            versionStr, currentTime);
                         i = NOHIT_OUT;
                     }
                     catch (Exception e) {
@@ -1160,7 +1166,7 @@ public class DistinguishNode extends Node {
                 continue;
             h = new HashMap<String, Object>();
             meta = cache.getMetaData(key);
-            value = (String) cache.get(key);
+            value = (String) cache.get(key, currentTime);
             mtime = cache.getTimestamp(key);
             ttl = cache.getTTL(key);
             rid = meta[0];

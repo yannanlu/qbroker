@@ -411,7 +411,6 @@ public class CacheNode extends Node {
                     cache.insert(key, tm, 0, null, new String[]{ruleName}, o);
                     ruleInfo[RULE_PEND] ++;
                 }
-                ruleInfo[RULE_TTL] = 0;
             }
         }
         else if ((o = ph.get("KeyTemplate")) != null && o instanceof String) {
@@ -1133,7 +1132,7 @@ public class CacheNode extends Node {
             if (rc != 0) // request failed so disable the invalidation
                 keys = new String[0];
             m = 0;
-            for (j=0; j<keys.length; j++) { // invaliate the groups via keys
+            for (j=0; j<keys.length; j++) { // invalidate the groups via keys
                 if (keys[j] == null || keys[j].length() <= 0)
                     continue;
                 k = cache.groupID(keys[j]);

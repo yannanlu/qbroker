@@ -1112,7 +1112,7 @@ public class AggregateNode extends Node {
                         else { // flush the msg of the key for dynamic session
                             MessageFilter filter;
                             int dmask = (int) ruleInfo[RULE_OPTION];
-                            TextEvent msg = (TextEvent) cache.get(key, 0);
+                            TextEvent msg = (TextEvent) cache.get(key, 0L);
                             if ((ruleInfo[RULE_GID] & 2) > 0) try {
                                 MessageUtils.copy(msg, inMessage, buffer);
                             }
@@ -1152,13 +1152,14 @@ public class AggregateNode extends Node {
                             }
 
                             if(passthru(currentTime, msg, in, rid, 0, -1, 0)>0){
+                                long ttl = ruleInfo[RULE_TTL];
                                 size ++;
                                 ruleInfo[RULE_PEND] --;
                                 ruleInfo[RULE_TIME] = currentTime;
                                 // disable the expired key
                                 info[1] = 0;
-                                cache.touch(key, currentTime-ruleInfo[RULE_TTL]-
-                                    10000, currentTime);
+                                cache.touch(key, currentTime - ttl - 10000,
+                                    currentTime);
                             }
                             else
                                 new Event(Event.ERR, name + ": " + ruleName+
@@ -1207,14 +1208,14 @@ public class AggregateNode extends Node {
                         previousTime = currentTime;
                     }
                 }
-                else if (cache.isExpired(key)) { // key has expired
+                else if (cache.isExpired(key, currentTime)) { // key has expired
                     int[] info;
                     String str = null;
                     if ((info = cache.getMetaData(key)) != null &&
                         info.length > 1 && info[1] > 0) {//flush the expired key
                         MessageFilter filter;
                         int dmask = (int) ruleInfo[RULE_OPTION];
-                        TextEvent msg = (TextEvent) cache.get(key, 0);
+                        TextEvent msg = (TextEvent) cache.get(key, 0L);
                         size = 0;
                         if (aggr != null)
                             recoverMsgBody(aggr.getBodyType(), ruleName, msg);
@@ -1358,7 +1359,7 @@ public class AggregateNode extends Node {
                     else { // flush the msg of the key for dynamic session
                         MessageFilter filter;
                         int dmask = (int) ruleInfo[RULE_OPTION];
-                        TextEvent msg = (TextEvent) cache.get(key, 0);
+                        TextEvent msg = (TextEvent) cache.get(key, 0L);
                         size = 0;
                         if (aggr != null)
                             recoverMsgBody(aggr.getBodyType(), ruleName, msg);
@@ -1390,13 +1391,14 @@ public class AggregateNode extends Node {
                         }
 
                         if (passthru(currentTime, msg, in, rid, 0, -1, 0) > 0) {
+                            long ttl = ruleInfo[RULE_TTL];
                             size ++;
                             ruleInfo[RULE_PEND] --;
                             ruleInfo[RULE_TIME] = currentTime;
                             // disable the expired key
                             info[1] = 0;
-                            cache.touch(key, currentTime-ruleInfo[RULE_TTL]-
-                                10000, currentTime);
+                            cache.touch(key, currentTime - ttl - 10000,
+                                currentTime);
                         }
                         else
                             new Event(Event.ERR, name + ": " + ruleName+
@@ -1542,7 +1544,7 @@ public class AggregateNode extends Node {
         count = 0;
         for (i=0; i<keys.length; i++) {
             cid = -1;
-            inMessage = (TextEvent) cache.get(keys[i], 0);
+            inMessage = (TextEvent) cache.get(keys[i], 0L);
             if (inMessage == null) {
                 new Event(Event.WARNING, name + ": null msg in flush for "+
                     keys[i]).send();

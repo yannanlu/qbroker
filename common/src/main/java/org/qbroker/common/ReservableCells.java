@@ -5,8 +5,8 @@ package org.qbroker.common;
 import org.qbroker.common.XQueue;
 
 /**
- * ReservableCells are bunch of indexed cells that are reservable with the
- * associated unigue IDs. All the reserved cells are always kept in their
+ * ReservableCells are a fixed number of indexed cells that are reservable with
+ * the associated unigue IDs. All the reserved cells are always kept in their
  * natural order.
  *<br/><br/>
  * A cell always is in one of the two different status, EMPTY, and RESERVED. All

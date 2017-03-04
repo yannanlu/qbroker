@@ -6,8 +6,8 @@ package org.qbroker.common;
  * XQueue is an Interface of First-In-First-Out storage with both tracking
  * and transaction support.
  *<br/><br/>
- * XQueue contains number of cells with unique ids.  Each cell can hold one
- * object.  A cell can be in one of four different states: EMPTY, RESERVED,
+ * XQueue contains a fixed number of cells with unique ids. Each cell can hold
+ * one object.  A cell can be in one of four different states: EMPTY, RESERVED,
  * OCCUPIED and TAKEN.  Only an empty cell is able to be reserved.  Only
  * reserved cells can be occupied.  Once a reserved cell is occupied, the
  * object can be taken by an application to process.  If an object is taken,

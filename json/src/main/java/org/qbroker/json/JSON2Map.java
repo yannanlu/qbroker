@@ -1629,7 +1629,7 @@ public class JSON2Map {
                 keyPath = keyPath.replace('[', '.').replaceAll("]", "");
 
             if ((i = keyPath.lastIndexOf('.')) >= 0) {
-                parent = get(ph, keyPath.substring(0, i));
+                parent = (i > 0) ? get(ph, keyPath.substring(0, i)) : ph;
                 key = keyPath.substring(i+1);
             }
             else {
@@ -1678,7 +1678,7 @@ public class JSON2Map {
                 keyPath = keyPath.replace('[', '.').replaceAll("]", "");
 
             if ((i = keyPath.lastIndexOf('.')) >= 0) {
-                parent = get(pl, keyPath.substring(0, i));
+                parent = (i > 0) ? get(pl, keyPath.substring(0, i)) : pl;
                 key = keyPath.substring(i+1);
             }
             else {

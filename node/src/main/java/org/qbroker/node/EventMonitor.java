@@ -50,12 +50,12 @@ import org.qbroker.event.Event;
  * is defined in the ruleset, it is treated as a bypass ruleset. Otherwise,
  * it will be treated as an escalation ruleset that may generate extra messages.
  *<br/><br/>
- * There are two cases for escalation rulesets. If ClassName is defined in the
- * ruleset, it will be used to instantiate an instance of EventEscalation.
- * Otherwise, it is the timeout escalation ruleset in which EventMonitor
- * expects the certain events showing up frequently. For each incomiong event,
- * EventMonitor will match it against every EventSelectors to single out a
- * ruleset. If the ruleset is an instance of EventEscalation, EventMonitor will
+ * For each incomiong event, EventMonitor will match it against every
+ * EventSelectors to single out a ruleset. There are two cases for escalation
+ * rulesets. If ClassName is defined in a ruleset, it will be used to
+ * instantiate an instance of EventEscalation. Otherwise, it is the timeout
+ * escalation ruleset in which EventMonitor expects certain events showing up
+ * frequently. If a ruleset of EventEscalation is selected, EventMonitor will
  * invoke its public method of escalate() to evalaute the event. The instance
  * of EventEscalation is supposed to maintain the state for the event group.
  * In case that a state change is up to certain point, an escalation event will
@@ -63,33 +63,32 @@ import org.qbroker.event.Event;
  * of the state change. It will be delivered according to the predefined
  * EscalationOrder with the value of either "first", "last" or "none" for no
  * order preference. In case of "first" or "last", the ruleset also allows
- * ActionDelay defined in millisec. It specifies how long the escalation gets
- * delayed for the ruleset of "last". For the ruleset of "first", the delay
- * happens after the escalation. EscalationMask controls the display mask on
- * escalation messages.
+ * ActionDelay defined in millisec. In case of the ruleset of "last", it
+ * specifies how long the escalation gets delayed. For the ruleset of "first",
+ * the delay happens after the escalation. EscalationMask controls the display
+ * mask on escalation messages.
  *<br/><br/>
- * However, if the ruleset is of timeout escalation, EventMonitor will update
- * the timestamp for the state to keep it up to date. But if the state has not
- * been updated within certain time interval, a timeout event will be generated
- * as the escalation with the priority set to EscalationPriority. A list of
+ * In case of a ruleset for timeout escalations, KeyTemplate is required to be
+ * defined so that EventMonitor is able cache the properties of the incoming
+ * event with the unique key for an new state or update the timestamp of
+ * an existing state with the incoming event. The ruleset expects certain
+ * events kept coming to keep it up to date. If the expected event has not
+ * shown up within a given interval, an escalation event will be generated as
+ * the escalation with the priority set to EscalationPriority. A list of
  * attribute names is specified in CopiedProperty. Those attributes will be
- * copied over from the first incoming event to the escalation event. The
- * timeout escalation ruleset is good to monitor events of time series.
+ * cached from the first incoming event to the escalation event. If Template
+ * is also defined in the ruleset, it will be used to format the message body
+ * on the escalation event. The tracking session for an existing state can be
+ * terminated or reset by an event whose priority is same as the predefined
+ * ResetPriority of the ruleset. The timeout escalation ruleset is good to
+ * track those alerts fired only once.
  *<br/><br/>
- * EventMonitor always creates one extra ruleset, nohit.  The ruleset of nohit
- * is for those events not hitting any patterns.  Please remember that there is
- * no one-to-one relationship between the candidate events and the esacaltion
- * events.  The total number of escalation events for a ruleset is stored into
- * its RULE_PEND field.  For a ruleset, its property displaying and resetting
- * are mutual-exclusively determined by DisplayMask and StringProperty for
- * the ruleset.  If DisplayMask is not defined in a ruleset or it is set to 0
- * or -1 (by default), its StringProperty will be used to reset the string
- * properties on the escalation events.  Otherwise, its StringProperty will
- * only be used to display the details of escalation events.  On the node
- * level, DisplayMask and StringProperty control the displaying result of
- * all incoming events.  If the DisplayMask of a ruleset is set to -1, that
- * rule will inherit the DisplayMask and the StringProperty from the node
- * for display control on the rule level.
+ * EventMonitor always creates one extra ruleset, nohit. The ruleset of nohit
+ * is for those events not hitting any patterns. Its RULE_PEND field is used to
+ * store the total number of cached states for all timeout rulesets.
+ * Please remember that there is no one-to-one relationship between the
+ * candidate events and the esacaltion events. The total number of escalation
+ * events for a ruleset is stored into its RULE_PEND field.
  *<br/><br/>
  * You are free to choose any names for the four fixed outlinks.  But
  * EventMonitor always assumes the first outlink for done, the second for
@@ -101,7 +100,7 @@ import org.qbroker.event.Event;
  */
 
 public class EventMonitor extends Node {
-    private long heartbeat = 3600000;
+    private long heartbeat = 60000;
     private int[] outLinkMap;
 
     private final static int RESULT_OUT = 0;
@@ -130,6 +129,12 @@ public class EventMonitor extends Node {
             ruleSize = Integer.parseInt((String) o);
         if (ruleSize <= 0)
             ruleSize = 512;
+
+        if ((o = props.get("Heartbeat")) != null) {
+            heartbeat = 1000 * Integer.parseInt((String) o);
+            if (heartbeat < 0)
+                heartbeat = 60000;
+        }
 
         if ((o = props.get("OutLink")) == null || !(o instanceof List))
             throw(new IllegalArgumentException(name +
@@ -293,11 +298,11 @@ public class EventMonitor extends Node {
                 strBuf.append("\n\t" + ruleList.getKey(i) + ": " + i + " " +
                     ruleInfo[RULE_PID] + " " + ruleInfo[RULE_EXTRA] + " " +
                     ruleInfo[RULE_TTL]/1000 + " " + ruleInfo[RULE_DMASK] + " "+
-                    ruleInfo[RULE_OPTION] + " - " +
+                    ruleInfo[RULE_OPTION] + " " + ruleInfo[RULE_GID] + " - " +
                     assetList.getKey((int) ruleInfo[RULE_OID]));
             }
             new Event(Event.DEBUG, name+
-                " RuleName: RID PID EXTRA TTL DMASK OPTION - OutName" +
+                " RuleName: RID PID EXTRA TTL DMASK OPTION GID - OutName" +
                 strBuf.toString()).send();
         }
     }
@@ -344,7 +349,7 @@ public class EventMonitor extends Node {
             ruleInfo[RULE_DMASK] = displayMask;
 
         // store escalation mask into RULE_OPTION
-        if ((o = ph.get("EsclationMask")) != null)
+        if ((o = ph.get("EscalationMask")) != null)
             ruleInfo[RULE_OPTION] = Integer.parseInt((String) o);
         else
             ruleInfo[RULE_OPTION] = ruleInfo[RULE_DMASK];
@@ -400,24 +405,37 @@ public class EventMonitor extends Node {
             ruleInfo[RULE_OID] = outLinkMap[BYPASS_OUT];
             ruleInfo[RULE_PID] = TYPE_ACTION;
         }
-        else { // default monitor
-            if ((o = ph.get("KeyTemplate")) != null && o instanceof String) {
-                rule.put("KeyTemplate", new Template((String) o));
-                if((o = ph.get("KeySubstitution"))!=null && o instanceof String)
-                    rule.put("KeySubstitution",new TextSubstitution((String)o));
-            }
-            else {
-                new Event(Event.WARNING, name + ": KeyTemplate is not well " +
-                    " defined. Instead, the default will be used for " +
-                    ruleName).send();
+        else if((o = ph.get("KeyTemplate")) == null || !(o instanceof String)){
+            ruleInfo[RULE_OID] = outLinkMap[BYPASS_OUT];
+            ruleInfo[RULE_PID] = TYPE_BYPASS;
+            new Event(Event.WARNING, name + ": PreferredOutLink is not well " +
+                "defined. Instead, the default will be used for " +
+                ruleName).send();
+        }
+        else { // default rule for timeout
+            rule.put("KeyTemplate", new Template((String) o));
+            if ((o = ph.get("KeySubstitution")) != null && o instanceof String)
+                rule.put("KeySubstitution", new TextSubstitution((String) o));
+
+            if ((o = ph.get("Template")) != null && o instanceof String) {
+                rule.put("Template", new Template((String) o));
+                if ((o = ph.get("Substitution")) != null && o instanceof String)
+                    rule.put("Substitution", new TextSubstitution((String) o));
             }
 
+            // EscalationPriority stored in EXTRA
             if ((o = ph.get("EscalationPriority")) != null)
                 ruleInfo[RULE_EXTRA] = Event.getPriorityByName((String) o);
             if (ruleInfo[RULE_EXTRA] < 0)
                 ruleInfo[RULE_EXTRA] = Event.getPriorityByName("INFO");
 
-            if ((o = ph.get("CopiedProperty")) != null && o instanceof List){
+            // ResetPriority stored in GID
+            if ((o = ph.get("ResetPriority")) != null)
+                ruleInfo[RULE_GID] = Event.getPriorityByName((String) o);
+            else
+                ruleInfo[RULE_GID] = -1;
+
+            if ((o = ph.get("CopiedProperty")) != null && o instanceof List) {
                 List<String> pl = new ArrayList<String>();
                 for (Object ky : (List) o) {
                     if (!(ky instanceof String))
@@ -481,7 +499,7 @@ public class EventMonitor extends Node {
         Map rule = null;
         Browser browser;
         int[] ruleMap;
-        long[] outInfo, ruleInfo = null;
+        long[] ri, outInfo, ruleInfo = null;
         long currentTime, previousTime, wt, count = 0;
         int mask, ii, sz, dspBody;
         int i = 0, m, n, previousRid;
@@ -508,6 +526,7 @@ public class EventMonitor extends Node {
         filter = new EventSelector[m];
         browser = ruleList.browser();
         ruleMap = new int[m];
+        ri = ruleList.getMetaData(0);
         i = 0;
         while ((rid = browser.next()) >= 0) {
             rule = (Map) ruleList.get(rid);
@@ -550,7 +569,7 @@ public class EventMonitor extends Node {
             }
             currentTime = System.currentTimeMillis();
             if (currentTime - previousTime >= heartbeat) {
-                if (update(currentTime, in, out[0], 0) > 0)//check timeouts
+                if (update(currentTime, in, out[0], 0) > 0) // check timeouts
                     currentTime = System.currentTimeMillis();
                 previousTime = currentTime;
             }
@@ -623,8 +642,8 @@ public class EventMonitor extends Node {
                 }
                 else if (ruleInfo[RULE_PID] == TYPE_CACHE) {
                     cache = (QuickCache) rule.get("Cache");
-                    temp = (Template) rule.get("Template");
-                    tsub = (TextSubstitution) rule.get("Substitution");
+                    temp = (Template) rule.get("KeyTemplate");
+                    tsub = (TextSubstitution) rule.get("KeySubstitution");
                 }
                 previousRid = rid;
             }
@@ -651,7 +670,26 @@ public class EventMonitor extends Node {
                 }
                 if (tsub != null && key != null)
                     key = tsub.substitute(key);
-                if (!cache.containsKey(key)) { // first event
+
+                int p = event.getPriority();
+                if (p == (int) ruleInfo[RULE_GID]) { // reset the state
+                    if (cache.containsKey(key)) {
+                        int[] meta = cache.getMetaData(key);
+                        if (meta != null && meta.length > 0)
+                            meta[0] = 0;
+                        i = (meta != null && meta.length > 0) ? meta[0] : -1;
+                        if (i == 0)
+                            ri[RULE_PEND] --;
+                        if (!cache.isExpired(key, currentTime))
+                            cache.expire(key, currentTime);
+                        if ((debug & DEBUG_PROP) > 0)
+                            new Event(Event.DEBUG, name + " " + ruleName +
+                                " reset: " + key + " with " + p +
+                                ": " + i).send(); 
+                    }
+                }
+                else if (!cache.containsKey(key) || // first event
+                    cache.isExpired(key, currentTime)) { // expired
                     Map<String, String> map = new HashMap<String, String>();
                     String[] pn = (String[]) rule.get("CopiedProperty");
                     if (pn.length > 0) {
@@ -669,76 +707,22 @@ public class EventMonitor extends Node {
                            map.put(str, event.getAttribute(str));
                         }
                     }
-                    i = cache.insert(key, currentTime, ttl, new int[]{1}, map);
+                    i = cache.insert(key, currentTime, ttl, new int[]{1}, map,
+                        currentTime);
+                    if (i > 0)
+                        ri[RULE_PEND] ++;
                     if (cache.size() == 1)
                         cache.setStatus(cache.getStatus(), currentTime);
+                    if ((debug & DEBUG_UPDT) > 0)
+                        new Event(Event.DEBUG, name + " " + ruleName +
+                            " insert: " + key + " " + i + " " +
+                            cache.size()).send();
                 }
-                else if (!cache.isExpired(key)) { // not exipired yet
+                else { // not exipired yet
                     int[] meta = cache.getMetaData(key);
                     if (meta != null && meta.length > 0)
                         meta[0] ++;
-                    cache.touch(key, currentTime);
-                }
-                else { // expired
-                    Map<String, String> map = new HashMap<String, String>();
-                    String[] pn = (String[]) rule.get("CopiedProperty");
-                    int[] meta = cache.getMetaData(key);
-                    long tm = cache.getTimestamp(key);
-                    cache.touch(key, currentTime);
-                    Map ph = (Map) cache.get(key, currentTime);
-                    cache.touch(key, tm);
-                    i = (meta != null && meta.length > 0) ? meta[0] : -1;
-                    msg = new TextEvent(key + " timed out after "+i+" events");
-                    msg.setPriority((int) ruleInfo[RULE_EXTRA]);
-                    msg.removeAttribute("priority");
-                    msg.setAttribute("eventCount", String.valueOf(i));
-                    msg.setAttribute("lastTM", Event.dateFormat(new Date(tm)));
-                    msg.setAttribute("date",
-                        Event.dateFormat(new Date(currentTime)));
-                    msg.setAttribute("status", "Normal");
-                    msg.setAttribute("EscalationKey", key);
-                    i = 0;
-                    for (String ky : pn) try {
-                        msg.setAttribute(ky, (String) ph.get(ky));
-                    }
-                    catch (Exception e) {
-                        String str = name + ": " + ruleName;
-                        Exception ex = null;
-                        if (e instanceof JMSException)
-                            ex = ((JMSException) e).getLinkedException();
-                        if (ex != null)
-                            str += " Linked exception: " + ex.toString() + "\n";
-                        i = -1;
-                        new Event(Event.ERR, str+" failed to copy property at "+
-                            ky + " for cache of " + key + ": " +
-                            Event.traceStack(e)).send();
-                    }
-                    if (i >= 0) {
-                        i = flush(currentTime, -1, rid, msg, in, out[0], 0);
-                        if (i <= 0)
-                            new Event(Event.ERR, name + ": " + ruleName +
-                            " failed to flush escalation msg to " + oid +
-                            " for " + key + " so it got dropped").send();
-                    }
-
-                    if (pn.length > 0) {
-                        for (String ky : pn)
-                            map.put(ky, event.getAttribute(ky));
-                    }
-                    else { // copy all attributes over
-                        String str;
-                        Iterator iter = event.getAttributeNames();
-                        while (iter.hasNext()) {
-                           str = (String) iter.next();
-                           if (str == null || str.length() <= 0 ||
-                               "text".equals(str))
-                               continue;
-                           map.put(str, event.getAttribute(str));
-                        }
-                    }
-                    i = cache.insert(key, currentTime, ttl, new int[]{1}, map);
-                    if (cache.size() == 1)
-                        cache.setStatus(cache.getStatus(), currentTime);
+                    cache.touch(key, currentTime, currentTime - ttl);
                 }
 
                 oid = outLinkMap[BYPASS_OUT];
@@ -869,7 +853,7 @@ public class EventMonitor extends Node {
                 " rid=" + rid + " oid=" + oid).send();
             return 0;
         }
-        if ((debug & DEBUG_COLL) > 0)
+        if ((debug & DEBUG_PROP) > 0)
             new Event(Event.DEBUG, name + " flush: cid=" + cid +
                 " rid=" + rid + " oid=" + oid).send();
 
@@ -906,13 +890,18 @@ public class EventMonitor extends Node {
         EventEscalation escalator;
         QuickCache cache;
         TextEvent msg;
+        Template temp;
+        TextSubstitution tsub;
         Map rule = null, map;
-        String[] pn;
         int[] meta;
         long[] ri;
         long st, tm, mtime;
-        int i, n, rid, count = 0;
+        int i, k, m, n, rid, count = 0;
 
+        if ((debug | DEBUG_UPDT) > 0)
+            strBuf = new StringBuffer();
+
+        m = -1;
         count = 0;
         browser = ruleList.browser();
         while ((rid = browser.next()) >= 0) {
@@ -926,6 +915,7 @@ public class EventMonitor extends Node {
                 st = ri[RULE_TTL];
                 if (st > 0 && currentTime - mtime >= st) // session timed out
                     count += escalator.resetSession(currentTime);
+                continue;
             }
             else if (TYPE_CACHE != (int) ri[RULE_PID])
                 continue;
@@ -933,12 +923,16 @@ public class EventMonitor extends Node {
             if (cache == null || cache.size() <= 0)
                 continue;
             mtime = cache.getMTime();
-            st = ri[RULE_GID];
+            st = ri[RULE_TTL];
             if (st <= 0 || currentTime - mtime < st) // not timed out yet
                 continue;
             count ++;
+            if (m < 0)
+                m = 0;
+            temp = (Template) rule.get("Template");
+            tsub = (TextSubstitution) rule.get("Substitution");
             mtime = currentTime;
-            pn = (String[]) rule.get("CopiedProperty");
+            k = 0;
             n = 0;
             for (String key : cache.keySet()) {
                 tm = cache.getTimestamp(key);
@@ -950,9 +944,12 @@ public class EventMonitor extends Node {
                 // expired so touch it first to retrieve the object
                 meta = cache.getMetaData(key);
                 i = (meta != null && meta.length > 0) ? meta[0] : -1;
-                cache.touch(key, currentTime);
-                map = (Map) cache.get(key);
-                cache.touch(key, tm);
+                if (i == 0) { // skip the key already claimed
+                    k ++;
+                    continue;
+                }
+                // since it has expired, use earlier time to retrive state map 
+                map = (Map) cache.get(key, tm);
                 msg = new TextEvent(key + " timed out after " + i + " events");
                 msg.setPriority((int) ri[RULE_EXTRA]);
                 msg.removeAttribute("priority");
@@ -962,21 +959,41 @@ public class EventMonitor extends Node {
                     Event.dateFormat(new Date(currentTime)));
                 msg.setAttribute("status", "Normal");
                 msg.setAttribute("EscalationKey", key);
-                for (String ky : pn)
-                    msg.setAttribute(ky, (String) map.get(ky));
+                for (Object obj : map.keySet())
+                    msg.setAttribute((String) obj, (String) map.get(obj));
+                if (temp != null) try {
+                    String text = EventUtils.format(msg, temp);
+                    if (tsub != null)
+                        text = tsub.substitute(text);
+                    if (text != null && text.length() > 0)
+                        msg.setText(text);
+                }
+                catch (Exception e) {
+                }
                 i = flush(currentTime, -1, rid, msg, in, out, oid);
-                if (i > 0)
-                    n ++;
-                else
+                n ++;
+                if (i <= 0)
                     new Event(Event.ERR, name + ": " + ruleList.getKey(rid) +
                         " failed to flush escalation msg to " + oid +
                         " for " + key).send();
             }
-            if (n > 0) // clean up expired keys
+            if (n + k > 0) // clean up expired keys
                 cache.disfragment(currentTime);
-            if (cache.size() > 0)
+            i = cache.size();
+            if (i > 0)
                 cache.setStatus(cache.getStatus(), mtime);
+            m += i;
+            if ((debug | DEBUG_UPDT) > 0)
+                strBuf.append("\n\t" + cache.getName() + ": " + n + " " +
+                    k + " " + i);
         }
+        if (m >= 0) { // update total pending on NOHIT
+            ri = ruleList.getMetaData(0);
+            ri[RULE_PEND] = m;
+        }
+        if ((debug | DEBUG_UPDT) > 0 && strBuf.length() > 0)
+            new Event(Event.DEBUG, name + " Rule Flushed Reset Cached - " +
+                m + strBuf.toString()).send();
 
         return count;
     }
@@ -1230,6 +1247,22 @@ public class EventMonitor extends Node {
                 strBuf.toString()).send();
 
         return l;
+    }
+
+    public int updateParameters(Map props) {
+        Object o;
+        int i, n;
+
+        n = super.updateParameters(props);
+        if ((o = props.get("Heartbeat")) != null) {
+            i = 1000 * Integer.parseInt((String) o);
+            if (i >= 0 && i != heartbeat) {
+                heartbeat = i;
+                n++;
+            }
+        }
+
+        return n;
     }
 
     /**

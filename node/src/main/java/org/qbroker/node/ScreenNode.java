@@ -1689,7 +1689,7 @@ public class ScreenNode extends Node {
                     }
                     else { // xa is off
                         cid = -1;
-                        msg = (Message) cache.get(keys[j]);
+                        msg = (Message) cache.get(keys[j], currentTime);
                     }
                     if (msg == null)
                         continue;

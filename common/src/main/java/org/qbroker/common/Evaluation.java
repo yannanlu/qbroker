@@ -752,7 +752,7 @@ public class Evaluation {
      * the result upon success. Otherwise it returns null or just throws an
      * IllegalArgumentException to indicate failure. Any single quoted string
      * can be replaced by a ternary expression as long as its result is also
-     * a quoted string.
+     * a single quoted string.
      */
     public static String choose(String expr) {
         int i, j, n;
@@ -767,11 +767,14 @@ public class Evaluation {
         if (i < 0) { // not a ternary expression
             i = expr.indexOf('\'');
             j = expr.lastIndexOf('\'');
-            return (i >= 0 && j >= i) ? expr.substring(i, j+1) : null;
+            return (i >= 0 && j >= i) ? expr.substring(i, j+1) : expr;
         }
         else if ((j = look(buffer, i+1, n)) < 0) // ':' not found
             return null;
-        else if (evaluate(expr.substring(0, i)).intValue() != 0)
+        else if (expr.lastIndexOf(")", j+1) >= 0)
+            return (evaluate(expr.substring(0,i)+"?1:0)").intValue() != 0) ?
+                choose(expr.substring(i+1, j)) : choose(expr.substring(j+1));
+        else if (evaluate(expr.substring(0, i) + "? 1 : 0").intValue() != 0)
             return choose(expr.substring(i+1, j));
         else
             return choose(expr.substring(j+1));

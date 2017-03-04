@@ -65,17 +65,16 @@ import org.qbroker.common.Evaluation;
  * <tr><td>s//:=pow d/e</td><td>Power</td><td>Real Number</td><td>s//:=pow 0.5/e</td></tr>
  * <tr><td>s//:=sqrt/e</td><td>Square Root</td><td>Number</td><td>s//:=sqrt/e</td></tr>
  * <tr><td>s//:=abs/e</td><td>Absolute Value</td><td>Number</td><td>s//:=abs/e</td></tr>
- * <tr><td>s//:=eval/e</td><td>Evaluation</td><td>Number</td><td>s//:=eval/e</td></tr>
- * <tr><td>s//:=choose/e</td><td>Choose between two quoted strings</td><td>String</td><td>s//:=choose/e</td></tr>
+ * <tr><td>s//:=eval/e</td><td>Evaluation</td><td>Number or String</td><td>s//:=eval/e</td></tr>
  * <tr><td>s//:=md5/e</td><td>MD5 Checksum</td><td>String</td><td>s//:=md5/e</td></tr>
  * <tr><td>s//:=chop/e</td><td>Chop</td><td>String</td><td>s//:=chop/e</td></tr>
  * <tr><td>s//:=replace d/e</td><td>Search Replace</td><td>String</td><td>s//:=replace !/e</td></tr>
  * <tr><td>s//:=sub d/e</td><td>regex replaceFirst</td><td>String</td><td>s//:=sub !/e</td></tr>
  * <tr><td>s//:=gsub d/e</td><td>regex replaceAll</td><td>String</td><td>s//:=gsub !/e</td></tr>
  * </table>
- * For eval(), it applies on a template with a simple numeric expression for
- * numbers. For choose(), it applies on a template with a ternary expression
- * for quoted strings. The result string will have the quotes trimmed off.
+ * For eval(), it applies to a template with a simple numeric expression for
+ * numbers or a ternary expression on numbers or single quoted strings. In case
+ * of string, the result string will have the quotes trimmed off.
  * For replace(), the following parameter, d, is the delimiter used to parse
  * the text of the template. The text of the template should contain 3 parts
  * delimitered by the delimiter, d. The first part is the original text to be
@@ -134,9 +133,8 @@ public class TextSubstitution {
     private static final int EXPR_MD5 = 24;
     private static final int EXPR_CHOP = 25;
     private static final int EXPR_REPLACE = 26;
-    private static final int EXPR_CHOOSE = 27;
-    private static final int EXPR_RSUB = 28;
-    private static final int EXPR_GSUB = 29;
+    private static final int EXPR_RSUB = 27;
+    private static final int EXPR_GSUB = 28;
     private static final int OP_EXPR = 0;
     private static final int OP_SUB = 1;
     private static final int OP_N2R = 2;
@@ -426,9 +424,6 @@ public class TextSubstitution {
                     expr = EXPR_REPLACE;
                     d1 = "!";
                 }
-                else if ("choose".equalsIgnoreCase(text)) {
-                    expr = EXPR_CHOOSE;
-                }
                 else if ("sub".equalsIgnoreCase(text)) {
                     expr = EXPR_RSUB;
                     d1 = "!";
@@ -672,21 +667,18 @@ public class TextSubstitution {
             break;
           case EXPR_EVAL:
             try {
-                Number o = Evaluation.evaluate(input);
-                if (o != null)
-                    str = o.toString();
-                else
-                    str = null;
-            }
-            catch (Exception e) {
-                str = null;
-            }
-            break;
-          case EXPR_CHOOSE:
-            try {
-                str = Evaluation.choose(input);
-                if (str != null)
-                    str = Evaluation.unquote(str);
+                if (Evaluation.isStringExpression(input)) {//between two strings
+                    str = Evaluation.choose(input);
+                    if (str != null)
+                        str = Evaluation.unquote(str);
+                }
+                else { // numeric exporession
+                    Number r = Evaluation.evaluate(input);
+                    if (r != null)
+                        str = r.toString();
+                    else
+                        str = null;
+                }
             }
             catch (Exception e) {
                 str = null;

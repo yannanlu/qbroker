@@ -3,6 +3,16 @@ package org.qbroker.flow;
 /* ReleaseTag.java - release tag for all the packages of qbroker */
 
 /**
+ * V1.1.10 (2017/03/04): added ResetPriority and Template to EventMonitor for
+ * the default timeout escalations, added updateParameters() to EventMonitor,
+ * fixed the issue of missing reference timestamp on QucikCache instances in
+ * rest of MessageNode implementations, removed in.available() from testHTTP()
+ * of WebTester to avoid socket exceptions, fixed a bug with choose() on two
+ * single quoted strings in Evaluation, merged the function of choose to eval
+ * in TextSubstitution, fixed a bug in put() of JSON2Map if a new key is
+ * something like ".xxx", added a check in copy() of JSONSection so that
+ * the override only happens on the existing keys
+ *<br/>
  * V1.1.9 (2017/02/12): rewritten JSONParser to add the support for JSONPath, 
  * Pattern and Substitution, added two headers to WebTester to support soap
  * testing, added try-catch block to CACHE rule of EventMonitor in case of
@@ -90,7 +100,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V 1.1.9 2017/02/12 16:11:50";
+    private static String ReleaseTAG = "QBroker V 1.1.10 2017/03/04 11:43:07";
 
     public ReleaseTag() {
     }
