@@ -11,7 +11,11 @@ package org.qbroker.flow;
  * single quoted strings in Evaluation, merged the function of choose to eval
  * in TextSubstitution, fixed a bug in put() of JSON2Map if a new key is
  * something like ".xxx", added a check in copy() of JSONSection so that
- * the override only happens on the existing keys
+ * the override only happens on the existing keys, added SessionSize to
+ * StreamPersister to support auto disconnections whenever processed msg count
+ * is same as SessionSize for TCP sockets, disabled the pattern match on TCP
+ * test for WebTester only if Pattern is not defined, added previousQStatus to
+ * JMSLogMonitor to reset the actionCount
  *<br/>
  * V1.1.9 (2017/02/12): rewritten JSONParser to add the support for JSONPath, 
  * Pattern and Substitution, added two headers to WebTester to support soap
@@ -100,7 +104,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V 1.1.10 2017/03/04 11:43:07";
+    private static String ReleaseTAG = "QBroker V 1.1.10 2017/03/04 12:20:59";
 
     public ReleaseTag() {
     }

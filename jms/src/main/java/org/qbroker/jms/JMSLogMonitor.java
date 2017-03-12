@@ -29,7 +29,7 @@ public class JMSLogMonitor extends Monitor {
     private String uri;
     private File referenceFile;
     private int errorIgnored, maxNumberLogs;
-    private int previousDepth, logSize;
+    private int previousQStatus, previousDepth, logSize;
     private int maxScannedLogs, debug, waterMark;
     private long position, timestamp, offset;
     private long previousPosition, previousTimestamp, previousOffset;
@@ -136,6 +136,7 @@ public class JMSLogMonitor extends Monitor {
         offset = savedOffset;
         referenceFile = new File((String) props.get("ReferenceFile"));
 
+        previousQStatus = JMSMonitor.Q_SLOW - 1;
         previousDepth = 0;
         needReset = false;
     }
@@ -388,7 +389,7 @@ public class JMSLogMonitor extends Monitor {
 
     public Event performAction(int status, long currentTime,
         Map<String, Object> latest) {
-        int i;
+        int i, qStatus = JMSMonitor.Q_UNKNOWN;
         int curDepth = 0, preDepth = 0, enqCount = 0, deqCount = 0, level = 0;
         String firstEntry = null, lastEntry = null;
         StringBuffer strBuf = new StringBuffer();
@@ -455,6 +456,7 @@ public class JMSLogMonitor extends Monitor {
             }
           default: // normal cases
             level = Event.INFO;
+            qStatus = JMSMonitor.Q_OK;
             exceptionCount = 0;
             if (status != TimeWindows.BLACKOUT &&
                 previousStatus == TimeWindows.BLACKOUT)
@@ -468,6 +470,9 @@ public class JMSLogMonitor extends Monitor {
                 }
                 strBuf.append(curDepth + " messages in ");
                 strBuf.append(uri + " not moving");
+                qStatus = JMSMonitor.Q_STUCK;
+                if (previousQStatus != qStatus)
+                    actionCount = 1;
             }
             else if (waterMark > 0 && curDepth > waterMark &&
                 preDepth > waterMark) {
@@ -478,10 +483,21 @@ public class JMSLogMonitor extends Monitor {
                 }
                 strBuf.append(curDepth + " messages in ");
                 strBuf.append(uri + " slow moving");
+                qStatus = JMSMonitor.Q_SLOW;
+                if (previousQStatus != qStatus)
+                    actionCount = 1;
+            }
+            else if (previousQStatus != qStatus) {
+                actionCount = 1;
+                strBuf.append(curDepth + " messages in ");
+                strBuf.append(uri + " moving OK");
+                if (normalStep > 0)
+                    step = normalStep;
             }
             break;
         }
         previousStatus = status;
+        previousQStatus = qStatus;
 
         int count = 0;
         switch (level) {
@@ -601,13 +617,14 @@ public class JMSLogMonitor extends Monitor {
     public Map<String, Object> checkpoint() {
         Map<String, Object> chkpt = super.checkpoint();
         chkpt.put("PreviousDepth", String.valueOf(previousDepth));
+        chkpt.put("PreviousQStatus", String.valueOf(previousQStatus));
         return chkpt;
     }
 
     public void restoreFromCheckpoint(Map<String, Object> chkpt) {
         Object o;
         long ct;
-        int aCount, eCount, pDepth, pStatus, sNumber;
+        int aCount, eCount, pDepth, pStatus, pQStatus, sNumber;
         if (chkpt == null || chkpt.size() == 0 || serialNumber > 0)
             return;
         if ((o = chkpt.get("Name")) == null || !name.equals((String) o))
@@ -641,6 +658,10 @@ public class JMSLogMonitor extends Monitor {
             pDepth = Integer.parseInt((String) o);
         else
             return;
+        if ((o = chkpt.get("PreviousQStatus")) != null)
+            pQStatus = Integer.parseInt((String) o);
+        else
+            return;
 
         // restore the parameters from the checkpoint
         actionCount = aCount;
@@ -648,6 +669,7 @@ public class JMSLogMonitor extends Monitor {
         previousStatus = pStatus;
         serialNumber = sNumber;
         previousDepth = pDepth;
+        previousQStatus = pQStatus;
     }
 
     public void destroy() {

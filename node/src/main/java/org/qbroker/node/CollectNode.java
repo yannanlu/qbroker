@@ -310,7 +310,7 @@ public class CollectNode extends Node {
      * It initializes a new ruleset with the ruleInfo and returns the rule upon
      * success.  Otherwise, it throws an exception or returns null.
      */
-    protected Map<String, Object> initRuleset(long tm, Map ph, long[] ruleInfo) {
+    protected Map<String, Object> initRuleset(long tm, Map ph, long[] ruleInfo){
         Object o;
         Map<String, Object> rule;
         Iterator iter;

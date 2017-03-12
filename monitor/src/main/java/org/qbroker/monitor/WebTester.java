@@ -159,15 +159,16 @@ public class WebTester extends Report {
             timeout = 60000;
 
         try {
-            String ps;
+            String ps = null;
             Perl5Compiler pc = new Perl5Compiler();
             pm = new Perl5Matcher();
 
             if ((o = props.get("Pattern")) != null)
                 ps = MonitorUtils.substitute((String) o, template);
-            else
+            else if (isHTTP)
                 ps = "200 OK";
-            pattern = pc.compile(ps);
+            if (ps != null)
+                pattern = pc.compile(ps);
             httpPattern = pc.compile("^(HTTP)\\/[^ ]* (\\d+) ");
         }
         catch (Exception e) {
@@ -514,7 +515,7 @@ public class WebTester extends Report {
         response = strBuf.toString();
 
         if (!isHTTP) { // for generic tcp test like aggie
-            if (!pm.contains(response, pattern)) {
+            if (pattern != null && !pm.contains(response, pattern)) {
                 if (debug != 0)
                     new Event(Event.DEBUG, name + " pattern not found: " +
                         response).send();

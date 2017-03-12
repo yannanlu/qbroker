@@ -682,7 +682,7 @@ public class EventMonitor extends Node {
                             ri[RULE_PEND] --;
                         if (!cache.isExpired(key, currentTime))
                             cache.expire(key, currentTime);
-                        if ((debug & DEBUG_PROP) > 0)
+                        if ((debug & DEBUG_UPDT) > 0)
                             new Event(Event.DEBUG, name + " " + ruleName +
                                 " reset: " + key + " with " + p +
                                 ": " + i).send(); 

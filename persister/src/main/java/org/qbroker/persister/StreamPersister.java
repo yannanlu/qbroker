@@ -53,6 +53,10 @@ import org.qbroker.event.Event;
  * StreamPersister will send JMS messages down the OutputStream for the
  * normal operation.  In this case, SOTimeout is used for connection timeout
  * while ReceiveTime is used to timeout read().
+ *<br/><br/>
+ * In case of the tcp socket and SessioneSize is larger than 0, StreamPersister
+ * will auto reconnect whenever the processed msg count is same as the value of
+ * SessionSize to terminate the session frequently.
  *<br/>
  * @author yannanlu@yahoo.com
  */
@@ -76,9 +80,9 @@ public class StreamPersister extends Persister {
     private byte[][] quitRequest = null;
     private String[] errorResponse = null;
     private int retryCount, receiveTime, port;
-    private int type, bufferSize = 0;
+    private int type, bufferSize = 4096;
     private int soTimeout = 60000;
-    private long sessionTime;
+    private long sessionTime, sessionSize = 0;
     private boolean keepAlive = false, isConnected = false;
     private boolean doRequest = false, withGreeting = false;
     private boolean isSimpleRequest = false;
@@ -233,6 +237,10 @@ public class StreamPersister extends Persister {
                 keepAlive = true;
             else
                 keepAlive = false;
+
+            if ((o = props.get("SessionSize")) != null)
+                sessionSize = Integer.parseInt((String) o);
+
             if ((o = props.get("BufferSize")) == null ||
                 (bufferSize = Integer.parseInt((String) o)) <= 0)
                 bufferSize = 4096;
@@ -861,6 +869,7 @@ public class StreamPersister extends Persister {
 
     private int socketOperation(XQueue xq, int baseTime) {
         int i = 0;
+        long count = 0;
 
         if (baseTime <= 0)
             baseTime = pauseTime;
@@ -869,12 +878,13 @@ public class StreamPersister extends Persister {
             if (sock == null || !isConnected)
                 throw(new IOException("socket is not connected yet"));
             else if (doRequest && !isSimpleRequest)
-                ms.request(sock.getInputStream(), xq, sock.getOutputStream(),
-                    msgList, sBuf);
+                count = ms.request(sock.getInputStream(), xq,
+                    sock.getOutputStream(), msgList, sBuf);
             else if (doRequest) // for single threaded request
-                ms.request(sock.getInputStream(), xq, sock.getOutputStream());
+                count = ms.request(sock.getInputStream(), xq,
+                    sock.getOutputStream());
             else
-                ms.write(xq, sock.getOutputStream());
+                count = ms.write(xq, sock.getOutputStream());
         }
         catch (TimeoutException e) { // hibernate
             resetStatus(PSTR_RUNNING, PSTR_DISABLED);
@@ -965,8 +975,20 @@ public class StreamPersister extends Persister {
         }
         int mask = xq.getGlobalMask();
         if ((mask & XQueue.KEEP_RUNNING) > 0 && status == PSTR_RUNNING &&
-            (mask & XQueue.STANDBY) == 0) // job is done
-            setStatus(PSTR_STOPPED);
+            (mask & XQueue.STANDBY) == 0) {
+            if (sessionSize <= 0 || count != sessionSize) // job is done
+                setStatus(PSTR_STOPPED);
+            else { // just reconnect for the session
+                socketReconnect();
+                if (!isConnected) {
+                    resetStatus(PSTR_RUNNING, PSTR_RETRYING);
+                    new Event(Event.ERR, linkName + ": failed to connect "+
+                        uri + " with msg count of " + count).send();
+                }
+                sessionTime = System.currentTimeMillis();
+                return 1;
+            }
+        }
         sessionTime = System.currentTimeMillis();
         return 0;
     }
