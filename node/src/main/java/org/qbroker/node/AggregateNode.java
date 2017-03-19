@@ -374,11 +374,9 @@ public class AggregateNode extends Node {
     protected Map<String, Object> initRuleset(long tm, Map ph, long[] ruleInfo){
         Object o;
         Map<String, Object> rule;
-        Iterator iter;
-        List list;
         String key, str, ruleName, preferredOutName;
         long[] outInfo;
-        int i, k, n, id;
+        int i, n, id;
 
         if (ph == null || ph.size() <= 0)
             throw(new IllegalArgumentException("Empty property for a rule"));
@@ -442,28 +440,10 @@ public class AggregateNode extends Node {
         else if ((o = ph.get("ClassName")) != null) { // plug-in
             str = (String) o;
             if ((o = ph.get("AggregatorArgument")) != null) {
-                Map map;
-                if (o instanceof List) {
-                    list = (List) o;
-                    k = list.size();
-                    for (i=0; i<k; i++) {
-                        if ((o = list.get(i)) == null)
-                            continue;
-                        if (!(o instanceof Map))
-                            continue;
-                        map = (Map) o;
-                        if (map.size() <= 0)
-                            continue;
-                        iter = map.keySet().iterator();
-                        if ((o = iter.next()) == null)
-                            continue;
-                        str += "::" + (String) o;
-                        str += "::" + (String) map.get((String) o);
-                    }
-                }
-                else if (o instanceof Map) {
-                    str += (String) ((Map) o).get("Name");
-                }
+                if (o instanceof List)
+                    str += "::" + JSON2Map.toJSON((List) o, null, null);
+                else if (o instanceof Map)
+                    str += "::" + JSON2Map.toJSON((Map) o, null, null);
                 else
                     str += "::" + (String) o;
             }
@@ -579,12 +559,11 @@ public class AggregateNode extends Node {
 
         // for String properties
         if ((o = ph.get("StringProperty")) != null && o instanceof Map) {
-            iter = ((Map) o).keySet().iterator();
-            k = ((Map) o).size();
+            int k = ((Map) o).size();
             String[] pn = new String[k];
             k = 0;
-            while (iter.hasNext()) {
-                key = (String) iter.next();
+            for (Object obj : ((Map) o).keySet()) {
+                key = (String) obj;
                 if ((pn[k] = MessageUtils.getPropertyID(key)) == null)
                     pn[k] = key;
                 k ++;

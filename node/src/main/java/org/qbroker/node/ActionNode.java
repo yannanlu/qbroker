@@ -21,6 +21,7 @@ import org.qbroker.common.Browser;
 import org.qbroker.common.AssetList;
 import org.qbroker.common.Template;
 import org.qbroker.common.CollectibleCells;
+import org.qbroker.json.JSON2Map;
 import org.qbroker.jms.MessageUtils;
 import org.qbroker.jms.MessageFilter;
 import org.qbroker.jms.JMSEvent;
@@ -76,11 +77,10 @@ import org.qbroker.event.Event;
  * the new JMS message for escalations.  If something is wrong, the returned
  * object should be a String as the text of the error.
  *<br/><br/>
- * The plugin must also have a constructor taking a Map with a unique
- * value for the key of tag name, or a List or a String as the single
- * argument for configurations.  Based on the data type of the constructor
- * argument, developers should define configuration parameters in the base tag
- * of ActionArgument.  ActionNode will pass the data to the plugin's
+ * The plugin must also have a constructor taking a Map, or a List or a String
+ * as the only argument for configurations.  Based on the data type of the
+ * constructor argument, developers should define configuration parameters
+ * in the base of ActionArgument.  ActionNode will pass the data to the plugin's
  * constructor as an opaque object during the instantiation of the plugin.
  * In the normal operation, ActionNode will invoke the method to process the
  * incoming messages.  It is OK for the method to modify the incoming messages.
@@ -271,11 +271,9 @@ public class ActionNode extends Node {
     protected Map<String, Object> initRuleset(long tm, Map ph, long[] ruleInfo){
         Object o;
         Map<String, Object> rule, hmap;
-        Iterator iter;
-        List list;
         String key, str, ruleName, preferredOutName;
         long[] outInfo;
-        int i, j, k, n, id;
+        int i, n, id;
 
         if (ph == null || ph.size() <= 0)
             throw(new IllegalArgumentException("Empty property for a rule"));
@@ -357,28 +355,10 @@ public class ActionNode extends Node {
         else if ((o = ph.get("ClassName")) != null) { // for plug-in
             str = (String) o;
             if ((o = ph.get("ActionArgument")) != null) {
-                Map map;
-                if (o instanceof List) {
-                    list = (List) o;
-                    k = list.size();
-                    for (i=0; i<k; i++) {
-                        if ((o = list.get(i)) == null)
-                            continue;
-                        if (!(o instanceof Map))
-                            continue;
-                        map = (Map) o;
-                        if (map.size() <= 0)
-                            continue;
-                        iter = map.keySet().iterator();
-                        if ((o = iter.next()) == null)
-                            continue;
-                        str += "::" + (String) o;
-                        str += "::" + (String) map.get((String) o);
-                    }
-                }
-                else if (o instanceof Map) {
-                    str += (String) ((Map) o).get("Name");
-                }
+                if (o instanceof List)
+                    str += "::" + JSON2Map.toJSON((List) o, null, null);
+                else if (o instanceof Map)
+                    str += "::" + JSON2Map.toJSON((Map) o, null, null);
                 else
                     str += "::" + (String) o;
             }
@@ -425,12 +405,11 @@ public class ActionNode extends Node {
 
         // for String properties
         if ((o = ph.get("StringProperty")) != null && o instanceof Map) {
-            iter = ((Map) o).keySet().iterator();
-            k = ((Map) o).size();
+            int k = ((Map) o).size();
             String[] pn = new String[k];
             k = 0;
-            while (iter.hasNext()) {
-                key = (String) iter.next();
+            for (Object obj : ((Map) o).keySet()) {
+                key = (String) obj;
                 if ((pn[k] = MessageUtils.getPropertyID(key)) == null)
                     pn[k] = key;
                 k ++;

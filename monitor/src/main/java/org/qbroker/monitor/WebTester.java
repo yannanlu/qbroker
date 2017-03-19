@@ -15,6 +15,7 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.SocketException;
 import org.apache.oro.text.regex.Pattern;
 import org.apache.oro.text.regex.MatchResult;
 import org.apache.oro.text.regex.Perl5Compiler;
@@ -471,6 +472,22 @@ public class WebTester extends Report {
                     }
                 }
                 catch (InterruptedIOException ex) {
+                }
+                catch (SocketException ex) {
+                    if ("Socket closed".equals(ex.getMessage())) {
+                        // closed on the other end
+                        bytesRead = -1;
+                        if (!isHTTP)
+                            break;
+                        if (k > 0 && totalBytes > 0) { // got something
+                            String str = strBuf.toString();
+                            i = str.indexOf("\r\n\r\n");
+                            if (i > 0 && // connection closed by server
+                                str.lastIndexOf("Connection: close\r\n", i) > 0)
+                                break;
+                        }
+                    }
+                    throw(ex);
                 }
                 k ++;
                 if (maxBytes > 0 && totalBytes >= maxBytes)

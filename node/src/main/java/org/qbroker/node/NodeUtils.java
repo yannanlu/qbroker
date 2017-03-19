@@ -228,7 +228,7 @@ public class NodeUtils {
         Object o;
         int[] partition;
         long[] outInfo;
-        String key, str;
+        String key, str, gn;
         AssetList outList;
         int i, j, id, n, option, capacity;
 
@@ -273,6 +273,9 @@ public class NodeUtils {
                 else
                     option = OF_HOLDON;
                 str = (String) ((Map) o).get("ReportName");
+                gn = (String) ((Map) o).get("GroupName");
+                if (gn != null && gn.length() == 0)
+                    gn = null;
             }
             else {
                 key = (String) o;
@@ -280,6 +283,7 @@ public class NodeUtils {
                 capacity = outCapacity;
                 option = OF_HOLDON;
                 str = null;
+                gn = null;
             }
             if (key == null || key.length() <= 0)
                 new Event(Event.WARNING, name+": ignored unnamed OutLink at " +
@@ -301,7 +305,7 @@ public class NodeUtils {
                 }
                 if (overflow >= 0 && overflow <= MessageNode.OUT_QTIME)
                     outInfo[overflow] = option;
-                id = outList.add(key, outInfo, new Object[]{null, str});
+                id = outList.add(key, outInfo, new Object[]{null, str, gn});
             }
         }
 

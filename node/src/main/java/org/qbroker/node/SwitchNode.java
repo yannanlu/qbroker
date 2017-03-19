@@ -20,6 +20,7 @@ import org.qbroker.common.TextSubstitution;
 import org.qbroker.common.TimeWindows;
 import org.qbroker.common.CollectibleCells;
 import org.qbroker.monitor.ConfigList;
+import org.qbroker.json.JSON2Map;
 import org.qbroker.jms.JMSEvent;
 import org.qbroker.jms.MessageUtils;
 import org.qbroker.jms.MessageFilter;
@@ -51,12 +52,12 @@ import org.qbroker.event.Event;
  * the plug-ins is minimum.  The class must have a public method of
  * route(Message msg) that takes JMS Message as the only argument.  The return
  * object must be an Integer for the id of the route.  In any case, it should
- * never acknowledge any messages. It also must have a constructor taking
- * a Map with a unique value for the key of Name, or a List,
- * or just a String as the single argument for the configurations.  SwitchNode
- * will invoke the method to get the route id for each incoming messages.
- * You can define PreferredOutLink in the Ruleset as the default outlink for
- * failures.  Otherwise, the default outlink will be set to NOHIT.
+ * never acknowledge any messages. It must also have a constructor taking
+ * a Map, or a List, or just a String as the only argument for the
+ * configurations.  SwitchNode will invoke the public method to get the route
+ * id for each incoming messages. You can define PreferredOutLink in the
+ * Ruleset as the default outlink for failures.  Otherwise, the default
+ * outlink will be set to NOHIT.
  *<br/><br/>
  * In case a plugin needs to connect to external resources for dynamic
  * routing process, it should define an extra method of close() to close all
@@ -314,11 +315,9 @@ public class SwitchNode extends Node {
     protected Map<String, Object> initRuleset(long tm, Map ph, long[] ruleInfo){
         Object o;
         Map<String, Object> rule;
-        Iterator iter;
-        List list;
         String key, str, ruleName, ruleType, preferredOutName;
         long[] outInfo;
-        int i, j, k, n, id;
+        int i, n, id;
 
         if (ph == null || ph.size() <= 0)
             throw(new IllegalArgumentException("Empty property for a rule"));
@@ -332,11 +331,8 @@ public class SwitchNode extends Node {
         rule.put("Name", ruleName);
         rule.put("ReportName",  ph.get("ReportName"));
         ruleType = (String) ph.get("RuleType");
-        if (ruleType == null) { // for backward compatibility
-            ruleType = (String) ph.get("Type");
-            if (ruleType == null)
-                ruleType = "";
-        }
+        if (ruleType == null)
+            ruleType = "preferred";
         preferredOutName = (String) ph.get("PreferredOutLink");
         if(preferredOutName ==null || !assetList.containsKey(preferredOutName)){
             preferredOutName = assetList.getKey(NOHIT_OUT);
@@ -352,7 +348,7 @@ public class SwitchNode extends Node {
             !"sticky".equals(ruleType.toLowerCase()))
             ruleType = "preferred";
 
-        if ("sticky".equals(ruleType)) {
+        if ("sticky".equals(ruleType.toLowerCase())) {
             if ((o = ph.get("KeyTemplate")) != null && o instanceof String)
                 rule.put("KeyTemplate", new Template((String) o));
             if ((o = ph.get("KeySubstitution")) != null && o instanceof String)
@@ -391,32 +387,15 @@ public class SwitchNode extends Node {
             }
         }
 
-        if ("weighted".equals(ruleType.toLowerCase()) &&
-            (o = ph.get("RouterArgument")) != null) { // plugin
-            Map map;
-            if (o instanceof List) {
-                list = (List) o;
-                k = list.size();
-                for (i=0; i<k; i++) {
-                    if ((o = list.get(i)) == null)
-                        continue;
-                    if (!(o instanceof Map))
-                        continue;
-                    map = (Map) o;
-                    if (map.size() <= 0)
-                        continue;
-                    iter = map.keySet().iterator();
-                    if ((o = iter.next()) == null)
-                        continue;
+        if ("weighted".equals(ruleType.toLowerCase())) { // for plugin
+            if ((o = ph.get("RouterArgument")) != null) {
+                if (o instanceof List)
+                    str += "::" + JSON2Map.toJSON((List) o, null, null);
+                else if (o instanceof Map)
+                    str += "::" + JSON2Map.toJSON((Map) o, null, null);
+                else
                     str += "::" + (String) o;
-                    str += "::" + (String) map.get((String) o);
-                }
             }
-            else if (o instanceof Map) {
-                str += (String) ((Map) o).get("Name");
-            }
-            else
-                str += "::" + (String) o;
 
             if (pluginList.containsKey(str)) {
                 long[] meta;
@@ -436,7 +415,7 @@ public class SwitchNode extends Node {
             ruleInfo[RULE_OID] = assetList.getID(preferredOutName);
             ruleInfo[RULE_PID] = TYPE_WEIGHTED;
         }
-        else if ("sticky".equals(ruleType)) { // sticky
+        else if ("sticky".equals(ruleType.toLowerCase())) { // sticky
             ruleInfo[RULE_OID] = assetList.getID(preferredOutName);
             ruleInfo[RULE_PID] = TYPE_NONE;
             ruleInfo[RULE_GID] = -1;
@@ -449,12 +428,11 @@ public class SwitchNode extends Node {
 
         // for String properties
         if ((o = ph.get("StringProperty")) != null && o instanceof Map) {
-            iter = ((Map) o).keySet().iterator();
-            k = ((Map) o).size();
+            int k = ((Map) o).size();
             String[] pn = new String[k];
             k = 0;
-            while (iter.hasNext()) {
-                key = (String) iter.next();
+            for (Object obj : ((Map) o).keySet()) {
+                key = (String) obj;
                 if ((pn[k] = MessageUtils.getPropertyID(key)) == null)
                     pn[k] = key;
                 k ++;
@@ -486,7 +464,7 @@ public class SwitchNode extends Node {
         long currentTime, previousTime, wt;
         long count = 0;
         int mask, ii, sz, dspBody;
-        int i = 0, k, min = 0, n, size, previousRid;
+        int i = 0, k, n, size, previousRid;
         int cid = -1; // the cell id of the message in input queue
         int rid = 0; // the id of the ruleset
         int oid = 0; // the id of the output queue
@@ -557,7 +535,7 @@ public class SwitchNode extends Node {
             currentTime = System.currentTimeMillis();
             if (currentTime - previousTime >= heartbeat) {
                 if ( sessionTimeout > 0)
-                    min = update(currentTime, in);
+                    update(currentTime, in);
                 previousTime = currentTime;
             }
             if (cid < 0)
@@ -678,7 +656,7 @@ public class SwitchNode extends Node {
 
             if ((debug & DEBUG_PROP) > 0)
                 new Event(Event.DEBUG, name+" propagate: cid=" + cid +
-                    " rid=" + rid + " oid=" + oid + " min=" + min).send();
+                    " rid=" + rid + " oid=" + oid + " i=" + i).send();
 
             if (ruleInfo[RULE_DMASK] > 0) try { // display the message
                 if ((ruleInfo[RULE_DMASK] & dspBody) > 0 && !ckBody)

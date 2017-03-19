@@ -29,45 +29,51 @@ import org.qbroker.event.Event;
 
 /**
  * DispatchNode dispatches JMS messages to various destinations according to
- * their content, and preconfigured rulesets.  DispatchNode contains
- * a number of predefined rulesets.  These rulesets categorize messages into
- * non-overlapping groups.  Therefore, each rule defines a unique message
- * group.  The ruleset also specifies the association between the group and
- * the outlinks.  For those messages falling off all defined rulesets,
- * DispatchNode always creates an extra ruleset, nohit, to handle them.
- * By default, nohit ruleset always uses the last outlink unless there is
- * one defined explicitly for nohit.
+ * their content, and preconfigured rulesets. DispatchNode contains one or more 
+ * outlinks as the destinations. Those outlinks are grouped exclusively
+ * according to their group name. Within each group, all the oulinks are
+ * equivalent and backing up of each other in case of failure or high load.
+ *<br/><br/>
+ * DispatchNode uses the predefined rulesets to dispatch incoming messages.
+ * These rulesets categorize messages into non-overlapping groups. Therefore,
+ * each rule defines a unique message group. The ruleset also specifies the
+ * association between the message group and the outlinks. For those messages
+ * falling off all defined rulesets, DispatchNode always creates an extra
+ * ruleset, nohit, to handle them. By default, nohit ruleset always uses the
+ * last outlink unless there is one defined explicitly.
  *<br/><br/>
  * Currently, DispatchNode supports only four types of dynamic switchings:
- * roundrobin, weighted, preferred and sticky.  DispatchNode assumes all the
- * destinations are equivalent and mutually replacible.  Therefore, there is no
- * fixed association between the rulesets and the outlinks.  For the type of
- * roundrobin, DispatchNode picks up next available outlink for each incoming
- * message roundrobinly. For the type of weighted, DispatchNode looks for the
- * outlink with lowest load for each incoming message.  For the type of
- * preferred, the association between the rulesets and the outlinks changes
- * only if there is a failover due to the load and the availability of the
- * destinations.  For the type of sticky, the association between the rulesets
- * and the outlinks is determined by the hash value of the key that is
- * retrieved from the incoming message.  If the outlink has a high load or it
- * is not available, sticky messages will be routed to its redirect outlink.
- * For nohit ruleset, the default switching type is roundrobin unless its
- * outlink has been defined explicitly.
+ * roundrobin, weighted, preferred and sticky. All the switchings are based on
+ * the same outlink groups. DispatchNode assumes all the destinations are
+ * equivalent and mutually replaceable within the same group. Therefore, there
+ * is no fixed association between a ruleset and the outlinks in the same group.
+ * For the type of roundrobin, DispatchNode picks up next available outlink in
+ * the group for each incoming message roundrobinly. For the type of weighted,
+ * DispatchNode looks for the outlink with lowest load in the group for each
+ * incoming message. For the type of preferred, the association between the
+ * ruleset and the outlinks in the group changes only if there is a failover
+ * due to either the load or the availability of the destinations. For the type
+ * of sticky, the association between the rulesets and the outlinks is
+ * determined by the hash value of the key that is retrieved from the incoming
+ * message. If the outlink has a high load or it is not available, sticky
+ * messages will be routed to its redirect outlink. For nohit ruleset, the
+ * default switching type is roundrobin unless its outlink has been defined
+ * explicitly.
  *<br/><br/>
- * In case of a high load or a failure on the report for a given outlink, its
+ * In case of a high load or a failure from the report on a given outlink, its
  * status will be set to standby mode for load balance and high availability.
  * Meanwhile, DispatchNode will failover all stuck messages to other available
- * outlinks and updates the outlink associations of the rulesets. When the
- * outlink becomes available again, it will failback those outstanding messages
- * to their oringial outlink and resumes the original outlink associations.
- * Dynamic load balance, failover and failback are supported via the sessions
- * and monitor reports. If SessionTimeout is non-zero, please make sure all
- * outlinks having their reports defined. Otherwise, SessionTimeout will be
- * reset to zero to prevent outlinks from being stuck forever. On the other
- * hand, if SessionTimeout is set to zero, it will only do static switching and
- * load balancing. DispatchNode supports static reports with a non-zero
- * SessionTimeout. In this case, the static report must contain ReportType with
- * the value of static in lower case.
+ * outlinks within the group and updates the outlink associations of the
+ * rulesets. When the outlink becomes available again, it will failback those
+ * outstanding messages to their oringial outlink and resumes the original
+ * outlink associations. Dynamic load balance, failover and failback are
+ * supported via the sessions and monitor reports. If SessionTimeout is
+ * non-zero, please make sure all outlinks having their reports defined.
+ * Otherwise, SessionTimeout will be reset to zero to prevent outlinks from
+ * being stuck forever. On the other hand, if SessionTimeout is set to zero,
+ * it will only do static switching and load balancing. DispatchNode supports
+ * static reports with a non-zero SessionTimeout. In this case, the static
+ * report must contain ReportType with the value of "static" in lower case.
  *<br/><br/>
  * Threshold contains 3 values for low, medium and high load.  The load for
  * each outlink is supposed to be updated by reporters.  DispatchNode checks
@@ -77,8 +83,9 @@ import org.qbroker.event.Event;
  * also monitors the session count of dispatched messages so that the total
  * number of dispatched messages plus the load of the destination will not
  * exceed the value of high load within each session. If the load is above
- * medium, the outlink will be marked as standby mode. Meantime, all the
- * messages in the outlink will be migrated to another outlink with lower load.
+ * medium, the outlink will be marked as standby mode. In the meantime, all the
+ * messages in the outlink will be migrated to another outlink with lower load
+ * in the group.
  *<br/><br/>
  * In order for DispatchNode to check the report for each outlink, ReportName
  * has to be defined in each OutLink. DispatchNode looks up the report via the
@@ -102,7 +109,8 @@ public class DispatchNode extends Node {
     private int sessionTimeout = 0;
     private int[] threshold;
     private int NOHIT_OUT = 0;
-    private HashChain hashChain = null;
+    private AssetList groupList = null;
+    private HashChain[] hashChain = null;
 
     public DispatchNode(Map props) {
         super(props);
@@ -114,6 +122,7 @@ public class DispatchNode extends Node {
         Map ph;
         long[] outInfo, ruleInfo;
         long tm;
+        int[] ids;
         int i, j, n, id, ruleSize = 512;
         StringBuffer strBuf = new StringBuffer();
 
@@ -152,8 +161,15 @@ public class DispatchNode extends Node {
             throw(new IllegalArgumentException(name +
                 ": failed to init OutLinks"));
 
+        ids = new int[n];
+        for (j=0; j<n; j++)
+            ids[j] = -1;
+        groupList = new AssetList(name, capacity);
+        groupList.add("", new long[]{0, -1, threshold[2]}, ids);
+
         browser = assetList.browser();
         while ((i = browser.next()) >= 0) {
+            Object[] asset = (Object[]) assetList.get(i);
             outInfo = assetList.getMetaData(i);
             if (outInfo[OUT_OFFSET] < 0 || outInfo[OUT_LENGTH] < 0 ||
                 (outInfo[OUT_LENGTH]==0 && outInfo[OUT_OFFSET]!=0) ||
@@ -170,12 +186,11 @@ public class DispatchNode extends Node {
                     outInfo[OUT_CAPACITY] + " " + outInfo[OUT_OFFSET] +
                     "," + outInfo[OUT_LENGTH]);
 
+            if (asset == null || asset.length <= ASSET_THR)
+                continue;
             if (sessionTimeout > 0) { // check required reports
-                Object[] asset = (Object[]) assetList.get(i);
-                if (asset == null || asset.length <= ASSET_URI)
-                    continue;
-                String reportName = (String) asset[ASSET_URI];
-                if (reportName == null || reportName.length() <= 0) {
+                key = (String) asset[ASSET_URI];
+                if (key == null || key.length() <= 0) {
                     // no report defined
                     new Event(Event.WARNING, name + ": outlink " + i +
                         ", " + assetList.getKey(i) + ", has no report defined"+
@@ -183,16 +198,55 @@ public class DispatchNode extends Node {
                     sessionTimeout = 0;
                 }
             }
+            // check groups
+            key = (String) asset[ASSET_THR];
+            if (key == null || key.length() <= 0) { // default group
+                long[] meta = groupList.getMetaData(0);
+                ids = (int[]) groupList.get(0);
+                ids[(int) meta[0]] = i;
+                meta[0] ++;
+                j = 0;
+            }
+            else if ((j = groupList.getID(key)) > 0) { // existing group
+                long[] meta = groupList.getMetaData(j);
+                ids = (int[]) groupList.get(j);
+                ids[(int) meta[0]] = i;
+                meta[0] ++;
+            }
+            else { // new group
+                ids = new int[n];
+                ids[0] = i;
+                for (j=1; j<n; j++)
+                     ids[j] = -1;
+                j = groupList.add(key, new long[]{1,-1,threshold[2]}, ids);
+            }
+            if ((debug & DEBUG_INIT) > 0)
+                strBuf.append(" " + j);
         }
 
         if ((debug & DEBUG_INIT) > 0) {
             new Event(Event.DEBUG, name + " LinkName: OID Capacity Partition " +
-                " - " + linkName + " " + capacity + strBuf.toString()).send();
+                "gid - " + linkName + " " + capacity +strBuf.toString()).send();
             strBuf = new StringBuffer();
         }
 
         if (assetList.size() <= 0)
             throw(new IllegalArgumentException(name+": OutLink is empty"));
+
+        hashChain = new HashChain[groupList.size()];
+        browser = groupList.browser();
+        while ((i = browser.next()) >= 0) { // replace ids with compact list
+            int[] idn;
+            long[] meta = groupList.getMetaData(i);
+            n = (int) meta[0];
+            idn = new int[n];
+            ids = (int[]) groupList.set(i, idn);
+            hashChain[i] = new HashChain(name +"_"+ groupList.getKey(i), 4*n);
+            for (j=0; j<n; j++) {
+                idn[j] = ids[j];
+                hashChain[i].add(assetList.getKey(idn[j]));
+            }
+        }
 
         if ((o = props.get("NohitOutLink")) != null && o instanceof String) {
             if ((id = assetList.getID((String) o)) >= 0)
@@ -207,11 +261,6 @@ public class DispatchNode extends Node {
         msgList = new AssetList(name, capacity);
         ruleList = new AssetList(name, ruleSize);
         cells = new CollectibleCells(name, capacity);
-        n = assetList.getCapacity();
-        hashChain = new HashChain(name, n + n);
-        n = assetList.size();
-        for (i=0; i<n; i++)
-            hashChain.add(assetList.getKey(i));
 
         if ((o = props.get("Ruleset")) != null && o instanceof List)
             list = (List) o;
@@ -322,11 +371,12 @@ public class DispatchNode extends Node {
             while ((i = browser.next()) >= 0) {
                 ruleInfo = ruleList.getMetaData(i);
                 strBuf.append("\n\t" + ruleList.getKey(i) + ": " + i + " " +
-                    ruleInfo[RULE_PID] + " " + ruleInfo[RULE_TTL] + " - " +
+                    ruleInfo[RULE_PID] + " " + ruleInfo[RULE_TTL] + " " +
+                    ruleInfo[RULE_GID] + " " + ruleInfo[RULE_EXTRA] + " - " +
                     assetList.getKey((int) ruleInfo[RULE_OID]));
             }
-            new Event(Event.DEBUG, name+" RuleName: RID PID TTL - OutName"+
-                strBuf.toString()).send();
+            new Event(Event.DEBUG, name+" RuleName: RID PID TTL GID EXTRA " +
+                "- OutName"+ strBuf.toString()).send();
         }
     }
 
@@ -414,34 +464,12 @@ public class DispatchNode extends Node {
         rule.put("Name",  ruleName);
         rule.put("ReportName",  ph.get("ReportName"));
         ruleType = (String) ph.get("RuleType");
-        if (ruleType == null) { // for backward compatibility
-            ruleType = (String) ph.get("Type");
-            if (ruleType == null)
-                ruleType = "";
-        }
-        preferredOutName = (String) ph.get("PreferredOutLink");
-        if(preferredOutName ==null || !assetList.containsKey(preferredOutName)){
-            preferredOutName = assetList.getKey(NOHIT_OUT);
-            if (!"roundrobin".equals(ruleType.toLowerCase()) &&
-                !"weighted".equals(ruleType.toLowerCase()) &&
-                !"sticky".equals(ruleType.toLowerCase())) {
-                ruleType = "preferred";
-                new Event(Event.WARNING, name + ": OutLink for " +
-                    ruleName+" not well defined, use the default: "+
-                    preferredOutName).send();
-            }
-        }
+        if (ruleType == null)
+            ruleType = "preferred";
         else if (!"roundrobin".equals(ruleType.toLowerCase()) &&
             !"weighted".equals(ruleType.toLowerCase()) &&
             !"sticky".equals(ruleType.toLowerCase()))
             ruleType = "preferred";
-
-        if ("sticky".equals(ruleType)) {
-            if ((o = ph.get("KeyTemplate")) != null && o instanceof String)
-                rule.put("KeyTemplate", new Template((String) o));
-            if ((o = ph.get("KeySubstitution")) != null && o instanceof String)
-                rule.put("KeySubstitution", new TextSubstitution((String) o));
-        }
 
         rule.put("Filter", new MessageFilter(ph));
         if ((o = rule.get("Filter")) == null)
@@ -464,24 +492,75 @@ public class DispatchNode extends Node {
         else
             ruleInfo[RULE_DMASK] = displayMask;
 
+        if ((o = ph.get("OutLinkGroup")) != null && o instanceof String &&
+            (str = (String) o).length() > 0) { // for outlink group
+            if ((j = groupList.getID(str)) <= 0) { // groupName NOT well defined
+                new Event(Event.ERR, name + ": groupName for " + ruleName +
+                    " is not well defined: " + str).send();
+                j = 0;
+            }
+            long[] meta = groupList.getMetaData(j);
+            // store size of group into RULE_EXTRA
+            ruleInfo[RULE_EXTRA] = meta[0];
+            // store the group ID into RULE_GID
+            ruleInfo[RULE_GID] = j;
+        }
+        else { // default group
+            long[] meta = groupList.getMetaData(0);
+            // store size of group into RULE_EXTRA
+            ruleInfo[RULE_EXTRA] = meta[0];
+            // store the group ID into RULE_GID
+            ruleInfo[RULE_GID] = 0;
+        }
+
+        preferredOutName = (String) ph.get("PreferredOutLink");
+        if (preferredOutName==null || !assetList.containsKey(preferredOutName)){
+            int[] ids = (int[]) groupList.get((int) ruleInfo[RULE_GID]);
+            if (ids == null || ids.length <= 0)
+                preferredOutName = assetList.getKey(NOHIT_OUT);
+            else
+                preferredOutName = assetList.getKey(ids[0]);
+            if ("prefered".equals(ruleType))
+                new Event(Event.WARNING, name + ": OutLink for " +
+                    ruleName+" not well defined, use the default: "+
+                    preferredOutName).send();
+        }
+        else { // verify the preferredOutName
+            int[] ids = (int[]) groupList.get((int) ruleInfo[RULE_GID]);
+            j = assetList.getID(preferredOutName);
+            if (ids == null || ids.length <= 0)
+                preferredOutName = assetList.getKey(NOHIT_OUT);
+            else {
+                for (i=0; i<ids.length; i++) {
+                    if (j == ids[i])
+                        break;
+                }
+                if (i >= ids.length)
+                    preferredOutName = assetList.getKey(ids[0]);
+            }
+            if (j != assetList.getID(preferredOutName))
+                new Event(Event.WARNING, name + ": OutLink for " +
+                    ruleName+" out of the group, use the default: "+
+                    preferredOutName).send();
+        }
+
         ruleInfo[RULE_OID] = assetList.getID(preferredOutName);
         outInfo = assetList.getMetaData((int) ruleInfo[RULE_OID]);
 
-        if ("preferred".equals(ruleType)) {
-            ruleInfo[RULE_PID] = ruleInfo[RULE_OID];
-            outInfo[OUT_NRULE] ++;
-            outInfo[OUT_ORULE] ++;
-        }
-        else if ("roundrobin".equals(ruleType)) {
+        if ("roundrobin".equals(ruleType.toLowerCase())) {
             ruleInfo[RULE_PID] = TYPE_ROUNDROBIN;
         }
-        else if ("weighted".equals(ruleType)) {
+        else if ("weighted".equals(ruleType.toLowerCase())) {
             ruleInfo[RULE_PID] = TYPE_WEIGHTED;
         }
-        else if ("sticky".equals(ruleType)) {
+        else if ("sticky".equals(ruleType.toLowerCase())) {
+            if ((o = ph.get("KeyTemplate")) != null && o instanceof String)
+                rule.put("KeyTemplate", new Template((String) o));
+            if ((o = ph.get("KeySubstitution")) != null && o instanceof String)
+                rule.put("KeySubstitution", new TextSubstitution((String) o));
             ruleInfo[RULE_PID] = TYPE_NONE;
         }
-        else { // for bypass
+        else { // for prefer or bypass 
             ruleInfo[RULE_PID] = ruleInfo[RULE_OID];
             outInfo[OUT_NRULE] ++;
             outInfo[OUT_ORULE] ++;
@@ -526,7 +605,7 @@ public class DispatchNode extends Node {
         long currentTime, previousTime, st, wt;
         long count = 0;
         int mask, ii, sz, tid, retryCount = 0, dspBody;
-        int i = 0, k, min = 0, n, size, previousRid;
+        int i = 0, k, n, size, previousRid;
         int cid = -1; // the cell id of the message in input queue
         int rid = 0; // the id of the ruleset
         int oid = 0; // the id of the output queue
@@ -574,7 +653,7 @@ public class DispatchNode extends Node {
                 outInfo[OUT_CAPACITY] = out[i].getCapacity();
         }
 
-        if (sessionTimeout > 0) {
+        if (sessionTimeout > 0) { // wait for reports
             for (i=0; i<k; i++) { // set pause first
                 outInfo = assetList.getMetaData(i);
                 if (outInfo[OUT_STATUS] == NODE_PAUSE)
@@ -608,7 +687,7 @@ public class DispatchNode extends Node {
             currentTime = System.currentTimeMillis();
             if (currentTime - previousTime >= heartbeat) {
                 if (sessionTimeout > 0)
-                    min = update(currentTime, in);
+                    update(currentTime, in);
                 previousTime = currentTime;
             }
             if (cid < 0)
@@ -658,18 +737,27 @@ public class DispatchNode extends Node {
             }
 
             // applying switch rule
-            if (i < 0) { // failed to apply filters
-                oid = NOHIT_OUT;
-                tid = -1;
-            }
-            else if (ruleInfo[RULE_PID] == TYPE_ROUNDROBIN) { // roundrobin
+            if (ruleInfo[RULE_PID] == TYPE_ROUNDROBIN) { // roundrobin
                 long d, dd = threshold[LOAD_MEDIUM];
-                int j = -1;
+                int[] ids = (int[]) groupList.get((int) ruleInfo[RULE_GID]);
                 boolean hasFlipped = false;
-                i = k;
+                k = ids.length;
                 oid = (int) ruleInfo[RULE_OID];
-                if (sessionTimeout > 0) for (i=0; i<k; i++) {
-                    oid = (oid + 1) % k;
+                for (i=0; i<k; i++) { // look for the previous oid
+                    if (oid == ids[i])
+                        break;
+                }
+                if (i >= k) { // previous oid not found
+                    i = (int) ruleInfo[RULE_GID];
+                    new Event(Event.ERR, name + ": " + ruleName +
+                        " failed to locate the previous outlink " + oid + "/" +
+                        k + " for group " + groupList.getKey(i)).send();
+                }
+                else if (sessionTimeout <= 0) { // static session
+                    oid = ids[(i + 1) % k];
+                }
+                else for (int j=0; j<k; j++) { // dynamic switch to next
+                    oid = ids[(i+j+1) % k];
                     outInfo = info[oid];
                     // check availability
                     if (outInfo[OUT_STATUS] == NODE_STANDBY ||
@@ -700,40 +788,30 @@ public class DispatchNode extends Node {
                         j = oid;
                     }
                 }
-                if (i >= k) { // not found, use the default
-                    if (j >= 0)
-                        oid = j;
-                    else // use the default
-                        oid = ((int) ruleInfo[RULE_OID] + 1) % k;
-                }
                 ruleInfo[RULE_OID] = oid;
 
                 // non-sticky
                 tid = -1;
             }
-            else if (ruleInfo[RULE_PID] == TYPE_WEIGHTED) { // minimum load
+            else if (ruleInfo[RULE_PID] == TYPE_WEIGHTED) { // load balance
                 long d, dd = threshold[LOAD_MEDIUM];
-                i = -1;
-                oid = (int) ruleInfo[RULE_OID];
-                if (sessionTimeout > 0) for (int j=0; j<k; j++) {
-                    // look for minimum load
-                    oid = (oid + 1) % k;
-                    outInfo = info[oid];
+                int[] ids = (int[]) groupList.get((int) ruleInfo[RULE_GID]);
+                oid = -1;
+                if (sessionTimeout > 0) for (int j : ids) { // look for min load
+                    outInfo = info[j];
                     if (outInfo[OUT_STATUS] == NODE_STANDBY ||
                         outInfo[OUT_QSTATUS] != 0)//disabled or failed on report
                         continue;
                     d = outInfo[OUT_QDEPTH] - outInfo[OUT_DEQ] +
                         outInfo[OUT_SIZE] + outInfo[OUT_EXTRA] +
-                        out[oid].getCount();
+                        out[j].getCount();
                     if (d < dd) {
-                        i = oid;
+                        oid = j;
                         dd = d;
                     }
                 }
-                if (i >= 0) // found the minimum oid
-                    oid = i;
-                else // use the default
-                    oid = ((int) ruleInfo[RULE_OID] + 1) % k;
+                if (oid < 0) // not found so use the default
+                    oid = (int) ruleInfo[RULE_OID];
                 ruleInfo[RULE_OID] = oid;
 
                 // non-sticky
@@ -749,33 +827,38 @@ public class DispatchNode extends Node {
                     key = sub.substitute(key);
 
                 if (key != null) // got the key
-                    oid = hashChain.map(key);
+                    oid = hashChain[(int) ruleInfo[RULE_GID]].map(key);
                 else // default outLink
                     oid = (int) ruleInfo[RULE_OID];
 
+                if (sessionTimeout > 0) { // check redirect
+                    outInfo = info[oid];
+                    if ((outInfo[OUT_STATUS] == NODE_STANDBY ||
+                        outInfo[OUT_QSTATUS] != 0) && outInfo[OUT_QIPPS] >= 0)
+                        // redirect temporarily
+                        oid = (int) outInfo[OUT_QIPPS];
+                }
+
                 // save sticky oid to tid
                 tid = oid;
-
-                outInfo = info[oid];
-                if ((outInfo[OUT_STATUS] == NODE_STANDBY ||
-                    outInfo[OUT_QSTATUS] != 0) && outInfo[OUT_QIPPS] >= 0)
-                    // redirect temporarily
-                    oid = (int) outInfo[OUT_QIPPS];
             }
             else { // preferred
                 oid = (int) ruleInfo[RULE_OID];
-                outInfo = info[oid];
-                if ((outInfo[OUT_STATUS] == NODE_STANDBY ||
-                    outInfo[OUT_QSTATUS] != 0) && outInfo[OUT_QIPPS] >= 0)
-                    // redirect temporarily
-                    oid = (int) outInfo[OUT_QIPPS];
+                if (sessionTimeout > 0) { // check redirect
+                    outInfo = info[oid];
+                    if ((outInfo[OUT_STATUS] == NODE_STANDBY ||
+                        outInfo[OUT_QSTATUS] != 0) && outInfo[OUT_QIPPS] >= 0)
+                        // redirect temporarily
+                        oid = (int) outInfo[OUT_QIPPS];
+                }
 
                 // non-sticky
                 tid = -1;
             }
             outInfo = info[oid];
 
-            // make sure the outLink is not in STANDBY mode
+            // make sure the outLink is not in STANDBY mode, otherwise putback
+            // and pause for a while on retries
             if (outInfo[OUT_STATUS] == NODE_STANDBY ||
                 outInfo[OUT_QSTATUS] != 0) { // in standby or failed on report
                 i = in.putback(cid);
@@ -807,6 +890,7 @@ public class DispatchNode extends Node {
                         outInfo[OUT_SIZE] + " " + outInfo[OUT_EXTRA] + " " +
                         out[oid].size() + "," + out[oid].getCount() + ": " +
                         cid + "/" + i + " on " + retryCount +" retries").send();
+
                 while (st > 0) { // sleep for a while to retry
                     mask = in.getGlobalMask();
                     if ((mask & XQueue.KEEP_RUNNING) > 0 &&
@@ -853,6 +937,7 @@ public class DispatchNode extends Node {
                         outInfo[OUT_SIZE] + " " + outInfo[OUT_EXTRA] + " " +
                         out[oid].size() + "," + out[oid].getCount() + ": " +
                         cid + "/" + i + " on " + retryCount +" retries").send();
+
                 while (st > 0) { // sleep for a while to retry
                     mask = in.getGlobalMask();
                     if ((mask & XQueue.KEEP_RUNNING) > 0 &&
@@ -871,7 +956,7 @@ public class DispatchNode extends Node {
 
             if ((debug & DEBUG_PROP) > 0)
                 new Event(Event.DEBUG, name+" propagate: cid=" + cid +
-                    " rid=" + rid + " oid=" + oid + " min=" + min).send();
+                    " rid=" + rid + " oid=" + oid + " i=" + i).send();
 
             if (ruleInfo[RULE_DMASK] > 0) try { // display the message
                 if ((ruleInfo[RULE_DMASK] & dspBody) > 0 && !ckBody)
@@ -933,10 +1018,11 @@ public class DispatchNode extends Node {
      * It supports both failover and failback.
      */
     private int update(long currentTime, XQueue in) {
-        int i, m, n, d, md, min, ns, ms, l=0, oid, s, mydebug = debug;
+        int i, m, n, d, md, min, ns, ms, l, s, mydebug = debug, total = 0;
+        int[] ids;
         StringBuffer strBuf = null;
         long st, preDepth = 0;
-        long[] outInfo, ruleInfo;
+        long[] outInfo, ruleInfo, meta;
         Object o;
         Object[] asset;
         Browser browser;
@@ -945,10 +1031,14 @@ public class DispatchNode extends Node {
         String reportName;
         if ((mydebug & DEBUG_UPDT) > 0 || (mydebug & DEBUG_REPT) > 0)
             strBuf = new StringBuffer();
-        md = threshold[LOAD_HIGH] + 600000;
-        min = NOHIT_OUT;
-        browser = assetList.browser();
-        while ((oid = browser.next()) >= 0) {
+
+        browser = groupList.browser();
+        while ((i = browser.next()) >= 0) { // go thru all groups of outlinks
+          ids = (int[]) groupList.get(i);
+          md = threshold[LOAD_HIGH] + 600000;
+          min = -1;
+          l = 0;
+          for (int oid : ids) { // check report and update load
             asset = (Object[]) assetList.get(oid);
             if (asset == null || asset.length <= ASSET_URI) {
                 new Event(Event.ERR, name + ": empty asset for " + oid).send();
@@ -967,7 +1057,7 @@ public class DispatchNode extends Node {
                 continue;
             }
             outInfo = assetList.getMetaData(oid);
-            outInfo[OUT_MODE] = 0;
+            outInfo[OUT_MODE] = 0; // mark the report not updated yet
             try {
                 xq = (XQueue) asset[ASSET_XQ];
                 st = Long.parseLong((String) o);
@@ -1010,10 +1100,10 @@ public class DispatchNode extends Node {
                     outInfo[OUT_QDEPTH] = preDepth;
                     // estimate the deq
                     outInfo[OUT_DEQ] = outInfo[OUT_EXTRA];
-                    outInfo[OUT_MODE] = 1;
                     outInfo[OUT_EXTRA] = 0;
                     if (outInfo[OUT_DEQ] < 0)
                         outInfo[OUT_DEQ] = 0;
+                    outInfo[OUT_MODE] = 1; // report updated
                     l ++;
                 }
                 else { // session not due yet so update enq only
@@ -1032,34 +1122,35 @@ public class DispatchNode extends Node {
                     outInfo[OUT_SIZE] + " " + outInfo[OUT_QIPPS] + " " +
                     outInfo[OUT_STATUS] + " " +
                     Event.dateFormat(new Date(outInfo[OUT_QTIME])));
+            // looking for min with the minimum load
             if (md > outInfo[OUT_QDEPTH] && outInfo[OUT_QSTATUS] == 0) {
-                // looking for min
                 md = (int) outInfo[OUT_QDEPTH];
                 min = oid;
             }
-        }
-        if ((mydebug & DEBUG_REPT) > 0) {
+          }
+          if ((mydebug & DEBUG_REPT) > 0) {
             if (l > 0) // got new report
                 new Event(Event.DEBUG, name+" ReportName: OID QStatus "+
-                    "QDepth ENQ DEQ Size QRedirect Status QTime (min=" + min +
-                    ")" + strBuf.toString()).send();
+                    "QDepth ENQ DEQ Size QRedirect Status QTime (gid=" + i +
+                    ",min=" + min + ")" + strBuf.toString()).send();
             strBuf = new StringBuffer();
-        }
+          }
 
-        if (l > 0 && sessionTimeout > 0) { // check report time on 1st oid
-            outInfo = assetList.getMetaData(0);
+          if (l > 0 && sessionTimeout > 0) { // check report time on 1st oid
+            outInfo = assetList.getMetaData(ids[0]);
             if (outInfo[OUT_MODE] > 0) { // reset RULE_PEND on all rules
+                int j;
                 Browser b = ruleList.browser();
-                while ((i = b.next()) >= 0) {
-                    ruleInfo = ruleList.getMetaData(i);
-                    ruleInfo[RULE_PEND] = 0;
+                while ((j = b.next()) >= 0) {
+                    ruleInfo = ruleList.getMetaData(j);
+                    if (ruleInfo[RULE_GID] == i)
+                        ruleInfo[RULE_PEND] = 0;
                 }
             }
-        }
+          }
 
-        m = 0;
-        browser.reset();
-        while((oid = browser.next()) >= 0) { // check load on each outLinks
+          m = 0;
+          for (int oid : ids) { // check load on each outLink
             asset = (Object[]) assetList.get(oid);
             if (asset == null || asset.length <= ASSET_URI)
                 continue;
@@ -1080,6 +1171,7 @@ public class DispatchNode extends Node {
                     currentTime - outInfo[OUT_TIME] >= sessionTimeout) {
                     outInfo[OUT_STATUS] = NODE_STANDBY;
                     outInfo[OUT_TIME] = currentTime;
+                    meta = groupList.getMetaData(i);
                     if (oid != min && md < threshold[LOAD_LOW]) {
                         // migrate to min
                         migrate(currentTime, oid, min, in);
@@ -1153,11 +1245,10 @@ public class DispatchNode extends Node {
                     outInfo[OUT_QIPPS] + " " + outInfo[OUT_NRULE] + " " +
                     outInfo[OUT_SIZE] + " " + outInfo[OUT_QDEPTH] + " " +
                     Event.dateFormat(new Date(outInfo[OUT_TIME])));
-        }
-        if (m > 0) { // summarize migration changes on outlinks
+          }
+          if (m > 0) { // summarize migration changes on outlinks
             strBuf = new StringBuffer();
-            browser = assetList.browser();
-            while ((oid = browser.next()) >= 0) {
+            for (int oid : ids) {
                 outInfo = assetList.getMetaData(oid);
                 strBuf.append("\n\t" + assetList.getKey(oid) + ": " + oid +" "+
                     outInfo[OUT_STATUS] + " " + outInfo[OUT_QSTATUS] + " " +
@@ -1165,18 +1256,20 @@ public class DispatchNode extends Node {
                     outInfo[OUT_SIZE] + " " + outInfo[OUT_QDEPTH] + " " +
                     Event.dateFormat(new Date(outInfo[OUT_TIME])));
             }
-            new Event(Event.INFO, name + " migration changes on Out: " +
-                "OID Status QStatus QRedirect NRule Size QDepth Time - In: " +
+            new Event(Event.INFO, name + " migration changes on Out for " + i +
+                ": OID Status QStatus QRedirect NRule Size QDepth Time - In: "+
                 in.getGlobalMask() + " " + in.size() + "," + in.depth() +
                 strBuf.toString()).send();
-        }
-        else if ((mydebug & DEBUG_UPDT) > 0 && strBuf.length() > 0) {
-            new Event(Event.DEBUG, name + " state changes on Out: " +
-                "OID Status QStatus QRedirect NRule Size QDepth Time - In: " +
+          }
+          else if ((mydebug & DEBUG_UPDT) > 0 && strBuf.length() > 0) {
+            new Event(Event.DEBUG, name + " state changes on Out for " + i +
+                ": OID Status QStatus QRedirect NRule Size QDepth Time - In: "+
                 in.getGlobalMask() + " " + in.size() + "," + in.depth() +
                 strBuf.toString()).send();
+          }
+          total += m;
         }
-        return min;
+        return total;
     }
 
     /**
@@ -1586,7 +1679,11 @@ public class DispatchNode extends Node {
 
     public void close() {
         super.close();
-        hashChain.clear();
+        groupList.clear();
+        if (hashChain != null) {
+            for (HashChain hc : hashChain)
+                hc.clear();
+        }
     }
 
     protected void finalize() {

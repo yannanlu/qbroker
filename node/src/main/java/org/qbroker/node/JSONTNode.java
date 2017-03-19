@@ -28,6 +28,7 @@ import org.qbroker.common.Template;
 import org.qbroker.common.TextSubstitution;
 import org.qbroker.common.QuickCache;
 import org.qbroker.common.CollectibleCells;
+import org.qbroker.json.JSON2Map;
 import org.qbroker.json.JSON2FmModel;
 import org.qbroker.json.JSONTemplate;
 import org.qbroker.jms.JSONFormatter;
@@ -67,12 +68,13 @@ import org.qbroker.event.Event;
  * have a public method of format() that takes a parsed JSON map and a parameter
  * map as the arguments. The return object must be a String of null meaning OK,
  * or an error message otherwise.  It must have a constructor taking a Map
- * with a unique value for the key of the Name as the single argument for
- * configurations.  Based on the constructor argument, developers should define
- * configuration parameters in the base tag of JSONFormatter. JSONNode will
- * pass the data to the plugin's constructor as an opaque object during
- * the instantiation of the plugin.  In the normal operation, JSONTNode will
- * invoke the method to format the json payload.
+ * as the only argument for configurations. Based on the map properties for
+ * the constructor, developers should define configuration parameters in the
+ * base of JSONFormatter. JSONTNode will pass the data to the plugin's
+ * constructor as an opaque object during the instantiation of the plugin.
+ * In the normal operation, JSONTNode will invoke the method to format
+ * the json payload. The method should never acknowledge any message in any
+ * case.
  *<br/>
  * @author yannanlu@yahoo.com
  */
@@ -251,12 +253,10 @@ public class JSONTNode extends Node {
     protected Map<String, Object> initRuleset(long tm, Map ph, long[] ruleInfo){
         Object o;
         Map<String, Object> rule;
-        Iterator iter;
-        List list;
         String key, str, ruleName, preferredOutName;
         char c = System.getProperty("path.separator").charAt(0);
         long[] outInfo;
-        int i, j, k, n, id;
+        int i, n, id;
 
         if (ph == null || ph.size() <= 0)
             throw(new IllegalArgumentException("Empty property for a rule"));
@@ -307,7 +307,7 @@ public class JSONTNode extends Node {
         else if ((o = ph.get("ClassName")) != null) { // plugin
             str = (String) o;
             if ((o = ph.get("JSONFormatter")) != null && o instanceof Map)
-                str += (String) ((Map) o).get("Name");
+                str += "::" + JSON2Map.toJSON((Map) o, null, null);
             else
                 throw(new IllegalArgumentException(ruleName +
                     ": JSONFormatter is not well defined for " + str));
@@ -328,7 +328,7 @@ public class JSONTNode extends Node {
             if ((o = ph.get("Parameter")) != null && o instanceof Map) {
                 Template temp;
                 Map<String, Object> params = new HashMap<String, Object>();
-                iter = ((Map) o).keySet().iterator();
+                Iterator iter = ((Map) o).keySet().iterator();
                 while (iter.hasNext()) {
                     key = (String) iter.next();
                     if (key == null || key.length() <= 0)
@@ -368,7 +368,7 @@ public class JSONTNode extends Node {
             if ((o = ph.get("Parameter")) != null && o instanceof Map) {
                 Template temp;
                 Map<String, Object> params = new HashMap<String, Object>();
-                iter = ((Map) o).keySet().iterator();
+                Iterator iter = ((Map) o).keySet().iterator();
                 while (iter.hasNext()) {
                     key = (String) iter.next();
                     if (key == null || key.length() <= 0)
@@ -401,12 +401,11 @@ public class JSONTNode extends Node {
 
         // for String properties
         if ((o = ph.get("StringProperty")) != null && o instanceof Map) {
-            iter = ((Map) o).keySet().iterator();
-            k = ((Map) o).size();
+            int k = ((Map) o).size();
             String[] pn = new String[k];
             k = 0;
-            while (iter.hasNext()) {
-                key = (String) iter.next();
+            for (Object obj : ((Map) o).keySet()) {
+                key = (String) obj;
                 if ((pn[k] = MessageUtils.getPropertyID(key)) == null)
                     pn[k] = key;
                 k ++;

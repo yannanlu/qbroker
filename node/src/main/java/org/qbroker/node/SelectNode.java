@@ -101,16 +101,16 @@ import org.qbroker.event.Event;
  *<br/><br/>
  * SelectNode also allows developers to plug-in their own methods to select.
  * In this case, the full ClassName of the selection implementation and its
- * SelecterArguments must be well defined in the rulesets.  The requirement on
+ * SelectorArguments must be well defined in the rulesets.  The requirement on
  * the plug-ins is minimum.  The class must have a public method of
  * select(String text) that takes a String as the only argument.  The return
  * object must be an array of String for selected items on success.  Each of
  * the array element will be stored to the outgoing message.  In case of
- * failure, null should be returned.  It also must have a constructor taking
- * a Map with a unique value for the key of Name, or an List, or just
- * a String as the single argument for the configurations.  SelectNode will
- * invoke the method to get the list of the selected items from each incoming
- * message.
+ * failure, null should be returned.  It must also have a constructor taking
+ * a Map, or an List, or just a String as the only argument for the
+ * configurations.  SelectNode will invoke its public method to get the list
+ * of the selected items from either message body or certain message property
+ * of each incoming message.
  *<br/><br/>
  * If CountField is defined for a ruleset, the total count of selected items
  * will be set to the specified field of the incoming messages. In case of the
@@ -300,12 +300,10 @@ public class SelectNode extends Node {
     protected Map<String, Object> initRuleset(long tm, Map ph, long[] ruleInfo){
         Object o;
         Map<String, Object> rule, hmap;
-        Iterator iter;
-        List list;
         Template temp;
         String key, str, ruleName, preferredOutName;
         long[] outInfo;
-        int i, k, n, id;
+        int i, n, id;
 
         if (ph == null || ph.size() <= 0)
             throw(new IllegalArgumentException("Empty property for a rule"));
@@ -369,35 +367,15 @@ public class SelectNode extends Node {
             ruleInfo[RULE_PID] = TYPE_BYPASS;
         }
         else if ((o = ph.get("ClassName")) != null) { // for plugin
-            Map map;
             str = (String) o;
-            o = ph.get("SelecterArgument");
-            if (o == null) {
-                str += "::";
-            }
-            else if (o instanceof List) {
-                list = (List) o;
-                k = list.size();
-                for (i=0; i<k; i++) {
-                    if ((o = list.get(i)) == null)
-                        continue;
-                    if (!(o instanceof Map))
-                        continue;
-                    map = (Map) o;
-                    if (map.size() <= 0)
-                        continue;
-                    iter = map.keySet().iterator();
-                    if ((o = iter.next()) == null)
-                        continue;
+            if ((o = ph.get("SelectorArgument")) != null) {
+                if (o instanceof List)
+                    str += "::" + JSON2Map.toJSON((Map) o, null, null);
+                else if (o instanceof Map)
+                    str += "::" + JSON2Map.toJSON((Map) o, null, null);
+                else
                     str += "::" + (String) o;
-                    str += "::" + (String) map.get((String) o);
-                }
             }
-            else if (o instanceof Map) {
-                str += (String) ((Map) o).get("Name");
-            }
-            else
-                str += "::" + (String) o;
 
             if (pluginList.containsKey(str)) {
                 long[] meta;
@@ -407,7 +385,7 @@ public class SelectNode extends Node {
                 meta[0] ++;
             }
             else {
-                o = MessageUtils.getPlugins(ph, "SelecterArgument", "select",
+                o = MessageUtils.getPlugins(ph, "SelectorArgument", "select",
                     new String[]{"java.lang.String"}, null, name);
                 id = pluginList.add(str, new long[]{1}, o);
             }
@@ -448,7 +426,7 @@ public class SelectNode extends Node {
                     pc = new Perl5Compiler();
                     pm = new Perl5Matcher();
                 }
-                iter = map.keySet().iterator();
+                Iterator iter = map.keySet().iterator();
                 while (iter.hasNext()) {
                     str = (String) iter.next();
                     if (str == null || str.length() <= 0)
@@ -516,7 +494,7 @@ public class SelectNode extends Node {
                     builder = factory.newDocumentBuilder();
                     xpath = XPathFactory.newInstance().newXPath();
                 }
-                iter = map.keySet().iterator();
+                Iterator iter = map.keySet().iterator();
                 while (iter.hasNext()) {
                     str = (String) iter.next();
                     if (str == null || str.length() <= 0)
@@ -578,21 +556,19 @@ public class SelectNode extends Node {
         // StringProperties control what to copied over
         if ((o = ph.get("StringProperty")) != null &&
             o instanceof Map) { // copy selected properties
-            iter = ((Map) o).keySet().iterator();
-            k = ((Map) o).size();
+            int k = ((Map) o).size();
             String[] pn = new String[k];
             k = 0;
-            while (iter.hasNext()) {
-                key = (String) iter.next();
+            for (Object obj : ((Map) o).keySet()) {
+                key = (String) obj;
                 if ((pn[k] = MessageUtils.getPropertyID(key)) == null)
                     pn[k] = key;
                 k ++;
             }
             rule.put("PropertyName", pn);
         }
-        else if (o != null) { // copy all properties
+        else if (o != null) // copy all properties
             rule.put("PropertyName", new String[0]);
-        }
 
         return rule;
     }

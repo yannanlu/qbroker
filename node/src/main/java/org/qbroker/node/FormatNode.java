@@ -21,6 +21,7 @@ import org.qbroker.common.Template;
 import org.qbroker.common.TextSubstitution;
 import org.qbroker.common.AssetList;
 import org.qbroker.common.CollectibleCells;
+import org.qbroker.json.JSON2Map;
 import org.qbroker.jms.MessageUtils;
 import org.qbroker.jms.MessageFilter;
 import org.qbroker.jms.JMSEvent;
@@ -74,15 +75,15 @@ import org.qbroker.event.Event;
  * have a public method of format() that takes a JMS Message to be formatted as
  * the only argument.  The return object must be a String of null meaning OK,
  * or an error message otherwise.  It must have a constructor taking a Map
- * with a unique value for the key of the Name as the single argument for
- * configurations.  Based on the constructor argument, developers should define
- * configuration parameters in the base tag of FormatterArgument.  FormatNode
- * will pass the data to the plugin's constructor as an opaque object during
- * the instantiation of the plugin.  In the normal operation, FormatNode will
- * invoke the method to format the incoming messages.  The method should never
- * acknowledge any message in any case.
+ * as the only argument for configurations.  Based on the map propertis for
+ * the constructor, developers should define configuration parameters in the
+ * base of FormatterArgument.  FormatNode will pass the data to the plugin's
+ * constructor as an opaque object during the instantiation of the plugin.
+ * In the normal operation, FormatNode will invoke the method to format the
+ * incoming messages.  The method should never acknowledge any message in any
+ * case.
  *<br/><br/>
- * In case a plugin needs to connect to external resources for dynamic
+ * In case a plugin needs to connect to external resources for the dynamic
  * format process, it should define an extra method of close() to close all
  * the external resources gracefully.  Its format method should also be able
  * to detect the disconnections and cleanly reconnect to the resources
@@ -273,11 +274,9 @@ public class FormatNode extends Node {
     protected Map<String, Object> initRuleset(long tm, Map ph, long[] ruleInfo){
         Object o;
         Map<String, Object> rule, hmap;
-        Iterator iter;
-        List list;
         String key, str, ruleName, preferredOutName;
         long[] outInfo;
-        int i, j, k, n, id;
+        int i, n, id;
 
         if (ph == null || ph.size() <= 0)
             throw(new IllegalArgumentException("Empty property for a rule"));
@@ -349,10 +348,10 @@ public class FormatNode extends Node {
         else if ((o = ph.get("ClassName")) != null) { // plugin
             str = (String) o;
             if ((o = ph.get("FormatterArgument")) != null && o instanceof Map)
-                str += (String) ((Map) o).get("Name");
+                str += "::" + JSON2Map.toJSON((Map) o, null, null);
             else
                 throw(new IllegalArgumentException(ruleName +
-                    ": FormatterArgument is not well defined for " + str));
+                    ": FormatterArgument is not a map for " + str));
 
             if (pluginList.containsKey(str)) {
                 long[] meta;
@@ -410,14 +409,17 @@ public class FormatNode extends Node {
             ruleInfo[RULE_PID] = TYPE_BYPASS;
         }
 
+        outInfo = assetList.getMetaData((int) ruleInfo[RULE_OID]);
+        outInfo[OUT_NRULE] ++;
+        outInfo[OUT_ORULE] ++;
+
         // for String properties
         if ((o = ph.get("StringProperty")) != null && o instanceof Map) {
-            iter = ((Map) o).keySet().iterator();
-            k = ((Map) o).size();
+            int k = ((Map) o).size();
             String[] pn = new String[k];
             k = 0;
-            while (iter.hasNext()) {
-                key = (String) iter.next();
+            for (Object obj : ((Map) o).keySet()) {
+                key = (String) obj;
                 if ((pn[k] = MessageUtils.getPropertyID(key)) == null)
                     pn[k] = key;
                 k ++;
@@ -426,9 +428,6 @@ public class FormatNode extends Node {
         }
         else if (o == null)
             rule.put("PropertyName", displayPropertyName);
-        outInfo = assetList.getMetaData((int) ruleInfo[RULE_OID]);
-        outInfo[OUT_NRULE] ++;
-        outInfo[OUT_ORULE] ++;
 
         return rule;
     }

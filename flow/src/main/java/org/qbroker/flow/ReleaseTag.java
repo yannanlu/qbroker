@@ -3,6 +3,12 @@ package org.qbroker.flow;
 /* ReleaseTag.java - release tag for all the packages of qbroker */
 
 /**
+ * V1.1.11 (2017/03/19): added group support for outlinks to DispatchNode so
+ * that the load balance works on separate groups of outlinks, changed the way
+ * to generate the unique key for plugin caches via JSON2Map.toJSON() in 7
+ * implementations of MessageNode, added the check on the header of 
+ * "Connection: close" to WebTester
+ *<br/>
  * V1.1.10 (2017/03/04): added ResetPriority and Template to EventMonitor for
  * the default timeout escalations, added updateParameters() to EventMonitor,
  * fixed the issue of missing reference timestamp on QucikCache instances in
@@ -104,7 +110,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V 1.1.10 2017/03/04 12:20:59";
+    private static String ReleaseTAG = "QBroker V 1.1.11 2017/03/18 09:12:05";
 
     public ReleaseTag() {
     }
