@@ -599,7 +599,8 @@ public class ScreenNode extends Node {
                       default:
                         ruleInfo[i] = meta[i];
                     }
-                    strBuf.append(" " + ruleInfo[i]);
+                    if ((debug & DEBUG_DIFF) > 0)
+                        strBuf.append(" " + ruleInfo[i]);
                 }
                 if ((debug & DEBUG_DIFF) > 0)
                     new Event(Event.DEBUG, name + "/" + key + " ruleInfo:" +

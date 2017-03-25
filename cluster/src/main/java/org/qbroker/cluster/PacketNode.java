@@ -1252,7 +1252,7 @@ public class PacketNode implements ClusterNode, Runnable {
                      if (buf[i] == ':')
                          break;
                 if (i < k && cache.insert(uri + "/" + new String(buf, 0, i),
-                    currentTime, ttl, null, null) < 0) {//skip redundent packet
+                    currentTime, ttl, null, null) < 0) {//skip redundant packet
                     xq.remove(cid);
                     continue;
                 }

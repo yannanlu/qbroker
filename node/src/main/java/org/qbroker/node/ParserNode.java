@@ -60,7 +60,7 @@ import org.qbroker.event.Event;
  * The requirement is minimum.  The class should have a public method of
  * parse() that takes the String to be parsed as the only argument.  The
  * returned object has to be either a Map or an Event.  It must have
- * a constructor taking a Map, or a List or a String as the only argument
+ * a constructor taking a Map, or a List, or just a String as the only argument
  * for configurations. ParserNode will invoke the public method to parse
  * the either message body or certain message property as a text.
  *<br/><br/>

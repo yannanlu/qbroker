@@ -465,7 +465,8 @@ public class MonitorNode extends Node {
                       default:
                         ruleInfo[i] = meta[i];
                     }
-                    strBuf.append(" " + ruleInfo[i]);
+                    if ((debug & DEBUG_DIFF) > 0)
+                        strBuf.append(" " + ruleInfo[i]);
                 }
                 if (meta[RULE_PID] == TYPE_ACTION && ruleInfo[RULE_PEND] > 0) {
                     AssetList taskList = (AssetList) orig.get("TaskList");

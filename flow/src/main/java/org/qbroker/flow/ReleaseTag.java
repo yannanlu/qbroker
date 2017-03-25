@@ -7,7 +7,9 @@ package org.qbroker.flow;
  * that the load balance works on separate groups of outlinks, changed the way
  * to generate the unique key for plugin caches via JSON2Map.toJSON() in 7
  * implementations of MessageNode, added the check on the header of 
- * "Connection: close" to WebTester
+ * "Connection: close" to WebTester, fixed a missing if statement in
+ * replaceRule() for 7 MessageNode implementations, fixed a typo on ids of
+ * SelectedOutLink in DuplicateNode
  *<br/>
  * V1.1.10 (2017/03/04): added ResetPriority and Template to EventMonitor for
  * the default timeout escalations, added updateParameters() to EventMonitor,
@@ -110,7 +112,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V 1.1.11 2017/03/18 09:12:05";
+    private static String ReleaseTAG = "QBroker V 1.1.11 2017/03/18 10:04:53";
 
     public ReleaseTag() {
     }

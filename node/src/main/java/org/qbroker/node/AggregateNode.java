@@ -652,7 +652,8 @@ public class AggregateNode extends Node {
                       default:
                         ruleInfo[i] = meta[i];
                     }
-                    strBuf.append(" " + ruleInfo[i]);
+                    if ((debug & DEBUG_DIFF) > 0)
+                        strBuf.append(" " + ruleInfo[i]);
                 }
                 if ((o = cacheList.remove(id)) != null) { // active cache
                     QuickCache cache = (QuickCache) rule.get("Cache");

@@ -284,8 +284,8 @@ public class DuplicateNode extends Node {
             m = 0;
             for (i=0; i<k; i++) {
                 str = (String) list.get(i);
-                if (str == null || (id = assetList.getID(str)) <= 0) {
-                    new Event(Event.WARNING, name+": SelectedOutLink" +
+                if (str == null || (id = assetList.getID(str)) < 0) {
+                    new Event(Event.WARNING, name + ": SelectedOutLink" +
                         "[" + i + "]=" + str + " for "+ ruleName +
                         " not defined, skipped it").send();
                     continue;

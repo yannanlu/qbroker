@@ -31,8 +31,8 @@ import org.qbroker.event.Event;
  * DispatchNode dispatches JMS messages to various destinations according to
  * their content, and preconfigured rulesets. DispatchNode contains one or more 
  * outlinks as the destinations. Those outlinks are grouped exclusively
- * according to their group name. Within each group, all the oulinks are
- * equivalent and backing up of each other in case of failure or high load.
+ * according to their group names. Within each group, all the oulinks are
+ * equivalent and backing up with each other in case of failure or high load.
  *<br/><br/>
  * DispatchNode uses the predefined rulesets to dispatch incoming messages.
  * These rulesets categorize messages into non-overlapping groups. Therefore,
@@ -57,8 +57,7 @@ import org.qbroker.event.Event;
  * determined by the hash value of the key that is retrieved from the incoming
  * message. If the outlink has a high load or it is not available, sticky
  * messages will be routed to its redirect outlink. For nohit ruleset, the
- * default switching type is roundrobin unless its outlink has been defined
- * explicitly.
+ * switching type is always preferred.
  *<br/><br/>
  * In case of a high load or a failure from the report on a given outlink, its
  * status will be set to standby mode for load balance and high availability.
@@ -1008,37 +1007,49 @@ public class DispatchNode extends Node {
     }
 
     /**
-     * It queries the report for each destination and checks the report status
-     * and queue depth. It then updates the output info and migrates the
-     * messages and rulesets from a high-load destination to a low-load
-     * destination according to the preconfigured rules. It will not manipulate
-     * the status of the destinations, except for calling reset for enq number
-     * and updating the metadata on them for internal uses.
+     * It updates the meta data on every destinations based on their reports.
+     * Based on the reports, it evaluates the load and status to decide if
+     * and how to failover or failback on those destinations within the groups. 
+     */
+    private int update(long currentTime, XQueue in) {
+        int i, k = 0;
+        Browser browser = groupList.browser();
+        while ((i = browser.next()) >= 0) { // go thru all groups of outlinks
+            k += update(currentTime, i, in);
+        }
+        return k;
+    }
+
+    /**
+     * It queries the report for each destination in the group and checks its
+     * report status and the queue depth. Then it updates the output info and
+     * migrates the messages and rulesets from a high-load destination to
+     * a low-load destination within the group according to the preconfigured
+     * rules. It will not manipulate the status of the destinations, except
+     * for calling reset for enq number and updating the metadata on them for
+     * internal uses.
      *<br/><br/>
      * It supports both failover and failback.
      */
-    private int update(long currentTime, XQueue in) {
-        int i, m, n, d, md, min, ns, ms, l, s, mydebug = debug, total = 0;
+    private int update(long currentTime, int gid, XQueue in) {
+        int m, n, d, md, min, ns, ms, l, s, mydebug = debug;
         int[] ids;
         StringBuffer strBuf = null;
         long st, preDepth = 0;
-        long[] outInfo, ruleInfo, meta;
+        long[] outInfo, ruleInfo;
         Object o;
         Object[] asset;
-        Browser browser;
         XQueue xq;
         Map r;
         String reportName;
         if ((mydebug & DEBUG_UPDT) > 0 || (mydebug & DEBUG_REPT) > 0)
             strBuf = new StringBuffer();
 
-        browser = groupList.browser();
-        while ((i = browser.next()) >= 0) { // go thru all groups of outlinks
-          ids = (int[]) groupList.get(i);
-          md = threshold[LOAD_HIGH] + 600000;
-          min = -1;
-          l = 0;
-          for (int oid : ids) { // check report and update load
+        ids = (int[]) groupList.get(gid);
+        md = threshold[LOAD_HIGH] + 600000;
+        min = -1;
+        l = 0;
+        for (int oid : ids) { // check report and update load
             asset = (Object[]) assetList.get(oid);
             if (asset == null || asset.length <= ASSET_URI) {
                 new Event(Event.ERR, name + ": empty asset for " + oid).send();
@@ -1127,30 +1138,30 @@ public class DispatchNode extends Node {
                 md = (int) outInfo[OUT_QDEPTH];
                 min = oid;
             }
-          }
-          if ((mydebug & DEBUG_REPT) > 0) {
+        }
+        if ((mydebug & DEBUG_REPT) > 0) {
             if (l > 0) // got new report
                 new Event(Event.DEBUG, name+" ReportName: OID QStatus "+
-                    "QDepth ENQ DEQ Size QRedirect Status QTime (gid=" + i +
+                    "QDepth ENQ DEQ Size QRedirect Status QTime (gid=" + gid +
                     ",min=" + min + ")" + strBuf.toString()).send();
             strBuf = new StringBuffer();
-          }
+        }
 
-          if (l > 0 && sessionTimeout > 0) { // check report time on 1st oid
+        if (l > 0 && sessionTimeout > 0) { // check report time on 1st oid
             outInfo = assetList.getMetaData(ids[0]);
             if (outInfo[OUT_MODE] > 0) { // reset RULE_PEND on all rules
                 int j;
                 Browser b = ruleList.browser();
                 while ((j = b.next()) >= 0) {
                     ruleInfo = ruleList.getMetaData(j);
-                    if (ruleInfo[RULE_GID] == i)
+                    if (ruleInfo[RULE_GID] == gid)
                         ruleInfo[RULE_PEND] = 0;
                 }
             }
-          }
+        }
 
-          m = 0;
-          for (int oid : ids) { // check load on each outLink
+        m = 0;
+        for (int oid : ids) { // check load on each outLink
             asset = (Object[]) assetList.get(oid);
             if (asset == null || asset.length <= ASSET_URI)
                 continue;
@@ -1171,7 +1182,6 @@ public class DispatchNode extends Node {
                     currentTime - outInfo[OUT_TIME] >= sessionTimeout) {
                     outInfo[OUT_STATUS] = NODE_STANDBY;
                     outInfo[OUT_TIME] = currentTime;
-                    meta = groupList.getMetaData(i);
                     if (oid != min && md < threshold[LOAD_LOW]) {
                         // migrate to min
                         migrate(currentTime, oid, min, in);
@@ -1245,8 +1255,8 @@ public class DispatchNode extends Node {
                     outInfo[OUT_QIPPS] + " " + outInfo[OUT_NRULE] + " " +
                     outInfo[OUT_SIZE] + " " + outInfo[OUT_QDEPTH] + " " +
                     Event.dateFormat(new Date(outInfo[OUT_TIME])));
-          }
-          if (m > 0) { // summarize migration changes on outlinks
+        }
+        if (m > 0) { // summarize migration changes on outlinks
             strBuf = new StringBuffer();
             for (int oid : ids) {
                 outInfo = assetList.getMetaData(oid);
@@ -1256,20 +1266,18 @@ public class DispatchNode extends Node {
                     outInfo[OUT_SIZE] + " " + outInfo[OUT_QDEPTH] + " " +
                     Event.dateFormat(new Date(outInfo[OUT_TIME])));
             }
-            new Event(Event.INFO, name + " migration changes on Out for " + i +
+            new Event(Event.INFO, name + " migration changes on Out for " +gid+
                 ": OID Status QStatus QRedirect NRule Size QDepth Time - In: "+
                 in.getGlobalMask() + " " + in.size() + "," + in.depth() +
                 strBuf.toString()).send();
-          }
-          else if ((mydebug & DEBUG_UPDT) > 0 && strBuf.length() > 0) {
-            new Event(Event.DEBUG, name + " state changes on Out for " + i +
-                ": OID Status QStatus QRedirect NRule Size QDepth Time - In: "+
-                in.getGlobalMask() + " " + in.size() + "," + in.depth() +
-                strBuf.toString()).send();
-          }
-          total += m;
         }
-        return total;
+        else if ((mydebug & DEBUG_UPDT) > 0 && strBuf.length() > 0) {
+            new Event(Event.DEBUG, name + " state changes on Out for " + gid +
+                ": OID Status QStatus QRedirect NRule Size QDepth Time - In: "+
+                in.getGlobalMask() + " " + in.size() + "," + in.depth() +
+                strBuf.toString()).send();
+        }
+        return m;
     }
 
     /**

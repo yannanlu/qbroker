@@ -57,15 +57,15 @@ import org.qbroker.event.Event;
 
 /**
  * SelectNode parses the payload of JMS Messages and selects the portions of
- * the content according to certain rules.  For each selected chunk of the
+ * the content according to predefined rules.  For each selected chunk of the
  * content, SelectNode creates a new TextMessage and stores the data into it.
  * It also copies the properties of the original message into the new message
  * and passes it through the outlink of done.  According to the rulesets,
- * SelectNode filters the incoming messages into three outlinks: bypass for
+ * SelectNode routes the incoming messages into three outlinks: bypass for
  * those original messages, nohit for those messages do not belong to any
- * rulesets, failure for the messages failed at the selecting process.
- * However, the outlink of done can be shared with other outlinks. Since
- * the payload of the message may be very large, SelectNode does not support
+ * rulesets, failure for the messages failed at the selection process.
+ * However, the outlink of done can be shared with other outlinks. Since the
+ * payload of the message may be very large, SelectNode tries to ignore any
  * filters on message body. It will not display message body of the incoming
  * messages either.
  *<br/><br/>
@@ -93,21 +93,21 @@ import org.qbroker.event.Event;
  * the pattern. All the matched items will be selected for the ruleset. If
  * XPath is defined, SelectNode will use it to select DOM nodes from
  * the XML document. The text representation of each selected DOM node will be
- * stored to every outgoing message. Both Pattern and XPath support selections
- * with dynamic variables. For Pattern or XPath, the value can be a Map
- * contains multiple static patterns or XPaths. SelectNode will use
- * each of them to select items. Their keys will be set to the TagField on the
- * item messages.
+ * stored to the outgoing message. Both Pattern and XPath support selections
+ * with dynamic variables. For either Pattern or XPath, the value can be a Map
+ * contains multiple static patterns or XPaths. SelectNode will use each of
+ * them to select items. Their keys will be set to the TagField on the new
+ * messages.
  *<br/><br/>
  * SelectNode also allows developers to plug-in their own methods to select.
  * In this case, the full ClassName of the selection implementation and its
  * SelectorArguments must be well defined in the rulesets.  The requirement on
  * the plug-ins is minimum.  The class must have a public method of
- * select(String text) that takes a String as the only argument.  The return
+ * select(String text) that takes a String as the only argument. The returned
  * object must be an array of String for selected items on success.  Each of
- * the array element will be stored to the outgoing message.  In case of
- * failure, null should be returned.  It must also have a constructor taking
- * a Map, or an List, or just a String as the only argument for the
+ * the array element will be stored into the newly created message. In case
+ * of failure, null should be returned. It should also have a constructor
+ * taking a Map, or a List, or just a String as the only argument for the
  * configurations.  SelectNode will invoke its public method to get the list
  * of the selected items from either message body or certain message property
  * of each incoming message.
@@ -119,7 +119,7 @@ import org.qbroker.event.Event;
  * property set. For other cases, the total count will be set right after the
  * items are selected. Therefore, the total count can be copied over to the
  * newly created messages.  The downstream can use this count to terminate the
- * aggregate sessions or loops.  In order to set the property at CountField,
+ * aggregation sessions or loops. In order to set the property at CountField,
  * the incoming message must be writeable. In most of the cases, you can use
  * the receivers to set a dummy property on all incoming messages since
  * it will make them writeable.

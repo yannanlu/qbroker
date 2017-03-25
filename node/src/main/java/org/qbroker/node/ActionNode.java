@@ -77,9 +77,9 @@ import org.qbroker.event.Event;
  * the new JMS message for escalations.  If something is wrong, the returned
  * object should be a String as the text of the error.
  *<br/><br/>
- * The plugin must also have a constructor taking a Map, or a List or a String
- * as the only argument for configurations.  Based on the data type of the
- * constructor argument, developers should define configuration parameters
+ * The plugin must also have a constructor taking a Map, or a List, or just a
+ * String as the only argument for configurations. Based on the data type of
+ * the constructor argument, developers should define configuration parameters
  * in the base of ActionArgument.  ActionNode will pass the data to the plugin's
  * constructor as an opaque object during the instantiation of the plugin.
  * In the normal operation, ActionNode will invoke the method to process the

@@ -480,8 +480,8 @@ public class MapReduceNode extends Node {
                     oids[m++] = id;
                 }
                 if (m < k) { // with maps
-                    new Event(Event.ERR, name+": SelectedOutLink" +
-                        " for "+ ruleName + " is bad").send();
+                    new Event(Event.ERR, name + ": SelectedOutLink for " +
+                        ruleName + " is not well defined").send();
                     return null;
                 }
                 ruleInfo[RULE_PID] = TYPE_MAPREDUCE;

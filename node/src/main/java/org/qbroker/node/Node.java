@@ -862,7 +862,7 @@ public abstract class Node implements MessageNode {
                       default:
                         ruleInfo[i] = meta[i];
                     }
-                    if (strBuf != null)
+                    if ((debug & DEBUG_DIFF) > 0)
                         strBuf.append(" " + ruleInfo[i]);
                 }
                 if ((debug & DEBUG_DIFF) > 0)
