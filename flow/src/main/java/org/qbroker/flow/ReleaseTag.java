@@ -9,7 +9,9 @@ package org.qbroker.flow;
  * implementations of MessageNode, added the check on the header of 
  * "Connection: close" to WebTester, fixed a missing if statement in
  * replaceRule() for 7 MessageNode implementations, fixed a typo on ids of
- * SelectedOutLink in DuplicateNode
+ * SelectedOutLink in DuplicateNode, changed the handling on HTTP return code
+ * in HTTPMessenger so that 2xx is a success for download(), fulfill() and
+ * store()
  *<br/>
  * V1.1.10 (2017/03/04): added ResetPriority and Template to EventMonitor for
  * the default timeout escalations, added updateParameters() to EventMonitor,
@@ -112,7 +114,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V 1.1.11 2017/03/18 10:04:53";
+    private static String ReleaseTAG = "QBroker V 1.1.11 2017/03/18 11:27:16";
 
     public ReleaseTag() {
     }

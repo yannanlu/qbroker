@@ -52,7 +52,8 @@ import org.qbroker.event.Event;
  * The method of download() is used for synchronous requests.  The method of
  * fulfill() is for asynchronous requests with the initial request and multiple
  * subsequent checks on the status.  The method of store() is used for putting
- * or posting content to a web server.
+ * or posting content to a web server. Except for retrieve(), the rest of
+ * methods treat the return code of 2xx as a success.
  *<br/><br/>
  * ResponseProperty is a map for retrieving the header properties from an HTTP
  * response. It contains multiple key-value pairs with key for an HTTP header
@@ -191,21 +192,16 @@ public class HTTPMessenger extends HTTPConnector {
             ph.clear();
         }
  
-        if (props.get("Retry") == null ||
-            (retry = Integer.parseInt((String) props.get("Retry"))) <= 0)
+        if ((o = props.get("Retry")) == null || (retry = Integer.parseInt((String) o)) <= 0)
             retry = 3;
 
-        if ((o = props.get("IgnoreTimeout")) != null &&
-            "true".equalsIgnoreCase((String) o))
+        if ((o = props.get("IgnoreTimeout")) != null && "true".equalsIgnoreCase((String) o))
             ignoreTimeout = true;
-
-        if (props.get("Mode") != null &&
-            "daemon".equals((String) props.get("Mode"))) {
+        if ((o = props.get("Mode")) != null && "daemon".equals((String) o))
             mode = 1;
-        }
-        if (props.get("Operation") != null) {
-            operation = (String) props.get("Operation");
-        }
+        if ((o = props.get("Operation")) != null)
+            operation = (String) o;
+
         if ((o = props.get("Partition")) != null) {
             partition = TimeWindows.parseThreshold((String) o);
             partition[0] /= 1000;
@@ -221,43 +217,35 @@ public class HTTPMessenger extends HTTPConnector {
             partition[0] = 0;
             partition[1] = 0;
         }
-        if (props.get("BufferSize") != null) {
-            bufferSize = Integer.parseInt((String) props.get("BufferSize"));
-        }
-        if (props.get("TextMode") != null) {
-            textMode = Integer.parseInt((String) props.get("TextMode"));
-        }
-        if (props.get("XAMode") != null) {
-            xaMode = Integer.parseInt((String) props.get("XAMode"));
-        }
-        if (props.get("DisplayMask") != null) {
-            displayMask = Integer.parseInt((String) props.get("DisplayMask"));
-        }
-        if ((o = props.get("MaxNumberMessage")) != null) {
+        if ((o = props.get("BufferSize")) != null)
+            bufferSize = Integer.parseInt((String) o);
+        if ((o = props.get("TextMode")) != null)
+            textMode = Integer.parseInt((String) o);
+        if ((o = props.get("XAMode")) != null)
+            xaMode = Integer.parseInt((String) o);
+        if ((o = props.get("DisplayMask")) != null)
+            displayMask = Integer.parseInt((String) o);
+        if ((o = props.get("MaxNumberMessage")) != null)
             maxNumberMsg = Integer.parseInt((String) o);
-        }
         if ((o = props.get("MaxIdleTime")) != null) {
             maxIdleTime = 1000 * Integer.parseInt((String) o);
             if (maxIdleTime < 0)
                 maxIdleTime = 0;
         }
-        if (props.get("ReceiveTime") != null) {
-            receiveTime = Integer.parseInt((String) props.get("ReceiveTime"));
+        if ((o = props.get("ReceiveTime")) != null) {
+            receiveTime = Integer.parseInt((String) o);
             if (receiveTime <= 0)
                 receiveTime = 1000;
         }
-        if (props.get("WaitTime") != null) {
-            waitTime = Long.parseLong((String) props.get("WaitTime"));
+        if ((o = props.get("WaitTime")) != null) {
+            waitTime = Long.parseLong((String) o);
             if (waitTime <= 0L)
                 waitTime = 500L;
         }
-        if (props.get("SleepTime") != null) {
-            sleepTime= Integer.parseInt((String) props.get("SleepTime"));
-        }
-
-        if (props.get("MaxFileSize") != null) {
-            maxFileSize =Long.parseLong((String) props.get("MaxFileSize"));
-        }
+        if ((o = props.get("SleepTime")) != null)
+            sleepTime= Integer.parseInt((String) o);
+        if ((o = props.get("MaxFileSize")) != null)
+            maxFileSize =Long.parseLong((String) o);
 
         if (displayMask > 0 && ((displayMask & MessageUtils.SHOW_BODY) > 0 ||
             (displayMask & MessageUtils.SHOW_SIZE) > 0))
@@ -813,7 +801,8 @@ public class HTTPMessenger extends HTTPConnector {
                     }
                     catch (Exception e) {
                     }
-                    if (retCode == HttpURLConnection.HTTP_OK)
+                    if (retCode >= HttpURLConnection.HTTP_OK &&
+                        retCode < HttpURLConnection.HTTP_MULT_CHOICE)
                         break;
                     if (i == 0)
                         new Event(Event.WARNING, "failed to save content from "+
@@ -921,7 +910,8 @@ public class HTTPMessenger extends HTTPConnector {
                         }
                         Event.flush(e);
                     }
-                    if (retCode == HttpURLConnection.HTTP_OK)
+                    if (retCode == HttpURLConnection.HTTP_OK &&
+                        retCode < HttpURLConnection.HTTP_MULT_CHOICE)
                         break;
                     if (i == 0)
                         new Event(Event.WARNING, "failed to download from " +
@@ -985,7 +975,7 @@ public class HTTPMessenger extends HTTPConnector {
                         " retries with error: " + retCode + " " +
                         strBuf.toString()));
             }
-            else if (retCode != HttpURLConnection.HTTP_OK) {
+            else if (retCode >= HttpURLConnection.HTTP_MULT_CHOICE) {
                 if (ack) try { // try to ack the msg
                     outMessage.acknowledge();
                 }
@@ -1441,7 +1431,7 @@ public class HTTPMessenger extends HTTPConnector {
                 throw(new IOException("failed to fulfill a request to " +
                     urlName+" with error: "+ retCode +" "+ strBuf.toString()));
             }
-            else if (retCode != HttpURLConnection.HTTP_OK) {
+            else if (retCode >= HttpURLConnection.HTTP_MULT_CHOICE) {
                 if (ack) try { // try to ack the msg
                     outMessage.acknowledge();
                 }
@@ -1510,7 +1500,8 @@ public class HTTPMessenger extends HTTPConnector {
                         urlName + ": " + e.toString()).send();
                     Event.flush(e);
                 }
-                if (retCode == HttpURLConnection.HTTP_OK)
+                if (retCode >= HttpURLConnection.HTTP_OK &&
+                    retCode < HttpURLConnection.HTTP_MULT_CHOICE)
                     break;
                 if (i == 0 && retCode >= HttpURLConnection.HTTP_INTERNAL_ERROR)
                     new Event(Event.WARNING, "failed to check fulfillment on " +
@@ -1529,7 +1520,7 @@ public class HTTPMessenger extends HTTPConnector {
                     urlName + " after " + i + " retries with error: " +
                     retCode + " " + strBuf.toString()));
             }
-            else if (retCode != HttpURLConnection.HTTP_OK) {
+            else if (retCode >= HttpURLConnection.HTTP_MULT_CHOICE) {
                 if (ack) try { // try to ack the msg
                     outMessage.acknowledge();
                 }
@@ -1862,7 +1853,8 @@ public class HTTPMessenger extends HTTPConnector {
                     msgBuf = null;
                     Event.flush(e);
                 }
-                if (retCode == HttpURLConnection.HTTP_OK)
+                if (retCode >= HttpURLConnection.HTTP_OK &&
+                    retCode < HttpURLConnection.HTTP_MULT_CHOICE)
                     break;
                 if (i == 0)
                     new Event(Event.WARNING, "failed to store to " +
@@ -1923,7 +1915,7 @@ public class HTTPMessenger extends HTTPConnector {
                 Event.flush(e);
             }
 
-            if (retCode != HttpURLConnection.HTTP_OK) { // for client error
+            if (retCode >= HttpURLConnection.HTTP_MULT_CHOICE) { // for client error
                 xq.remove(sid);
                 new Event(Event.ERR, "failed to store msg to " + urlName +
                     " after " + i + " retries with error: " + retCode +
