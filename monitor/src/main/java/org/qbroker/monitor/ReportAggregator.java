@@ -92,10 +92,15 @@ public class ReportAggregator extends Report {
             skip = MonitorUtils.checkDependencies(currentTime, dependencyGroup,
                 name);
             if (skip != NOSKIP) {
-                if (skip == EXCEPTION)
+                if (skip == EXCEPTION) {
                     report.put("Exception",
                         new Exception("failed to check dependencies"));
-                return report;
+                    return report;
+                }
+                else if (skip == SKIPPED)
+                    return report;
+                else if (!disabledWithReport)
+                    return report;
             }
         }
 

@@ -3,6 +3,10 @@ package org.qbroker.flow;
 /* ReleaseTag.java - release tag for all the packages of qbroker */
 
 /**
+ * V1.1.12 (2017/04/15): added DisabledWithReport to handle DISABLED case of
+ * DependecyGroup on Report and Monitor, updated all the monitors, added
+ * ResultType to RULE_EXTRA for formatter of Msg2Text in FormatNode
+ *<br/>
  * V1.1.11 (2017/03/19): added group support for outlinks to DispatchNode so
  * that the load balance works on separate groups of outlinks, changed the way
  * to generate the unique key for plugin caches via JSON2Map.toJSON() in 7
@@ -114,7 +118,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V 1.1.11 2017/03/18 11:27:16";
+    private static String ReleaseTAG = "QBroker V 1.1.12 2017/04/15 10:01:49";
 
     public ReleaseTag() {
     }

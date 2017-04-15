@@ -28,6 +28,7 @@ public abstract class Report implements MonitorReport {
     protected String name, type = null;
     protected int step, skip, disableMode, serialNumber;
     protected int reportMode, cachedSkip = NOSKIP, resolution = 1000;
+    protected boolean disabledWithReport = false;
     protected Template template;
     protected Map<String, Object> report = new HashMap<String, Object>();
     protected List[] dependencyGroup = null;
@@ -90,6 +91,9 @@ public abstract class Report implements MonitorReport {
         if ((o = props.get("DependencyGroup")) != null && o instanceof List) {
             dependencyGroup = MonitorUtils.getDependencies((List) o);
             disableMode = 0;
+            if ((o = props.get("DisabledWithReport")) != null &&
+                "true".equalsIgnoreCase((String) o)) // run report if disabled
+                disabledWithReport = true;
         }
         else if ((o = props.get("DisableMode")) != null &&
             Integer.parseInt((String) o) != 0) { // initialize disable report

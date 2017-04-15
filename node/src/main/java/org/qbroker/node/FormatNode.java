@@ -14,6 +14,7 @@ import javax.jms.BytesMessage;
 import javax.jms.TextMessage;
 import javax.jms.MapMessage;
 import javax.jms.JMSException;
+import org.qbroker.common.Utils;
 import org.qbroker.common.XQueue;
 import org.qbroker.common.Browser;
 import org.qbroker.common.QuickCache;
@@ -24,6 +25,7 @@ import org.qbroker.common.CollectibleCells;
 import org.qbroker.json.JSON2Map;
 import org.qbroker.jms.MessageUtils;
 import org.qbroker.jms.MessageFilter;
+import org.qbroker.jms.Msg2Text;
 import org.qbroker.jms.JMSEvent;
 import org.qbroker.node.Node;
 import org.qbroker.node.NodeUtils;
@@ -62,20 +64,24 @@ import org.qbroker.event.Event;
  * of the operations fails, the message will be routed to failure outlink.
  *<br/><br/> 
  * If ClassName is not defined in the rule, the rule is for the default
- * formatter. In this case, it also accepts a template via URITemplate for the
- * path to a template file which will be used to format the message body.
- * If URITemplate is defined, the rule will load the template from the file
- * and cache it at the first application to the message.  The format result
- * will be set back to the message body. The cache count of templates for the
- * rule will be stored to RULE_PEND. The cache count will be updated when the
- * session times out which is determined by SessionTimeout.
+ * formatter. In this case, the rule will check if ResultType is defined first.
+ * If it is defined, the rule will format the incoming message into the
+ * specific type and sets the result to the message body. Otherwise, it checks
+ * if a template via URITemplate is defined for the path to a template file
+ * which will be used to format the message body. If URITemplate is defined,
+ * the rule will load the template from the file and cache it at the first
+ * application to the message. The format result will be set back to the
+ * message body. The cache count of templates for the rule will be stored to
+ * RULE_PEND. The cache count will be updated when the session times out which
+ * is determined by SessionTimeout. TemplateFile is also accepted for a static
+ * template file.
  *<br/><br/>
  * FormatNode allows developers to plugin their own formatters by specifying
  * the ClassName for the plugin.  The requirement is minimum.  The class should
  * have a public method of format() that takes a JMS Message to be formatted as
  * the only argument.  The return object must be a String of null meaning OK,
  * or an error message otherwise.  It must have a constructor taking a Map
- * as the only argument for configurations.  Based on the map propertis for
+ * as the only argument for configurations.  Based on the map properties for
  * the constructor, developers should define configuration parameters in the
  * base of FormatterArgument.  FormatNode will pass the data to the plugin's
  * constructor as an opaque object during the instantiation of the plugin.
@@ -105,6 +111,7 @@ public class FormatNode extends Node {
     private AssetList pluginList = null; // plugin method and object
     private Map<String, Object> templateMap, substitutionMap;
     private QuickCache cache = null;     // for storing templates
+    private Msg2Text msg2Text = null;    // for msg format
 
     private final static int RESULT_OUT = 0;
     private final static int FAILURE_OUT = 1;
@@ -245,11 +252,12 @@ public class FormatNode extends Node {
                 ruleInfo = ruleList.getMetaData(i);
                 strBuf.append("\n\t" + ruleList.getKey(i) + ": " + i + " " +
                     ruleInfo[RULE_PID] + " " + ruleInfo[RULE_OPTION] + " " +
-                    ruleInfo[RULE_TTL] + " " + ruleInfo[RULE_MODE] + " - " +
+                    ruleInfo[RULE_TTL] + " " + ruleInfo[RULE_MODE] + " " +
+                    ruleInfo[RULE_DMASK] + " " + ruleInfo[RULE_EXTRA] + " - " +
                     assetList.getKey((int) ruleInfo[RULE_OID]));
             }
-            new Event(Event.DEBUG, name+" RuleName: RID PID Reset TTL Chop - "+
-                "OutName" + strBuf.toString()).send();
+            new Event(Event.DEBUG, name+" RuleName: RID PID Reset TTL Chop "+
+                "DMask RType OutName" + strBuf.toString()).send();
         }
     }
 
@@ -371,7 +379,24 @@ public class FormatNode extends Node {
         }
         else if ((o = ph.get("FormatterArgument")) != null &&
             o instanceof List) { // default formatter already created
-            if ((o = ph.get("URITemplate")) != null) {
+            if ((o = ph.get("ResultType")) != null && o instanceof String) {
+                i = Integer.parseInt((String) o);
+                if (i == Utils.RESULT_XML || i == Utils.RESULT_JSON ||
+                    i == Utils.RESULT_POSTABLE || i == Utils.RESULT_COLLECTABLE)
+                    ruleInfo[RULE_EXTRA] = i;
+                else
+                    throw(new IllegalArgumentException(ruleName +
+                        ": ResultType not supported for " + (String) o));
+                if (msg2Text == null) {
+                    Map<String, Object> h = new HashMap<String, Object>();
+                    h.put("Template", "");
+                    if ((o = ph.containsKey("ExcludedProperty")) != null)
+                        h.put("ExcludedProperty", o);
+                    msg2Text = new Msg2Text(h);
+                    h.clear();
+                }
+            }
+            else if ((o = ph.get("URITemplate")) != null) {
                 str = (String) o;
                 rule.put("Template", new Template(str));
                 if ((o = ph.get("URISubstitution")) != null)
@@ -383,6 +408,25 @@ public class FormatNode extends Node {
                 if ((o = ph.get("NeedChop")) != null &&
                     o instanceof String && "true".equals((String) o))
                     ruleInfo[RULE_MODE] = 1;
+            }
+            ruleInfo[RULE_OID] = outLinkMap[RESULT_OUT];
+            ruleInfo[RULE_PID] = TYPE_FORMAT;
+        }
+        else if ((o = ph.get("ResultType")) != null && o instanceof String) {
+            i = Integer.parseInt((String) o);
+            if (i == Utils.RESULT_XML || i == Utils.RESULT_JSON ||
+                i == Utils.RESULT_POSTABLE || i == Utils.RESULT_COLLECTABLE)
+                ruleInfo[RULE_EXTRA] = i;
+            else
+                throw(new IllegalArgumentException(ruleName +
+                    ": ResultType not supported for " + (String) o));
+            if (msg2Text == null) {
+                Map<String, Object> h = new HashMap<String, Object>();
+                h.put("Template", "");
+                if ((o = ph.containsKey("ExcludedProperty")) != null)
+                    h.put("ExcludedProperty", o);
+                msg2Text = new Msg2Text(h);
+                h.clear();
             }
             ruleInfo[RULE_OID] = outLinkMap[RESULT_OUT];
             ruleInfo[RULE_PID] = TYPE_FORMAT;
@@ -494,7 +538,7 @@ public class FormatNode extends Node {
      */
     public void propagate(XQueue in, XQueue[] out) throws JMSException {
         Message inMessage;
-        String key, value, msgStr = null, ruleName = null;
+        String msgStr = null, ruleName = null;
         Object[] asset;
         Map rule = null;
         Browser browser;
@@ -670,7 +714,9 @@ public class FormatNode extends Node {
                             i = RESULT_OUT;
                     }
 
-                    if (i == RESULT_OUT && temp != null) {
+                    if (i != RESULT_OUT)
+                        i = FAILURE_OUT;
+                    else if (temp != null) { // with template
                         String uri;
                         uri = MessageUtils.format(inMessage, buffer, temp);
                         if (tsub != null)
@@ -682,6 +728,19 @@ public class FormatNode extends Node {
                             i = RESULT_OUT;
                             new Event(Event.ERR, name +
                                 ": empty uri for the file on "+ruleName).send();
+                        }
+                    }
+                    else if (ruleInfo[RULE_EXTRA] > 0) { // with msg2text
+                        String text = msg2Text.format((int)ruleInfo[RULE_EXTRA],
+                            inMessage);
+                        inMessage.clearBody();
+                        if (inMessage instanceof TextMessage)
+                            ((TextMessage) inMessage).setText(text);
+                        else if (inMessage instanceof BytesMessage)
+                          ((BytesMessage)inMessage).writeBytes(text.getBytes());
+                        else {
+                            new Event(Event.ERR, name + ": " + ruleName +
+                                " failed to set body: bad msg family").send();
                         }
                     }
                 }

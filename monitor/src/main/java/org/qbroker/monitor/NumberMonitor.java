@@ -445,10 +445,15 @@ public class NumberMonitor extends Monitor {
             skip = MonitorUtils.checkDependencies(currentTime, dependencyGroup,
                 name);
             if (skip != NOSKIP) {
-                if (skip == EXCEPTION)
+                if (skip == EXCEPTION) {
                     report.put("Exception",
                         new Exception("failed to check dependencies"));
-                return report;
+                    return report;
+                }
+                else if (skip == SKIPPED)
+                    return report;
+                else if (!disabledWithReport)
+                    return report;
             }
         }
         else if (reportMode == REPORT_CACHED) { // use the cached report

@@ -192,10 +192,11 @@ public class HTTPMessenger extends HTTPConnector {
             ph.clear();
         }
  
-        if ((o = props.get("Retry")) == null || (retry = Integer.parseInt((String) o)) <= 0)
+        if ((o = props.get("Retry")) == null ||
+            (retry = Integer.parseInt((String) o)) <= 0)
             retry = 3;
-
-        if ((o = props.get("IgnoreTimeout")) != null && "true".equalsIgnoreCase((String) o))
+        if ((o = props.get("IgnoreTimeout")) != null &&
+            "true".equalsIgnoreCase((String) o))
             ignoreTimeout = true;
         if ((o = props.get("Mode")) != null && "daemon".equals((String) o))
             mode = 1;

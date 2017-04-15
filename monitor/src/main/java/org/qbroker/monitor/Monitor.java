@@ -50,6 +50,7 @@ public abstract class Monitor implements MonitorReport, MonitorAction {
     protected int previousStatus, skip, actionCount, exceptionCount;
     protected int disableMode, reportMode, checkpointTimeout, statusOffset;
     protected int cachedSkip = NOSKIP, resolution = 1000;
+    protected boolean disabledWithReport = false;
     protected GenericLogger statsLogger = null;
     protected Pattern[][] aPatternGroup = null;
     protected Pattern[][] xPatternGroup = null;
@@ -126,6 +127,9 @@ public abstract class Monitor implements MonitorReport, MonitorAction {
         if ((o = props.get("DependencyGroup")) != null && o instanceof List) {
             dependencyGroup = MonitorUtils.getDependencies((List) o);
             disableMode = 0;
+            if ((o = props.get("DisabledWithReport")) != null &&
+                "true".equalsIgnoreCase((String) o)) // run report if disabled
+                disabledWithReport = true;
         }
         else if ((o = props.get("DisableMode")) != null &&
             Integer.parseInt((String) o) != 0) { // initialize disable report
