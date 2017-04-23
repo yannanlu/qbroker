@@ -4,8 +4,7 @@ package org.qbroker.flow;
 
 /**
  * V1.1.12 (2017/04/15): added DisabledWithReport to handle DISABLED case of
- * DependecyGroup on Report and Monitor, updated all the monitors, added
- * ResultType to RULE_EXTRA for formatter of Msg2Text in FormatNode
+ * DependecyGroup on Report and Monitor, updated all the monitors
  *<br/>
  * V1.1.11 (2017/03/19): added group support for outlinks to DispatchNode so
  * that the load balance works on separate groups of outlinks, changed the way
@@ -118,7 +117,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V 1.1.12 2017/04/15 10:01:49";
+    private static String ReleaseTAG = "QBroker V 1.1.12 2017/04/15 11:23:17";
 
     public ReleaseTag() {
     }
