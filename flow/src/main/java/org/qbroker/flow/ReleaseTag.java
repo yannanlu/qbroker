@@ -4,7 +4,9 @@ package org.qbroker.flow;
 
 /**
  * V1.1.12 (2017/04/15): added DisabledWithReport to handle DISABLED case of
- * DependecyGroup on Report and Monitor, updated all the monitors
+ * DependecyGroup on Report and Monitor, updated all the monitors, removed the
+ * support of EventPostable from HTTPMessenger, added direct support of
+ * EventPostable and EventCollectible to Msg2Text for TextEvent only.
  *<br/>
  * V1.1.11 (2017/03/19): added group support for outlinks to DispatchNode so
  * that the load balance works on separate groups of outlinks, changed the way
@@ -117,7 +119,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V 1.1.12 2017/04/15 11:23:17";
+    private static String ReleaseTAG = "QBroker V 1.1.12 2017/04/15 11:40:32";
 
     public ReleaseTag() {
     }

@@ -40,7 +40,6 @@ import org.qbroker.jms.MessageUtils;
 import org.qbroker.jms.Msg2Text;
 import org.qbroker.jms.TextEvent;
 import org.qbroker.jms.BytesEvent;
-import org.qbroker.event.EventUtils;
 import org.qbroker.event.Event;
 
 /**
@@ -117,7 +116,6 @@ public class HTTPMessenger extends HTTPConnector {
 
     private boolean check_body = false;
     private boolean check_jms = false;
-    private boolean eventPostable = false;
     private boolean ignoreTimeout = false;
     private boolean verifyDirectory = false;
     private boolean usePut = false;
@@ -158,9 +156,6 @@ public class HTTPMessenger extends HTTPConnector {
         if ((fieldName = (String) props.get("FieldName")) == null ||
             fieldName.length() == 0) {
             fieldName = null;
-            if ((o = props.get("EventPostable")) != null &&
-                "true".equals((String) o)) // for posting events
-                eventPostable = true;
         }
         else {
             pathType |= PATH_DYNAMIC;
@@ -185,8 +180,6 @@ public class HTTPMessenger extends HTTPConnector {
             ph.put("RepeatedTemplate", o);
         if ((o = props.get("ExcludedProperty")) != null)
             ph.put("ExcludedProperty", o);
-        if (eventPostable)
-            ph.put("ResultType", String.valueOf(Utils.RESULT_POSTABLE));
         if (ph.size() > 0) {
             msg2Text = new Msg2Text(ph);
             ph.clear();
@@ -688,10 +681,7 @@ public class HTTPMessenger extends HTTPConnector {
                 urlName = uri;
 
             msgStr = null;
-            if (eventPostable && outMessage instanceof TextEvent) { //for events
-                msgStr = EventUtils.postable((Event) outMessage);
-            }
-            else try {
+            try {
                 if (hasTemplate) // for JMSEvent only
                     msgStr = msg2Text.format(0, outMessage);
                 else if (isPost || usePut)
@@ -1781,10 +1771,7 @@ public class HTTPMessenger extends HTTPConnector {
                 urlName = uri;
 
             msgStr = null;
-            if (eventPostable && inMessage instanceof TextEvent) { // for events
-                msgStr = EventUtils.postable((Event) inMessage);
-            }
-            else try { // for JMS messages
+            try { // for JMS messages
                 if (hasTemplate) // for JMSEvent only
                     msgStr = msg2Text.format(0, inMessage);
                 else

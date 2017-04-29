@@ -12,6 +12,7 @@ import javax.jms.BytesMessage;
 import javax.jms.JMSException;
 import org.apache.oro.text.regex.Perl5Matcher;
 import org.qbroker.event.Event;
+import org.qbroker.event.EventUtils;
 import org.qbroker.jms.MessageUtils;
 import org.qbroker.common.Template;
 import org.qbroker.common.Utils;
@@ -201,8 +202,13 @@ public class Msg2Text {
             str = msg.getStringProperty("priority");
             msg.setStringProperty("priority",
                 Event.priorityNames[9-priority]);
-            text = MessageUtils.format(msg, buffer, template,
-                repeatedTemplate, excludedProperty, pm);
+            if (!(msg instanceof TextEvent)) // non-event
+                text = MessageUtils.format(msg, buffer, template,
+                    repeatedTemplate, excludedProperty, pm);
+            else if ((type & Utils.RESULT_POSTABLE) > 0)
+                text = EventUtils.postable((Event) msg);
+            else
+                text = EventUtils.collectible((Event) msg);
             msg.setStringProperty("priority", str);
         }
         else if (hasRepeatedTemplate)
