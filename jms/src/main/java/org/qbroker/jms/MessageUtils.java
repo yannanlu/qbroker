@@ -1339,6 +1339,11 @@ public class MessageUtils {
             message.setObjectProperty(key, msg.getObjectProperty(key));
         }
         message.setJMSPriority(msg.getJMSPriority());
+        if (msg instanceof JMSEvent && // check if priority defined in property
+            ((JMSEvent) msg).attributeExists("priority")) {
+            ((JMSEvent) message).setAttribute("priority",
+               ((JMSEvent) msg).getAttribute("priority"));
+        }
         message.setJMSExpiration(msg.getJMSExpiration());
         message.setJMSDeliveryMode(msg.getJMSDeliveryMode());
         message.setJMSTimestamp(msg.getJMSTimestamp());
