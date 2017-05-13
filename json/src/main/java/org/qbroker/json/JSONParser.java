@@ -75,6 +75,7 @@ public class JSONParser {
         }
     }
 
+    @SuppressWarnings("unchecked")
     public Map parse(String buffer) throws IOException {
         Object o;
         StringReader sr = null;

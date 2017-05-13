@@ -372,6 +372,7 @@ public class GenericList extends Report {
         }
     }
 
+    @SuppressWarnings("unchecked")
     public Map<String, Object> generateReport(long currentTime)
         throws IOException {
         int n, returnCode = -1;

@@ -164,7 +164,7 @@ public class MonitorAgent implements Service, Runnable {
     private DateFormat zonedDateFormat;
     private static Map<String, Object> reports = new HashMap<String, Object>();
     private static ThreadLocal<Map> privateReport = new ThreadLocal<Map>();
-    private boolean checkRunawayThread = true;
+    private boolean checkRunawayThread = true, logHTTP_412 = false;
 
     private final static int JOB_GID = 0;
     private final static int JOB_TID = 1;
@@ -298,6 +298,9 @@ public class MonitorAgent implements Service, Runnable {
             maxRetry = Integer.parseInt((String) o);
         else
             maxRetry = 3;
+
+        if ((o = props.get("LogHTTP412")) != null) //log 412 error on stats post
+            logHTTP_412 = "true".equalsIgnoreCase((String) o);
 
         if ((o = props.get("Debug")) != null)
             debug = Integer.parseInt((String) o);
@@ -775,9 +778,12 @@ public class MonitorAgent implements Service, Runnable {
                 try {
                     int rc =
                         httpConn.doPost(null, EventUtils.postable(ev), strBuf);
-                    if (rc != HttpURLConnection.HTTP_OK)
-                        new Event(Event.ERR, "failed to send stats for " +
-                            (String) task.get("Name") + ": " + rc).send();
+                    if (rc >= HttpURLConnection.HTTP_MULT_CHOICE) {
+                        if (rc != HttpURLConnection.HTTP_PRECON_FAILED ||
+                            logHTTP_412)
+                            new Event(Event.ERR, "failed to send stats for " +
+                                (String) task.get("Name") + ": " + rc).send();
+                    }
                 }
                 catch (Exception e) {
                     new Event(Event.ERR, "failed to send stats for " +
@@ -2871,6 +2877,9 @@ public class MonitorAgent implements Service, Runnable {
             m += 1;
             debug = 0;
         }
+
+        if ((o = props.get("LogHTTP412")) != null)
+            logHTTP_412 = "true".equalsIgnoreCase((String) o);
 
         if ((o = props.get("Heartbeat")) != null) {
             i = 1000 * Integer.parseInt((String) o);

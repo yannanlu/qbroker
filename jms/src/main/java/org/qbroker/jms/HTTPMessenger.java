@@ -52,7 +52,9 @@ import org.qbroker.event.Event;
  * fulfill() is for asynchronous requests with the initial request and multiple
  * subsequent checks on the status.  The method of store() is used for putting
  * or posting content to a web server. Except for retrieve(), the rest of
- * methods treat the return code of 2xx as a success.
+ * methods treat the return code of 2xx as a success. If IgnoreHTTP412 is set
+ * to be true, the methods of download(), fulfill() and store() will not treat
+ * the return code of 412 as a failure.
  *<br/><br/>
  * ResponseProperty is a map for retrieving the header properties from an HTTP
  * response. It contains multiple key-value pairs with key for an HTTP header
@@ -117,6 +119,7 @@ public class HTTPMessenger extends HTTPConnector {
     private boolean check_body = false;
     private boolean check_jms = false;
     private boolean ignoreTimeout = false;
+    private boolean ignoreHTTP_412 = false;
     private boolean verifyDirectory = false;
     private boolean usePut = false;
     private boolean copyHeader = false;
@@ -240,6 +243,9 @@ public class HTTPMessenger extends HTTPConnector {
             sleepTime= Integer.parseInt((String) o);
         if ((o = props.get("MaxFileSize")) != null)
             maxFileSize =Long.parseLong((String) o);
+
+        if ((o = props.get("IgnoreHTTP412")) != null) //ignore 412 error on post
+            ignoreHTTP_412 = "true".equalsIgnoreCase((String) o);
 
         if (displayMask > 0 && ((displayMask & MessageUtils.SHOW_BODY) > 0 ||
             (displayMask & MessageUtils.SHOW_SIZE) > 0))
@@ -795,6 +801,9 @@ public class HTTPMessenger extends HTTPConnector {
                     if (retCode >= HttpURLConnection.HTTP_OK &&
                         retCode < HttpURLConnection.HTTP_MULT_CHOICE)
                         break;
+                    else if (retCode == HttpURLConnection.HTTP_PRECON_FAILED &&
+                        ignoreHTTP_412)
+                        break;
                     if (i == 0)
                         new Event(Event.WARNING, "failed to save content from "+
                             urlName + ((isPost || usePut) ? "" : msgStr)+" to "+
@@ -901,8 +910,11 @@ public class HTTPMessenger extends HTTPConnector {
                         }
                         Event.flush(e);
                     }
-                    if (retCode == HttpURLConnection.HTTP_OK &&
+                    if (retCode >= HttpURLConnection.HTTP_OK &&
                         retCode < HttpURLConnection.HTTP_MULT_CHOICE)
+                        break;
+                    else if (retCode == HttpURLConnection.HTTP_PRECON_FAILED &&
+                        ignoreHTTP_412)
                         break;
                     if (i == 0)
                         new Event(Event.WARNING, "failed to download from " +
@@ -966,7 +978,9 @@ public class HTTPMessenger extends HTTPConnector {
                         " retries with error: " + retCode + " " +
                         strBuf.toString()));
             }
-            else if (retCode >= HttpURLConnection.HTTP_MULT_CHOICE) {
+            else if (retCode >= HttpURLConnection.HTTP_MULT_CHOICE &&
+                (retCode != HttpURLConnection.HTTP_PRECON_FAILED ||
+                !ignoreHTTP_412)) {
                 if (ack) try { // try to ack the msg
                     outMessage.acknowledge();
                 }
@@ -1422,7 +1436,9 @@ public class HTTPMessenger extends HTTPConnector {
                 throw(new IOException("failed to fulfill a request to " +
                     urlName+" with error: "+ retCode +" "+ strBuf.toString()));
             }
-            else if (retCode >= HttpURLConnection.HTTP_MULT_CHOICE) {
+            else if (retCode >= HttpURLConnection.HTTP_MULT_CHOICE &&
+                (retCode != HttpURLConnection.HTTP_PRECON_FAILED ||
+                !ignoreHTTP_412)) {
                 if (ack) try { // try to ack the msg
                     outMessage.acknowledge();
                 }
@@ -1494,6 +1510,9 @@ public class HTTPMessenger extends HTTPConnector {
                 if (retCode >= HttpURLConnection.HTTP_OK &&
                     retCode < HttpURLConnection.HTTP_MULT_CHOICE)
                     break;
+                else if (retCode == HttpURLConnection.HTTP_PRECON_FAILED &&
+                    ignoreHTTP_412)
+                    break;
                 if (i == 0 && retCode >= HttpURLConnection.HTTP_INTERNAL_ERROR)
                     new Event(Event.WARNING, "failed to check fulfillment on " +
                         urlName + ": " + retCode).send();
@@ -1511,7 +1530,9 @@ public class HTTPMessenger extends HTTPConnector {
                     urlName + " after " + i + " retries with error: " +
                     retCode + " " + strBuf.toString()));
             }
-            else if (retCode >= HttpURLConnection.HTTP_MULT_CHOICE) {
+            else if (retCode >= HttpURLConnection.HTTP_MULT_CHOICE &&
+                (retCode != HttpURLConnection.HTTP_PRECON_FAILED ||
+                !ignoreHTTP_412)) {
                 if (ack) try { // try to ack the msg
                     outMessage.acknowledge();
                 }
@@ -1844,6 +1865,9 @@ public class HTTPMessenger extends HTTPConnector {
                 if (retCode >= HttpURLConnection.HTTP_OK &&
                     retCode < HttpURLConnection.HTTP_MULT_CHOICE)
                     break;
+                else if (retCode == HttpURLConnection.HTTP_PRECON_FAILED &&
+                    ignoreHTTP_412)
+                    break;
                 if (i == 0)
                     new Event(Event.WARNING, "failed to store to " +
                         urlName + " with " + retCode +
@@ -1903,7 +1927,9 @@ public class HTTPMessenger extends HTTPConnector {
                 Event.flush(e);
             }
 
-            if (retCode >= HttpURLConnection.HTTP_MULT_CHOICE) { // for client error
+            if (retCode >= HttpURLConnection.HTTP_MULT_CHOICE &&
+                (retCode != HttpURLConnection.HTTP_PRECON_FAILED ||
+                !ignoreHTTP_412)) {
                 xq.remove(sid);
                 new Event(Event.ERR, "failed to store msg to " + urlName +
                     " after " + i + " retries with error: " + retCode +

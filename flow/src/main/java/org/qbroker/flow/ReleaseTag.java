@@ -8,7 +8,8 @@ package org.qbroker.flow;
  * support of EventPostable from HTTPMessenger, added direct support of
  * EventPostable and EventCollectible to Msg2Text for TextEvent only, added
  * the recovery of the property of priority for JMSEvent in duplicate() of
- * MessageUtils
+ * MessageUtils, added IgnoreHTTP412 to HTTPMessenger, added LogHTTP412 to
+ * MonitorAgent for ignoring HTTP 412 error 
  *<br/>
  * V1.1.11 (2017/03/19): added group support for outlinks to DispatchNode so
  * that the load balance works on separate groups of outlinks, changed the way
@@ -121,7 +122,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V 1.1.12 2017/04/15 13:15:47";
+    private static String ReleaseTAG = "QBroker V 1.1.12 2017/04/15 16:26:19";
 
     public ReleaseTag() {
     }
