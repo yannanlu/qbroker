@@ -1,7 +1,6 @@
 # qbroker
 
-This is a Maven 2 project for QBroker. It has been tested on build with Maven 3.3.3. The following jar files
-have to be deployed to the local repository since they are not available in Maven Central:
+This is a Maven 2 project for QBroker. It has been tested on build with Maven 3.3.3. The following jar files have to be deployed to the local repository since they are not available in Maven Central:
 
 | name                  |   groupId                  |   artifactId        |   version |
 | ---                   |   ---                      |   ---               |   ---     |
@@ -22,7 +21,10 @@ In case you do not need to work with WebSphereMQ and SonicMQ, you can remove the
 ## Status
 
 ## Description
-To build the project, just run "mvn pacakge". The result of the build is the jar file of qbroker-x.y.z.jar in dist/target.
+To build the project, just run "mvn pacakge". The result of the build is the jar file of qbroker-x.y.z.jar in dist/target. Check [Documentation](https://yannanlu.github.io) for how to install/configure/run QBroker instances.
 
 ## Author
 Yannan Lu <yannanlu@yahoo.com>
+
+## See Also
+* [Documentation](https://yannanlu.github.io)
