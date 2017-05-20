@@ -3,6 +3,10 @@ package org.qbroker.flow;
 /* ReleaseTag.java - release tag for all the packages of qbroker */
 
 /**
+ * V1.1.13 (2017/05/20): added support for simple expressions on JSON path
+ * to JSON2Map so that the index of a list is either evaluated from a numeric
+ * expression or is selected from the evaluations on its children
+ *<br/>
  * V1.1.12 (2017/04/15): added DisabledWithReport to handle DISABLED case of
  * DependecyGroup on Report and Monitor, updated all the monitors, removed the
  * support of EventPostable from HTTPMessenger, added direct support of
@@ -124,7 +128,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V 1.1.12 2017/04/15 18:02:54";
+    private static String ReleaseTAG = "QBroker V 1.1.13 2017/05/20 11:42:54";
 
     public ReleaseTag() {
     }

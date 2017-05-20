@@ -16,8 +16,10 @@ import java.util.List;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Collection;
+import java.util.regex.Pattern;
 import org.apache.oro.text.regex.Perl5Matcher;
 import org.qbroker.common.Utils;
+import org.qbroker.common.Evaluation;
 import org.qbroker.common.Template;
 import org.qbroker.common.TextSubstitution;
 
@@ -38,14 +40,17 @@ import org.qbroker.common.TextSubstitution;
  *<br/><br/>
  * The method of get() returns the JSON object referenced by the JSONPath.
  * Currently, it only supports simple JSONPath with delimiter of dot. The array
- * index can have a number only. It does not support fancy expressions. Please
- * check with dust.js for the JSON path.
+ * index can be a number or a simplate expression within the solid bracket.
+ * In case of expressions, the variable of #{xxxx} references the value of the
+ * key xxxx with the current map in a list context. It does not support fancy
+ * expressions. Please check with dust.js for the JSON path.
  *<br/>
  * @author yannanlu@yahoo.com
  */
 
 @SuppressWarnings("unchecked")
 public class JSON2Map {
+    private final static Pattern pattern = Pattern.compile("-?\\d+");
     public final static int bufferSize = 4096;
     public final static int JSON_UNKNOWN = -1;
     public final static int JSON_NULL = 0;
@@ -1141,47 +1146,57 @@ public class JSON2Map {
 
     /** returns true if the keyPath exists or false otherwise */
     public static boolean containsKey(Map ph, String keyPath) {
-        int i, k, n, j = 0;
+        int k, n;
+        String key;
         String[] keys;
         Object o;
-        Map h;
-        List a;
         if (ph == null)
             throw(new IllegalArgumentException("null data"));
-        if (keyPath == null || keyPath.length() <= 0)
-            throw(new IllegalArgumentException("bad path: " + keyPath));
+        if (keyPath == null || (n = keyPath.length()) <= 0)
+            throw(new IllegalArgumentException("null path: " + keyPath));
         if (".".equals(keyPath)) // for itself
             return true;
         if (ph.size() <= 0)
             return false;
-        if (keyPath.charAt(0) == '.')
-            j = 1;
-        if (keyPath.indexOf('[') > 0) // for array access
-            keyPath = keyPath.replace('[', '.').replaceAll("]", "");
-        keys = Utils.split(".", keyPath);
+        keys = split(keyPath.toCharArray(), 0, n);
+        if (keys == null)
+            throw(new IllegalArgumentException("bad path: " + keyPath));
         n = keys.length;
         o = ph;
-        for (i=j; i<n; i++) {
-            if (o instanceof Map) {
-                h = (Map) o;
-                if (!h.containsKey(keys[i]))
+        for (int i=0; i<n; i++) {
+            key = keys[i];
+            k = key.length();
+            if (k <= 0)
+                continue;
+            else if (key.charAt(0) == '[') { // parent is a list
+                int j, l;
+                List a = (List) o;
+                key = key.substring(1, k-1);
+                l = a.size();
+                if (pattern.matcher(key).matches()) {
+                    j = Integer.parseInt(key);
+                    if (j < 0) // wrap once only for last index
+                        j += l;
+                }
+                else
+                    j = evaluateIndex(key, a);
+                if (j < 0 || l <= 0 || j >= l)
                     break;
                 else if (i+1 == n) // end of test
                     return true;
-                o = h.get(keys[i]);
+                o = a.get(j);
                 if (o == null)
                     break;
                 else if (!(o instanceof Map || o instanceof List))
                     break;
             }
-            else if (o instanceof List) {
-                a = (List) o;
-                k = Integer.parseInt(keys[i]);
-                if (k < 0 || k >= a.size())
+            else { // parent is a map
+                Map h = (Map) o;
+                if (!h.containsKey(key))
                     break;
                 else if (i+1 == n) // end of test
                     return true;
-                o = a.get(k);
+                o = h.get(key);
                 if (o == null)
                     break;
                 else if (!(o instanceof Map || o instanceof List))
@@ -1193,50 +1208,57 @@ public class JSON2Map {
 
     /** returns true if the keyPath exists or false otherwise */
     public static boolean containsKey(List pl, String keyPath) {
-        int i, k, n, j = 0;
+        int k, n;
         String key;
         String[] keys;
         Object o;
-        Map h;
-        List a;
         if (pl == null)
             throw(new IllegalArgumentException("null data"));
-        if (keyPath == null || keyPath.length() <= 0)
-            throw(new IllegalArgumentException("bad path: " + keyPath));
+        if (keyPath == null || (n = keyPath.length()) <= 0)
+            throw(new IllegalArgumentException("null path: " + keyPath));
         if (".".equals(keyPath)) // for itself
             return true;
         if (pl.size() <= 0)
             return false;
-        if (keyPath.charAt(0) == '.')
-            j = (keyPath.charAt(1) == '[') ? 2 : 1;
-        else if (keyPath.charAt(0) == '[')
-            j = 1;
-        if (keyPath.indexOf('[') >= 0) // for array access
-            keyPath = keyPath.replace('[', '.').replaceAll("]", "");
-        keys = Utils.split(".", keyPath);
+        keys = split(keyPath.toCharArray(), 0, n);
+        if (keys == null)
+            throw(new IllegalArgumentException("bad path: " + keyPath));
         n = keys.length;
         o = pl;
-        for (i=j; i<n; i++) {
-            if (o instanceof Map) {
-                h = (Map) o;
-                if (!h.containsKey(keys[i]))
+        for (int i=0; i<n; i++) {
+            key = keys[i];
+            k = key.length();
+            if (k <= 0)
+                continue;
+            else if (key.charAt(0) == '[') { // parent is a list
+                int j, l;
+                List a = (List) o;
+                key = key.substring(1, k-1);
+                l = a.size();
+                if (pattern.matcher(key).matches()) {
+                    j = Integer.parseInt(key);
+                    if (j < 0) // wrap once only for last index
+                        j += l;
+                }
+                else
+                    j = evaluateIndex(key, a);
+                if (j < 0 || l <= 0 || j >= l)
                     break;
                 else if (i+1 == n) // end of test
                     return true;
-                o = h.get(keys[i]);
+                o = a.get(j);
                 if (o == null)
                     break;
                 else if (!(o instanceof Map || o instanceof List))
                     break;
             }
-            else if (o instanceof List) {
-                a = (List) o;
-                k = Integer.parseInt(keys[i]);
-                if (k < 0 || k >= a.size())
+            else { // parent is a map
+                Map h = (Map) o;
+                if (!h.containsKey(key))
                     break;
                 else if (i+1 == n) // end of test
                     return true;
-                o = a.get(k);
+                o = h.get(key);
                 if (o == null)
                     break;
                 else if (!(o instanceof Map || o instanceof List))
@@ -1282,41 +1304,57 @@ public class JSON2Map {
 
     /** returns the removed object referenced by the keyPath or null */
     public static Object remove(Map ph, String keyPath) {
-        int i, k, n, j = 0;
+        int k, n;
+        String key;
         String[] keys;
         Object o;
-        Map h;
-        List a;
-        if (!containsKey(ph, keyPath) || ".".equals(keyPath))
+        if (ph == null)
+            throw(new IllegalArgumentException("null data"));
+        if (keyPath == null || (n = keyPath.length()) <= 0)
+            throw(new IllegalArgumentException("null path: " + keyPath));
+        if (".".equals(keyPath)) // for itself
             return null;
-        if (keyPath.charAt(0) == '.')
-            j = 1;
-        if (keyPath.indexOf('[') > 0) // for array access
-            keyPath = keyPath.replace('[', '.').replaceAll("]", "");
-        keys = Utils.split(".", keyPath);
+        if (ph.size() <= 0)
+            return null;
+        keys = split(keyPath.toCharArray(), 0, n);
+        if (keys == null)
+            throw(new IllegalArgumentException("bad path: " + keyPath));
         n = keys.length;
         o = ph;
-        for (i=j; i<n; i++) {
-            if (o instanceof Map) {
-                h = (Map) o;
-                if (!h.containsKey(keys[i]))
+        for (int i=0; i<n; i++) {
+            key = keys[i];
+            k = key.length();
+            if (k <= 0)
+                continue;
+            else if (key.charAt(0) == '[') { // parent is a list
+                int j, l;
+                List a = (List) o;
+                key = key.substring(1, k-1);
+                l = a.size();
+                if (pattern.matcher(key).matches()) {
+                    j = Integer.parseInt(key);
+                    if (j < 0) // wrap once only for last index
+                        j += l;
+                }
+                else
+                    j = evaluateIndex(key, a);
+                if (j < 0 || l <= 0 || j >= l)
                     break;
-                else if (i+1 == n)
-                    return h.remove(keys[i]);
-                o = h.get(keys[i]);
+                else if (i+1 == n) // end of test
+                    return a.remove(j);
+                o = a.get(j);
                 if (o == null)
                     break;
                 else if (!(o instanceof Map || o instanceof List))
                     break;
             }
-            else if (o instanceof List) {
-                a = (List) o;
-                k = Integer.parseInt(keys[i]);
-                if (k < 0 || k >= a.size())
+            else { // parent is a map
+                Map h = (Map) o;
+                if (!h.containsKey(key))
                     break;
                 else if (i+1 == n)
-                    return a.remove(k);
-                o = a.get(k);
+                    return h.remove(key);
+                o = h.get(key);
                 if (o == null)
                     break;
                 else if (!(o instanceof Map || o instanceof List))
@@ -1328,43 +1366,57 @@ public class JSON2Map {
 
     /** returns the removed object referenced by the keyPath or null */
     public static Object remove(List pl, String keyPath) {
-        int i, k, n, j = 0;
+        int k, n;
+        String key;
         String[] keys;
         Object o;
-        Map h;
-        List a;
-        if (!containsKey(pl, keyPath) || ".".equals(keyPath))
+        if (pl == null)
+            throw(new IllegalArgumentException("null data"));
+        if (keyPath == null || (n = keyPath.length()) <= 0)
+            throw(new IllegalArgumentException("null path: " + keyPath));
+        if (".".equals(keyPath)) // for itself
             return null;
-        if (keyPath.charAt(0) == '.')
-            j = (keyPath.charAt(1) == '[') ? 2 : 1;
-        else if (keyPath.charAt(0) == '[')
-            j = 1;
-        if (keyPath.indexOf('[') >= 0) // for array access
-            keyPath = keyPath.replace('[', '.').replaceAll("]", "");
-        keys = Utils.split(".", keyPath);
+        if (pl.size() <= 0)
+            return null;
+        keys = split(keyPath.toCharArray(), 0, n);
+        if (keys == null)
+            throw(new IllegalArgumentException("bad path: " + keyPath));
         n = keys.length;
         o = pl;
-        for (i=j; i<n; i++) {
-            if (o instanceof Map) {
-                h = (Map) o;
-                if (!h.containsKey(keys[i]))
+        for (int i=0; i<n; i++) {
+            key = keys[i];
+            k = key.length();
+            if (k <= 0)
+                continue;
+            else if (key.charAt(0) == '[') { // parent is a list
+                int j, l;
+                List a = (List) o;
+                key = key.substring(1, k-1);
+                l = a.size();
+                if (pattern.matcher(key).matches()) {
+                    j = Integer.parseInt(key);
+                    if (j < 0) // wrap once only for last index
+                        j += l;
+                }
+                else
+                    j = evaluateIndex(key, a);
+                if (j < 0 || l <= 0 || j >= l)
                     break;
-                else if (i+1 == n)
-                    return h.remove(keys[i]);
-                o = h.get(keys[i]);
+                else if (i+1 == n) // end of test
+                    return a.remove(j);
+                o = a.get(j);
                 if (o == null)
                     break;
                 else if (!(o instanceof Map || o instanceof List))
                     break;
             }
-            else if (o instanceof List) {
-                a = (List) o;
-                k = Integer.parseInt(keys[i]);
-                if (k < 0 || k >= a.size())
+            else { // parent is a map
+                Map h = (Map) o;
+                if (!h.containsKey(key))
                     break;
                 else if (i+1 == n)
-                    return a.remove(k);
-                o = a.get(k);
+                    return h.remove(key);
+                o = h.get(key);
                 if (o == null)
                     break;
                 else if (!(o instanceof Map || o instanceof List))
@@ -1376,41 +1428,55 @@ public class JSON2Map {
 
     /** returns the parent of the object referenced by the keyPath or null */
     public static Object getParent(Map ph, String keyPath) {
-        int i, k, n, j = 0;
+        int k, n;
+        String key;
         String[] keys;
         Object o;
-        Map h;
-        List a;
-        if (!containsKey(ph, keyPath) || ".".equals(keyPath))
+        if (ph == null)
+            throw(new IllegalArgumentException("null data"));
+        if (keyPath == null || (n = keyPath.length()) <= 0)
+            throw(new IllegalArgumentException("null path: " + keyPath));
+        if (".".equals(keyPath)) // for itself
             return null;
-        if (keyPath.charAt(0) == '.')
-            j = 1;
-        if (keyPath.indexOf('[') > 0) // for array access
-            keyPath = keyPath.replace('[', '.').replaceAll("]", "");
-        keys = Utils.split(".", keyPath);
+        keys = split(keyPath.toCharArray(), 0, n);
+        if (keys == null)
+            throw(new IllegalArgumentException("bad path: " + keyPath));
         n = keys.length;
         o = ph;
-        for (i=j; i<n; i++) {
-            if (o instanceof Map) {
-                h = (Map) o;
-                if (!h.containsKey(keys[i]))
+        for (int i=0; i<n; i++) {
+            key = keys[i];
+            k = key.length();
+            if (k <= 0)
+                continue;
+            else if (key.charAt(0) == '[') { // parent is a list
+                int j, l;
+                List a = (List) o;
+                key = key.substring(1, k-1);
+                l = a.size();
+                if (pattern.matcher(key).matches()) {
+                    j = Integer.parseInt(key);
+                    if (j < 0) // wrap once only for last index
+                        j += l;
+                }
+                else
+                    j = evaluateIndex(key, a);
+                if (i+1 == n) // end of test
+                    return a;
+                else if (j < 0 || l <= 0 || j >= l)
                     break;
-                else if (i+1 == n)
-                    return h;
-                o = h.get(keys[i]);
+                o = a.get(j);
                 if (o == null)
                     break;
                 else if (!(o instanceof Map || o instanceof List))
                     break;
             }
-            else if (o instanceof List) {
-                a = (List) o;
-                k = Integer.parseInt(keys[i]);
-                if (k < 0 || k >= a.size())
+            else { // parent is a map
+                Map h = (Map) o;
+                if (i+1 == n)
+                    return h;
+                else if (!h.containsKey(key))
                     break;
-                else if (i+1 == n)
-                    return a;
-                o = a.get(k);
+                o = h.get(key);
                 if (o == null)
                     break;
                 else if (!(o instanceof Map || o instanceof List))
@@ -1422,43 +1488,55 @@ public class JSON2Map {
 
     /** returns the parent of the object referenced by the keyPath or null */
     public static Object getParent(List pl, String keyPath) {
-        int i, k, n, j = 0;
+        int k, n;
+        String key;
         String[] keys;
         Object o;
-        Map h;
-        List a;
-        if (!containsKey(pl, keyPath) || ".".equals(keyPath))
+        if (pl == null)
+            throw(new IllegalArgumentException("null data"));
+        if (keyPath == null || (n = keyPath.length()) <= 0)
+            throw(new IllegalArgumentException("null path: " + keyPath));
+        if (".".equals(keyPath)) // for itself
             return null;
-        if (keyPath.charAt(0) == '.')
-            j = (keyPath.charAt(1) == '[') ? 2 : 1;
-        else if (keyPath.charAt(0) == '[')
-            j = 1;
-        if (keyPath.indexOf('[') >= 0) // for array access
-            keyPath = keyPath.replace('[', '.').replaceAll("]", "");
-        keys = Utils.split(".", keyPath);
+        keys = split(keyPath.toCharArray(), 0, n);
+        if (keys == null)
+            throw(new IllegalArgumentException("bad path: " + keyPath));
         n = keys.length;
         o = pl;
-        for (i=j; i<n; i++) {
-            if (o instanceof Map) {
-                h = (Map) o;
-                if (!h.containsKey(keys[i]))
+        for (int i=0; i<n; i++) {
+            key = keys[i];
+            k = key.length();
+            if (k <= 0)
+                continue;
+            else if (key.charAt(0) == '[') { // parent is a list
+                int j, l;
+                List a = (List) o;
+                key = key.substring(1, k-1);
+                l = a.size();
+                if (pattern.matcher(key).matches()) {
+                    j = Integer.parseInt(key);
+                    if (j < 0) // wrap once only for last index
+                        j += l;
+                }
+                else
+                    j = evaluateIndex(key, a);
+                if (i+1 == n) // end of test
+                    return a;
+                else if (j < 0 || l <= 0 || j >= l)
                     break;
-                else if (i+1 == n)
-                    return h;
-                o = h.get(keys[i]);
+                o = a.get(j);
                 if (o == null)
                     break;
                 else if (!(o instanceof Map || o instanceof List))
                     break;
             }
-            else if (o instanceof List) {
-                a = (List) o;
-                k = Integer.parseInt(keys[i]);
-                if (k < 0 || k >= a.size())
+            else { // parent is a map
+                Map h = (Map) o;
+                if (i+1 == n)
+                    return h;
+                else if (!h.containsKey(key))
                     break;
-                else if (i+1 == n)
-                    return a;
-                o = a.get(k);
+                o = h.get(key);
                 if (o == null)
                     break;
                 else if (!(o instanceof Map || o instanceof List))
@@ -1470,43 +1548,57 @@ public class JSON2Map {
 
     /** returns the raw object referenced by the keyPath or null */
     public static Object get(Map ph, String keyPath) {
-        int i, k, n, j = 0;
+        int k, n;
+        String key;
         String[] keys;
         Object o;
-        Map h;
-        List a;
-        if (!containsKey(ph, keyPath))
-            return null;
+        if (ph == null)
+            throw(new IllegalArgumentException("null data"));
+        if (keyPath == null || (n = keyPath.length()) <= 0)
+            throw(new IllegalArgumentException("null path: " + keyPath));
         if (".".equals(keyPath)) // for itself
             return ph;
-        if (keyPath.charAt(0) == '.')
-            j = 1;
-        if (keyPath.indexOf('[') > 0) // for array access
-            keyPath = keyPath.replace('[', '.').replaceAll("]", "");
-        keys = Utils.split(".", keyPath);
+        if (ph.size() <= 0)
+            return null;
+        keys = split(keyPath.toCharArray(), 0, n);
+        if (keys == null)
+            throw(new IllegalArgumentException("bad path: " + keyPath));
         n = keys.length;
         o = ph;
-        for (i=j; i<n; i++) {
-            if (o instanceof Map) {
-                h = (Map) o;
-                if (!h.containsKey(keys[i]))
+        for (int i=0; i<n; i++) {
+            key = keys[i];
+            k = key.length();
+            if (k <= 0)
+                continue;
+            else if (key.charAt(0) == '[') { // parent is a list
+                int j, l;
+                List a = (List) o;
+                key = key.substring(1, k-1);
+                l = a.size();
+                if (pattern.matcher(key).matches()) {
+                    j = Integer.parseInt(key);
+                    if (j < 0) // wrap once only for last index
+                        j += l;
+                }
+                else
+                    j = evaluateIndex(key, a);
+                if (j < 0 || l <= 0 || j >= l)
                     break;
-                else if (i+1 == n)
-                    return h.get(keys[i]);
-                o = h.get(keys[i]);
+                else if (i+1 == n) // end of test
+                    return a.get(j);
+                o = a.get(j);
                 if (o == null)
                     break;
                 else if (!(o instanceof Map || o instanceof List))
                     break;
             }
-            else if (o instanceof List) {
-                a = (List) o;
-                k = Integer.parseInt(keys[i]);
-                if (k < 0 || k >= a.size())
+            else { // parent is a map
+                Map h = (Map) o;
+                if (!h.containsKey(key))
                     break;
                 else if (i+1 == n)
-                    return a.get(k);
-                o = a.get(k);
+                    return h.get(key);
+                o = h.get(key);
                 if (o == null)
                     break;
                 else if (!(o instanceof Map || o instanceof List))
@@ -1518,45 +1610,57 @@ public class JSON2Map {
 
     /** returns the raw object referenced by the keyPath or null */
     public static Object get(List pl, String keyPath) {
-        int i, k, n, j = 0;
+        int k, n;
+        String key;
         String[] keys;
         Object o;
-        Map h;
-        List a;
-        if (!containsKey(pl, keyPath))
-            return null;
+        if (pl == null)
+            throw(new IllegalArgumentException("null data"));
+        if (keyPath == null || (n = keyPath.length()) <= 0)
+            throw(new IllegalArgumentException("null path: " + keyPath));
         if (".".equals(keyPath)) // for itself
             return pl;
-        if (keyPath.charAt(0) == '.')
-            j = (keyPath.charAt(1) == '[') ? 2 : 1;
-        else if (keyPath.charAt(0) == '[')
-            j = 1;
-        if (keyPath.indexOf('[') >= 0) // for array access
-            keyPath = keyPath.replace('[', '.').replaceAll("]", "");
-        keys = Utils.split(".", keyPath);
+        if (pl.size() <= 0)
+            return null;
+        keys = split(keyPath.toCharArray(), 0, n);
+        if (keys == null)
+            throw(new IllegalArgumentException("bad path: " + keyPath));
         n = keys.length;
         o = pl;
-        for (i=j; i<n; i++) {
-            if (o instanceof Map) {
-                h = (Map) o;
-                if (!h.containsKey(keys[i]))
+        for (int i=0; i<n; i++) {
+            key = keys[i];
+            k = key.length();
+            if (k <= 0)
+                continue;
+            else if (key.charAt(0) == '[') { // parent is a list
+                int j, l;
+                List a = (List) o;
+                key = key.substring(1, k-1);
+                l = a.size();
+                if (pattern.matcher(key).matches()) {
+                    j = Integer.parseInt(key);
+                    if (j < 0) // wrap once only for last index
+                        j += l;
+                }
+                else
+                    j = evaluateIndex(key, a);
+                if (j < 0 || l <= 0 || j >= l)
                     break;
-                else if (i+1 == n)
-                    return h.get(keys[i]);
-                o = h.get(keys[i]);
+                else if (i+1 == n) // end of test
+                    return a.get(j);
+                o = a.get(j);
                 if (o == null)
                     break;
                 else if (!(o instanceof Map || o instanceof List))
                     break;
             }
-            else if (o instanceof List) {
-                a = (List) o;
-                k = Integer.parseInt(keys[i]);
-                if (k < 0 || k >= a.size())
+            else { // parent is a map
+                Map h = (Map) o;
+                if (!h.containsKey(key))
                     break;
                 else if (i+1 == n)
-                    return a.get(k);
-                o = a.get(k);
+                    return h.get(key);
+                o = h.get(key);
                 if (o == null)
                     break;
                 else if (!(o instanceof Map || o instanceof List))
@@ -1604,100 +1708,78 @@ public class JSON2Map {
 
     /**puts raw data and returns the replaced object referenced by the keyPath*/
     public static Object put(Map ph, String keyPath, Object data) {
-        int i;
-        String key;
+        int n;
         Object parent;
 
-        if (keyPath == null || keyPath.length() <= 0 || ".".equals(keyPath))
+        if (keyPath == null || (n=keyPath.length()) <= 0 || ".".equals(keyPath))
             throw(new IllegalArgumentException("bad path: " + keyPath));
 
         if (data == null)
             return null;
 
-        if (containsKey(ph, keyPath)) {
-            parent = getParent(ph, keyPath);
-            if (keyPath.indexOf('[') > 0) // for array access
-                keyPath = keyPath.replace('[', '.').replaceAll("]", "");
+        parent = getParent(ph, keyPath);
 
-            if ((i = keyPath.lastIndexOf('.')) >= 0)
-                key = keyPath.substring(i+1);
-            else
-                key = keyPath;
-        }
-        else { // it is a new key
-            if (keyPath.indexOf('[') > 0) // for array access
-                keyPath = keyPath.replace('[', '.').replaceAll("]", "");
-
-            if ((i = keyPath.lastIndexOf('.')) >= 0) {
-                parent = (i > 0) ? get(ph, keyPath.substring(0, i)) : ph;
-                key = keyPath.substring(i+1);
+        if (parent != null) {
+            String[] keys = split(keyPath.toCharArray(), 0, n);
+            String key = keys[keys.length-1];
+            if (key.charAt(0) == '[') { // parent is a list
+                int k = key.length();
+                key = key.substring(1, k-1);
+                if (pattern.matcher(key).matches()) {
+                    k = Integer.parseInt(key);
+                    if (k < 0) // wrap back
+                        k += ((List) parent).size();
+                }
+                else {
+                    k = evaluateIndex(key, (List) parent);
+                    if (k < 0) // evaluation failed
+                        throw(new IllegalArgumentException("bad expr: " + key));
+                }
+                return ((List) parent).set(k, data);
             }
-            else {
-                parent = ph;
-                key = keyPath;
-            }
-        }
-
-        if (parent == null)
-            throw(new IllegalArgumentException("no parent for: " + keyPath));
-        else if (parent instanceof Map) { // Map
-            return ((Map) parent).put(key, data);
-        }
-        else if (key.matches("\\d+")) { // List
-            i = Integer.parseInt(key);
-            return ((List) parent).set(i, data);
+            else // parent is a map
+                return ((Map) parent).put(key, data);
         }
         else
-            throw(new IllegalArgumentException("not a number for array"));
+            throw(new IllegalArgumentException("no parent for: " + keyPath));
     }
 
     /**puts raw data and returns the replaced object referenced by the keyPath*/
     public static Object put(List pl, String keyPath, Object data) {
-        int i;
-        String key;
+        int n;
         Object parent;
 
-        if (keyPath == null || keyPath.length() <= 0 || ".".equals(keyPath))
+        if (keyPath == null || (n=keyPath.length()) <= 0 || ".".equals(keyPath))
             throw(new IllegalArgumentException("bad path: " + keyPath));
 
         if (data == null)
             return null;
 
-        if (containsKey(pl, keyPath)) {
-            parent = getParent(pl, keyPath);
-            if (keyPath.indexOf('[') >= 0) // for array access
-                keyPath = keyPath.replace('[', '.').replaceAll("]", "");
+        parent = getParent(pl, keyPath);
 
-            if ((i = keyPath.lastIndexOf('.')) >= 0)
-                key = keyPath.substring(i+1);
-            else
-                key = keyPath;
-        }
-        else { // it is a new key
-            if (keyPath.indexOf('[') >= 0) // for array access
-                keyPath = keyPath.replace('[', '.').replaceAll("]", "");
-
-            if ((i = keyPath.lastIndexOf('.')) >= 0) {
-                parent = (i > 0) ? get(pl, keyPath.substring(0, i)) : pl;
-                key = keyPath.substring(i+1);
+        if (parent != null) { // got parent
+            String[] keys = split(keyPath.toCharArray(), 0, n);
+            String key = keys[keys.length-1];
+            if (key.charAt(0) == '[') { // parent is a list
+                int k = key.length();
+                key = key.substring(1, k-1);
+                if (pattern.matcher(key).matches()) {
+                    k = Integer.parseInt(key);
+                    if (k < 0) // wrap back
+                        k += ((List) parent).size();
+                }
+                else {
+                    k = evaluateIndex(key, (List) parent);
+                    if (k < 0) // evaluation failed
+                        throw(new IllegalArgumentException("bad expr: " + key));
+                }
+                return ((List) parent).set(k, data);
             }
-            else {
-                parent = pl;
-                key = keyPath;
-            }
-        }
-
-        if (parent == null)
-            throw(new IllegalArgumentException("no parent for: " + keyPath));
-        else if (parent instanceof Map) { // Map
-            return ((Map) parent).put(key, data);
-        }
-        else if (key.matches("\\d+")) { // List
-            i = Integer.parseInt(key);
-            return ((List) parent).set(i, data);
+            else // parent is a map
+                return ((Map) parent).put(key, data);
         }
         else
-            throw(new IllegalArgumentException("not a number for array"));
+            throw(new IllegalArgumentException("no parent for: " + keyPath));
     }
 
     /** returns the formatted JSON text for the given template or null */
@@ -1768,6 +1850,116 @@ public class JSON2Map {
     /** returns the formatted string for the given template or null on faluire*/
     public static String format(List pl, Template temp) {
         return format(pl, temp, null);
+    }
+
+    /** returns the evaluated index of the list or -1 on failure or no hit */
+    public static int evaluateIndex(String expr, List list) {
+        Number r = null;
+        if (expr == null || list == null)
+            return -1;
+        int n = list.size();
+        if (expr.indexOf("#{") >= 0) {
+            Template template = new Template(expr, "#\\{[^#\\{\\}]+\\}");
+            if (template.numberOfFields() > 0) { // template
+                Object obj;
+                String[] keys = template.getAllFields();
+                for (int i=0; i<n; i++) {
+                    obj = list.get(i);
+                    if (obj instanceof Map) {
+                        String value, text = template.copyText();
+                        Map map = (Map) obj;
+                        for (String key : keys) {
+                            value = (String) map.get(key); 
+                            text = template.substitute(key,"'"+value+"'",text);
+                        }
+                        r = Evaluation.evaluate(text);
+                        if (r instanceof Integer && r.intValue() != 0) {
+                            template.clear();
+                            return i;
+                        }
+                    }
+                }
+                template.clear();
+            }
+            else { // not a template
+                template.clear();
+                r = Evaluation.evaluate(expr);
+                if (r != null && r instanceof Long) {
+                    int i = r.intValue();
+                    if (i >= 0)
+                        return i;
+                    else // wrap back
+                        return n + i;
+                }
+            }
+        }
+        else {
+            r = Evaluation.evaluate(expr);
+            if (r != null && r instanceof Long) {
+                int i = r.intValue();
+                if (i >= 0)
+                    return i;
+                else // wrap
+                    return n + i;
+            }
+        }
+
+        return -1;
+    }
+
+    /** returns an string array split from given buffer with '.' or '[' */
+    private static String[] split(char[] buffer, int offset, int length) {
+        char c;
+        int j = offset;
+        List<String> list = new ArrayList<String>();
+        for (int i=offset; i<length; i++) {
+            c = buffer[i];
+            if (c == '.') { // found a dot
+                if (i > j)
+                    list.add(new String(buffer, j, i-j));
+                j = i + 1;
+            }
+            else if (c == '[') {
+                int k;
+                if (i > j)
+                    list.add(new String(buffer, j, i-j));
+                j = i;
+                k = find(buffer, i+1, length);
+                if (k > i)
+                    i = k;
+                else // no ']' found
+                    return null;
+            }
+        }
+        if (j >= offset && j < length)
+            list.add(new String(buffer, j, length-j));
+        return list.toArray(new String[list.size()]);
+    }
+
+    /** returns the position of the corresponding ']' or -1 if not found */
+    private static int find(char[] buffer, int offset, int length) {
+        int level = 0;
+        char c, b = buffer[offset];
+        boolean inQuotes = false;
+        for (int i=offset; i<length; i++) {
+            c = buffer[i];
+            if (c == '\'') { // found a quote
+                if (b != '\\') // not escaped
+                    inQuotes = !inQuotes;
+            }
+            else if (!inQuotes) { // not in quotes
+                if (c == '[')
+                    level ++;
+                else if (c == ']') {
+                    if (level > 0)
+                        level --;
+                    else // found the right bracket
+                        return i;
+                }
+            }
+            b = c;
+        }
+        return -1;
     }
 
     /** parses JSON stream from in and returns either a Map or a List with
