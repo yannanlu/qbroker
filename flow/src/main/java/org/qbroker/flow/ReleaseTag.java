@@ -9,7 +9,9 @@ package org.qbroker.flow;
  * EventPostable and EventCollectible to Msg2Text for TextEvent only, added
  * the recovery of the property of priority for JMSEvent in duplicate() of
  * MessageUtils, added IgnoreHTTP412 to HTTPMessenger, added LogHTTP412 to
- * MonitorAgent for ignoring HTTP 412 error 
+ * MonitorAgent for ignoring HTTP 412 error, fixed a bug in Evaluation on
+ * the boolean expressions, fixed a typo on rpt_global_var in QFlow, added
+ * main() to ReleaseTag, removed Version
  *<br/>
  * V1.1.11 (2017/03/19): added group support for outlinks to DispatchNode so
  * that the load balance works on separate groups of outlinks, changed the way
@@ -122,7 +124,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V 1.1.12 2017/04/15 16:26:19";
+    private static String ReleaseTAG = "QBroker V 1.1.12 2017/04/15 18:02:54";
 
     public ReleaseTag() {
     }
@@ -140,5 +142,9 @@ public class ReleaseTag {
 
     public static String getReleaseTag() {
         return ReleaseTAG;
+    }
+
+    public static void main(String args[]) {
+        System.out.println(getReleaseTag());
     }
 }

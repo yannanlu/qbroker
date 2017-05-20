@@ -174,7 +174,7 @@ public class QFlow implements Service, Runnable {
         zonedDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss,SSS zz");
 
         // HACK: init GlobalProperties for container
-        if ((o = props.get("global_var")) != null && o instanceof Map) {
+        if ((o = props.get("rpt_global_var")) != null && o instanceof Map) {
             Map map = (Map) o;
             if ((o = map.get("ReportName")) != null && o instanceof String &&
                 "GlobalProperties".equals((String) o) &&
@@ -185,7 +185,7 @@ public class QFlow implements Service, Runnable {
             catch (org.qbroker.common.DisabledException e) { // success
             }
             catch (Exception e) {
-                new Event(Event.ERR, name + " failed to init global_var: " +
+                new Event(Event.ERR, name + " failed to init rpt_global_var: " +
                   Event.traceStack(e)).send();
             }
         }

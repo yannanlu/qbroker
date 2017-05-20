@@ -144,6 +144,7 @@ public class MessageUtils {
             return template.substitute(input, defaultMap);
     }
 
+    /** substitutes GlobalProperties with ${xxx} as the place holder */
     public static String substitute(String input) {
         Map report = null;
         MonitorReport reporter = null;
