@@ -38,12 +38,10 @@ public class JSONSelector {
     private Map<String, Object> aJSONProps = null;
     private Pattern pattern = null;
     private DataSet dset = null;
-    private Perl5Matcher pm = null;
+    private static ThreadLocal<Perl5Matcher> lm=new ThreadLocal<Perl5Matcher>();
 
     @SuppressWarnings("unchecked")
-    public JSONSelector(String prefix, Object obj, Perl5Matcher pm,
-        Perl5Compiler pc) {
-
+    public JSONSelector(String prefix, Object obj) {
         if (obj == null)
             throw(new IllegalArgumentException("null selector"));
 
@@ -51,12 +49,8 @@ public class JSONSelector {
             this.prefix = "";
         else
             this.prefix = prefix;
-        if (pc == null)
-            pc = new Perl5Compiler();
-        if (pm == null)
-            this.pm = new Perl5Matcher();
-        else
-            this.pm = pm;
+
+        Perl5Compiler pc = new Perl5Compiler();
 
         try {
             if (obj instanceof String) { // selector for keys
@@ -107,13 +101,20 @@ public class JSONSelector {
             return false;
         else if (aJSONProps == null)
             return true;
-        else try {
-            return evaluate(json, aJSONProps, pm);
-        }
-        catch (Exception e) {
-            new Event(Event.ERR, prefix + ": failed to parse json: " +
-                e.toString()).send();
-            return false;
+        else {
+            Perl5Matcher pm = lm.get();
+            if (pm == null) {
+                pm = new Perl5Matcher();
+                lm.set(pm);
+            }
+            try {
+                return evaluate(json, aJSONProps, pm);
+            }
+            catch (Exception e) {
+                new Event(Event.ERR, prefix + ": failed to evaluate json: " +
+                    e.toString()).send();
+                return false;
+            }
         }
     }
 
@@ -122,33 +123,54 @@ public class JSONSelector {
             return false;
         else if (aJSONProps == null)
             return true;
-        else try {
-            return evaluate(json, aJSONProps, pm);
-        }
-        catch (Exception e) {
-            new Event(Event.ERR, prefix + ": failed to parse json: " +
-                e.toString()).send();
-            return false;
+        else {
+            Perl5Matcher pm = lm.get();
+            if (pm == null) {
+                pm = new Perl5Matcher();
+                lm.set(pm);
+            }
+            try {
+                return evaluate(json, aJSONProps, pm);
+            }
+            catch (Exception e) {
+                new Event(Event.ERR, prefix + ": failed to evaluate json: " +
+                    e.toString()).send();
+                return false;
+            }
         }
     }
 
     public boolean evaluate(String json) {
         if (json == null)
             return false;
-        else if (pattern != null)
+        else if (pattern != null) {
+            Perl5Matcher pm = lm.get();
+            if (pm == null) {
+                pm = new Perl5Matcher();
+                lm.set(pm);
+            }
             return pm.contains(json, pattern);
+        }
         else if (dset == null)
             return true;
-        else try {
-            if (dset.getDataType() == DataSet.DATA_LONG)
-                return dset.contains(Long.parseLong(json));
-            else
-                return dset.contains(Double.parseDouble(json));
-        }
-        catch (Exception e) {
-            new Event(Event.ERR, prefix + ": failed to parse number on " +
-                json + ": " + e.toString()).send();
-            return false;
+        else {
+            Perl5Matcher pm = lm.get();
+            if (pm == null) {
+                pm = new Perl5Matcher();
+                lm.set(pm);
+            }
+            try {
+                if (dset.getDataType() == DataSet.DATA_LONG)
+                    return dset.contains(Long.parseLong(json));
+                else
+                    return dset.contains(Double.parseDouble(json));
+            }
+            catch (Exception e) {
+                    new Event(Event.ERR, prefix +
+                        ": failed to evaluate number on " + json + ": " +
+                        e.toString()).send();
+                return false;
+            }
         }
     }
 
@@ -183,7 +205,6 @@ public class JSONSelector {
             aJSONProps.clear();
             aJSONProps = null;
         }
-        pm = null;
         pattern = null;
         dset = null;
     }
@@ -191,7 +212,7 @@ public class JSONSelector {
     /**
      * returns a Map with compiled pattern as the value for each json path
      */
-    public static Map<String, Object> getPatternMap(String name, Map ph,
+    private static Map<String, Object> getPatternMap(String name, Map ph,
         Perl5Compiler pc) throws MalformedPatternException {
         Object o;
         Map<String, Object> map = null;
@@ -358,11 +379,11 @@ public class JSONSelector {
                 System.exit(0);
             }
             else if (pattern != null) // for pattern
-                selector = new JSONSelector("pattern", pattern, null, null); 
+                selector = new JSONSelector("pattern", pattern); 
             else if (list.size() > 0) // for range
-                selector = new JSONSelector("range", list, null, null); 
+                selector = new JSONSelector("range", list); 
             else if (ph.size() > 0) {
-                selector = new JSONSelector("json", ph, null, null); 
+                selector = new JSONSelector("json", ph); 
             }
             else {
                 printUsage();

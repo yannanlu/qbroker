@@ -630,7 +630,7 @@ public class NumberMonitor extends Monitor {
                     mr = pm.getMatch();
                     if (mr.groups() > 1) { // got the number
                         str = (tSub == null) ? mr.group(1) :
-                            tSub.substitute(pm, mr.group(1));
+                            tSub.substitute(mr.group(1));
                         if (isDouble)
                             f = Double.parseDouble(str);
                         else

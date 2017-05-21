@@ -34,7 +34,6 @@ import javax.jms.Session;
 import javax.jms.Queue;
 import javax.jms.Topic;
 import javax.jms.DeliveryMode;
-import org.apache.oro.text.regex.Perl5Matcher;
 import org.qbroker.event.Event;
 import org.qbroker.common.Utils;
 import org.qbroker.common.Template;
@@ -722,7 +721,7 @@ public class MessageUtils {
      * returns a formatted string of the message with the given template
      */
     public static String format(Message msg, byte[] buffer,
-        Template template, Perl5Matcher pm) throws JMSException {
+        Template template) throws JMSException {
         String key, value, field, text, body = "";
         int i, n;
         if (template == null)
@@ -745,14 +744,9 @@ public class MessageUtils {
                 value = "";
             if (value == null)
                 value = "";
-            text = template.substitute(pm, field, value, text);
+            text = template.substitute(field, value, text);
         }
         return text;
-    }
-
-    public static String format(Message msg, byte[] buffer,
-        Template template) throws JMSException {
-        return format(msg, buffer, template, (Perl5Matcher) null);
     }
 
     /**
@@ -761,7 +755,7 @@ public class MessageUtils {
      * of the Map key will substitute the place holder of ##body##.
      */
     public static String format(MapMessage msg, String mapKey,
-        Template template, Perl5Matcher pm) throws JMSException {
+        Template template) throws JMSException {
         String key, value, field, text, body = "";
         int i, n;
         if (template == null) {
@@ -790,7 +784,7 @@ public class MessageUtils {
                 value = "";
             if (value == null)
                 value = "";
-            text = template.substitute(pm, field, value, text);
+            text = template.substitute(field, value, text);
         }
         return text;
     }
@@ -852,7 +846,7 @@ public class MessageUtils {
      * newline chararcter and the leading timestamp as well as the IP address.
      */
     public static String format(Message msg, byte[] buffer, Template template,
-        Template repeat, Map exclude, Perl5Matcher pm) throws JMSException {
+        Template repeat, Map exclude) throws JMSException {
         String key, value, field, text, body = "";
         int i, n;
         if (template == null && repeat == null)
@@ -889,7 +883,7 @@ public class MessageUtils {
                 if (value.indexOf('\n') >= 0)
                     value = Utils.doSearchReplace("\n", "\r", value);
             }
-            text = template.substitute(pm, field, value, text);
+            text = template.substitute(field, value, text);
         }
 
         if (repeat != null) { // extra
@@ -911,7 +905,7 @@ public class MessageUtils {
                     continue;
                 field = repeat.copyText();
                 if (hasKey)
-                    field = repeat.substitute(pm, "key", key, field);
+                    field = repeat.substitute("key", key, field);
                 if (hasValue) {
                     value = msg.getStringProperty(key);
                     if (value == null)
@@ -919,7 +913,7 @@ public class MessageUtils {
                     else
                         value = Utils.doSearchReplace(Event.ITEM_SEPARATOR,
                             Event.ESCAPED_ITEM_SEPARATOR, value);
-                    field = repeat.substitute(pm, "value", value, field);
+                    field = repeat.substitute("value", value, field);
                 }
                 strBuf.append(field);
             }
@@ -947,8 +941,7 @@ public class MessageUtils {
      * the exception message if there is an error.
      */
     public static String format(String prefix, Template[] template,
-        TextSubstitution[] substitution, byte[] buffer, Message inMessage,
-        Perl5Matcher pm) {
+        TextSubstitution[] substitution, byte[] buffer, Message inMessage) {
         int i, k, n;
         String text = null;
         StringBuffer strBuf ;
@@ -964,7 +957,7 @@ public class MessageUtils {
             if (template[i] != null) try { // format
                 if (i > 0)
                     strBuf.append(text);
-                text = format(inMessage, buffer, template[i], pm);
+                text = format(inMessage, buffer, template[i]);
             }
             catch (JMSException e) {
                 String str = prefix + i;
@@ -986,7 +979,7 @@ public class MessageUtils {
             if (i >= k) // no sub defined beyond k
                 continue;
             if (substitution[i] != null) try { // substitute
-                text = substitution[i].substitute(pm, text);
+                text = substitution[i].substitute(text);
             }
             catch (Exception e) {
                 new Event(Event.ERR, prefix + i + " failed to format " +

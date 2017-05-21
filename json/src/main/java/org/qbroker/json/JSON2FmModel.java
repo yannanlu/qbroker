@@ -13,11 +13,6 @@ import java.util.Map;
 import java.util.Iterator;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.oro.text.regex.Pattern;
-import org.apache.oro.text.regex.MatchResult;
-import org.apache.oro.text.regex.Perl5Matcher;
-import org.apache.oro.text.regex.StringSubstitution;
-import org.apache.oro.text.regex.Util;
 import org.qbroker.common.Utils;
 import org.qbroker.common.Template;
 import org.qbroker.common.TextSubstitution;
@@ -388,24 +383,14 @@ public class JSON2FmModel {
         return JSON2Map.put(pl, keyPath, data);
     }
 
-    /** returns the formatted JSON text for the given template or null */
-    public static String format(Map ph, Template temp, Perl5Matcher pm) {
-        return JSON2Map.format(ph, temp, pm);
-    }
-
     /** returns the formatted string for the given template or null on faluire*/
     public static String format(Map ph, Template temp) {
-        return format(ph, temp, null);
-    }
-
-    /** returns the formatted JSON text for the given template or null */
-    public static String format(List pl, Template temp, Perl5Matcher pm) {
-        return JSON2Map.format(pl, temp, pm);
+        return JSON2Map.format(ph, temp);
     }
 
     /** returns the formatted string for the given template or null on faluire*/
     public static String format(List pl, Template temp) {
-        return format(pl, temp, null);
+        return JSON2Map.format(pl, temp);
     }
 
     /** parses JSON stream from in and returns either Map or List, MT-safe */

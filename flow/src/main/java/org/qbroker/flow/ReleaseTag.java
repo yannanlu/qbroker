@@ -3,6 +3,15 @@ package org.qbroker.flow;
 /* ReleaseTag.java - release tag for all the packages of qbroker */
 
 /**
+ * V1.2.0 (2017/05/21): changed Perl5Matcher from a instance object to a local
+ * object got from ThreadLocal in Template and TextSubstitution, removed the
+ * public APIs with Perl5Matcher from Template and TextSubstitution, also
+ * removed the synchronized methods from Template and TextSubstitution, updated
+ * all the dependent classes due to this API change, also removed two
+ * synchonized methods from Utils with DateFormat object stored in ThreadLocal,
+ * added cleanups on used Template and TextSubstitution for MessageFilter, etc,
+ * added Expression as an interface and Term as an implementation
+ *<br/>
  * V1.1.13 (2017/05/20): added support for simple expressions on JSON path
  * to JSON2Map so that the index of a list is either evaluated from a numeric
  * expression or is selected from the evaluations on its children
@@ -128,7 +137,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V 1.1.13 2017/05/20 11:42:54";
+    private static String ReleaseTAG = "QBroker V 1.2.0 2017/05/21 10:17:08";
 
     public ReleaseTag() {
     }

@@ -196,7 +196,7 @@ public class JVMMonitor extends Monitor {
                 MatchResult mr = pm.getMatch();
                 if (mr.groups() > 2) try {
                     str = (tSub == null) ? mr.group(2) :
-                        tSub.substitute(pm, mr.group(2));
+                        tSub.substitute(mr.group(2));
                     extraNumber = Long.parseLong(mr.group(1));
                     if (isDouble)
                         f = Double.parseDouble(str);

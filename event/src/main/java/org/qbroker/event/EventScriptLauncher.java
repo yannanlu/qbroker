@@ -205,7 +205,7 @@ public class EventScriptLauncher implements EventAction {
             template = (Template) o;
             msgSub = (TextSubstitution[]) map.get("MsgSub");
             if (msgSub != null) {
-                change = EventUtils.getChange(event, msgSub, pm);
+                change = EventUtils.getChange(event, msgSub);
                 if (change != null && change.size() <= 0)
                     change = null;
             }
@@ -224,14 +224,14 @@ public class EventScriptLauncher implements EventAction {
                         value = (String) attr.get(key);
                     if (value == null)
                         value = "";
-                    script = template.substitute(pm, key, value, script);
+                    script = template.substitute(key, value, script);
                 }
                 else if ("serialNumber".equals(key)) {
-                    script = template.substitute(pm, key,
+                    script = template.substitute(key,
                         String.valueOf(serialNumber), script);
                 }
                 else {
-                    script = template.substitute(pm, key, "", script);
+                    script = template.substitute(key, "", script);
                 }
             }
             if (change != null)
@@ -313,8 +313,21 @@ public class EventScriptLauncher implements EventAction {
         pm = null;
         pattern = null;
         if (launcher != null) {
-            for (String key : launcher.keySet())
-                launcher.get(key).clear();
+            Map map;
+            TextSubstitution[] tsub;
+            Object o;
+            for (String key : launcher.keySet()) {
+                map = launcher.get(key);
+                o = map.remove("Template");
+                if (o != null && o instanceof Template)
+                    ((Template) o).clear();
+                tsub = (TextSubstitution[]) map.remove("MsgSub");
+                if (tsub != null) {
+                    for (TextSubstitution sub : tsub)
+                        sub.clear();
+                }
+                map.clear();
+            }
             launcher.clear();
             launcher = null;
         }

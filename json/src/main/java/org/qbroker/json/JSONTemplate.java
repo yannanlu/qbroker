@@ -11,7 +11,6 @@ import java.io.Reader;
 import java.io.StringReader;
 import java.io.FileReader;
 import java.io.IOException;
-import org.apache.oro.text.regex.Perl5Matcher;
 import org.qbroker.common.Browser;
 import org.qbroker.common.AssetList;
 import org.qbroker.common.Template;
@@ -48,7 +47,6 @@ public class JSONTemplate extends AssetList {
     private String name;
     private Template temp;
     private TextSubstitution tsub;
-    private Perl5Matcher pm = null;
     private Map<String, Object> params = new HashMap<String, Object>();
     private Map<String, String> varMap = new HashMap<String, String>();
     private boolean keepOriginalOrder = false;
@@ -72,16 +70,15 @@ public class JSONTemplate extends AssetList {
 
         // for getting rid of double quotes on variables
         sub = new TextSubstitution("s/\"(##[^#]+##)\"/$1/g");
-        pm = new Perl5Matcher();
 
         if ((o = props.get("template")) != null) {
             String str;
             if (o instanceof String)
                 str = (String) o;
             else if (o instanceof Map)
-                str = sub.substitute(pm,JSON2FmModel.toJSON((Map) o,null,null));
+                str = sub.substitute(JSON2FmModel.toJSON((Map) o, null, null));
             else if (o instanceof List)
-                str = sub.substitute(pm,JSON2FmModel.toJSON((List)o,null,null));
+                str = sub.substitute(JSON2FmModel.toJSON((List) o, null, null));
             else
                 str = o.toString();
             temp = new Template(str);
@@ -204,7 +201,7 @@ public class JSONTemplate extends AssetList {
                     value = "\"" + (String) o + "\"";
                 else
                     value = o.toString();
-                text = temp.substitute(pm, key, value, text);
+                text = temp.substitute(key, value, text);
             }
             else if (key.startsWith("P:")) { // for a parameter without quotes
                 o = params.get(key.substring(2));
@@ -214,7 +211,7 @@ public class JSONTemplate extends AssetList {
                     value = (String) o;
                 else
                     value = o.toString();
-                text = temp.substitute(pm, key, value, text);
+                text = temp.substitute(key, value, text);
             }
             else if (key.startsWith("v:")) { // for a variable
                 o = params.get(key);
@@ -224,7 +221,7 @@ public class JSONTemplate extends AssetList {
                     value = "\"" + (String) o + "\"";
                 else
                     value = o.toString();
-                text = temp.substitute(pm, key, value, text);
+                text = temp.substitute(key, value, text);
             }
             else if (key.startsWith("V:")) { // for a variable without quotes
                 o = params.get("v:"+key.substring(2));
@@ -234,7 +231,7 @@ public class JSONTemplate extends AssetList {
                     value = (String) o;
                 else
                     value = o.toString();
-                text = temp.substitute(pm, key, value, text);
+                text = temp.substitute(key, value, text);
             }
             else if (!key.startsWith("s:")) { // for a json path 
                 o = JSON2FmModel.get(json, key);
@@ -248,7 +245,7 @@ public class JSONTemplate extends AssetList {
                     value = JSON2FmModel.toJSON((List) o, null, null);
                 else
                     value = o.toString();
-                text = temp.substitute(pm, key, value, text);
+                text = temp.substitute(key, value, text);
             }
             else if ((sect = (JSONSection) get(key.substring(2))) != null) {
                 try {
@@ -262,7 +259,7 @@ public class JSONTemplate extends AssetList {
                         " failed to fulfill the section of " + key + ": " +
                         Utils.traceStack(e)));
                 }
-                text = temp.substitute(pm, key, value, text);
+                text = temp.substitute(key, value, text);
             }
             else {
                 params.remove("r:_JSON_");
@@ -278,7 +275,7 @@ public class JSONTemplate extends AssetList {
             params.remove("v:" + key);
 
         if (tsub != null)
-            tsub.substitute(pm, text);
+            tsub.substitute(text);
 
         return text;
     }
@@ -314,7 +311,7 @@ public class JSONTemplate extends AssetList {
                     value = "\"" + (String) o + "\"";
                 else
                     value = o.toString();
-                text = temp.substitute(pm, key, value, text);
+                text = temp.substitute(key, value, text);
             }
             else if (key.startsWith("P:")) { // for a parameter without quotes
                 o = params.get(key.substring(2));
@@ -324,7 +321,7 @@ public class JSONTemplate extends AssetList {
                     value = (String) o;
                 else
                     value = o.toString();
-                text = temp.substitute(pm, key, value, text);
+                text = temp.substitute(key, value, text);
             }
             else if (key.startsWith("v:")) { // for a variable
                 o = params.get(key);
@@ -334,7 +331,7 @@ public class JSONTemplate extends AssetList {
                     value = "\"" + (String) o + "\"";
                 else
                     value = o.toString();
-                text = temp.substitute(pm, key, value, text);
+                text = temp.substitute(key, value, text);
             }
             else if (key.startsWith("V:")) { // for a variable without quotes
                 o = params.get("v:"+key.substring(2));
@@ -344,7 +341,7 @@ public class JSONTemplate extends AssetList {
                     value = (String) o;
                 else
                     value = o.toString();
-                text = temp.substitute(pm, key, value, text);
+                text = temp.substitute(key, value, text);
             }
             else if (!key.startsWith("s:")) { // for a json path
                 o = JSON2FmModel.get(json, key);
@@ -358,7 +355,7 @@ public class JSONTemplate extends AssetList {
                     value = JSON2FmModel.toJSON((List) o, null, null);
                 else
                     value = o.toString();
-                text = temp.substitute(pm, key, value, text);
+                text = temp.substitute(key, value, text);
             }
             else if ((sect = (JSONSection) get(key.substring(2))) != null) {
                 try {
@@ -372,7 +369,7 @@ public class JSONTemplate extends AssetList {
                         " failed to fulfill the section of " + key + ": " +
                         Utils.traceStack(e)));
                 }
-                text = temp.substitute(pm, key, value, text);
+                text = temp.substitute(key, value, text);
             }
             else {
                 params.remove("r:_JSON_");
@@ -388,7 +385,7 @@ public class JSONTemplate extends AssetList {
             params.remove("v:" + key);
 
         if (tsub != null)
-            tsub.substitute(pm, text);
+            tsub.substitute(text);
 
         return text;
     }
@@ -403,7 +400,11 @@ public class JSONTemplate extends AssetList {
             if (sect != null)
                 sect.clear();
         }
+        if (temp != null)
+            temp.clear();
         temp = null;
+        if (tsub != null)
+            tsub.clear();
         tsub = null;
         if (params != null) {
             params.clear();

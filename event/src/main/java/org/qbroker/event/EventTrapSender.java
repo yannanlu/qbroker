@@ -211,7 +211,7 @@ public class EventTrapSender extends SNMPConnector implements EventAction {
 
         msgSub = (TextSubstitution[]) map.get("MsgSub");
         if (msgSub != null) {
-            change = EventUtils.getChange(event, msgSub, pm);
+            change = EventUtils.getChange(event, msgSub);
             if (change != null && change.size() <= 0)
                 change = null;
         }
@@ -248,10 +248,10 @@ public class EventTrapSender extends SNMPConnector implements EventAction {
                         value = (String) attr.get(key);
                     if (value == null)
                         value = "";
-                    text = template.substitute(pm, key, value, text);
+                    text = template.substitute(key, value, text);
                 }
                 else {
-                    text = template.substitute(pm, key, "", text);
+                    text = template.substitute(key, "", text);
                 }
             }
             data[i][2] = text;
@@ -310,6 +310,20 @@ public class EventTrapSender extends SNMPConnector implements EventAction {
         pm = null;
         pattern = null;
         if (ruleList != null) {
+            List list = (List) ruleList.get("Default");
+            if (list != null) {
+                Map map;
+                for (Object obj : list) {
+                    if (obj != null && obj instanceof Map) {
+                        map = (Map) obj;
+                        obj = map.remove("Value");
+                        if (obj != null && obj instanceof Template)
+                            ((Template) obj).clear();
+                        map.clear();
+                    }
+                }
+                list.clear();
+            }
             ruleList.clear();
             ruleList = null;
         }

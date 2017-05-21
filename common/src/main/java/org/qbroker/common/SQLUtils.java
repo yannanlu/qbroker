@@ -123,7 +123,7 @@ public class SQLUtils {
             list = temp.getAllFields();
             str = new String(sqlText);
             for (i=0; i<list.length; i++)
-                str = temp.substitute(null, list[i], "?", str);
+                str = temp.substitute(list[i], "?", str);
         }
         else {
             str = sqlText;

@@ -14,7 +14,6 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.io.StringReader;
 import java.io.IOException;
-import org.apache.oro.text.regex.Perl5Matcher;
 import javax.jms.Message;
 import javax.jms.BytesMessage;
 import javax.jms.TextMessage;
@@ -63,7 +62,6 @@ import org.qbroker.event.Event;
 
 public class JSONPathNode extends Node {
     private int[] outLinkMap;
-    private Perl5Matcher pm = null;
 
     private final static int RESULT_OUT = 0;
     private final static int FAILURE_OUT = 1;
@@ -106,7 +104,6 @@ public class JSONPathNode extends Node {
         outLinkMap[FAILURE_OUT] = overlap[0];
         outLinkMap[NOHIT_OUT] = overlap[1];
 
-        pm = new Perl5Matcher();
         if (assetList == null)
             throw(new IllegalArgumentException(name +
                 ": failed to init OutLinks"));

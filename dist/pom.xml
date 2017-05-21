@@ -7,13 +7,13 @@
   <parent>
     <groupId>org.qbroker</groupId>
     <artifactId>qbroker</artifactId>
-    <version>1.1.0</version>
+    <version>1.2.0</version>
   </parent>
   <dependencies>
     <dependency>
       <groupId>org.qbroker</groupId>
       <artifactId>common</artifactId>
-      <version>1.1.1</version>
+      <version>1.2.0</version>
     </dependency>
     <dependency>
       <groupId>org.qbroker</groupId>
@@ -23,22 +23,22 @@
     <dependency>
       <groupId>org.qbroker</groupId>
       <artifactId>event</artifactId>
-      <version>1.1.0</version>
+      <version>1.1.1</version>
     </dependency>
     <dependency>
       <groupId>org.qbroker</groupId>
       <artifactId>json</artifactId>
-      <version>1.1.2</version>
+      <version>1.2.0</version>
     </dependency>
     <dependency>
       <groupId>org.qbroker</groupId>
       <artifactId>monitor</artifactId>
-      <version>1.1.6</version>
+      <version>1.1.7</version>
     </dependency>
     <dependency>
       <groupId>org.qbroker</groupId>
       <artifactId>jms</artifactId>
-      <version>1.1.1</version>
+      <version>1.2.0</version>
     </dependency>
     <dependency>
       <groupId>org.qbroker</groupId>
@@ -63,7 +63,7 @@
     <dependency>
       <groupId>org.qbroker</groupId>
       <artifactId>node</artifactId>
-      <version>1.1.5</version>
+      <version>1.1.6</version>
     </dependency>
     <dependency>
       <groupId>org.qbroker</groupId>
@@ -73,7 +73,7 @@
     <dependency>
       <groupId>org.qbroker</groupId>
       <artifactId>flow</artifactId>
-      <version>1.1.13</version>
+      <version>1.2.0</version>
     </dependency>
     <dependency>
       <groupId>org.qbroker</groupId>

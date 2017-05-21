@@ -14,6 +14,7 @@ import java.util.Iterator;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.IOException;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.text.ParsePosition;
 import org.w3c.dom.NodeList;
@@ -27,7 +28,6 @@ import javax.crypto.spec.SecretKeySpec;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathConstants;
-import org.apache.oro.text.regex.Perl5Matcher;
 import org.qbroker.common.BytesBuffer;
 import org.qbroker.common.TextSubstitution;
 import org.qbroker.common.TraceStackThread;
@@ -57,8 +57,8 @@ public class Utils {
     public static final int RESULT_COLLECTABLE = 128;
     public static final String FS = " | ";
     public static final String RS = "\n";
-    private static final SimpleDateFormat dateFormat =
-        new SimpleDateFormat("yyyy/MM/dd.HH:mm:ss.SSS.zz");
+    private static ThreadLocal<DateFormat> df = new ThreadLocal<DateFormat>();
+    private static final String dfStr = "yyyy/MM/dd.HH:mm:ss.SSS.zz";
 
     public Utils() {
     }
@@ -88,15 +88,21 @@ public class Utils {
     }
 
     public static String dateFormat(Date date) {
-        synchronized(dateFormat) {
-            return dateFormat.format(date);
+        DateFormat dateFormat = df.get();
+        if (dateFormat == null) {
+            dateFormat = new SimpleDateFormat(dfStr);
+            df.set(dateFormat);
         }
+        return dateFormat.format(date);
     }
 
     public static Date parseDate(String date) {
-        synchronized(dateFormat) {
-            return dateFormat.parse(date, new ParsePosition(0));
+        DateFormat dateFormat = df.get();
+        if (dateFormat == null) {
+            dateFormat = new SimpleDateFormat(dfStr);
+            df.set(dateFormat);
         }
+        return dateFormat.parse(date, new ParsePosition(0));
     }
 
     public static String escapeJSON(String text) {

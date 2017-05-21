@@ -431,6 +431,19 @@ public class EventTracker implements EventEscalation {
 
     public void clear() {
         cache.clear();
+        aggr.clear();
+        if (template != null)
+            template.clear();
+        template = null;
+        if (keyTemp != null)
+            keyTemp.clear();
+        keyTemp = null;
+        if (keySub != null)
+            keySub.clear();
+        keySub = null;
+        if (selector != null)
+            selector.clear();
+        selector = null;
     }
 
     public Map<String, Object> checkpoint() {

@@ -41,17 +41,14 @@ import org.qbroker.common.Utils;
  *<br/><br/>
  * Template also provides the methods for the actual substitutions.
  * They require either a key-value pair or a Map with all key-value pairs.
- * If the caller provides its own Perl5Matcher in substitution, there is no
- * MT-Safty protection. So the caller is responsible for the MT-Safty.
- * Ohterwise, the internal Perl5Matcher will be used with MT-Safty protection.
  *<br/>
  * @author yannanlu@yahoo.com
  */
 
 public class Template {
+    private static ThreadLocal<Perl5Matcher> lm=new ThreadLocal<Perl5Matcher>();
     private static String defaultPattern = "##[^#]+##";
     private Pattern pattern;
-    private Perl5Matcher pm = null;
     private Map<String, Pattern> fields;   // storing rawString => pattern pairs
     private String[] allFields; // storing all rawStrings
     private String text;
@@ -64,8 +61,13 @@ public class Template {
         MatchResult mr;
         Pattern p;
         String rawString, headStr, tailStr;
+
         Perl5Compiler pc = new Perl5Compiler();
-        pm = new Perl5Matcher();
+        Perl5Matcher pm = lm.get();
+        if (pm == null) {
+            pm = new Perl5Matcher();
+            lm.set(pm);
+        }
 
         if (patternString == null || patternString.length() == 0) { // default
             patternString = defaultPattern;
@@ -243,6 +245,11 @@ public class Template {
         String rawString, patternString;
         MatchResult mr;
         PatternMatcherInput input;
+        Perl5Matcher pm = lm.get();
+        if (pm == null) {
+            pm = new Perl5Matcher();
+            lm.set(pm);
+        }
         input = new PatternMatcherInput(text);
         while (pm.contains(input, pattern)) {
             mr = pm.getMatch();
@@ -258,27 +265,19 @@ public class Template {
         return (fields.keySet()).iterator();
     }
 
-    public String substitute(Perl5Matcher matcher, String field, String value,
-        String input) {
+    public String substitute(String field, String value, String input) {
         if (input == null || !fields.containsKey(field))
             return input;
-        else if (matcher != null) // not MT-Safe
-            return Util.substitute(matcher, (Pattern) fields.get(field),
-                new StringSubstitution(value), input, Util.SUBSTITUTE_ALL);
-        else
-            return substitute(field, value, input);
+        Perl5Matcher pm = lm.get();
+        if (pm == null) {
+            pm = new Perl5Matcher();
+            lm.set(pm);
+        }
+        return Util.substitute(pm, (Pattern) fields.get(field),
+            new StringSubstitution(value), input, Util.SUBSTITUTE_ALL);
     }
 
-    public synchronized String substitute(String field, String value,
-        String input) {
-        if (input == null || !fields.containsKey(field))
-            return input;
-        else
-            return Util.substitute(pm, (Pattern) fields.get(field),
-                new StringSubstitution(value), input, Util.SUBSTITUTE_ALL);
-    }
-
-    public String substitute(Perl5Matcher matcher, String input, Map map) {
+    public String substitute(String input, Map map) {
         String field, value;
         if (map == null || map.size() == 0)
             return input;
@@ -286,18 +285,28 @@ public class Template {
             field = allFields[i];
             value = (String) map.get(field);
             if (value != null && input.indexOf(field) >= 0)
-                input = substitute(matcher, field, value, input);
+                input = substitute(field, value, input);
         }
         return input;
     }
 
-    public String substitute(String input, Map map) {
-        return substitute((Perl5Matcher) null, input, map);
+    public int substitute(StringBuffer result, String field, String value,
+        String input) {
+        if (fields.containsKey(field)) {
+            Perl5Matcher pm = lm.get();
+            if (pm == null) {
+                pm = new Perl5Matcher();
+                lm.set(pm);
+            }
+            return Util.substitute(result, pm, (Pattern) fields.get(field),
+                new StringSubstitution(value), input, Util.SUBSTITUTE_ALL);
+        }
+        else
+            return -1;
     }
 
     public void clear() {
         pattern = null;
-        pm = null;
         allFields = null;
         if (fields != null) {
             fields.clear();
@@ -308,18 +317,6 @@ public class Template {
     protected void finalize() {
         clear();
     }
-
-/**
-    // require v2.0.5
-    public int substitute(StringBuffer result, String field, String value,
-        String input) {
-        if (fields.containsKey(field))
-            return Util.substitute(result, pm, (Pattern) fields.get(field),
-                new StringSubstitution(value), input, Util.SUBSTITUTE_ALL);
-        else
-            return -1;
-    }
-*/
 
     private String read(InputStream fis) throws IOException {
         int bytesRead = 0, totalBytes = 0, bufferSize = 4096;

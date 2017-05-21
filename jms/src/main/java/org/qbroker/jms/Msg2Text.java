@@ -10,7 +10,6 @@ import javax.jms.Message;
 import javax.jms.TextMessage;
 import javax.jms.BytesMessage;
 import javax.jms.JMSException;
-import org.apache.oro.text.regex.Perl5Matcher;
 import org.qbroker.event.Event;
 import org.qbroker.event.EventUtils;
 import org.qbroker.jms.MessageUtils;
@@ -38,7 +37,6 @@ public class Msg2Text {
     private String name;
     private Template template = null, repeatedTemplate = null;
     private Map<String, Object> excludedProperty;
-    private Perl5Matcher pm = null;
     private String myIP = null;
     private String[] keys = null, names = null;
     private String baseTag0, baseTag1;
@@ -112,8 +110,6 @@ public class Msg2Text {
         }
 
         hasRepeatedTemplate = (repeatedTemplate != null);
-        if (template != null || hasRepeatedTemplate)
-            pm = new Perl5Matcher();
         myIP = Event.getIPAddress();
         if (myIP == null || myIP.length() <= 0)
             myIP = "127.0.0.1";
@@ -193,9 +189,6 @@ public class Msg2Text {
         if (msg == null)
             return null;
 
-        if (pm == null)
-            pm = new Perl5Matcher();
-
         if ((type & Utils.RESULT_COLLECTABLE) > 0 ||
             (type & Utils.RESULT_POSTABLE) > 0) { // for event
             priority = msg.getJMSPriority();
@@ -204,7 +197,7 @@ public class Msg2Text {
                 Event.priorityNames[9-priority]);
             if (!(msg instanceof TextEvent)) // non-event
                 text = MessageUtils.format(msg, buffer, template,
-                    repeatedTemplate, excludedProperty, pm);
+                    repeatedTemplate, excludedProperty);
             else if ((type & Utils.RESULT_POSTABLE) > 0)
                 text = EventUtils.postable((Event) msg);
             else
@@ -213,9 +206,9 @@ public class Msg2Text {
         }
         else if (hasRepeatedTemplate)
             text = MessageUtils.format(msg, buffer, template,
-                repeatedTemplate, excludedProperty, pm);
+                repeatedTemplate, excludedProperty);
         else if (template != null)
-            text = MessageUtils.format(msg, buffer, template, pm);
+            text = MessageUtils.format(msg, buffer, template);
         else
             text = MessageUtils.processBody(msg, buffer);
 
@@ -423,7 +416,6 @@ public class Msg2Text {
     }
 
     public void clear() {
-        pm = null;
         if (template != null) {
             template.clear();
             template = null;

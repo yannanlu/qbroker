@@ -218,7 +218,7 @@ public class EventSQLExecutor implements EventAction {
             template = (Template) o;
             msgSub = (TextSubstitution[]) map.get("MsgSub");
             if (msgSub != null) {
-                change = EventUtils.getChange(event, msgSub, pm);
+                change = EventUtils.getChange(event, msgSub);
                 if (change != null && change.size() <= 0)
                     change = null;
             }
@@ -237,14 +237,14 @@ public class EventSQLExecutor implements EventAction {
                         value = (String) attr.get(key);
                     if (value == null)
                         value = "";
-                    sql = template.substitute(pm, key, value, sql);
+                    sql = template.substitute(key, value, sql);
                 }
                 else if ("serialNumber".equals(key)) {
-                    sql = template.substitute(pm, key,
+                    sql = template.substitute(key,
                         String.valueOf(serialNumber), sql);
                 }
                 else {
-                    sql = template.substitute(pm, key, "", sql);
+                    sql = template.substitute(key, "", sql);
                 }
             }
             if (change != null)
@@ -346,8 +346,21 @@ public class EventSQLExecutor implements EventAction {
             dbConn = null;
         }
         if (launcher != null) {
-            for (String key : launcher.keySet())
-                launcher.get(key).clear();
+            Map map;
+            Object o;
+            TextSubstitution[] tsub;
+            for (String key : launcher.keySet()) {
+                map = launcher.get(key);
+                o = map.get("Template");
+                if (o != null && o instanceof Template)
+                    ((Template) o).clear();
+                tsub = (TextSubstitution[]) map.remove("MsgSub");
+                if (tsub != null) {
+                    for (TextSubstitution sub : tsub)
+                        sub.clear();
+                }
+                map.clear();
+            }
             launcher.clear();
             launcher = null;
         }

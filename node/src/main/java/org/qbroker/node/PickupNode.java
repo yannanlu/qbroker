@@ -15,7 +15,6 @@ import javax.jms.TextMessage;
 import javax.jms.MapMessage;
 import javax.jms.ObjectMessage;
 import javax.jms.JMSException;
-import org.apache.oro.text.regex.Perl5Matcher;
 import org.qbroker.common.XQueue;
 import org.qbroker.common.IndexedXQueue;
 import org.qbroker.common.AssetList;
@@ -127,7 +126,6 @@ public class PickupNode extends Node {
 
     private AssetList reqList = null;  //{oid,rid} for tracking outstanding reqs
     private Map<String, Object> templateMap, substitutionMap;
-    private Perl5Matcher pm = null;
     private boolean takebackEnabled = false;
 
     private final static int POOL_OUT = 0;
@@ -177,8 +175,6 @@ public class PickupNode extends Node {
         if ((o = props.get("TakebackEnabled")) != null &&
             "true".equalsIgnoreCase((String) o))
             takebackEnabled = true;
-
-        pm = new Perl5Matcher();
 
         if ((o = props.get("OutLink")) == null || !(o instanceof List))
             throw(new IllegalArgumentException(name +
@@ -682,7 +678,7 @@ public class PickupNode extends Node {
                 TYPE_PICKUP == (int) ruleInfo[RULE_PID]) { // dynamic
                 XQueue xq;
                 uriStr = MessageUtils.format(name + ": " + ruleName +
-                    " URI at ", tmp, sub, buffer, inMessage, pm);
+                    " URI at ", tmp, sub, buffer, inMessage);
 
                 if (uriStr == null || uriStr.length() <= 0)
                     oid = FAILURE_OUT;
@@ -782,7 +778,7 @@ public class PickupNode extends Node {
                         else if (o instanceof Template) try { // template
                             String str;
                             Template temp = (Template) o;
-                            str = MessageUtils.format(inMessage,buffer,temp,pm);
+                            str = MessageUtils.format(inMessage, buffer, temp);
                             StringReader sin = new StringReader(str);
                             bag.put("Properties", (Map) JSON2Map.parse(sin));
                             sin.close();

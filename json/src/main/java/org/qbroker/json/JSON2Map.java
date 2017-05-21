@@ -17,7 +17,6 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Collection;
 import java.util.regex.Pattern;
-import org.apache.oro.text.regex.Perl5Matcher;
 import org.qbroker.common.Utils;
 import org.qbroker.common.Evaluation;
 import org.qbroker.common.Template;
@@ -1783,7 +1782,7 @@ public class JSON2Map {
     }
 
     /** returns the formatted JSON text for the given template or null */
-    public static String format(Map ph, Template temp, Perl5Matcher pm) {
+    public static String format(Map ph, Template temp) {
         String key, value, text;
         String[] textFields;
         Object o;
@@ -1807,18 +1806,13 @@ public class JSON2Map {
             else
                 value = o.toString();
 
-            text = temp.substitute(pm, key, value, text);
+            text = temp.substitute(key, value, text);
         }
         return text;
     }
 
-    /** returns the formatted string for the given template or null on faluire*/
-    public static String format(Map ph, Template temp) {
-        return format(ph, temp, null);
-    }
-
     /** returns the formatted JSON text for the given template or null */
-    public static String format(List pl, Template temp, Perl5Matcher pm) {
+    public static String format(List pl, Template temp) {
         String key, value, text;
         String[] textFields;
         Object o;
@@ -1842,14 +1836,9 @@ public class JSON2Map {
             else
                 value = o.toString();
 
-            text = temp.substitute(pm, key, value, text);
+            text = temp.substitute(key, value, text);
         }
         return text;
-    }
-
-    /** returns the formatted string for the given template or null on faluire*/
-    public static String format(List pl, Template temp) {
-        return format(pl, temp, null);
     }
 
     /** returns the evaluated index of the list or -1 on failure or no hit */

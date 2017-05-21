@@ -60,12 +60,11 @@ public class JSONFilter implements Filter<Map> {
     private Map<String, Object>[] aJSONProps = null, xJSONProps = null;
     private Template temp = null;
     private TextSubstitution tsub = null;
-    private Perl5Matcher pm = null;
     private int count = 0;
     private boolean hasFormatter, hasSection;
+    private static ThreadLocal<Perl5Matcher> lm=new ThreadLocal<Perl5Matcher>();
 
-    public JSONFilter(String prefix, Map props, Perl5Matcher pm,
-        Perl5Compiler pc) {
+    public JSONFilter(String prefix, Map props, Perl5Compiler pc) {
         Object o;
         TextSubstitution sub;
 
@@ -78,10 +77,6 @@ public class JSONFilter implements Filter<Map> {
             this.prefix = prefix;
         if (pc == null)
             pc = new Perl5Compiler();
-        if (pm == null)
-            this.pm = new Perl5Matcher();
-        else
-            this.pm = pm;
 
         if ((o = props.get("indent")) != null && o instanceof String)
             indent = (String) o;
@@ -108,9 +103,9 @@ public class JSONFilter implements Filter<Map> {
             if (o instanceof String)
                 str = (String) o;
             else if (o instanceof Map)
-                str = sub.substitute(pm,JSON2FmModel.toJSON((Map) o,null,null));
+                str = sub.substitute(JSON2FmModel.toJSON((Map) o, null, null));
             else if (o instanceof List)
-                str = sub.substitute(pm,JSON2FmModel.toJSON((List)o,null,null));
+                str = sub.substitute(JSON2FmModel.toJSON((List) o, null, null));
             else
                 str = o.toString();
 
@@ -128,6 +123,10 @@ public class JSONFilter implements Filter<Map> {
                 }
             }
         }
+    }
+
+    public JSONFilter(String prefix, Map props) {
+        this(prefix, props, (Perl5Compiler) null);
     }
 
     /**
@@ -155,7 +154,7 @@ public class JSONFilter implements Filter<Map> {
                     value = "\"" + (String) o + "\"";
                 else
                     value = o.toString();
-                text = temp.substitute(pm, key, value, text);
+                text = temp.substitute(key, value, text);
             }
             else if (key.startsWith("P:")) {//for a parameter without quotes
                 o = params.get(key.substring(2));
@@ -165,7 +164,7 @@ public class JSONFilter implements Filter<Map> {
                     value = (String) o;
                 else
                     value = o.toString();
-                text = temp.substitute(pm, key, value, text);
+                text = temp.substitute(key, value, text);
             }
             else if (key.startsWith("v:")) { // for a variable
                 o = params.get(key);
@@ -175,7 +174,7 @@ public class JSONFilter implements Filter<Map> {
                     value = "\"" + (String) o + "\"";
                 else
                     value = o.toString();
-                text = temp.substitute(pm, key, value, text);
+                text = temp.substitute(key, value, text);
             }
             else if (key.startsWith("V:")) { // for a variable without quotes
                 o = params.get("v:"+key.substring(2));
@@ -185,7 +184,7 @@ public class JSONFilter implements Filter<Map> {
                     value = (String) o;
                 else
                     value = o.toString();
-                text = temp.substitute(pm, key, value, text);
+                text = temp.substitute(key, value, text);
             }
             else if (!key.startsWith("s:")) { // for a json path
                 o = JSON2FmModel.get(json, key);
@@ -199,7 +198,7 @@ public class JSONFilter implements Filter<Map> {
                     value = JSON2FmModel.toJSON((List) o, null, null);
                 else
                     value = o.toString();
-                text = temp.substitute(pm, key, value, text);
+                text = temp.substitute(key, value, text);
             }
             else if (withSection) { // for a section key
                 JSONSection sect;
@@ -216,11 +215,11 @@ public class JSONFilter implements Filter<Map> {
                         " failed to fulfill the section of " + key + ": " +
                         Event.traceStack(e)));
                 }
-                text = temp.substitute(pm, key, value, text);
+                text = temp.substitute(key, value, text);
             }
         }
         if (tsub != null)
-            tsub.substitute(pm, text);
+            tsub.substitute(text);
 
         return text;
     }
@@ -250,7 +249,7 @@ public class JSONFilter implements Filter<Map> {
                     value = "\"" + (String) o + "\"";
                 else
                     value = o.toString();
-                text = temp.substitute(pm, key, value, text);
+                text = temp.substitute(key, value, text);
             }
             else if (key.startsWith("P:")) {//for a parameter without quotes
                 o = params.get(key.substring(2));
@@ -260,7 +259,7 @@ public class JSONFilter implements Filter<Map> {
                     value = (String) o;
                 else
                     value = o.toString();
-                text = temp.substitute(pm, key, value, text);
+                text = temp.substitute(key, value, text);
             }
             else if (key.startsWith("v:")) { // for a variable
                 o = params.get(key);
@@ -270,7 +269,7 @@ public class JSONFilter implements Filter<Map> {
                     value = "\"" + (String) o + "\"";
                 else
                     value = o.toString();
-                text = temp.substitute(pm, key, value, text);
+                text = temp.substitute(key, value, text);
             }
             else if (key.startsWith("V:")) { // for a variable without qutoes
                 o = params.get("v:"+key.substring(2));
@@ -280,7 +279,7 @@ public class JSONFilter implements Filter<Map> {
                     value = (String) o;
                 else
                     value = o.toString();
-                text = temp.substitute(pm, key, value, text);
+                text = temp.substitute(key, value, text);
             }
             else if (!key.startsWith("s:")) { // for a json path
                 o = JSON2FmModel.get(json, key);
@@ -294,7 +293,7 @@ public class JSONFilter implements Filter<Map> {
                     value = JSON2FmModel.toJSON((List) o, null, null);
                 else
                     value = o.toString();
-                text = temp.substitute(pm, key, value, text);
+                text = temp.substitute(key, value, text);
             }
             else if (withSection) { // for a section key
                 JSONSection sect;
@@ -311,12 +310,12 @@ public class JSONFilter implements Filter<Map> {
                         " failed to fulfill the section of " + key + ": " +
                         Event.traceStack(e)));
                 }
-                text = temp.substitute(pm, key, value, text);
+                text = temp.substitute(key, value, text);
             }
         }
 
         if (tsub != null)
-            tsub.substitute(pm, text);
+            tsub.substitute(text);
 
         return text;
     }
@@ -326,7 +325,7 @@ public class JSONFilter implements Filter<Map> {
      * JSONSections and a given parameter map. It returns formatted content
      * upon success.
      */
-    public String format(String json, AssetList list,Map<String,Object> params){
+    public String format(String json, AssetList list, Map<String,Object>params){
         String text, value;
         Object o;
         boolean withSection;
@@ -344,7 +343,7 @@ public class JSONFilter implements Filter<Map> {
                     value = "\"" + (String) o + "\"";
                 else
                     value = o.toString();
-                text = temp.substitute(pm, key, value, text);
+                text = temp.substitute(key, value, text);
             }
             else if (key.startsWith("P:")) {//for a parameter without quotes
                 o = params.get(key.substring(2));
@@ -354,7 +353,7 @@ public class JSONFilter implements Filter<Map> {
                     value = (String) o;
                 else
                     value = o.toString();
-                text = temp.substitute(pm, key, value, text);
+                text = temp.substitute(key, value, text);
             }
             else if (key.startsWith("v:")) { // for a variable
                 o = params.get(key);
@@ -364,7 +363,7 @@ public class JSONFilter implements Filter<Map> {
                     value = "\"" + (String) o + "\"";
                 else
                     value = o.toString();
-                text = temp.substitute(pm, key, value, text);
+                text = temp.substitute(key, value, text);
             }
             else if (key.startsWith("V:")) { // for a variable
                 o = params.get("v:"+key.substring(2));
@@ -374,10 +373,10 @@ public class JSONFilter implements Filter<Map> {
                     value = (String) o;
                 else
                     value = o.toString();
-                text = temp.substitute(pm, key, value, text);
+                text = temp.substitute(key, value, text);
             }
             else if (!key.startsWith("s:")) { // for selected value
-                text = temp.substitute(pm, key, json, text);
+                text = temp.substitute(key, json, text);
             }
             else if (withSection) { // for a section
                 JSONSection sect;
@@ -394,17 +393,17 @@ public class JSONFilter implements Filter<Map> {
                         " failed to fulfill the section of " + key + ": " +
                         Event.traceStack(e)));
                 }
-                text = temp.substitute(pm, key, value, text);
+                text = temp.substitute(key, value, text);
             }
         }
         if (tsub != null)
-            tsub.substitute(pm, text);
+            tsub.substitute(text);
 
         return text;
     }
 
     /**
-     * It evalues the JSON map data with the internal predefined filters
+     * It evaluates the JSON map data with the internal predefined filters
      * and returns true if there is a hit or false otherwise.
      */
     public boolean evaluate(long tm, Map json) {
@@ -412,48 +411,69 @@ public class JSONFilter implements Filter<Map> {
     }
 
     /**
-     * It evalues the JSON map data with the internal predefined filters
+     * It evaluates the JSON map data with the internal predefined filters
      * and the given parameter map. It returns true if there is a hit or
      * false otherwise.
      */
     public boolean evaluate(Map json, Map<String, Object> params) {
         if (json == null)
             return false;
-        else if (evaluate(json, aJSONProps, pm, true, params) &&
-            !evaluate(json, xJSONProps, pm, false, params))
-            return true;
-        else
-            return false;
+        else {
+            Perl5Matcher pm = lm.get();
+            if (pm == null) {
+                pm = new Perl5Matcher();
+                lm.set(pm);
+            }
+            if (evaluate(json, aJSONProps, pm, true, params) &&
+                !evaluate(json, xJSONProps, pm, false, params))
+                return true;
+            else
+                return false;
+        }
     }
 
     /**
-     * It evalues the JSON list data with the internal predefined filters
+     * It evaluates the JSON list data with the internal predefined filters
      * and the given parameter map. It returns true if there is a hit or
      * false otherwise.
      */
     public boolean evaluate(List json, Map<String, Object> params) {
         if (json == null)
             return false;
-        else if (evaluate(json, aJSONProps, pm, true, params) &&
-            !evaluate(json, xJSONProps, pm, false, params))
-            return true;
-        else
-            return false;
+        else {
+            Perl5Matcher pm = lm.get();
+            if (pm == null) {
+                pm = new Perl5Matcher();
+                lm.set(pm);
+            }
+            if (evaluate(json, aJSONProps, pm, true, params) &&
+                !evaluate(json, xJSONProps, pm, false, params))
+                return true;
+            else
+                return false;
+        }
     }
 
     /**
-     * It evalues the JSON text with the internal predefined filters
+     * It evaluates the JSON text with the internal predefined filters
      * and the given parameter map. It returns true if there is a hit or
      * false otherwise.
      */
     public boolean evaluate(String json, Map<String, Object> params) {
         if (json == null)
             return false;
-        else if (evaluate(json, aJSONProps, pm, true, params) &&
-            !evaluate(json, xJSONProps, pm, false, params))
-            return true;
-        else
-            return false;
+        else {
+            Perl5Matcher pm = lm.get();
+            if (pm == null) {
+                pm = new Perl5Matcher();
+                lm.set(pm);
+            }
+            if (evaluate(json, aJSONProps, pm, true, params) &&
+                !evaluate(json, xJSONProps, pm, false, params))
+                return true;
+            else
+                return false;
+        }
     }
 
     /**
@@ -464,7 +484,7 @@ public class JSONFilter implements Filter<Map> {
      * treated as the variable. The rest part of the key will be the json path.
      * The default boolean value is used to evaluate an empty eval map.
      */
-    public static boolean evaluate(Map json, Map<String, Object>[] props,
+    private static boolean evaluate(Map json, Map<String, Object>[] props,
         Perl5Matcher pm, boolean def, Map<String, Object> params) {
         Pattern p;
         DataSet d;
@@ -560,7 +580,7 @@ public class JSONFilter implements Filter<Map> {
      * treated as the variable. The rest part of the key will be the json path.
      * The default boolean value is used to evaluate an empty eval map.
      */
-    public static boolean evaluate(List json, Map<String, Object>[] props,
+    private static boolean evaluate(List json, Map<String, Object>[] props,
         Perl5Matcher pm, boolean def, Map<String, Object> params) {
         Pattern p;
         DataSet d;
@@ -656,7 +676,7 @@ public class JSONFilter implements Filter<Map> {
      * treated as the variable. The rest part of the key will be the json path.
      * The default boolean value is used to evaluate an empty eval map.
      */
-    public static boolean evaluate(String value, Map<String, Object>[] props,
+    private static boolean evaluate(String value, Map<String, Object>[] props,
         Perl5Matcher pm, boolean def, Map<String, Object> params) {
         Pattern p;
         DataSet d;
@@ -735,7 +755,6 @@ public class JSONFilter implements Filter<Map> {
             }
         }
         xJSONProps = null;
-        pm = null;
         if (temp != null) {
             temp.clear();
             temp = null;
@@ -750,10 +769,8 @@ public class JSONFilter implements Filter<Map> {
         clear();
     }
 
-    // returns an array of JSONFilters with given property map
-    public static JSONFilter[] initFilters(String prefix, String name, Map ph,
-        Perl5Matcher pm) {
-        Perl5Compiler pc;
+    // returns an array of JSONFilters with the given property map
+    protected static JSONFilter[] initFilters(String prefix,String name,Map ph){
         Object o;
         if (ph == null || ph.size() <= 0)
             return null;
@@ -767,19 +784,18 @@ public class JSONFilter implements Filter<Map> {
             List<JSONFilter> pl;
             List list = (List) o;
             int n = list.size();
+            Perl5Compiler pc = new Perl5Compiler();
             pl = new ArrayList<JSONFilter>();
-            if (pm == null)
-                pm = new Perl5Matcher();
-            pc = new Perl5Compiler();
             for (int i=0; i<n; i++) {
                 o = list.get(i);
                 if (o == null || !(o instanceof Map))
                     continue;
-                filter = new JSONFilter(prefix, (Map) o, pm, pc);
+                filter = new JSONFilter(prefix, (Map) o, pc);
                 if (filter != null)
                     pl.add(filter);
             }
             filters = pl.toArray(new JSONFilter[pl.size()]);
+            pl.clear();
             return filters;
         }
     }
@@ -788,12 +804,14 @@ public class JSONFilter implements Filter<Map> {
      * returns an array of Map with a group of patterns in each of them
      */
     @SuppressWarnings("unchecked")
-    public static Map<String, Object>[] getPatternMaps(String name, Map ph,
+    private static Map<String, Object>[] getPatternMaps(String name, Map ph,
         Perl5Compiler pc) throws MalformedPatternException {
         int i, size = 0;
         Object o;
         List pl;
         Map<String, Object>[] h = new HashMap[0];
+        if (pc == null)
+            pc = new Perl5Compiler();
         if ((o = ph.get(name)) != null) {
             if (o instanceof List) {
                 String str;

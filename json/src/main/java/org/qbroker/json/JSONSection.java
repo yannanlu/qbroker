@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.Iterator;
-import org.apache.oro.text.regex.Perl5Matcher;
 import org.qbroker.common.AssetList;
 import org.qbroker.json.JSON2FmModel;
 import org.qbroker.json.JSON2Map;
@@ -43,7 +42,6 @@ public class JSONSection {
     private String delimiter = ",";
     private Map<String, String> varMap;
     private JSONFilter[] filters;
-    private Perl5Matcher pm = null;
     private int count = 0;
     private int oid = JSON_COPY;
     private boolean hasVariable = false;
@@ -99,10 +97,8 @@ public class JSONSection {
         if (oid == JSON_UNIQ && (o = props.get("keypath")) != null)
             keyPath = (String) o;
 
-        pm = new Perl5Matcher();
-
         // for filters
-        filters = JSONFilter.initFilters(name, "filters", props, pm);
+        filters = JSONFilter.initFilters(name, "filters", props);
         count = filters.length;
     }
 

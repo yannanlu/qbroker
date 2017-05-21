@@ -193,7 +193,7 @@ public class EventAppender implements EventAction {
 
         msgSub = (TextSubstitution[]) map.get("MsgSub");
         if (msgSub != null) {
-            change = EventUtils.getChange(event, msgSub, pm);
+            change = EventUtils.getChange(event, msgSub);
             if (change != null && change.size() <= 0)
                 change = null;
         }
@@ -215,10 +215,10 @@ public class EventAppender implements EventAction {
                         value = (String) attr.get(key);
                     if (value == null)
                         value = "";
-                    headline = template.substitute(pm, key, value, headline);
+                    headline = template.substitute(key, value, headline);
                 }
                 else {
-                    headline = template.substitute(pm, key, "", headline);
+                    headline = template.substitute(key, "", headline);
                 }
             }
         }
@@ -239,10 +239,10 @@ public class EventAppender implements EventAction {
                         value = (String) attr.get(key);
                     if (value == null)
                         value = "";
-                    text = template.substitute(pm, key, value, text);
+                    text = template.substitute(key, value, text);
                 }
                 else if ("serialNumber".equals(key)) {
-                    text = template.substitute(pm, key,
+                    text = template.substitute(key,
                         String.valueOf(serialNumber), text);
                 }
                 else if ("all".equals(key)) {
@@ -254,7 +254,7 @@ public class EventAppender implements EventAction {
                         EventUtils.compact(event, change), text);
                 }
                 else {
-                    text = template.substitute(pm, key, "", text);
+                    text = template.substitute(key, "", text);
                 }
             }
         }
@@ -322,8 +322,24 @@ public class EventAppender implements EventAction {
         pm = null;
         pattern = null;
         if (appender != null) {
-            for (String key : appender.keySet())
-                appender.get(key).clear();
+            Map map;
+            Template temp;
+            TextSubstitution[] tsub;
+            for (String key : appender.keySet()) {
+                map = appender.get(key);
+                temp = (Template) map.remove("Template");
+                if (temp != null)
+                    temp.clear();
+                temp = (Template) map.remove("Summary");
+                if (temp != null)
+                    temp.clear();
+                tsub = (TextSubstitution[]) map.remove("MsgSub");
+                if (tsub != null) {
+                    for (TextSubstitution sub : tsub)
+                        sub.clear();
+                }
+                map.clear();
+            }
             appender.clear();
             appender = null;
         }

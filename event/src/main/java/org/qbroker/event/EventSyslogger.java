@@ -286,7 +286,7 @@ public class EventSyslogger implements EventAction {
                 template = (Template) o;
                 msgSub = (TextSubstitution[]) map.get("MsgSub");
                 if (msgSub != null) {
-                    change = EventUtils.getChange(event, msgSub, pm);
+                    change = EventUtils.getChange(event, msgSub);
                     if (change != null && change.size() <= 0)
                         change = null;
                 }
@@ -305,14 +305,14 @@ public class EventSyslogger implements EventAction {
                             value = (String) attr.get(key);
                         if (value == null)
                             value = "";
-                        text = template.substitute(pm, key, value, text);
+                        text = template.substitute(key, value, text);
                     }
                     else if ("serialNumber".equals(key)) {
-                        text = template.substitute(pm, key,
+                        text = template.substitute(key,
                             String.valueOf(serialNumber), text);
                     }
                     else {
-                        text = template.substitute(pm, key, "", text);
+                        text = template.substitute(key, "", text);
                     }
                 }
             }
@@ -472,8 +472,21 @@ public class EventSyslogger implements EventAction {
         pattern = null;
         packet = null;
         if (logger != null) {
-            for (String key : logger.keySet())
-                logger.get(key).clear();
+            Map map;
+            Object o;
+            TextSubstitution[] tsub;
+            for (String key : logger.keySet()) {
+                map = logger.get(key);
+                o = map.remove("Template");
+                if (o != null && o instanceof Template)
+                    ((Template) o).clear();
+                tsub = (TextSubstitution[]) map.remove("MsgSub");
+                if (tsub != null) {
+                    for (TextSubstitution sub : tsub)
+                        sub.clear();
+                }
+                map.clear();
+            }
             logger.clear();
             logger = null;
         }

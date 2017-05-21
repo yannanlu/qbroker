@@ -16,9 +16,7 @@ import javax.jms.Message;
 import javax.jms.TextMessage;
 import javax.jms.BytesMessage;
 import javax.jms.JMSException;
-import org.apache.oro.text.regex.Pattern;
 import org.apache.oro.text.regex.Perl5Compiler;
-import org.apache.oro.text.regex.Perl5Matcher;
 import org.qbroker.common.Template;
 import org.qbroker.common.TextSubstitution;
 import org.qbroker.json.JSON2Map;
@@ -42,13 +40,11 @@ import org.qbroker.event.Event;
 @SuppressWarnings("unchecked")
 public class JSONFormatter {
     private String name;
-    private Perl5Matcher pm = null;
     private int[] dataType, action;
     private JSONSelector[] selector;
     private Template[] template;
     private TextSubstitution[] substitution;
     private String[] keyPath;
-    private Pattern[] pattern;
     private final static int JSON_GET = 1;
     private final static int JSON_SET = 2;
     private final static int JSON_PARSE = 3;
@@ -75,9 +71,7 @@ public class JSONFormatter {
             throw(new IllegalArgumentException("Name is not well defined"));
         name = (String) o;
 
-        pm = new Perl5Matcher();
         if ((o = props.get("JSONFormatter")) != null && o instanceof List) {
-            Perl5Compiler pc = new Perl5Compiler();
             Map map;
             List list = (List) o;
             int k = list.size();
@@ -117,7 +111,7 @@ public class JSONFormatter {
                 }
 
                 if ((o = map.get("Selector")) != null)
-                    selector[i] = new JSONSelector(name, o, pm, pc);
+                    selector[i] = new JSONSelector(name, o);
 
                 if ((o = map.get("Template")) != null && o instanceof String) {
                     template[i] = new Template((String) o);
@@ -417,12 +411,12 @@ public class JSONFormatter {
         else if (template[id].numberOfFields() <= 0) // static value
             value = template[id].copyText(); 
         else if (isList)
-            value = format((List) obj, msg, template[id], pm);
+            value = format((List) obj, msg, template[id]);
         else
-            value = format((Map) obj, msg, template[id], pm);
+            value = format((Map) obj, msg, template[id]);
 
         if (substitution[id] != null)
-            value = substitution[id].substitute(pm, value);
+            value = substitution[id].substitute(value);
 
         switch (k) {
           case JSON2Map.JSON_NULL:
@@ -565,10 +559,10 @@ public class JSONFormatter {
         if (selector[id] == null) {
             String key = null;
             if (template[id] != null) { // dataField is defined
-                key = (isList) ? format((List) obj, msg, template[id], pm) :
-                    format((Map) obj, msg, template[id], pm);
+                key = (isList) ? format((List) obj, msg, template[id]) :
+                    format((Map) obj, msg, template[id]);
                 if (substitution[id] != null)
-                    key = substitution[id].substitute(pm, key);
+                    key = substitution[id].substitute(key);
             }
 
             if (option >= 0) { // for select and parse
@@ -661,10 +655,10 @@ public class JSONFormatter {
                 int n = list.size();
                 String key = null;
                 if (template[id] != null) { // dataField is defined
-                    key = (isList) ? format((List) obj, msg, template[id], pm):
-                        format((Map) obj, msg, template[id], pm);
+                    key = (isList) ? format((List) obj, msg, template[id]):
+                        format((Map) obj, msg, template[id]);
                     if (substitution[id] != null)
-                        key = substitution[id].substitute(pm, key);
+                        key = substitution[id].substitute(key);
                 }
                 for (int i=n-1; i>=0; i--) {
                     str = String.valueOf(i);
@@ -700,10 +694,10 @@ public class JSONFormatter {
                 int n = list.size();
                 String key = null;
                 if (template[id] != null) { // dataField is defined
-                    key = (isList) ? format((List) obj, msg, template[id], pm):
-                        format((Map) obj, msg, template[id], pm);
+                    key = (isList) ? format((List) obj, msg, template[id]):
+                        format((Map) obj, msg, template[id]);
                     if (substitution[id] != null)
-                        key = substitution[id].substitute(pm, key);
+                        key = substitution[id].substitute(key);
                 }
                 for (int i=n-1; i>=0; i--) {
                     o = list.get(i);
@@ -790,9 +784,9 @@ public class JSONFormatter {
                     o = list.get(i);
                     if (o == null || o instanceof Map || o instanceof List)
                         continue;
-                    str = format(o.toString(), msg, template[id], pm);
+                    str = format(o.toString(), msg, template[id]);
                     if (substitution[id] != null)
-                        str = substitution[id].substitute(pm, str);
+                        str = substitution[id].substitute(str);
                     list.set(i, str);
                     k ++;
                 }
@@ -887,7 +881,7 @@ public class JSONFormatter {
                             map.clear();
                             continue;
                         }
-                        str = format(map, msg, template[id], pm);
+                        str = format(map, msg, template[id]);
                         if (substitution[id] != null)
                             str = substitution[id].substitute(str);
                         if (strBuf.length() > 0)
@@ -984,10 +978,10 @@ public class JSONFormatter {
             if (o == null) // got nothing
                 return null;
             if (template[id] != null) try { // set the property
-                String key=(isList) ? format((List) obj, msg, template[id], pm):
-                    format((Map) obj, msg, template[id], pm);
+                String key=(isList) ? format((List) obj, msg, template[id]):
+                    format((Map) obj, msg, template[id]);
                 if (substitution[id] != null)
-                    key = substitution[id].substitute(pm, key);
+                    key = substitution[id].substitute(key);
                 MessageUtils.setProperty(key, str, msg);
             }
             catch (JMSException e) {
@@ -1022,10 +1016,10 @@ public class JSONFormatter {
                 return null;
             str = "0";
             if (template[id] != null) try { // set the property
-                String key=(isList) ? format((List) obj, msg, template[id], pm):
-                    format((Map) obj, msg, template[id], pm);
+                String key=(isList) ? format((List) obj, msg, template[id]):
+                    format((Map) obj, msg, template[id]);
                 if (substitution[id] != null)
-                    key = substitution[id].substitute(pm, key);
+                    key = substitution[id].substitute(key);
                 MessageUtils.setProperty(key, str, msg);
             }
             catch (JMSException e) {
@@ -1070,10 +1064,10 @@ public class JSONFormatter {
             if (o == null) // got nothing
                 return null;
             if (template[id] != null) { // set the property
-                String key=(isList) ? format((List) obj, msg, template[id], pm):
-                    format((Map) obj, msg, template[id], pm);
+                String key=(isList) ? format((List) obj, msg, template[id]):
+                    format((Map) obj, msg, template[id]);
                 if (substitution[id] != null)
-                    key = substitution[id].substitute(pm, key);
+                    key = substitution[id].substitute(key);
                 MessageUtils.setProperty(key, str, msg);
             }
             if (dataType[id] != JSON2Map.JSON_UNKNOWN) // for replacement
@@ -1103,10 +1097,10 @@ public class JSONFormatter {
                 return null;
             str = String.valueOf(n-1);
             if (template[id] != null) { // set the property
-                String key=(isList) ? format((List) obj, msg, template[id], pm):
-                    format((Map) obj, msg, template[id], pm);
+                String key=(isList) ? format((List) obj, msg, template[id]):
+                    format((Map) obj, msg, template[id]);
                 if (substitution[id] != null)
-                    key = substitution[id].substitute(pm, key);
+                    key = substitution[id].substitute(key);
                 MessageUtils.setProperty(key, str, msg);
             }
             if (dataType[id] != JSON2Map.JSON_UNKNOWN) // for replacement
@@ -1151,12 +1145,12 @@ public class JSONFormatter {
         else if (template[id].numberOfFields() <= 0) // static value
             value = template[id].copyText(); 
         else if (isList)
-            value = format((List) obj, msg, template[id], pm);
+            value = format((List) obj, msg, template[id]);
         else
-            value = format((Map) obj, msg, template[id], pm);
+            value = format((Map) obj, msg, template[id]);
 
         if (substitution[id] != null)
-            value = substitution[id].substitute(pm, value);
+            value = substitution[id].substitute(value);
 
         if (o instanceof Map && dataType[id] == JSON2Map.JSON_MAP) {
             Map map = (Map) o;
@@ -1406,9 +1400,9 @@ public class JSONFormatter {
                 for (int i=0; i<n; i++) { // generate keys
                     o = list.get(i);
                     if (o != null && o instanceof Map) {
-                        keys[i] = JSON2Map.format((Map) o, template[id], pm);
+                        keys[i] = JSON2Map.format((Map) o, template[id]);
                         if (substitution[id] != null)
-                            keys[i] = substitution[id].substitute(pm, keys[i]);
+                            keys[i] = substitution[id].substitute(keys[i]);
                         pl.add(o);
                     }
                 }
@@ -1419,7 +1413,7 @@ public class JSONFormatter {
                     for (int i=0; i<k; i++) { // fill sorted items
                         for (j=0; j<n; j++) { // look for the same key
                             o = pl.get(j);
-                            key = JSON2Map.format((Map) o, template[id], pm);
+                            key = JSON2Map.format((Map) o, template[id]);
                             if (key.equals(keys[i])) { // found it
                                 list.set(i, o);
                                 pl.remove(j);
@@ -1448,9 +1442,9 @@ public class JSONFormatter {
                 for (int i=0; i<n; i++) { // generate keys
                     o = list.get(i);
                     if (o != null && o instanceof Map) {
-                        keys[i] = JSON2Map.format((List) o, template[id], pm);
+                        keys[i] = JSON2Map.format((List) o, template[id]);
                         if (substitution[id] != null)
-                            keys[i] = substitution[id].substitute(pm, keys[i]);
+                            keys[i] = substitution[id].substitute(keys[i]);
                         pl.add(o);
                     }
                 }
@@ -1461,7 +1455,7 @@ public class JSONFormatter {
                     for (int i=0; i<k; i++) { // fill sorted items
                         for (j=0; j<n; j++) { // look for the same key
                             o = pl.get(j);
-                            key = JSON2Map.format((List) o, template[id], pm);
+                            key = JSON2Map.format((List) o, template[id]);
                             if (key.equals(keys[i])) { // found it
                                 list.set(i, o);
                                 pl.remove(j);
@@ -1566,9 +1560,9 @@ public class JSONFormatter {
                     if (o == null)
                         continue;
                     else if (o instanceof Map) {
-                        key = JSON2Map.format((Map) o, template[id], pm);
+                        key = JSON2Map.format((Map) o, template[id]);
                         if (substitution[id] != null)
-                            key = substitution[id].substitute(pm, key);
+                            key = substitution[id].substitute(key);
                         if (!map.containsKey(key)) {
                             map.put(key, null);
                             if (i > j) {
@@ -1597,9 +1591,9 @@ public class JSONFormatter {
                     if (o == null)
                         continue;
                     else if (o instanceof List) {
-                        key = JSON2Map.format((List) o, template[id], pm);
+                        key = JSON2Map.format((List) o, template[id]);
                         if (substitution[id] != null)
-                            key = substitution[id].substitute(pm, key);
+                            key = substitution[id].substitute(key);
                         if (!map.containsKey(key)) {
                             map.put(key, null);
                             if (i > j) {
@@ -1671,8 +1665,8 @@ public class JSONFormatter {
      * returns a text formatted out of the message and the json payload with
      * the given template
      */
-    public static String format(Map obj, Message msg, Template template,
-        Perl5Matcher pm) throws JMSException {
+    public static String format(Map obj, Message msg, Template template)
+        throws JMSException {
         Object o;
         String key, value, field, text;
         int i, n;
@@ -1707,7 +1701,7 @@ public class JSONFormatter {
                 value = "";
             if (value == null)
                 value = "";
-            text = template.substitute(pm, field, value, text);
+            text = template.substitute(field, value, text);
         }
         return text;
     }
@@ -1716,8 +1710,8 @@ public class JSONFormatter {
      * returns a text formatted out of the message and the json payload with
      * the given template
      */
-    public static String format(List obj, Message msg, Template template,
-        Perl5Matcher pm) throws JMSException {
+    public static String format(List obj, Message msg, Template template)
+        throws JMSException {
         Object o;
         String key, value, field, text;
         int i, n;
@@ -1752,7 +1746,7 @@ public class JSONFormatter {
                 value = "";
             if (value == null)
                 value = "";
-            text = template.substitute(pm, field, value, text);
+            text = template.substitute(field, value, text);
         }
         return text;
     }
@@ -1761,8 +1755,8 @@ public class JSONFormatter {
      * returns a text formatted out of the message and the json string with
      * the given template
      */
-    public static String format(String obj, Message msg, Template template,
-        Perl5Matcher pm) throws JMSException {
+    public static String format(String obj, Message msg, Template template)
+        throws JMSException {
         String key, value, field, text;
         int i, n;
 
@@ -1789,7 +1783,7 @@ public class JSONFormatter {
                 value = "";
             if (value == null)
                 value = "";
-            text = template.substitute(pm, field, value, text);
+            text = template.substitute(field, value, text);
         }
         return text;
     }
@@ -1806,12 +1800,17 @@ public class JSONFormatter {
         if (keyPath != null) {
             for (int i=keyPath.length-1; i>=0; i--) {
                 keyPath[i] = null;
+                if (template[i] != null)
+                    template[i].clear();
                 template[i] = null;
+                if (substitution[i] != null)
+                    substitution[i].clear();
                 substitution[i] = null;
                 if (selector[i] != null)
                     selector[i].clear();
                 selector[i] = null;
             }
+            keyPath = null;
         }
     }
 

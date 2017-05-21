@@ -567,7 +567,7 @@ public class GenericList extends Report {
                     if (MonitorUtils.filter(str, aPatternGroup, pm, true) &&
                         !MonitorUtils.filter(str, xPatternGroup, pm, false)) {
                         if (tsub != null)
-                            dataBlock.set(i, tsub.substitute(pm, str));
+                            dataBlock.set(i, tsub.substitute(str));
                     }
                     else
                         dataBlock.remove(i);
@@ -584,13 +584,13 @@ public class GenericList extends Report {
                         dataBlock.remove(i);
                         continue;
                     }
-                    str = temp.substitute(pm, temp.copyText(), map);
+                    str = temp.substitute(temp.copyText(), map);
                     if (str == null || str.length() <= 0)
                         continue;
                     if (MonitorUtils.filter(str, aPatternGroup, pm, true) &&
                         !MonitorUtils.filter(str, xPatternGroup, pm, false)) {
                         if (tsub != null)
-                            keys[k++] = tsub.substitute(pm, str);
+                            keys[k++] = tsub.substitute(str);
                         else
                             keys[k++] = str;
                     }

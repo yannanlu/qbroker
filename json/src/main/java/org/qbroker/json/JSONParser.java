@@ -90,7 +90,7 @@ public class JSONParser {
             if (tsub != null) {
                 for (int i=0; i<tsub.length; i++)
                     if (tsub[i] != null)
-                        text = tsub[i].substitute(pm, text);
+                        text = tsub[i].substitute(text);
             }
             sr = new StringReader(text);
         }

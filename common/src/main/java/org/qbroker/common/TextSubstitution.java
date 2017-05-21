@@ -20,6 +20,7 @@ import org.apache.oro.text.regex.Substitution;
 import org.apache.oro.text.regex.Perl5Substitution;
 import org.apache.oro.text.regex.Util;
 import org.apache.oro.text.regex.MalformedPatternException;
+import org.qbroker.common.Utils;
 import org.qbroker.common.DataSet;
 import org.qbroker.common.RandomNumber;
 import org.qbroker.common.Evaluation;
@@ -32,10 +33,6 @@ import org.qbroker.common.Evaluation;
  * string and returns the result.  It supports the substitution between
  * LineFeed (\n) and CarrigeReturn (\r). It also supports the substitution like
  * "s/a/c/g" or "s/c/b/g" where c is the hexdecimal char, such as \x02.
- *<br/><br/>
- * If the caller provides its own Perl5Matcher in substitution, there is no
- * MT-Safty protection.  So the caller is responsible for the MT-Safty.
- * Ohterwise, the internal Perl5Matcher will be used with MT-Safty protection.
  *<br/><br/>
  * It also supports expressions in a different way as compared to Perl5.
  * In this case, the substitution expression is supposed to be something like
@@ -89,7 +86,7 @@ import org.qbroker.common.Evaluation;
  */
 
 public class TextSubstitution {
-    private Perl5Matcher pm = null;
+    private static ThreadLocal<Perl5Matcher> lm=new ThreadLocal<Perl5Matcher>();
     private Pattern pattern = null;
     private Substitution substitution = null;
     private SimpleDateFormat dateFormat = null;
@@ -152,7 +149,12 @@ public class TextSubstitution {
         this.name = name;
 
         Perl5Compiler pc = new Perl5Compiler();
-        pm = new Perl5Matcher();
+        Perl5Matcher pm = lm.get();
+        if (pm == null) {
+            pm = new Perl5Matcher();
+            lm.set(pm);
+        }
+
         if (expression == null || expression.length() <= 4)
             throw(new IllegalArgumentException("null or empty expression"));
 
@@ -781,17 +783,13 @@ public class TextSubstitution {
     }
 
     // for multiline support
-    private String mSubstitute(Perl5Matcher matcher, String input, int numSubs){
+    private String mSubstitute(String input, int numSubs) {
         int len, i, j;
         String text;
         StringBuffer buffer;
 
         if (input == null || (i = input.indexOf('\n')) < 0) {
-            if (matcher != null)
-                return Util.substitute(matcher, pattern, substitution, input,
-                    numSubs);
-            else
-                return safeSubstitute(input, numSubs);
+            return safeSubstitute(input, numSubs);
         }
 
         len = 1;
@@ -799,11 +797,7 @@ public class TextSubstitution {
         buffer = new StringBuffer();
         do {
             if (i > j) {
-                if (matcher != null)
-                    text = Util.substitute(matcher, pattern, substitution,
-                        input.substring(j, i), numSubs);
-                else
-                    text = safeSubstitute(input.substring(j, i), numSubs);
+                text = safeSubstitute(input.substring(j, i), numSubs);
                 buffer.append(text);
             }
             buffer.append('\n');
@@ -813,14 +807,14 @@ public class TextSubstitution {
         return buffer.toString();
     }
 
-    public String substitute(Perl5Matcher matcher, String input, int numSubs) {
+    public String substitute(String input, int numSubs) {
         if (input == null)
             return input;
         else if (operation == OP_EXPR)
             return eSubstitute(input, numSubs);
-        else if (matcher != null) {
+        else {
             if ((scope & SCOPE_MLINES) > 0)
-                return mSubstitute(matcher, input, numSubs);
+                return mSubstitute(input, numSubs);
             else if (operation == OP_R2N)
                 return doSearchReplace("\r", "\n", input, numSubs);
             else if (operation == OP_N2R)
@@ -832,49 +826,23 @@ public class TextSubstitution {
             else if (operation == OP_R2RN)
                 return doSearchReplace("\r", "\r\n", input, numSubs);
             else
-                return Util.substitute(matcher, pattern, substitution, input,
-                    numSubs);
-        }
-        else {
-            if ((scope & SCOPE_MLINES) > 0)
-                return mSubstitute((Perl5Matcher) null, input, numSubs);
-            else if (operation == OP_R2N)
-                return doSearchReplace("\r", "\n", input, numSubs);
-            else if (operation == OP_N2R)
-                return doSearchReplace("\n", "\r", input, numSubs);
-            else if (operation == OP_RN2N)
-                return doSearchReplace("\r\n", "\n", input, numSubs);
-            else if (operation == OP_N2RN)
-                return doSearchReplace("\n", "\r\n", input, numSubs);
-            else if (operation == OP_R2RN)
-                return doSearchReplace("\r", "\r\n", input, numSubs);
-            else // for MT-Safty
                 return safeSubstitute(input, numSubs);
         }
     }
 
-    public String substitute(Perl5Matcher matcher, String input) {
-        if (operation != OP_EXPR)
-            return substitute(matcher, input, defaultNumSubs);
-        else // for expression support
-            return eSubstitute(input, 0);
-    }
-
-    public String substitute(String input, int numSubs) {
-        if (operation != OP_EXPR)
-            return substitute((Perl5Matcher) null, input, numSubs);
-        else // for expression support
-            return eSubstitute(input, numSubs);
-    }
-
     public String substitute(String input) {
         if (operation != OP_EXPR)
-            return substitute((Perl5Matcher) null, input, defaultNumSubs);
+            return substitute(input, defaultNumSubs);
         else // for expression support
             return eSubstitute(input, 0);
     }
 
-    private synchronized String safeSubstitute(String input, int numSubs) {
+    private String safeSubstitute(String input, int numSubs) {
+        Perl5Matcher pm = lm.get();
+        if (pm == null) {
+            pm = new Perl5Matcher();
+            lm.set(pm);
+        }
         return Util.substitute(pm, pattern, substitution, input, numSubs);
     }
 
@@ -896,7 +864,6 @@ public class TextSubstitution {
 
     public void clear() {
         pattern = null;
-        pm = null;
         substitution = null;
         dateFormat = null;
         dset = null;

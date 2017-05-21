@@ -200,7 +200,7 @@ public class FormattedEventMailer implements EventAction {
 
         msgSub = (TextSubstitution[]) map.get("MsgSub");
         if (msgSub != null) {
-            change = EventUtils.getChange(event, msgSub, pm);
+            change = EventUtils.getChange(event, msgSub);
             if (change != null && change.size() <= 0)
                 change = null;
         }
@@ -221,10 +221,10 @@ public class FormattedEventMailer implements EventAction {
                     value = (String) attr.get(key);
                 if (value == null)
                     value = "";
-                subject = template.substitute(pm, key, value, subject);
+                subject = template.substitute(key, value, subject);
             }
             else {
-                subject = template.substitute(pm, key, "", subject);
+                subject = template.substitute(key, "", subject);
             }
         }
 
@@ -243,10 +243,10 @@ public class FormattedEventMailer implements EventAction {
                     value = (String) attr.get(key);
                 if (value == null)
                     value = "";
-                text = template.substitute(pm, key, value, text);
+                text = template.substitute(key, value, text);
             }
             else if ("serialNumber".equals(key)) {
-                text = template.substitute(pm, key,
+                text = template.substitute(key,
                     String.valueOf(serialNumber), text);
             }
             else if ("all".equals(key)) {
@@ -311,8 +311,23 @@ public class FormattedEventMailer implements EventAction {
         pattern = null;
         mailer = null;
         if (sender != null) {
-            for (String key : sender.keySet())
-                sender.get(key).clear();
+            Template temp;
+            TextSubstitution[] tsub;
+            Map map;
+            for (String key : sender.keySet()) {
+                map = sender.get(key);
+                temp = (Template) map.remove("Subject");
+                if (temp != null)
+                temp = (Template) map.remove("Template");
+                if (temp != null)
+                    temp.clear();
+                tsub = (TextSubstitution[]) map.remove("MsgSub");
+                if (tsub != null) {
+                    for (TextSubstitution sub : tsub)
+                        sub.clear();
+                }
+                map.clear();
+            }
             sender.clear();
             sender = null;
         }

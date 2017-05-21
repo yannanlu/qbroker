@@ -201,7 +201,7 @@ public class ReportQuery extends Report {
                 new StringBuffer(Event.dateFormat(new Date(currentTime)));
 
             if (template != null) {
-                line = template.substitute(pm, template.copyText(), report);
+                line = template.substitute(template.copyText(), report);
                 if (line != null)
                     strBuf.append(" " + line);
             }

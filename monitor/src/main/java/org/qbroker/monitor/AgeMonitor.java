@@ -761,7 +761,7 @@ public class AgeMonitor extends Monitor {
                         strBuf.insert(0, new char[] {'0', '-'});
                 }
                 str = (tSub == null) ? strBuf.toString() :
-                    tSub.substitute(pm, strBuf.toString());
+                    tSub.substitute(strBuf.toString());
                 if (isNumber)
                     date = new Date(Long.parseLong(str));
                 else

@@ -462,7 +462,7 @@ public class MessageFilter implements Filter<Message> {
      * A pattern group represents all the patterns in an array member.
      * The default value is used to evaluate an empty pattern group.
      */
-    public static boolean evaluate(String msgStr, Pattern[][] patterns,
+    private static boolean evaluate(String msgStr, Pattern[][] patterns,
         Perl5Matcher pm, boolean def) {
         int i, j, n, size;
         Pattern[] p;
@@ -498,7 +498,7 @@ public class MessageFilter implements Filter<Message> {
      * A pattern group represents all the patterns in a Map.
      * The default value is used to evaluate an empty pattern group.
      */
-    public static boolean evaluate(Message msg, Map<String, Object>[] props,
+    private static boolean evaluate(Message msg, Map<String, Object>[] props,
         Perl5Matcher pm, boolean def) {
         Pattern p;
         DataSet d;
@@ -568,9 +568,9 @@ public class MessageFilter implements Filter<Message> {
             return -1;
 
         if (message instanceof MapMessage) // for MapMessage
-            return format((MapMessage) message, pm);
+            return format((MapMessage) message);
         else
-            return format(message, buffer, pm);
+            return format(buffer, message);
     }
 
     /**
@@ -578,8 +578,7 @@ public class MessageFilter implements Filter<Message> {
      * to the predefined templates and substitutions. It returns number of
      * fields modified upon success or throws JMSException otherwise.
      */
-    private int format(Message msg, byte[] buffer, Perl5Matcher pm)
-        throws JMSException{
+    private int format(byte[] buffer, Message msg) throws JMSException{
         int i, j, k, n, count;
         String text;
         StringBuffer strBuf = null;
@@ -600,7 +599,7 @@ public class MessageFilter implements Filter<Message> {
                 if (temp[i][j] != null) try { // format
                     if (j > 0)
                         strBuf.append(text);
-                    text = MessageUtils.format(msg, buffer, temp[i][j], pm);
+                    text = MessageUtils.format(msg, buffer, temp[i][j]);
                 }
                 catch (JMSException e) {
                     String str = " at " + i + "/" + j + " ";
@@ -619,7 +618,7 @@ public class MessageFilter implements Filter<Message> {
                     text = "";
 
                 if (tsub[i][j] != null) try { // substitute
-                    String str = tsub[i][j].substitute(pm, text);
+                    String str = tsub[i][j].substitute(text);
                     if (str != null) // sub should not return null
                         text = str;
                     else
@@ -680,7 +679,7 @@ public class MessageFilter implements Filter<Message> {
      * Upon success, it returns the number of fields modified.  Otherwise, it
      * throws JMSException with detailed error.
      */
-    private int format(MapMessage msg, Perl5Matcher pm) throws JMSException {
+    private int format(MapMessage msg) throws JMSException {
         int i, j, k, n, count;
         String text;
         StringBuffer strBuf = null;
@@ -702,7 +701,7 @@ public class MessageFilter implements Filter<Message> {
                 if (temp[i][j] != null) try { // format
                     if (j > 0)
                         strBuf.append(text);
-                    text = MessageUtils.format(msg, mapKey[i], temp[i][j], pm);
+                    text = MessageUtils.format(msg, mapKey[i], temp[i][j]);
                 }
                 catch (JMSException e) {
                     String str = " at " + i + "/" + j + " ";
@@ -721,7 +720,7 @@ public class MessageFilter implements Filter<Message> {
                     text = "";
 
                 if (tsub[i][j] != null) try { // substitute
-                    String str = tsub[i][j].substitute(pm, text);
+                    String str = tsub[i][j].substitute(text);
                     if (str != null) // sub should not return null
                         text = str;
                     else
@@ -863,15 +862,21 @@ public class MessageFilter implements Filter<Message> {
                 dataField[i] = null;
                 mapKey[i] = null;
                 if (temp[i] != null) try {
-                    for (int j=temp[i].length-1; j>=0; j--)
+                    for (int j=temp[i].length-1; j>=0; j--) {
+                        if (temp[i][j] != null)
+                            temp[i][j].clear();
                         temp[i][j] = null;
+                    }
                 }
                 catch (Exception e) {
                 }
                 temp[i] = null;
                 if (tsub[i] != null) try {
-                    for (int j=tsub[i].length-1; j>=0; j--)
+                    for (int j=tsub[i].length-1; j>=0; j--) {
+                        if (tsub[i][j] != null)
+                            tsub[i][j].clear();
                         tsub[i][j] = null;
+                    }
                 }
                 catch (Exception e) {
                 }

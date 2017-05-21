@@ -10,7 +10,6 @@ import java.util.Iterator;
 import java.util.Date;
 import java.text.SimpleDateFormat;
 import java.text.ParsePosition;
-import org.apache.oro.text.regex.Perl5Matcher;
 import org.qbroker.common.Utils;
 import org.qbroker.common.RunCommand;
 import org.qbroker.common.TimeoutException;
@@ -699,7 +698,7 @@ public class EventUtils {
      * returns a Map contains changes only from the substitution
      */
     public static Map<String, Object> getChange(Event event,
-        TextSubstitution[] sub, Perl5Matcher pm) {
+        TextSubstitution[] sub) {
         int i, n;
         String key, value;
         Map<String, Object> change = new HashMap<String, Object>();
@@ -718,18 +717,11 @@ public class EventUtils {
                 value = (String) change.get(key);
             else
                 value = (String) attr.get(key);
-            if (pm == null)
-                value = sub[i].substitute(value);
-            else
-                value = sub[i].substitute(pm, value);
+            value = sub[i].substitute(value);
             change.put(key, value);
         }
 
         return change;
-    }
-
-    public static Map getChange(Event event, TextSubstitution[] sub) {
-        return getChange(event, sub, null);
     }
 
     public static Event duplicate(Event event) {

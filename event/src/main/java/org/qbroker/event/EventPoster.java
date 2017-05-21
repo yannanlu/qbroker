@@ -34,7 +34,6 @@ public class EventPoster implements EventAction {
     private String type;
     private String description;
     private String category;
-    private Template queryTemplate = null;
     private String uri, host = null;
     private HTTPConnector conn = null;
     private long serialNumber;
@@ -103,7 +102,7 @@ public class EventPoster implements EventAction {
         conn = new HTTPConnector(ph);
         isPost = conn.isPost();
 
-        if ((o = ph.get("QueryTemplate")) != null) {
+        if ((o = ph.get("QueryTemplate")) != null && o instanceof String) {
             value = EventUtils.substitute((String) o, template);
             map = new HashMap<String, Object>();
             temp = new Template(value);
@@ -120,13 +119,10 @@ public class EventPoster implements EventAction {
             }
             poster.put("Default", map);
         }
-        else if ((o = ph.get("Default")) != null && o instanceof Map) {
-            o = ((Map) o).get("Substitution");
-            if (o != null && o instanceof List)
-                msgSub = EventUtils.initSubstitutions((List) o);
-            else if ((o = ph.get("Substitution")) != null &&
-                o instanceof List)
-                msgSub = EventUtils.initSubstitutions((List) o);
+
+        if (msgSub == null && (o = ph.get("Substitution")) != null &&
+            o instanceof List) { // for default msgSub
+            msgSub = EventUtils.initSubstitutions((List) o);
         }
 
         Iterator iter = ph.keySet().iterator();
@@ -154,7 +150,7 @@ public class EventPoster implements EventAction {
                 map.put("Template", temp);
                 map.put("Fields", temp.getAllFields());
                 o = ((Map) o).get("Substitution");
-                if (o != null && o instanceof List) // override
+                if (o != null && o instanceof List) // for override
                     map.put("MsgSub", EventUtils.initSubstitutions((List) o));
                 else if (o == null) // use the default
                     map.put("MsgSub", msgSub);
@@ -189,7 +185,7 @@ public class EventPoster implements EventAction {
                 String[] allFields = (String[]) map.get("Fields");
                 msgSub = (TextSubstitution[]) map.get("MsgSub");
                 if (msgSub != null) {
-                    change = EventUtils.getChange(event, msgSub, pm);
+                    change = EventUtils.getChange(event, msgSub);
                     if (change != null && change.size() <= 0)
                         change = null;
                 }
@@ -206,14 +202,14 @@ public class EventPoster implements EventAction {
                             value = (String) attr.get(key);
                         if (value == null)
                             value = "";
-                        line = template.substitute(pm, key, value, line);
+                        line = template.substitute(key, value, line);
                     }
                     else if ("serialNumber".equals(key)) {
-                        line = template.substitute(pm, key,
+                        line = template.substitute(key,
                             String.valueOf(serialNumber), line);
                     }
                     else {
-                        line = template.substitute(pm, key, "", line);
+                        line = template.substitute(key, "", line);
                     }
                 }
             }
@@ -273,7 +269,7 @@ public class EventPoster implements EventAction {
                 String[] allFields = (String[]) map.get("Fields");
                 msgSub = (TextSubstitution[]) map.get("MsgSub");
                 if (msgSub != null) {
-                    change = EventUtils.getChange(event, msgSub, pm);
+                    change = EventUtils.getChange(event, msgSub);
                     if (change != null && change.size() <= 0)
                         change = null;
                 }
@@ -292,14 +288,14 @@ public class EventPoster implements EventAction {
                             value = (String) attr.get(key);
                         if (value == null)
                             value = "";
-                        url = template.substitute(pm, key, value, url);
+                        url = template.substitute(key, value, url);
                     }
                     else if ("serialNumber".equals(key)) {
-                        url = template.substitute(pm, key,
+                        url = template.substitute(key,
                             String.valueOf(serialNumber), url);
                     }
                     else {
-                        url = template.substitute(pm, key, "", url);
+                        url = template.substitute(key, "", url);
                     }
                 }
                 if (change != null)
@@ -372,13 +368,22 @@ public class EventPoster implements EventAction {
             conn.close();
             conn = null;
         }
-        if (queryTemplate != null) {
-            queryTemplate.clear();
-            queryTemplate = null;
-        }
         if (poster != null) {
-            for (String key : poster.keySet())
-                poster.get(key).clear();
+            Map map;
+            Object o;
+            TextSubstitution[] tsub;
+            for (String key : poster.keySet()) {
+                map = poster.get(key);
+                o = map.remove("Template");
+                if (o != null && o instanceof Template)
+                    ((Template) o).clear();
+                tsub = (TextSubstitution[]) map.remove("MsgSub");
+                if (tsub != null) {
+                    for (TextSubstitution sub : tsub)
+                        sub.clear();
+                }
+                map.clear();
+            }
             poster.clear();
             poster = null;
         }
