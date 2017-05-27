@@ -18,6 +18,7 @@ import org.qbroker.common.Template;
 import org.qbroker.common.TimeWindows;
 import org.qbroker.common.CollectibleCells;
 import org.qbroker.monitor.ConfigList;
+import org.qbroker.jms.MessageFilter;
 import org.qbroker.jms.MessageUtils;
 import org.qbroker.jms.JMSEvent;
 import org.qbroker.jms.TextEvent;
@@ -51,7 +52,8 @@ import org.qbroker.event.Event;
  * with the lowest rule ID will be the winner.  Therefore each ruleset defines
  * a unique event group.  The ruleset also defines a summary list for the
  * merger to generate a new event and to attach the summary of all the events
- * in the group.
+ * in the group. All the summary events will get formatted if the post
+ * formatter is defined in their rulesets.
  *<br/><br/>
  * EventCorrelator always creates two extra rulesets.   The first one is nohit
  * ruleset for those events without any matches.  The other is candidate
@@ -403,6 +405,15 @@ public class EventCorrelator extends Node {
             ruleInfo[RULE_OID] = assetList.getID(preferredOutName);
         }
         else { // for EventSummary
+            // init post formatter for summary events only
+            if ((o = ph.get("FormatterArgument")) != null && o instanceof List){
+                Map<String, Object> hmap = new HashMap<String, Object>();
+                hmap.put("Name", ruleName);
+                hmap.put("FormatterArgument", o);
+                hmap.put("ResetOption", "0");
+                rule.put("Formatter", new MessageFilter(hmap));
+                hmap.clear();
+            }
             ruleInfo[RULE_PID] = TYPE_ACTION;
             rule.put("Merger", new EventSummary(ph));
             ruleInfo[RULE_OID] = outLinkMap[BYPASS_OUT];
@@ -410,6 +421,7 @@ public class EventCorrelator extends Node {
         outInfo = assetList.getMetaData((int) ruleInfo[RULE_OID]);
         outInfo[OUT_NRULE] ++;
         outInfo[OUT_ORULE] ++;
+
 
         // for StringProperty
         if ((o = ph.get("StringProperty")) != null && o instanceof Map) {
@@ -687,7 +699,7 @@ public class EventCorrelator extends Node {
             currentTime = System.currentTimeMillis();
             if (currentTime - previousTime >= sessionTimeout) {
                 i = correlate(currentTime, ruleMap, filter, eventList);
-                size = flush(currentTime, in, out[0], 0, eventList);
+                size = flush(currentTime, in, out[0], 0, eventList, buffer);
                 if (size > 0)
                     new Event(Event.INFO, name + ": flushed " +
                         size + " msgs due to overtime").send();
@@ -800,7 +812,7 @@ public class EventCorrelator extends Node {
                 i = size - sessionSize;
                 currentTime = System.currentTimeMillis();
                 i = correlate(currentTime, ruleMap, filter, eventList);
-                size = flush(currentTime, in, out[0], 0, eventList);
+                size = flush(currentTime, in, out[0], 0, eventList, buffer);
                 if (size > 0)
                     new Event(Event.INFO, name + ": flushed " +
                         size + " msgs due to oversize: " +i).send();
@@ -821,10 +833,11 @@ public class EventCorrelator extends Node {
      * returning the number of events flushed.
      */
     private int flush(long currentTime, XQueue in, XQueue out, int oid,
-        List<Event> eventList) {
+        List<Event> eventList, byte[] buffer) {
         int i, n, cid, rid, dmask, count = 0, dspBody;
         Map rule;
         EventMerger merger;
+        MessageFilter filter;
         String[] pn;
         long[] ruleInfo;
         String ruleName;
@@ -852,11 +865,12 @@ public class EventCorrelator extends Node {
             rule = (Map) ruleList.get(rid);
             pn = (String[]) rule.get("PropertyName");
             merger = (EventMerger) rule.get("Merger");
+            filter = (MessageFilter) rule.get("Formatter");
             try {
                 event = merger.merge(currentTime, eventGroup);
             }
             catch (Exception e) {
-                new Event(Event.WARNING, name + ": " + ruleName +
+                new Event(Event.ERR, name + ": " + ruleName +
                     " failed to merge: " + Event.traceStack(e)).send();
                 ruleInfo[RULE_SIZE] = 0;
                 continue;
@@ -879,6 +893,14 @@ public class EventCorrelator extends Node {
             catch (Exception e) {
                 new Event(Event.WARNING, name + ": " + ruleName +
                     " failed to display msg: " + e.toString()).send();
+            }
+
+            if (filter != null && filter.hasFormatter()) try { // post format
+                filter.format((TextEvent) event, buffer);
+            }
+            catch (Exception e) {
+                new Event(Event.ERR, name + ": " + ruleName +
+                    " failed to format the msg: " + Event.traceStack(e)).send();
             }
 
             // flush the summary event

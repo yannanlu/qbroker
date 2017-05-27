@@ -64,7 +64,8 @@ import org.qbroker.event.Event;
  * to any rulesets, failure for the messages failed at the aggregations.
  * AggregateNode will create a new message, a TextMessage, as the result of
  * the aggregation for each unique key in every session.  These new messages
- * will be flushed to the outlink of done when their sessions terminate.
+ * will be flushed to the outlink of done when their sessions terminate. They
+ * will be formatted right before the flush if the post formatter are defined.
  *<br/><br/>
  * AggregateNode contains a number of predefined rulesets.  These rulesets
  * categorize messages into non-overlapping groups.  Therefore, each ruleset
@@ -1545,7 +1546,7 @@ public class AggregateNode extends Node {
                     " failed to display msg: " + e.toString()).send();
             }
 
-            if (filter != null && filter.hasFormatter()) try {
+            if (filter != null && filter.hasFormatter()) try { // post format
                 filter.format(inMessage, buffer);
             }
             catch (Exception e) {

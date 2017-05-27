@@ -21,8 +21,8 @@ import org.qbroker.common.TextSubstitution;
 import org.qbroker.common.QuickCache;
 import org.qbroker.common.CollectibleCells;
 import org.qbroker.monitor.ConfigList;
-import org.qbroker.jms.MessageUtils;
 import org.qbroker.jms.MessageFilter;
+import org.qbroker.jms.MessageUtils;
 import org.qbroker.jms.JMSEvent;
 import org.qbroker.jms.TextEvent;
 import org.qbroker.node.Node;
@@ -37,7 +37,7 @@ import org.qbroker.event.Event;
  * according to the rulesets and the value of the aggregated attribute.
  * In case that the state changes up to a certain point, EventMonitor will
  * generate a new JMS event as the escalation.  All escalation events will
- * be routed to the outlink of done.  For all the incoming events, EventMonitor
+ * be routed to the outlink of done. For all the incoming events, EventMonitor
  * routes them into three outlinks: bypass for all the processed incoming
  * events, nohit for those events do not belong to any rulesets, failure for
  * the incoming events failed in the process. However, the outlink of done
@@ -49,6 +49,8 @@ import org.qbroker.event.Event;
  * and an EventSelector to select events for the group.  If PreferredOutLink
  * is defined in the ruleset, it is treated as a bypass ruleset. Otherwise,
  * it will be treated as an escalation ruleset that may generate extra messages.
+ * For those escalation messages, they will get formatted if the post formatter
+ * is defined in their rulesets.
  *<br/><br/>
  * For each incomiong event, EventMonitor will match it against every
  * EventSelectors to single out a ruleset. There are two cases for escalation
@@ -75,13 +77,11 @@ import org.qbroker.event.Event;
  * events kept coming to keep it up to date. If the expected event has not
  * shown up within a given interval, an escalation event will be generated as
  * the escalation with the priority set to EscalationPriority. A list of
- * attribute names is specified in CopiedProperty. Those attributes will be
- * cached from the first incoming event to the escalation event. If Template
- * is also defined in the ruleset, it will be used to format the message body
- * on the escalation event. The tracking session for an existing state can be
- * terminated or reset by an event whose priority is same as the predefined
- * ResetPriority of the ruleset. The timeout escalation ruleset is good to
- * track those alerts fired only once.
+ * attribute names is specified in CopiedProperty. Those attributes cached from
+ * the first incoming event will be copied to the escalation event. The tracking
+ * session for an existing state can be terminated or reset by an event whose
+ * priority is same as the predefined ResetPriority of the ruleset. The timeout
+ * escalation ruleset is good to track those alerts fired only once.
  *<br/><br/>
  * EventMonitor always creates one extra ruleset, nohit. The ruleset of nohit
  * is for those events not hitting any patterns. Its RULE_PEND field is used to
@@ -361,6 +361,7 @@ public class EventMonitor extends Node {
             ruleInfo[RULE_TTL] = 1000 * Integer.parseInt((String) o);
 
         rule.put("Filter", new EventSelector(ph));
+
         if (preferredOutName != null) { // for bypass
             ruleInfo[RULE_OID] = assetList.getID(preferredOutName);
             ruleInfo[RULE_PID] = TYPE_BYPASS;
@@ -395,6 +396,16 @@ public class EventMonitor extends Node {
             if (tw != null)
                 rule.put("TimeWindows", tw);
 
+            // init post formatter for escalation events only
+            if ((o = ph.get("FormatterArgument")) != null && o instanceof List){
+                Map<String, Object> hmap = new HashMap<String, Object>();
+                hmap.put("Name", ruleName);
+                hmap.put("FormatterArgument", o);
+                hmap.put("ResetOption", "0");
+                rule.put("Formatter", new MessageFilter(hmap));
+                hmap.clear();
+            }
+
             // escalation order stored in RULE_EXTRA
             ruleInfo[RULE_EXTRA] = escalator.getEscalationOrder();
 
@@ -417,10 +428,14 @@ public class EventMonitor extends Node {
             if ((o = ph.get("KeySubstitution")) != null && o instanceof String)
                 rule.put("KeySubstitution", new TextSubstitution((String) o));
 
-            if ((o = ph.get("Template")) != null && o instanceof String) {
-                rule.put("Template", new Template((String) o));
-                if ((o = ph.get("Substitution")) != null && o instanceof String)
-                    rule.put("Substitution", new TextSubstitution((String) o));
+            // init post formatter for escalation events only
+            if ((o = ph.get("FormatterArgument")) != null && o instanceof List){
+                Map<String, Object> hmap = new HashMap<String, Object>();
+                hmap.put("Name", ruleName);
+                hmap.put("FormatterArgument", o);
+                hmap.put("ResetOption", "0");
+                rule.put("Formatter", new MessageFilter(hmap));
+                hmap.clear();
             }
 
             // EscalationPriority stored in EXTRA
@@ -569,7 +584,7 @@ public class EventMonitor extends Node {
             }
             currentTime = System.currentTimeMillis();
             if (currentTime - previousTime >= heartbeat) {
-                if (update(currentTime, in, out[0], 0) > 0) // check timeouts
+                if(update(currentTime, in, out[0], 0, buffer)>0)//check timeouts
                     currentTime = System.currentTimeMillis();
                 previousTime = currentTime;
             }
@@ -737,7 +752,8 @@ public class EventMonitor extends Node {
                         int k;
                         oid = RESULT_OUT;
                         // use cid to track the flushed msg externally
-                        k =flush(currentTime, cid, rid, msg, in, out[oid], oid);
+                        k = flush(currentTime, cid, rid, msg, in, out[oid], oid,
+                            buffer);
                         if (k <= 0)
                             new Event(Event.ERR, name + ": " + ruleName +
                                 " failed to flush escalation msg to " +
@@ -817,7 +833,7 @@ public class EventMonitor extends Node {
                 count ++;
             if (ruleInfo[RULE_EXTRA] == 0 && msg != null) {
                 oid = RESULT_OUT;
-                i = flush(currentTime, -1, rid, msg, in, out[oid], oid);
+                i = flush(currentTime, -1, rid, msg, in, out[oid], oid, buffer);
                 if (i <= 0)
                     new Event(Event.ERR, name + ": " + ruleName +
                         " failed to flush escalation msg to " + oid +
@@ -841,10 +857,11 @@ public class EventMonitor extends Node {
      * delivery externally. There is no rollback to cid in any case.
      */
     private int flush(long currentTime, int cid, int rid, TextEvent msg,
-        XQueue in, XQueue out, int oid) {
+        XQueue in, XQueue out, int oid, byte[] buffer) {
         int i, dmask;
         long[] ruleInfo;
         String ruleName;
+        MessageFilter filter;
         Map rule;
         String[] pn;
 
@@ -861,6 +878,7 @@ public class EventMonitor extends Node {
         ruleInfo = ruleList.getMetaData(rid);
         rule = (Map) ruleList.get(rid);
         pn = (String[]) rule.get("PropertyName");
+        filter = (MessageFilter) rule.get("Formatter");
         // retrieve displayMask from RULE_OPTION
         dmask = (int) ruleInfo[RULE_OPTION];
 
@@ -871,6 +889,14 @@ public class EventMonitor extends Node {
         catch (Exception e) {
             new Event(Event.WARNING, name + ": " + ruleName +
                 " failed to display msg: " + e.toString()).send();
+        }
+
+        if (filter != null && filter.hasFormatter()) try { // post format
+            filter.format(msg, buffer);
+        }
+        catch (JMSException e) {
+            new Event(Event.ERR, name + ": " + ruleName +
+                " failed on post format: " + Event.traceStack(e)).send();
         }
 
         // flush the escalation msg without rolling back to cid
@@ -884,14 +910,13 @@ public class EventMonitor extends Node {
     }
 
     /* checks escalators for session timeouts and resets their sessions */
-    private int update(long currentTime, XQueue in, XQueue out, int oid) {
+    private int update(long currentTime, XQueue in, XQueue out, int oid,
+        byte[] buffer) {
         StringBuffer strBuf = null;
         Browser browser;
         EventEscalation escalator;
         QuickCache cache;
         TextEvent msg;
-        Template temp;
-        TextSubstitution tsub;
         Map rule = null, map;
         int[] meta;
         long[] ri;
@@ -929,8 +954,6 @@ public class EventMonitor extends Node {
             count ++;
             if (m < 0)
                 m = 0;
-            temp = (Template) rule.get("Template");
-            tsub = (TextSubstitution) rule.get("Substitution");
             mtime = currentTime;
             k = 0;
             n = 0;
@@ -961,16 +984,7 @@ public class EventMonitor extends Node {
                 msg.setAttribute("EscalationKey", key);
                 for (Object obj : map.keySet())
                     msg.setAttribute((String) obj, (String) map.get(obj));
-                if (temp != null) try {
-                    String text = EventUtils.format(msg, temp);
-                    if (tsub != null)
-                        text = tsub.substitute(text);
-                    if (text != null && text.length() > 0)
-                        msg.setText(text);
-                }
-                catch (Exception e) {
-                }
-                i = flush(currentTime, -1, rid, msg, in, out, oid);
+                i = flush(currentTime, -1, rid, msg, in, out, oid, buffer);
                 n ++;
                 if (i <= 0)
                     new Event(Event.ERR, name + ": " + ruleList.getKey(rid) +
@@ -1098,6 +1112,7 @@ public class EventMonitor extends Node {
                 k = (int) state[MSG_RID];
                 ruleInfo = ruleList.getMetaData(k);
                 if (ruleInfo[RULE_EXTRA] < 0 && o instanceof TextEvent) {
+                    byte[] buffer = new byte[4096];
                     mask = in.getGlobalMask();
                     if(ruleInfo[RULE_GID] > 0 && (mask & XQueue.STANDBY) == 0 &&
                         (mask & XQueue.KEEP_RUNNING) > 0) try { // for delay
@@ -1107,7 +1122,7 @@ public class EventMonitor extends Node {
                     }
                     asset = (Object[]) assetList.get(RESULT_OUT);
                     int i = flush(currentTime, -1, k, (TextEvent) o, in,
-                        (XQueue) asset[ASSET_XQ], RESULT_OUT);
+                        (XQueue) asset[ASSET_XQ], RESULT_OUT, buffer);
                     if (i <= 0)
                         new Event(Event.ERR, name + ": " + ruleList.getKey(k) +
                             " failed to flush escalation msg at " + mid).send();
@@ -1209,6 +1224,7 @@ public class EventMonitor extends Node {
             ruleInfo = ruleList.getMetaData(rid);
             // check for escalation msg
             if (ruleInfo[RULE_EXTRA] < 0 && o instanceof TextEvent) {
+                byte[] buffer = new byte[4096];
                 if (ruleInfo[RULE_GID] > wt) { // for delay
                     int mask = in.getGlobalMask();
                     if ((mask & XQueue.KEEP_RUNNING) > 0 &&
@@ -1222,7 +1238,7 @@ public class EventMonitor extends Node {
                 }
                 asset = (Object[]) assetList.get(RESULT_OUT);
                 int i = flush(t, -1, rid, (TextEvent) o, in,
-                    (XQueue) asset[ASSET_XQ], RESULT_OUT);
+                    (XQueue) asset[ASSET_XQ], RESULT_OUT, buffer);
                 if (i <= 0)
                     new Event(Event.ERR, name + ": " + ruleList.getKey(rid) +
                         " failed to flush escalation msg to " + RESULT_OUT +

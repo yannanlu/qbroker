@@ -15,7 +15,6 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.StringReader;
-import java.io.UnsupportedEncodingException;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.text.ParsePosition;
@@ -664,7 +663,7 @@ public class MessageUtils {
                     if (bytesRead == 0)
                         return msgStr;
 
-                    strBuf.append(new String(buffer,0,bytesRead,"ISO-8859-1"));
+                    strBuf.append(new String(buffer, 0, bytesRead));
                 }
             }
             catch (NullPointerException e) { // hack for the bug in JMS
@@ -672,7 +671,7 @@ public class MessageUtils {
                     msgStr = strBuf.toString();
                 return msgStr;
             }
-            catch (UnsupportedEncodingException e) {
+            catch (Exception e) {
                 throw(new JMSException(e.toString()));
             }
             msgStr = strBuf.toString();
@@ -692,9 +691,9 @@ public class MessageUtils {
                 if (!(o instanceof byte[])) // assuming it is String
                     strBuf.append(o.toString());
                 else try {
-                    strBuf.append(new String((byte[]) o, "ISO-8859-1"));
+                    strBuf.append(new String((byte[]) o));
                 }
-                catch (UnsupportedEncodingException e) {
+                catch (Exception e) {
                     throw(new JMSException(e.toString()));
                 }
                 strBuf.append("</" + name + ">");
