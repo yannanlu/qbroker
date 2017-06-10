@@ -5,7 +5,13 @@ package org.qbroker.flow;
 /**
  * V1.2.1 (2017/05/27): added the support of post formatters to EventMonitor
  * and EventCorrelator for newly generated events, removed hardcoded String
- * encoding from MessageUtils
+ * encoding from MessageUtils, fixed a bug on the request path in QServlet
+ * introduced in release 1.1.7, changed to display the new msg body in
+ * FormatNode, fixed a deep bug in Msg2Text.format(Message) that it failed
+ * to catch exceptions due to calling overloaded API, fixed a bug in both
+ * postable() and collectible() of EventUtils that failed to handle null
+ * attributes, added a check on null value of the input string to the method
+ * of searchAndReplace() in Utils.
  *<br/>
  * V1.2.0 (2017/05/21): changed Perl5Matcher from a instance object to a local
  * object got from ThreadLocal in Template and TextSubstitution, removed the
@@ -141,7 +147,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V 1.2.1 2017/05/27 09:31:23";
+    private static String ReleaseTAG = "QBroker V 1.2.1 2017/05/27 11:07:45";
 
     public ReleaseTag() {
     }

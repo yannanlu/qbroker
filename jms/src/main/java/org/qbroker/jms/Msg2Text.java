@@ -119,7 +119,7 @@ public class Msg2Text {
      * It formatts the message based on the default ResultType, the predefined
      * template and the repeated template.  Upon success, it loads the
      * formatted text into the message body and returns null to indicate OK.
-     * Otherwise, it returns a error text. 
+     * Otherwise, it returns an error text.
      *<br/><br/>
      * It can be used as the plugin formatter in FormatNode.
      */
@@ -129,7 +129,13 @@ public class Msg2Text {
             return "null message";
 
         try {
-            text = format(defaultType, msg);
+            if ((defaultType & Utils.RESULT_XML) > 0)
+                text = getXML(msg, new byte[4096]);
+            else if ((defaultType & Utils.RESULT_JSON) > 0)
+                text = getJSON(msg, new byte[4096]);
+            else
+                text = getText(defaultType, msg, new byte[4096]);
+
             msg.clearBody();
             if (msg instanceof TextMessage) {
                 ((TextMessage) msg).setText(text);
@@ -141,18 +147,17 @@ public class Msg2Text {
                 return "message type not supported";
             }
         }
-        catch (JMSException e) {
-            return Event.traceStack(e);
-        }
         catch (Exception e) {
             return Event.traceStack(e);
         }
         return null;
     }
 
-    /** returns a formatted text of the message according to the type */
+    /**
+     * returns a formatted text of the message according to the type or
+     * null in case of failure
+     */
     public String format(int type, Message msg) {
-        byte[] buffer = new byte[4096];
         String text = null;
         if (msg == null)
             return null;
@@ -162,18 +167,16 @@ public class Msg2Text {
 
         try {
             if ((type & Utils.RESULT_XML) > 0)
-                text = getXML(msg, buffer);
+                text = getXML(msg, new byte[4096]);
             else if ((type & Utils.RESULT_JSON) > 0)
-                text = getJSON(msg, buffer);
+                text = getJSON(msg, new byte[4096]);
             else
-                text = getText(type, msg, buffer);
+                text = getText(type, msg, new byte[4096]);
         }
-        catch (JMSException e) {
+        catch (Exception e) { // failure
             text = null;
         }
-        catch (Exception e) {
-            text = null;
-        }
+
         return text;
     }
 
@@ -189,7 +192,7 @@ public class Msg2Text {
         if (msg == null)
             return null;
 
-        if ((type & Utils.RESULT_COLLECTABLE) > 0 ||
+        if ((type & Utils.RESULT_COLLECTIBLE) > 0 ||
             (type & Utils.RESULT_POSTABLE) > 0) { // for event
             priority = msg.getJMSPriority();
             str = msg.getStringProperty("priority");
@@ -201,7 +204,8 @@ public class Msg2Text {
             else if ((type & Utils.RESULT_POSTABLE) > 0)
                 text = EventUtils.postable((Event) msg);
             else
-                text = EventUtils.collectible((Event) msg);
+                text = zonedDateFormat.format(new Date(msg.getJMSTimestamp()))+
+                    " " + myIP + " " + EventUtils.collectible((Event) msg);
             msg.setStringProperty("priority", str);
         }
         else if (hasRepeatedTemplate)
@@ -212,11 +216,6 @@ public class Msg2Text {
         else
             text = MessageUtils.processBody(msg, buffer);
 
-        if ((type & Utils.RESULT_COLLECTABLE) > 0) {
-            long tm = msg.getJMSTimestamp();
-            text = zonedDateFormat.format(new Date(tm)) + " " +
-                myIP + " " + text;
-        }
         return text;
     }
 

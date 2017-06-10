@@ -54,7 +54,7 @@ public class Utils {
     public static final int RESULT_LIST = 16;
     public static final int RESULT_SET = 32;
     public static final int RESULT_POSTABLE = 64;
-    public static final int RESULT_COLLECTABLE = 128;
+    public static final int RESULT_COLLECTIBLE = 128;
     public static final String FS = " | ";
     public static final String RS = "\n";
     private static ThreadLocal<DateFormat> df = new ThreadLocal<DateFormat>();
@@ -200,7 +200,8 @@ public class Utils {
     public static String doSearchReplace(String s, String r, String text) {
         int len, i, j, k, d;
 
-        if (s == null || (len = s.length()) == 0 || (i  = text.indexOf(s)) < 0)
+        if (s == null || (len = s.length()) == 0 || text == null ||
+            (i  = text.indexOf(s)) < 0)
             return text;
 
         len = s.length();

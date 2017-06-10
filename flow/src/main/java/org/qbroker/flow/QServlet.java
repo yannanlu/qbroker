@@ -56,30 +56,33 @@ import org.qbroker.event.EventUtils;
 import org.qbroker.event.Event;
 
 /**
- * QServlet is a servlet of QFlow.  It allows QFlow running
- * inside the servlet container as a web application.  As a web
- * application, QFlow can receive JMS messages directly from web
- * clients and send messages back on HTTP.  Therefore, QServlet is
- * the frontend and one of the reveiver of QFlow.  It is responsible
- * for transformation between the HTTP requests/responses and JMS messages.
+ * QServlet is a servlet as an HTTP gateway of QFlow. It hosts a QFlow
+ * instance running inside the servlet container as a web application. As a
+ * web application, QFlow can receive JMS messages directly from web clients
+ * and sends messages back on HTTP via the servlet. Therefore, QServlet is
+ * the frontend and one of the reveiver of QFlow.  It is responsible for
+ * transformation between the HTTP requests/responses and JMS messages.
  *<br/><br/>
- * QServlet has 5 rulesets represented by the URL path.  They are
- * /jms for non-collectible JMS TextEvents, /collectible for collectible
- * JMS TextEvents, /event for non-JMS events, RestURI for JMS TextEvents
- * of REST requests and other paths for ad hoc form requests.  When the
- * web request hits one of the URLs, the corresponding ruleset will be
- * invoked to process the incoming request.  QServlet supports
- * both POST, GET and PUT methods. In case of POST, it also supports file
- * upload and raw xml or json content. For POST or PUT, those headers matched
- * with HeaderRegex will be copied into the message. One of the examples of
- * HeaderRegex is "^[Xx]-.+$" that matches all HTTP headers of starting with
- * "X-".
+ * QServlet has 6 rulesets represented by the URL path.  The first one is /jms
+ * for receiving event postables as the JMS TextEvents. The second is
+ * /collectible for receiving event postables from the client and transforming
+ * them to the collectible JMS TextEvents. The next is /event for receiving
+ * event postables as the non-JMS events. The pre-configured RestURI is to
+ * convert simple REST requests to JMS TextEvents. The path of /json or /xml is
+ * to receive posted JSON or XML data from the client. Other paths are for
+ * ad hoc HTML form requests. When a web request hits one of the URLs, the
+ * corresponding ruleset will be invoked to process the incoming request.
+ * QServlet supports POST, GET and PUT methods. In case of POST, it also
+ * supports file upload and raw xml or json content. For POST or PUT, those
+ * headers matched with HeaderRegex will be copied into the message. One of
+ * the examples of HeaderRegex is "^[Xx]-.+$" that matches all HTTP headers of
+ * starting with "X-".
  *<br/><br/>
- * A collectible TextEvent is a TextEvent with its message body set to
- * the collectible format of the original message.  It is meant to be sent
- * to remote destinations.  In order to get content of the original
- * message, the consumer will have to parse the message body with the
- * EventParser.
+ * A collectible TextEvent is a TextEvent with its message body set to the
+ * collectible format of the original message.  It is supposed to be forwarded
+ * to remote destinations in the format of text. In order to get content of
+ * the original message, the consumer will have to parse the message body with
+ * the EventParser.
  *<br/><br/>
  * For the ad hoc form requests, QServlet treats them in two
  * different ways.  If the attribute of view is defined in the request
@@ -905,7 +908,7 @@ public class QServlet extends HttpServlet {
             }
         }
         else if (path.startsWith("/collectible") && (l == 12 ||
-            path.charAt(13) == '/')) { //JMS event for collectibles
+            path.charAt(12) == '/')) { //JMS event for collectibles
             if ((qf.getDebugMode() & QFlow.DEBUG_CTRL) > 0)
                 new Event(Event.DEBUG, name + " collectible: " + path).send();
             isCollectible = true;
@@ -928,7 +931,7 @@ public class QServlet extends HttpServlet {
             port = event.getAttribute("port");
         }
         else if (path.startsWith("/event") && (l == 6 ||
-            path.charAt(7) == '/')) { // non-JMS event only
+            path.charAt(6) == '/')) { // non-JMS event only
             if ((qf.getDebugMode() & QFlow.DEBUG_CTRL) > 0)
                 new Event(Event.DEBUG, name + " event: " + path).send();
             isJMS = false;
@@ -956,7 +959,7 @@ public class QServlet extends HttpServlet {
             category = event.getAttribute("category");
         }
         else if (path.startsWith("/jms") && (l == 4 ||
-            path.charAt(5) == '/')) { // JMS event without collectibles
+            path.charAt(4) == '/')) { // JMS event without collectibles
             if ((qf.getDebugMode() & QFlow.DEBUG_CTRL) > 0)
                 new Event(Event.DEBUG, name + " jms: " + path).send();
             isJMS = true;
@@ -971,7 +974,7 @@ public class QServlet extends HttpServlet {
                 jsp = event.getAttribute("jsp");
         }
         else if (path.startsWith("/stream") && (l == 7 ||
-            path.charAt(8) == '/')) { //JMS event for stream operations
+            path.charAt(7) == '/')) { //JMS event for stream operations
             if ((qf.getDebugMode() & QFlow.DEBUG_CTRL) > 0)
                 new Event(Event.DEBUG, name + " stream: " + path).send();
             isJMS = true;
@@ -981,7 +984,7 @@ public class QServlet extends HttpServlet {
             event.setAttribute("hostname", clientIP);
         }
         else if (restURILen > 0 && path.startsWith(restURI) && (l==restURILen ||
-            path.charAt(restURILen+1) == '/')) { // REST requests
+            path.charAt(restURILen) == '/')) { // REST requests
             if ((qf.getDebugMode() & QFlow.DEBUG_CTRL) > 0)
                 new Event(Event.DEBUG, name + " rest: " + path).send();
             Iterator iter = props.keySet().iterator();

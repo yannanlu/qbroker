@@ -176,9 +176,6 @@ public class FormatNode extends Node {
             strBuf = new StringBuffer();
         }
 
-        if (outLinkMap[NOHIT_OUT] >= assetList.size())
-            throw(new IllegalArgumentException(name+": missing some OutLinks"));
-
         templateMap = new HashMap<String, Object>();
         substitutionMap = new HashMap<String, Object>();
         cache = new QuickCache(name, QuickCache.META_ATAC, 0, 0);
@@ -246,11 +243,12 @@ public class FormatNode extends Node {
                 ruleInfo = ruleList.getMetaData(i);
                 strBuf.append("\n\t" + ruleList.getKey(i) + ": " + i + " " +
                     ruleInfo[RULE_PID] + " " + ruleInfo[RULE_OPTION] + " " +
-                    ruleInfo[RULE_TTL] + " " + ruleInfo[RULE_MODE] + " - " +
+                    ruleInfo[RULE_TTL] + " " + ruleInfo[RULE_MODE] + " " +
+                    ruleInfo[RULE_DMASK] + " - " +
                     assetList.getKey((int) ruleInfo[RULE_OID]));
             }
             new Event(Event.DEBUG, name+" RuleName: RID PID Reset TTL Chop "+
-                "OutName" + strBuf.toString()).send();
+                "DMask OutName" + strBuf.toString()).send();
         }
     }
 
@@ -515,7 +513,7 @@ public class FormatNode extends Node {
         int rid = -1; // the rule id
         int cid = -1; // the cell id of the message in input queue
         int oid = 0; // the id of the output queue
-        boolean dspBody = false, ckBody = false;
+        boolean ckBody = false;
         byte[] buffer = new byte[bufferSize];
 
         i = in.getCapacity();
@@ -772,7 +770,7 @@ public class FormatNode extends Node {
                     " rid=" + rid + " oid=" + oid + " i=" + i).send();
 
             if (ruleInfo[RULE_DMASK] > 0) try { // display the message
-                if (!ckBody && ((int) ruleInfo[RULE_DMASK] &
+                if (((int) ruleInfo[RULE_DMASK] &
                     (MessageUtils.SHOW_BODY + MessageUtils.SHOW_SIZE)) > 0)
                     msgStr = MessageUtils.processBody(inMessage, buffer);
                 new Event(Event.INFO, name +": "+ ruleName + " formatted msg "+

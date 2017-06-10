@@ -404,6 +404,8 @@ public class EventUtils {
                     value = o.toString();
                 else
                     value = (String) o;
+                if (value == null) // skip
+                    continue;
             }
             if (number > 0)
                 content.append(Event.ITEM_SEPARATOR);
@@ -426,6 +428,8 @@ public class EventUtils {
                     value = o.toString();
                 else
                     value = (String) o;
+                if (value == null) // skip
+                    continue;
                 if (number > 0)
                     content.append(Event.ITEM_SEPARATOR);
                 content.append(key);
@@ -617,6 +621,8 @@ public class EventUtils {
                     value = o.toString();
                 else
                     value = (String) o;
+                if (value == null) // skip
+                    continue;
             }
             if (number > 0)
                 content.append(Event.ITEM_SEPARATOR);
@@ -639,6 +645,8 @@ public class EventUtils {
                     value = o.toString();
                 else
                     value = (String) o;
+                if (value == null) // skip
+                    continue;
                 if (number > 0)
                     content.append(Event.ITEM_SEPARATOR);
                 content.append(key);
