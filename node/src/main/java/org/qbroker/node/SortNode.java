@@ -37,19 +37,20 @@ import org.qbroker.node.NodeUtils;
 import org.qbroker.event.Event;
 
 /**
- * SortNode picks up JMS messages from an input XQ and sorts them according to
- * their sorting keys and the pre-defined rulesets. It routes them out to four
+ * SortNode picks up JMS messages from an input XQ and withholds them for the
+ * baking process. Once the messages are fully baked, it sorts them according
+ * to their sorting keys and the pre-defined rulesets. It routes them to four
  * outlinks: done for sorted messages, bypass for messages which are out of
  * order, nohit for those messages do not belong to any rulesets and failure
- * for the messages failed in the sorting process.  Since SortNode does not
- * consume any messages, any incoming message has to find a way out via one
- * of the four outlinks.
+ * for the messages failed in the baking or sorting process. Since SortNode
+ * does not consume any messages, any incoming message has to find a way out
+ * via one of the four outlinks.
  *<br/><br/>
  * SortNode contains a number of pre-defined rulesets.  These rulesets
  * categorize messages into non-overlapping groups.  Therefore, each rule
  * defines a unique message group.  The ruleset also defines the sorting
  * options for the messages in each group as well as the parameters used
- * in the sorting process.  All the groups must share the same key type.
+ * in the baking process.  All the groups must share the same key type.
  * But different groups may have their own way to construct the sorting key.
  * The number of messages withheld for baking process is tracked via the
  * RULE_PEND field.  Furthermore, SortNode always creates one extra ruleset,
@@ -71,12 +72,12 @@ import org.qbroker.event.Event;
  * zero, the dynamic session will be controlled by the baking process.  In this
  * case, the incoming messages will be baked rather than statically withheld.
  * During the baking process, some of the incoming messages will be routed out
- * right away. But majority of them will be withheld for a certain time.
+ * right away. But majority of them will be withheld for a certain time peroid.
  *<br/><br/>
  * BakeTime is the minimum time for the reference message of a session to be
  * withheld in case other low-key messages arriving late. The reference message
  * is the most baked message with a higher key value than the threshold which
- * is the highest key value for the previous session. We are not sure taht how
+ * is the highest key value for the previous session. We are not sure that how
  * many messages with lower key values will come after the reference message.
  * However, we are sure after a certain time (BakeTime), the chance to have
  * messages with lower key values is minimal.  Therefore, SortNode keeps the
@@ -95,29 +96,54 @@ import org.qbroker.event.Event;
  * original order.
  *<br/><br/>
  * SortNode also supports the claim mode.  If there is at least one claim
- * ruleset defined, the node is on claim mode.  On the claim mode, the routing
- * behaviors will be different.  A claim ruleset is similar to a baking ruleset.
- * The only difference is that the former has also defined RuleType as "claim".
- * The claim rule is designed for active-active message flow clusters.  It
- * assumes that the master escalates each processed message to the worker flow.
- * Meanwhile, the worker flow is processing the same set of messages. Its
- * SortNode also processes the escalated messages from the master. For a
- * SortNode on claim mode, it allows the sort rules and the claim rules to
- * define IDTemplate.  The IDTemplate specifies the way to extract a unique ID
- * from the messages.  These IDs will be cached into a separate cache to
- * indicate those messages have been processed on the master flow. There is no
- * requirement on the order for the IDs. But if there is no IDTemplate defined,
- * the ID will be same as the key.  The messages of claim rulesets will be used
- * to terminate the baking process if their keys match any cached keys.  On the
- * other hand, if the incoming message has the same ID of the ID cache, it will
- * not be baked at all since it has already been processed on the master.
- * All the cached messages with the lower or equal key values will be flushed
- * to bypass.  We called those cached messages are claimed rather than fully
- * baked.  The claiming messages will be routed to nohit.  For those fully
- * baked messages, SortNode will route them to out since they have not been
- * claimed within certain time window. If SorthNode is on claim mode, its
- * uplink must have the 2nd half of the cells unused. The unused partition will
- * be reserved for escalations.
+ * ruleset defined, the node has its claim mode on. A claim ruleset is
+ * similar to a baking ruleset. The only difference on the configurations is
+ * that the former has also defined RuleType as "claim". However, the impact
+ * on the node is huge, even for the baking rulesets. With the claim mode
+ * enabled, the routing policy of the node will be totally different from the
+ * case where the claim mode is off by default. The claim rule is designed
+ * for active-active message flow clusters only. It assumes that both the
+ * master and the worker flows are processing the same set of incoming messages.
+ * Meanwhile, the master flow also escalates each processed message to the
+ * worker flow via the cluster communication channels. Therefore, the SortNode
+ * on the claim mode is supposed to be paired with an instance of ActionNode
+ * on the same flow. Even though both the SortNode and the ActionNode are
+ * running on the same flow and they shared the same uplink, their status are
+ * mutually exclusive on any given instance of the flow. On the master flow,
+ * the SortNode is always disabled while the ActionNode is always enabled. The
+ * ActionNode will process all the incoming messages and escalates each of them
+ * to the worker flow. On the worker flow, the ActionNode is always disabled
+ * while the SortNode is always enabled. Therefore, the SortNode processes
+ * the incoming messages. Since the container of the worker flow will forward
+ * the escalated messages to the SortNode, they will be processed by the
+ * SortNode to claim the baked incoming messages.
+ *<br/><br/>
+ * For a SortNode with the claim mode on, it allows the baking rules and the
+ * claim rules to define IDTemplate. The IDTemplate specifies the way to
+ * extract a unique ID from the messages.  These IDs will be cached into a
+ * separate cache to indicate those messages have been processed on the master
+ * flow. There is no requirement on the order for the IDs. But if there is no
+ * IDTemplate defined, the ID will be same as the key. The messages of claim
+ * rulesets will be used to terminate the baking process if their keys match
+ * any cached keys. On the other hand, if the incoming message has the same ID
+ * in the ID cache, it will not be baked at all since it has already been
+ * processed on the master. All the cached incoming messages with the lower or
+ * equal key values will be flushed to the bypass outlink. We called the cached
+ * messages are claimed rather than fully baked. The claiming messages will be
+ * routed to the nohit outlink. For those fully baked messages, SortNode will
+ * route them to the done outlink since they have not been claimed within the
+ * time window. The rest of incoming messages are still in the baking process.
+ * Since they are not claimed yet, it means they are not processed by the
+ * master flow yet. When a failover occurs, the worker flow will be promoted
+ * to the new master after the original master flow has been demoted to the new
+ * worker or stopped. The container will swap the status of the SortNode
+ * and the ActionNode. All the unclaimed messages will be rolled back to the
+ * uplink. So they will be processed by the ActionNode for escalations. This
+ * way, there is no message lost or double fed. If you are going to implement
+ * the active-active message flow cluster with a SortNode on the claim mode and
+ * an ActionNode for escalations, please make sure the uplink of the SortNode
+ * has the 2nd half of the cells unused. The unused partition will be reserved
+ * for escalations so that the container is able to forward the escalations.
  *<br/><br/>
  * SortNode will not consume any messages. But it may remove the withheld
  * messages from the uplink for certain rulesets. If EXTERNAL_XA bit is set
@@ -160,7 +186,7 @@ public class SortNode extends Node {
     private QuickCache idCache = null;  // for claiming ids
     private int[] outLinkMap;
     private boolean sortReversed = false;
-    private boolean isClaim = false, isBaking = false, isDynamic = false;
+    private boolean withClaim = false, isBaking = false, isDynamic = false;
     private final static int DEFAULT_BAKETIME = 0;
     private final static int DEFAULT_SESSION_TIMEOUT = 0;
     private final static int DEFAULT_SESSION_SIZE = 40960;
@@ -292,7 +318,10 @@ public class SortNode extends Node {
             strBuf = new StringBuffer();
         }
 
-        if (outLinkMap[NOHIT_OUT] >= assetList.size())
+        i = outLinkMap[NOHIT_OUT];
+        i = (i >= outLinkMap[FAILURE_OUT]) ? i : outLinkMap[FAILURE_OUT];
+        i = (i >= outLinkMap[BYPASS_OUT]) ? i : outLinkMap[BYPASS_OUT];
+        if (++i > assetList.size())
             throw(new IllegalArgumentException(name+": missing some OutLinks"));
 
         // for claim rules only
@@ -356,7 +385,7 @@ public class SortNode extends Node {
         browser = ruleList.browser();
         while ((i = browser.next()) >= 0) {
             ruleInfo = ruleList.getMetaData(i);
-            if (isClaim) // disable XA for claim mode
+            if (withClaim) // disable XA for claim mode
                 ruleInfo[RULE_MODE] = 0;
             if ((debug & DEBUG_INIT) > 0)
                 strBuf.append("\n\t" + ruleList.getKey(i) + ": " + i + " " +
@@ -510,7 +539,7 @@ public class SortNode extends Node {
 
             if ((o = ph.get("RuleType")) != null &&
                 "claim".equalsIgnoreCase((String) o)) {
-                isClaim = true;
+                withClaim = true;
                 if ((o = ph.get("TimeToLive")) != null)
                     ruleInfo[RULE_TTL] = 1000 * Integer.parseInt((String) o);
                 ruleInfo[RULE_OID] = outLinkMap[BYPASS_OUT];
@@ -577,7 +606,7 @@ public class SortNode extends Node {
                         i = RESULT_OUT;
                     }
                     else { // less than threshold so let bypass 
-                        i = (isClaim) ? RESULT_OUT : BYPASS_OUT;
+                        i = (withClaim) ? RESULT_OUT : BYPASS_OUT;
                     }
                 }
                 else if (isDynamic) { // just cache
@@ -605,7 +634,7 @@ public class SortNode extends Node {
                         i = RESULT_OUT;
                     }
                     else { // less than threshold so let bypass
-                        i = (isClaim) ? RESULT_OUT : BYPASS_OUT;
+                        i = (withClaim) ? RESULT_OUT : BYPASS_OUT;
                     }
                 }
                 else if (isDynamic) { // just cache
@@ -633,7 +662,7 @@ public class SortNode extends Node {
                         i = RESULT_OUT;
                     }
                     else { // less than threshold so let bypass
-                        i = (isClaim) ? RESULT_OUT : BYPASS_OUT;
+                        i = (withClaim) ? RESULT_OUT : BYPASS_OUT;
                     }
                 }
                 else if (isDynamic) { // just cache
@@ -661,7 +690,7 @@ public class SortNode extends Node {
                         i = RESULT_OUT;
                     }
                     else { // less than threshold so let bypass
-                        i = (isClaim) ? RESULT_OUT : BYPASS_OUT;
+                        i = (withClaim) ? RESULT_OUT : BYPASS_OUT;
                     }
                 }
                 else if (isDynamic) { // just cache
@@ -689,7 +718,7 @@ public class SortNode extends Node {
                         i = RESULT_OUT;
                     }
                     else { // less than threshold so let bypass 
-                        i = (isClaim) ? RESULT_OUT : BYPASS_OUT;
+                        i = (withClaim) ? RESULT_OUT : BYPASS_OUT;
                     }
                 }
                 else if (isDynamic) { // just cache
@@ -724,7 +753,7 @@ public class SortNode extends Node {
                         i = RESULT_OUT;
                     }
                     else { // less than threshold so let bypass
-                        i = (isClaim) ? RESULT_OUT : BYPASS_OUT;
+                        i = (withClaim) ? RESULT_OUT : BYPASS_OUT;
                     }
                 }
                 else if (isDynamic) { // just cache
@@ -744,7 +773,7 @@ public class SortNode extends Node {
               case KeyChain.KEY_SEQUENCE:
                 y = Long.parseLong(key);
                 if (isBaking) { // dynamic session
-                    if (y == y0 + 1 && !isClaim) { // next consecutive number
+                    if (y == y0 + 1 && !withClaim) { // next consecutive number
                         i = RESULT_OUT;
                         y0 = y;
                     }
@@ -753,7 +782,7 @@ public class SortNode extends Node {
                             new int[]{cid, rid}, inMessage);
                     }
                     else { // less than or eq to threshold so let bypass
-                        i = (isClaim) ? RESULT_OUT : BYPASS_OUT;
+                        i = (withClaim) ? RESULT_OUT : BYPASS_OUT;
                     }
                 }
                 else if (isDynamic) { // just cache
@@ -899,7 +928,7 @@ public class SortNode extends Node {
                 }
                 else
                     previousTime = currentTime;
-                if (isClaim && idCache.size() > 0 && // check id cache
+                if (withClaim && idCache.size() > 0 && // check id cache
                     currentTime >= ttl + idCache.getMTime()) {
                     i = disfragment(currentTime);
                     if (i > 0 && (debug & DEBUG_COLL) > 0)
@@ -954,7 +983,7 @@ public class SortNode extends Node {
                     template = (Template) rule.get("KeyTemplate");
                     sub = (TextSubstitution) rule.get("KeySubstitution");
                     dateFormat = (DateFormat) rule.get("DateFormat");
-                    if (isClaim)
+                    if (withClaim)
                         idTemp = (Template) rule.get("IDTemplate");
                 }
                 previousRid = rid;
@@ -987,7 +1016,7 @@ public class SortNode extends Node {
                 if (sub != null && key != null)
                     key = sub.substitute(key);
 
-                if (isClaim) { // check id cache first
+                if (withClaim) { // check id cache first
                     if (idTemp != null)
                         id = MessageUtils.format(inMessage, buffer, idTemp);
                     else
@@ -1016,7 +1045,7 @@ public class SortNode extends Node {
                                 " failed to ack msg at " + cid + " on " + key+
                                 ": " + Event.traceStack(e)).send();
                         }
-                        if (!isClaim) // msg cached for normal baking
+                        if (!withClaim) // msg cached for normal baking
                             in.remove(cid);
                         // for claim mode, msg is not cached, so it can not be
                         // removed here. Claimed msg will be removed in claim()
@@ -1185,30 +1214,30 @@ public class SortNode extends Node {
 
             if (ruleInfo[RULE_PID] == TYPE_SORT ||
                 ruleInfo[RULE_PID] == TYPE_ACTION) {//no putbcak for sort, claim
-                int j = passthru(currentTime, inMessage, in, rid, oid, cid, -1);
-                if (j > 0)
+                i = passthru(currentTime, inMessage, in, rid, oid, cid, -1);
+                if (i > 0)
                     count ++;
                 else { // failed to passthru so force it to FAILURE_OUT
-                    j = forcethru(currentTime, inMessage, in, rid,
+                    i = forcethru(currentTime, inMessage, in, rid,
                         outLinkMap[FAILURE_OUT], cid);
-                    if (j > 0)
-                        new Event(Event.ERR, name + ": " + ruleName +
-                            " failed to passthru the msg at " + cid +
-                            " with msg redirected to " +
-                            outLinkMap[FAILURE_OUT]).send();
-                    else if (j == 0)
-                        new Event(Event.ERR, name + ": " + ruleName +
-                            " failed to passthru the msg at " + cid +
-                            " with msg flushed to " +
-                            outLinkMap[FAILURE_OUT]).send();
-                    else
+                    if (i < 0)
                         new Event(Event.ERR, name + ": " + ruleName +
                             " failed to passthru the msg at " + cid +
                             " with msg dropped").send();
+                    else {
+                        count ++;
+                        new Event(Event.ERR, name + ": " + ruleName +
+                            " failed to passthru the msg at " + cid +
+                            " with msg " +((i > 0) ? "redirected" : "flushed")+ 
+                            " to " + outLinkMap[FAILURE_OUT]).send();
+                    }
                 }
             }
-            else
-                count += passthru(currentTime, inMessage, in, rid, oid, cid, 0);
+            else {
+                i = passthru(currentTime, inMessage, in, rid, oid, cid, 0);
+                if (i > 0)
+                    count ++;
+            }
             feedback(in, -1L);
             sz = msgList.size();
             inMessage = null;
@@ -1407,7 +1436,7 @@ public class SortNode extends Node {
             }
             cid = meta[0];
             rid = meta[1];
-            if (isClaim) // msg has not been removed from in yet
+            if (withClaim) // msg has not been removed from in yet
                 inMessage = (Message) in.browse(cid);
             else // msg stored in cache
                 inMessage = (Message) cache.get(k);
@@ -1462,8 +1491,8 @@ public class SortNode extends Node {
                     " failed to format the msg: "+ Event.traceStack(e)).send();
             }
 
-            if (ruleInfo[RULE_MODE] > 0 || isClaim) { // XA is ON or for claim
-                int oid = (isClaim) ? outLinkMap[FAILURE_OUT] : RESULT_OUT;
+            if (ruleInfo[RULE_MODE] > 0 || withClaim) { // XA is ON or for claim
+                int oid = (withClaim) ? outLinkMap[FAILURE_OUT] : RESULT_OUT;
                 int j = passthru(currentTime, inMessage, in, rid, oid, cid, -1);
                 if (j > 0) {
                     count ++;
@@ -1639,7 +1668,7 @@ public class SortNode extends Node {
         int i, n, mid;
 
         super.resetMetaData(in, out);
-        if (!isClaim)
+        if (!withClaim)
             return;
 
         // rollback cached msgs

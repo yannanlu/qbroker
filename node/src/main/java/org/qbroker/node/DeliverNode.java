@@ -107,8 +107,8 @@ import org.qbroker.event.Event;
  *<br/><br/>
  * You are free to choose any names for the three fixed outlinks.  But
  * DeliverNode always assumes the first outlink for pool, the second for
- * failure and the third for nohit.  The name for nohit is allowed to be
- * overlapped with that of failure.  But neither nohit nor failure is
+ * failure and the third for nohit.  The name for nohit outlink is allowed to
+ * be same as that of failure outlink.  But neither nohit nor failure is
  * allowed to share their names with the pool.  The rest of the outlinks are
  * for the on-demand destinations.
  *<br/>
@@ -128,7 +128,7 @@ public class DeliverNode extends Node {
     private final static int POOL_OUT = 0;
     private final static int FAILURE_OUT = 1;
     private int NOHIT_OUT = 2;
-    private int BOUNDARY = 2;
+    private int BOUNDARY = NOHIT_OUT + 1;
 
     public DeliverNode(Map props) {
         super(props);
@@ -207,16 +207,15 @@ public class DeliverNode extends Node {
                     "," + outInfo[OUT_LENGTH]);
         }
 
-        BOUNDARY = NOHIT_OUT;
+        BOUNDARY = NOHIT_OUT + 1;
         if ((debug & DEBUG_INIT) > 0) {
             new Event(Event.DEBUG, name + " LinkName: OID Capacity Partition " +
-                " - " + linkName + " " + capacity + " / " + BOUNDARY + " " +
-                assetList.getKey(POOL_OUT)+" "+assetList.getKey(FAILURE_OUT)+
-                " " + assetList.getKey(NOHIT_OUT) + strBuf.toString()).send();
+                " - " + linkName + " " + capacity + " / " + BOUNDARY +
+                strBuf.toString()).send();
             strBuf = new StringBuffer();
         }
 
-        if (NOHIT_OUT >= assetList.size())
+        if (BOUNDARY > assetList.size())
             throw(new IllegalArgumentException(name+": missing some OutLinks"));
 
         templateMap = new HashMap<String, Object>();
@@ -558,7 +557,7 @@ public class DeliverNode extends Node {
         xa = ((in.getGlobalMask() & XQueue.EXTERNAL_XA) > 0);
         // update assetList
         n = out.length;
-        if (n > BOUNDARY) for (i=0; i<=BOUNDARY; i++) {
+        if (n >= BOUNDARY) for (i=0; i<BOUNDARY; i++) {
             asset = (Object[]) assetList.get(i);
             asset[ASSET_XQ] = out[i];
             outInfo = assetList.getMetaData(i);
@@ -1041,7 +1040,7 @@ public class DeliverNode extends Node {
         boolean isDebug = ((debug & DEBUG_REPT) > 0);
 
         n = assetList.size();
-        if (n <= BOUNDARY + 1)
+        if (n <= BOUNDARY)
             return 0;
 
         int[] list = new int[n];
@@ -1052,7 +1051,7 @@ public class DeliverNode extends Node {
         k = 0;
         for (i=0; i<n; i++) {
             oid = list[i];
-            if (oid <= BOUNDARY) // leave fixed outLinks alone
+            if (oid < BOUNDARY) // leave fixed outLinks alone
                 continue;
             asset = (Object[]) assetList.get(oid);
             if (asset == null || asset.length <= ASSET_THR)
@@ -1334,7 +1333,7 @@ public class DeliverNode extends Node {
                 in.remove(mid);
                 outInfo[OUT_SIZE] --;
                 outInfo[OUT_COUNT] ++;
-                if (oid > BOUNDARY) // increase number of deq in OUT_DEQ
+                if (oid >= BOUNDARY) // increase number of deq in OUT_DEQ
                     outInfo[OUT_DEQ] ++;
                 k = (int) state[MSG_RID];
                 ruleInfo = ruleList.getMetaData(k);
@@ -1411,7 +1410,7 @@ public class DeliverNode extends Node {
             outInfo = assetList.getMetaData(oid);
             outInfo[OUT_SIZE] --;
             outInfo[OUT_COUNT] ++;
-            if (oid > BOUNDARY) // increase number of deq in OUT_DEQ
+            if (oid >= BOUNDARY) // increase number of deq in OUT_DEQ
                 outInfo[OUT_DEQ] ++;
             outInfo[OUT_TIME] = t;
             rid = (int) state[MSG_RID];
@@ -1446,13 +1445,13 @@ public class DeliverNode extends Node {
         XQueue xq;
         int[] list;
         n = assetList.size();
-        if (n <= BOUNDARY + 1)
+        if (n <= BOUNDARY)
             return;
         list = new int[n];
         n = assetList.queryIDs(list);
         for (i=0; i<n; i++) {
             k = list[i];
-            if (k <= BOUNDARY)
+            if (k < BOUNDARY)
                 continue;
             asset = (Object[]) assetList.get(k);
             if (asset == null || asset.length <= ASSET_THR)
@@ -1532,7 +1531,7 @@ public class DeliverNode extends Node {
         return takebackEnabled;
     }
 
-    /** returns the BOUNDARY separating pool from other fixed outlinks */
+    /** returns 0 to have the ack propagation skipped on the first outlink */
     public int getOutLinkBoundary() {
         return 0;
     }

@@ -1368,9 +1368,9 @@ public class MessageFlow implements Runnable {
                 doneMap.put(key, null);
             if ((xq.getGlobalMask() & XQueue.EXTERNAL_XA) == 0) {
                 kk = node.getOutLinkBoundary();
-                if (kk < -1) { // enable ack above BOUNDARY regardlessly
+                if (kk < -1) { // enable ack staring from BOUNDARY regardlessly
                     jj = node.getNumberOfOutLinks();
-                    for (j=-kk; j<jj; j++) {
+                    for (j=-(kk+1); j<jj; j++) {
                         key = node.getLinkName(j);
                         if (doneMap.containsKey(key)) // bypass feedbacks
                             continue;
@@ -1399,8 +1399,8 @@ public class MessageFlow implements Runnable {
                     }
                 }
             }
-            else if (kk > 0) { // propagate to outlinks up to BOUNDARY
-                for (j=0; j<=kk; j++) {
+            else if (kk > 0) { // propagate to outlinks lower than BOUNDARY
+                for (j=0; j<kk; j++) {
                     key = node.getLinkName(j);
                     if (doneMap.containsKey(key)) // bypass feedbacks
                         continue;

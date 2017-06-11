@@ -40,37 +40,59 @@ import org.qbroker.event.Event;
  *<br/><br/>
  * DistinguishNode contains a number of predefined rulesets.  These rulesets
  * categorize messages into non-overlapping groups.  Therefore, each rule
- * defines a unique message group.  The ruleset also specifies the parameters
- * to control the message filtering process on the group.  Furthermore,
- * the content filtering can be enabled or disabled dynamically via the
- * sessions and monitors.  If SessionTimeout is set to 0, it will only do
- * static filtering.  The number of the keys cached is tracked via the
- * RULE_PEND field. If VersionTemplate is defined in a ruleset, DistinguishNode
- * will retrieve the version info from the messages to enforce the version
- * control. It means the messages with older versions will be treated as the
- * duplicates. DistinguishNode also creates one extra ruleset by default for
- * all nohit messages.  The reserved word, nohit, is the name of this default
- * ruleset.
+ * defines a unique message group. The ruleset also specifies the parameters
+ * to control the message filtering process on the group, such as KeyTemplate.
+ * If KeyTemplate is defined for a ruleset, it is the ruleset for distinction.
+ * DistinguishNode maintains a global cache for all the keys in order to track
+ * them. Furthermore, the content filtering can be enabled or disabled
+ * dynamically via the sessions and monitors. If SessionTimeout is set to 0,
+ * it will only do static filtering. The number of the keys cached is tracked
+ * via the RULE_PEND field for each rule. If VersionTemplate is defined in a
+ * ruleset, DistinguishNode will retrieve the version info from the messages
+ * to enforce the version control. It means the messages with older versions
+ * will be treated as the duplicates. DistinguishNode also creates one extra
+ * ruleset by default for all nohit messages. The reserved word, nohit, is the
+ * name of this default ruleset.
  *<br/><br/>
- * DistinguishNode also supports the cache mode. If a ruleset is defined with
- * its RuleType as "cache", another reserved word, the node is on cache mode.
- * The cache rule is designed for active-passive message flow clusters.  It
- * assumes that the master escalates each processed message to the worker flow.
- * On the worker side, its DistinguishNode processes the escalated messages
- * from the master to cache the keys of them. It keeps the state cache on the
- * worker flow in sync with the master.  When the failover occurs, the worker
- * flow with the current cache will be ready to be promoted to the master.
- * Since the cache on the new master is current, any processed message will not
- * be routed to the done outlink. The cache rule on worker flow has a different
- * routing behavior. Since all the messages have already been processed on the
- * master, the messages with the unique keys will be routed to nohit outlink.
- * The rest of the messages will be routed to failure outlink, if there is any.
- * If DistinguishNode is on cache mode, its uplink must have the 2nd half of
- * the cells unused. The unused partition will be reserved for escalations.
+ * DistinguishNode also supports the cache ruleset which is similar to a
+ * regular distinction ruleset. The only difference on the configurations is
+ * that the former has also defined RuleType as "cache". However, the routing
+ * policy for a cache ruleset is different from what of the distinction
+ * ruleset. It is designed for message flow clusters only. Even though both
+ * distinction rulesets and cache rulesets are defined for the node, their
+ * activities are mutually exclusive on any given instance of the node.
+ * Therefore, a DistinguishNode with active cache rulesets is called on the
+ * cache mode.
+ *<br/><br/>
+ * One of the use cases of cache rulesets is that an active-passive message
+ * flow cluster with the only one DistinguishNode. In this case, the master
+ * flow processes all the incoming messages. By desing, those messages only
+ * activate the distinction rulesets of the DistinguishNode. As the contrast,
+ * the worker flow does not process any incoming messages. Therefore, the
+ * distinction rulesets of the DistinguishNode are not active at all.
+ * Meanwhile, the master flow also escalates each processed message to the
+ * worker flow via the cluster communication channels. On the worker side,
+ * the container of the worker flow is supposed to forward the escalated
+ * messages to the DistinguishNode. Those escalated messages are supposed to
+ * activate the cache rulesets of the DistinguishNode. Once an escalated
+ * message arrives, the DistinguishNode on the cache mode extracts the key from
+ * the message and saves it to the global cache. The cache ruleset on the
+ * worker flow has a different routing policy. Since those messages have
+ * already been processed on the master, the messages with the unique keys
+ * will be routed to nohit outlink. The rest of the messages will be routed
+ * to failure outlink, if there is any. This way the cache on the worker flow
+ * always keeps in sync with the master. When a failover occurs, the worker
+ * flow with the latest cache will be ready to be promoted to the new master.
+ * Since the cache on the new master is current, any duplicated message will
+ * not be routed to the done outlink. If you are going to implement the
+ * active-passive message flow cluster with a DistinguishNode with cache rules,
+ * please make sure its uplink has the 2nd half of the cells unused. The unused
+ * partition will be reserved for escalations so that the container is able to
+ * forward the escalations.
  *<br/><br/>
  * DistinguishNode also supports checkpointing of the internal data cache via
- * the container.  In order to checkpoint, the CheckpointDir and SAXParser
- * must be defined on the container level.
+ * the container.  In order to checkpoint, the CheckpointDir must be defined
+ * on the container level.
  *<br/><br/>
  * You are free to choose any names for the four fixed outlinks.  But
  * DistiguishNode always assumes the first outlink for done, the second for
@@ -185,7 +207,10 @@ public class DistinguishNode extends Node {
             strBuf = new StringBuffer();
         }
 
-        if (outLinkMap[NOHIT_OUT] >= assetList.size())
+        i = outLinkMap[NOHIT_OUT];
+        i = (i >= outLinkMap[FAILURE_OUT]) ? i : outLinkMap[FAILURE_OUT];
+        i = (i >= outLinkMap[BYPASS_OUT]) ? i : outLinkMap[BYPASS_OUT];
+        if (++i > assetList.size())
             throw(new IllegalArgumentException(name+": missing some OutLinks"));
 
         // set reportName for RESULT_OUT

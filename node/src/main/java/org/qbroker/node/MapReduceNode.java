@@ -103,8 +103,8 @@ import org.qbroker.event.Event;
  * MapReduceNode always assumes the first outlink for done, the second for
  * failure and the third for nohit.  The rest of the outlinks are for responses.
  * It is OK for those three fixed outlinks to share the same name.  Please make
- * sure each of the fixed outlinks has the actual capacity no less than that of
- * the input XQueue.
+ * sure the first fixed outlink has the actual capacity no less than that of
+ * the uplink.
  *<br/>
  * @author yannanlu@yahoo.com
  */
@@ -124,7 +124,7 @@ public class MapReduceNode extends Node {
     private final static int RESULT_OUT = 0;
     private int FAILURE_OUT = 1;
     private int NOHIT_OUT = 2;
-    private int BOUNDARY = 2;
+    private int BOUNDARY = NOHIT_OUT + 1;
     private final static int REQ_CID = 0;
     private final static int REQ_RID = 1;
     private final static int REQ_OID = 2;
@@ -182,10 +182,11 @@ public class MapReduceNode extends Node {
 
         tm = System.currentTimeMillis();
 
-        int[] overlap = new int[]{NOHIT_OUT};
+        int[] overlap = new int[]{FAILURE_OUT, NOHIT_OUT};
         assetList = NodeUtils.initFixedOutLinks(tm, capacity, n, overlap,
             name, list);
-        NOHIT_OUT = overlap[0];
+        FAILURE_OUT = overlap[0];
+        NOHIT_OUT = overlap[1];
 
         if (assetList == null)
             throw(new IllegalArgumentException(name +
@@ -208,11 +209,11 @@ public class MapReduceNode extends Node {
         }
 
         BOUNDARY = (NOHIT_OUT >= FAILURE_OUT) ? NOHIT_OUT : FAILURE_OUT;
+        BOUNDARY ++;
         if ((debug & DEBUG_INIT) > 0) {
             new Event(Event.DEBUG, name + " LinkName: OID Capacity Partition " +
-                " - " + linkName + " " + capacity + " / " + BOUNDARY + " " +
-                assetList.getKey(RESULT_OUT)+" "+assetList.getKey(FAILURE_OUT)+
-                " " + assetList.getKey(NOHIT_OUT) + strBuf.toString()).send();
+                " - " + linkName + " " + capacity + " / " + BOUNDARY +
+                strBuf.toString()).send();
             strBuf = new StringBuffer();
         }
 
@@ -222,7 +223,7 @@ public class MapReduceNode extends Node {
         msgList = new AssetList(name, capacity);
         ruleList = new AssetList(name, ruleSize);
         pendList = new AssetList(name, capacity);
-        n = assetList.size() - BOUNDARY - 1;
+        n = assetList.size() - BOUNDARY;
         reqList = new IndexedXQueue(name, n * capacity);
         cells = new CollectibleCells(name, capacity);
 
@@ -471,7 +472,7 @@ public class MapReduceNode extends Node {
                     if (ltmp[i] != null) // dynamic link
                         id = -1;
                     else if (key == null || key.length() <= 0 ||
-                        (id = assetList.getID(key)) <= BOUNDARY) {
+                        (id = assetList.getID(key)) < BOUNDARY) {
                         new Event(Event.WARNING, name+": SelectedOutLink" +
                             "[" + i + "]=" + key + " for "+ ruleName +
                             " not defined, skip it for now").send();
@@ -508,7 +509,7 @@ public class MapReduceNode extends Node {
                 key = (String) o;
                 id = assetList.getID(key);
                 oids[0] = id;
-                if (id <= BOUNDARY) {
+                if (id < BOUNDARY) {
                     new Event(Event.ERR, name + ": SelectedOutLink[0]=" +
                         key + " for " + ruleName + " not well defined").send();
                     return null;
@@ -550,10 +551,10 @@ public class MapReduceNode extends Node {
                 }
             }
             else { // for default mapping
-                m = assetList.size() - BOUNDARY - 1;
+                m = assetList.size() - BOUNDARY;
                 oids = new int[m];
                 for (i=0; i<m; i++) {
-                    oids[i] = i + BOUNDARY + 1;
+                    oids[i] = i + BOUNDARY;
                 }
                 ruleInfo[RULE_PID] = TYPE_MAPREDUCE;
 
@@ -774,7 +775,7 @@ public class MapReduceNode extends Node {
             ods[i] = -1;
             xqs[i] = null;
             list[i] = null;
-            if (oids[i] > BOUNDARY) // static links
+            if (oids[i] >= BOUNDARY) // static links
                 oid = oids[i];
             else if (ltmp == null || ltmp[i] == null) {
                 for (int j=0; j<i; j++)
@@ -789,7 +790,7 @@ public class MapReduceNode extends Node {
                 if (lsub[i] != null)
                     text = lsub[i].substitute(text);
                 oid = assetList.getID(text);
-                if (oid <= BOUNDARY) { // not a collectible
+                if (oid < BOUNDARY) { // not a collectible
                     for (int j=0; j<i; j++)
                         if (xqs[j] != null && ids[j] >= 0)
                             xqs[j].cancel(ids[j]);
@@ -1924,7 +1925,8 @@ public class MapReduceNode extends Node {
     }
 
     /**
-     * returns -(BOUNDARY+1) to have the container enable ack regardlessly
+     * returns -(BOUNDARY+1) to have the container enable ack regardlessly on
+     * the outlinks starting from BOUNDARY and beyond
      */
     public int getOutLinkBoundary() {
         return -BOUNDARY-1;

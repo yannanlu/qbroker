@@ -110,8 +110,8 @@ import org.qbroker.event.Event;
  *<br/><br/>
  * You are free to choose any names for the three fixed outlinks.  But
  * PickupNode always assumes the first outlink for pool, the second for
- * failure and the third for nohit.  The name for nohit is allowed
- * to be overlapped with that of failure.  But neither nohit nor failure is
+ * failure and the third for nohit.  The name for nohit outlink is allowed
+ * to be same as that of failure outlink.  But neither nohit nor failure is
  * allowed to share their names with pool.  The rest of the outlinks are
  * for the on-demand data sources.
  *<br/>
@@ -131,7 +131,7 @@ public class PickupNode extends Node {
     private final static int POOL_OUT = 0;
     private final static int FAILURE_OUT = 1;
     private int NOHIT_OUT = 2;
-    private int BOUNDARY = 2;
+    private int BOUNDARY = NOHIT_OUT + 1;
 
     public PickupNode(Map props) {
         super(props);
@@ -214,16 +214,15 @@ public class PickupNode extends Node {
                     "," + outInfo[OUT_LENGTH]);
         }
 
-        BOUNDARY = NOHIT_OUT;
+        BOUNDARY = NOHIT_OUT + 1;
         if ((debug & DEBUG_INIT) > 0) {
             new Event(Event.DEBUG, name + " LinkName: OID Capacity Partition " +
-                " - " + linkName + " " + capacity + " / " + BOUNDARY + " " +
-                assetList.getKey(POOL_OUT)+" "+assetList.getKey(FAILURE_OUT)+
-                " " + assetList.getKey(NOHIT_OUT) + strBuf.toString()).send();
+                " - " + linkName + " " + capacity + " / " + BOUNDARY +
+                strBuf.toString()).send();
             strBuf = new StringBuffer();
         }
 
-        if (NOHIT_OUT >= assetList.size())
+        if (BOUNDARY > assetList.size())
             throw(new IllegalArgumentException(name+": missing some OutLinks"));
 
         templateMap = new HashMap<String, Object>();
@@ -569,7 +568,7 @@ public class PickupNode extends Node {
 
         // update assetList
         n = out.length;
-        if (n > BOUNDARY) for (i=0; i<=BOUNDARY; i++) {
+        if (n >= BOUNDARY) for (i=0; i<BOUNDARY; i++) {
             asset = (Object[]) assetList.get(i);
             asset[ASSET_XQ] = out[i];
             outInfo = assetList.getMetaData(i);
@@ -903,7 +902,7 @@ public class PickupNode extends Node {
                     " failed to format the msg: " + Event.traceStack(e)).send();
             }
 
-            if (oid > POOL_OUT && oid <= BOUNDARY) { // bypass or failure
+            if (oid > POOL_OUT && oid < BOUNDARY) { // bypass or failure
                 count += passthru(currentTime, inMessage, in, rid, oid, cid, 0);
                 feedback(in, -1L);
                 sz = msgList.size();
@@ -1047,7 +1046,7 @@ public class PickupNode extends Node {
         boolean isDebug = ((debug & DEBUG_REPT) > 0);
 
         n = assetList.size();
-        if (n <= BOUNDARY + 1)
+        if (n <= BOUNDARY)
             return 0;
 
         int[] list = new int[n];
@@ -1058,7 +1057,7 @@ public class PickupNode extends Node {
         k = 0;
         for (i=0; i<n; i++) {
             oid = list[i];
-            if (oid <= BOUNDARY) // leave fixed outLinks alone
+            if (oid < BOUNDARY) // leave fixed outLinks alone
                 continue;
             asset = (Object[]) assetList.get(oid);
             if (asset == null || asset.length <= ASSET_THR)
@@ -1215,13 +1214,13 @@ public class PickupNode extends Node {
         XQueue xq;
         int[] list;
         n = assetList.size();
-        if (n <= BOUNDARY + 1)
+        if (n <= BOUNDARY)
             return;
         list = new int[n];
         n = assetList.queryIDs(list);
         for (i=0; i<n; i++) {
             k = list[i];
-            if (k <= BOUNDARY)
+            if (k < BOUNDARY)
                 continue;
             asset = (Object[]) assetList.get(k);
             if (asset == null || asset.length <= ASSET_THR)
@@ -1256,7 +1255,7 @@ public class PickupNode extends Node {
         return takebackEnabled;
     }
 
-    /** returns the BOUNDARY separating pool from other fixed outlinks */
+    /** returns 0 to have the ack propagation skipped on the first outlink */
     public int getOutLinkBoundary() {
         return 0;
     }

@@ -158,7 +158,9 @@ public class JSONTNode extends Node {
             strBuf = new StringBuffer();
         }
 
-        if (outLinkMap[NOHIT_OUT] >= assetList.size())
+        i = outLinkMap[NOHIT_OUT];
+        i = (i >= outLinkMap[FAILURE_OUT]) ? i : outLinkMap[FAILURE_OUT];
+        if (++i > assetList.size())
             throw(new IllegalArgumentException(name+": missing some OutLinks"));
 
         msgList = new AssetList(name, capacity);
@@ -658,7 +660,7 @@ public class JSONTNode extends Node {
                 previousRid = rid;
             }
 
-            if (i>= 0) try {
+            if (i > 0) try {
                 switch ((int) ruleInfo[RULE_OPTION]) {
                   case RESET_MAP:
                     MessageUtils.resetProperties(inMessage);
@@ -801,6 +803,8 @@ public class JSONTNode extends Node {
                     new Event(Event.DEBUG, name + " propagate: " +
                          cid + ":" + rid +" "+ i).send();
 
+                if (i == FAILURE_OUT) // disable post formatter
+                    filter = null;
                 oid = outLinkMap[i];
                 ruleInfo[RULE_OID] = oid;
             }
@@ -902,10 +906,14 @@ public class JSONTNode extends Node {
                     new Event(Event.DEBUG, name + " propagate: " +
                          cid + ":" + rid +" "+ i).send();
 
+                if (i == FAILURE_OUT) // disable post formatter
+                    filter = null;
                 oid = outLinkMap[i];
                 ruleInfo[RULE_OID] = oid;
             }
             else { // preferred ruleset or nohit
+                if (i == 0) // disable post formatter for nohit
+                    filter = null;
                 oid = (int) ruleInfo[RULE_OID];
             }
 

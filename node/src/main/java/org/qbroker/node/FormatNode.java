@@ -176,6 +176,11 @@ public class FormatNode extends Node {
             strBuf = new StringBuffer();
         }
 
+        i = outLinkMap[NOHIT_OUT];
+        i = (i >= outLinkMap[FAILURE_OUT]) ? i : outLinkMap[FAILURE_OUT];
+        if (++i > assetList.size())
+            throw(new IllegalArgumentException(name+": missing some OutLinks"));
+
         templateMap = new HashMap<String, Object>();
         substitutionMap = new HashMap<String, Object>();
         cache = new QuickCache(name, QuickCache.META_ATAC, 0, 0);
@@ -508,7 +513,7 @@ public class FormatNode extends Node {
         Object o = null;
         Iterator iter;
         long count = 0;
-        int mask, ii, sz;
+        int mask, ii, sz, dspBody;
         int i = 0, n, previousRid;
         int rid = -1; // the rule id
         int cid = -1; // the cell id of the message in input queue
@@ -543,6 +548,7 @@ public class FormatNode extends Node {
             }
             ruleMap[i++] = rid;
         }
+        dspBody = MessageUtils.SHOW_BODY + MessageUtils.SHOW_SIZE;
 
         // update assetList
         n = out.length;
@@ -770,8 +776,7 @@ public class FormatNode extends Node {
                     " rid=" + rid + " oid=" + oid + " i=" + i).send();
 
             if (ruleInfo[RULE_DMASK] > 0) try { // display the message
-                if (((int) ruleInfo[RULE_DMASK] &
-                    (MessageUtils.SHOW_BODY + MessageUtils.SHOW_SIZE)) > 0)
+                if (((int) ruleInfo[RULE_DMASK] & dspBody) > 0)
                     msgStr = MessageUtils.processBody(inMessage, buffer);
                 new Event(Event.INFO, name +": "+ ruleName + " formatted msg "+
                     (count+1) + ":" + MessageUtils.display(inMessage, msgStr,

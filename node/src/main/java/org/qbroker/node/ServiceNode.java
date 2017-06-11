@@ -138,8 +138,9 @@ import org.qbroker.event.Event;
  *<br/><br/>
  * You are free to choose any names for the three fixed outlinks.  But
  * ServiceNode always assumes the first outlink for the producer, the second
- * for consumer and the third is for nohit.  The rest of the outlinks are for
- * dynamic destinations or sources.
+ * for consumer and the third is for nohit. The rest of the outlinks are
+ * on-demand outlinks for dynamic destinations or sources. The name of the
+ * first outlink has to be unique on the node.
  *<br/><br/>
  * Currently, there is no support for NOHIT outlink yet.  But it may be added
  * in the future to support existing static XQueues.  If a ruleset is nohit
@@ -252,7 +253,8 @@ public class ServiceNode extends Node {
             strBuf = new StringBuffer();
         }
 
-        if (NOHIT_OUT >= assetList.size())
+        i = NOHIT_OUT;
+        if (++i > assetList.size())
             throw(new IllegalArgumentException(name+": missing some OutLinks"));
 
         msgList = new AssetList(name, capacity);

@@ -34,22 +34,25 @@ import org.qbroker.node.NodeUtils;
 import org.qbroker.event.Event;
 
 /**
- * JobNode listens to an input XQueue for JMS messages as the job requests.
- * It classifies the incoming messages into groups based on the rulesets
- * and the content of the messages. If an incoming message does not hit any
- * ruleset, it will be routed to the bypass outlink at once. If the message
- * hits a bypass ruleset, it will be routed to the bypass outlink. Otherwise,
- * JobNode dispatches the incoming message to an available worker outlink
- * based on the priority and threshod of the group. If there is no enough
- * worker available, the incoming message will be cached until the required
- * worker resource is available. Meanwhile, JobNode periodically monitors
- * all active jobs and sends query events to their worker outlinks. When the
- * query events are collected, JobNode will escalate them to the first outlink,
- * notice. Once a job has completed, JobNode will collect the request message
- * from the worker outlink and escalates the final report event. The original
- * request message will be removed from the uplink without acknowledgement.
- * Since the request message will be withheld for a while, it is recommended
- * to duplicate the orginal job request for JobNode.
+ * JobNode picks up JMS messages as the job requests and job queries from the
+ * uplink and processes them according to their content and the pre-defined
+ * rulesets. A job request is to start a time consuming job whereas a job
+ * query is just to query the status of a running job. If an incoming message
+ * is neither a job request nor a job query, JobNode will treat it as a bypass
+ * and routes it to the bypass outlink without any delay. When a job request
+ * arrives, JobNode creates a job task out of the message and sets the job id
+ * and the status to the message. Then it routes the message to the done
+ * outlink at once. Meanwhile, JobNode tries to dispatch the new job task to an
+ * available worker outlink based on the priority of the job. If there is no
+ * enough worker available, the job task will wait until the required worker
+ * resource is available. JobNode also periodically monitors all active jobs
+ * and sends query events to their worker outlinks. When the query events are
+ * collected, They will be escalated to the outlink of notice. Once a job
+ * has completed, JobNode will collect the task message from the worker
+ * outlink and escalates the final report event to the notice outlink. If an
+ * incoming message is a job query, JobNode will forward it to the worker
+ * outlink. Once the response is collected, it will be routed to the bypass
+ * outlink.
  *<br/><br/>
  * JobNode contains multiple rulesets that categorize the incoming messages
  * into non-overlapped groups.  Each group has its own priority for scheduling
@@ -66,11 +69,12 @@ import org.qbroker.event.Event;
  * messages.
  *<br/><br/>
  * JobNode always creates an extra ruleset, nohit, for those messages not
- * hitting any pre-defined rulesets.  For nohit, there is no flow control.
+ * hitting any pre-defined rulesets. All the nohit messages will be routed to
+ * the outlink of bypass.
  *<br/><br/>
  * You are free to choose any names for the outlinks.  But JobNode always
- * assumes the first outlink for notice, the second for bypass, and
- * the rest for workers.
+ * assumes the first outlink for done, the second for bypass, and third for
+ * notice and the rest for workers.
  *<br/>
  * @author yannanlu@yahoo.com
  */
@@ -82,6 +86,7 @@ public class JobNode extends Node implements Comparator<int[]> {
 
     private QList reqList = null;      // pending jobs {cid, rid}
     private AssetList jobList = null;  // active jobs {id, cid, rid, ...}
+    private int[] outLinkMap;
     private final static int JOB_ID = 0;
     private final static int JOB_CID = 1;
     private final static int JOB_RID = 2;
@@ -90,9 +95,11 @@ public class JobNode extends Node implements Comparator<int[]> {
     private final static int JOB_COUNT = 5;
     private final static int JOB_RETRY = 6;
     private final static int JOB_TIME = 7;
-    private final static int NOTICE_OUT = 0;
+    private final static int RESULT_OUT = 0;
     private final static int BYPASS_OUT = 1;
-    private final static int OFFSET_OUT = 2;
+    private final static int NOTICE_OUT = 2;
+    private final static int OFFSET_OUT = 3;
+    private int BOUNDARY = NOTICE_OUT + 1;
 
     public JobNode(Map props) {
         super(props);
@@ -135,9 +142,12 @@ public class JobNode extends Node implements Comparator<int[]> {
 
         tm = System.currentTimeMillis();
 
-        int[] overlap = new int[]{};
+        int[] overlap = new int[]{BYPASS_OUT, NOTICE_OUT};
         assetList = NodeUtils.initFixedOutLinks(tm, capacity, n, overlap,
             name, list);
+        outLinkMap = new int[]{RESULT_OUT, BYPASS_OUT, NOTICE_OUT};
+        outLinkMap[BYPASS_OUT] = overlap[0];
+        outLinkMap[NOTICE_OUT] = overlap[1];
 
         if (assetList == null)
             throw(new IllegalArgumentException(name +
@@ -157,17 +167,21 @@ public class JobNode extends Node implements Comparator<int[]> {
                 strBuf.append("\n\t" + assetList.getKey(i) + ": " + i + " " +
                     outInfo[OUT_CAPACITY] + " " + outInfo[OUT_OFFSET] +
                     "," + outInfo[OUT_LENGTH]);
-            break;
         }
 
+        BOUNDARY = outLinkMap[NOTICE_OUT];
+        BOUNDARY = (BOUNDARY >= outLinkMap[BYPASS_OUT]) ? BOUNDARY :
+            outLinkMap[BYPASS_OUT];
+        BOUNDARY ++;
         if ((debug & DEBUG_INIT) > 0) {
             new Event(Event.DEBUG, name + " LinkName: OID Capacity Partition " +
-                " - " + linkName + " " + capacity + strBuf.toString()).send();
+                " - " + linkName + " " + capacity + " / " + BOUNDARY +
+                strBuf.toString()).send();
             strBuf = new StringBuffer();
         }
 
-        if (assetList.size() <= 0)
-            throw(new IllegalArgumentException(name+": OutLink is empty"));
+        if (BOUNDARY >= assetList.size())
+            throw(new IllegalArgumentException(name+": missing some OutLinks"));
 
         msgList = new AssetList(name, capacity);
         reqList = new QList(name, capacity);
@@ -283,7 +297,7 @@ public class JobNode extends Node implements Comparator<int[]> {
 
         preferredOutName = (String) ph.get("PreferredOutLink");
         if(preferredOutName !=null && (i=assetList.getID(preferredOutName))!=1){
-            preferredOutName = assetList.getKey(BYPASS_OUT);
+            preferredOutName = assetList.getKey(outLinkMap[BYPASS_OUT]);
             new Event(Event.WARNING, name + ": OutLink for " +
                 ruleName + " not well defined, use the default: "+
                 preferredOutName).send();
@@ -360,7 +374,7 @@ public class JobNode extends Node implements Comparator<int[]> {
                 ruleInfo[RULE_OPTION] = k;
             }
         }
-        outInfo = assetList.getMetaData(BYPASS_OUT);
+        outInfo = assetList.getMetaData(outLinkMap[BYPASS_OUT]);
         outInfo[OUT_NRULE] ++;
         outInfo[OUT_ORULE] ++;
 
@@ -1406,6 +1420,14 @@ public class JobNode extends Node implements Comparator<int[]> {
             h.put("MSG", "[" + strBuf.toString() + "]");
 
         return h;
+    }
+
+    /**
+     * returns -(BOUNDARY+1) to have the container enable ack regardlessly on
+     * the outlinks starting from BOUNDARY and beyond
+     */
+    public int getOutLinkBoundary() {
+        return -BOUNDARY-1;
     }
 
     public void close() {

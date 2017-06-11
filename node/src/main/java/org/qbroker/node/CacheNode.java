@@ -41,7 +41,7 @@ import org.qbroker.event.Event;
  * The message will be routed to the outlink of done.  In case of failure, the
  * incoming messages will be routed to the outlink failure.  If none of the
  * rulesets matches the incoming messages, they will be put to the outlink of
- * nohit.  The rest of the outlinks are collectibles to fulfill requests.
+ * nohit. The rest of the outlinks are collectibles to fulfill requests.
  *<br/><br/>
  * CacheNode contains a number of predefined rulesets.  These rulesets
  * categorize messages into non-overlapping groups via the property filter.
@@ -54,8 +54,8 @@ import org.qbroker.event.Event;
  * cache the result. DataField, Template and Substitution are used to modify
  * the request for cache. By default, the request is assumed already built-in.
  * If the associated outlink is one the fixed outlinks and KeyTemplate is
- * defined also, the ruleset is of static cache. In this case, StaticCache is
- * required to be defined in the ruleset. It is a map with predefined key-value
+ * defined also, the ruleset is of static cache. In this case, StaticCache can
+ * be predefined in the ruleset. It is just a map with predefined key-value
  * pairs. Each cache ruleset maintains its own dedicated cache. Hence,
  * different message groups may have their own ways for the keys and policies.
  * Further more, CacheNode always creates an extra ruleset, nohit.  Ruleset
@@ -70,7 +70,14 @@ import org.qbroker.event.Event;
  * for invalidations. Each message of an invalidation ruleset will be routed
  * to its outlink directly. Once the response is successfully collected,
  * CacheNode will invalidate the cache of the target ruleset based on the
- * group keys.
+ * group keys. When you define an invalidation ruleset, make sure the ruleset
+ * referenced by the TargetRule has already been defined before the
+ * invalidation ruleset.
+ *<br/><br/>
+ * For static cache, CacheNode supports the update ruleset with TargetRule
+ * defined for a static cahce rule. When CacheNode invokes an update ruleset,
+ * The message payload will be saved into the cache with the given key. So
+ * the static cache will cache the data fed by the incoming messages.
  *<br/><br/>
  * If a ruleset has its preferred outlink to one of the collectibles but
  * has no KeyTemplate defined, it is a simple rule to collect responses.
@@ -90,10 +97,9 @@ import org.qbroker.event.Event;
  *<br/><br/>
  * You are free to choose any names for the three fixed outlinks.  But
  * CacheNode always assumes the first outlink for done, the second for failure
- * and the third for nohit.  The rest of the outlinks are for workers.  It is
- * OK for those three fixed outlinks to share the same name.  Please make sure
- * the each of the fixed outlinks has the actual capacity no less than that of
- * the input XQueue.
+ * and the third for nohit. The rest of the outlinks are for workers. It is OK
+ * for those three fixed outlinks to share the same name. Please make sure the
+ * first fixed outlink has the actual capacity no less than that of the uplink.
  *<br/>
  * @author yannanlu@yahoo.com
  */
@@ -103,6 +109,7 @@ public class CacheNode extends Node {
     private int sessionTimeout = 3600000;
     private int heartbeat = 120000;
     private String rcField;
+    private int[] outLinkMap;
 
     private QList pendList = null;     // list of messages pending for response
     private QuickCache templateCache;  // cache of templates for keys
@@ -122,9 +129,9 @@ public class CacheNode extends Node {
     public final static int OPTION_STATIC = 12;
     private final static int ONHOLD_OUT = -1;
     private final static int RESULT_OUT = 0;
-    private int FAILURE_OUT = 1;
-    private int NOHIT_OUT = 2;
-    private int BOUNDARY = 2;
+    private final static int FAILURE_OUT = 1;
+    private final static int NOHIT_OUT = 2;
+    private int BOUNDARY = NOHIT_OUT + 1;
 
     public CacheNode(Map props) {
         super(props);
@@ -177,8 +184,9 @@ public class CacheNode extends Node {
         int[] overlap = new int[]{FAILURE_OUT, NOHIT_OUT};
         assetList = NodeUtils.initFixedOutLinks(tm, capacity, n, overlap,
             name, list);
-        FAILURE_OUT = overlap[0];
-        NOHIT_OUT = overlap[1];
+        outLinkMap = new int[]{RESULT_OUT, FAILURE_OUT, NOHIT_OUT};
+        outLinkMap[FAILURE_OUT] = overlap[0];
+        outLinkMap[NOHIT_OUT] = overlap[1];
 
         if (assetList == null)
             throw(new IllegalArgumentException(name +
@@ -200,12 +208,14 @@ public class CacheNode extends Node {
                     "," + outInfo[OUT_LENGTH]);
         }
 
-        BOUNDARY = (NOHIT_OUT >= FAILURE_OUT) ? NOHIT_OUT : FAILURE_OUT;
+        BOUNDARY = outLinkMap[NOHIT_OUT];
+        BOUNDARY = (BOUNDARY >= outLinkMap[FAILURE_OUT]) ? BOUNDARY :
+            outLinkMap[FAILURE_OUT];
+        BOUNDARY ++;
         if ((debug & DEBUG_INIT) > 0) {
             new Event(Event.DEBUG, name + " LinkName: OID Capacity Partition " +
-                " - " + linkName + " " + capacity + " / " + BOUNDARY + " " +
-                assetList.getKey(RESULT_OUT)+" "+assetList.getKey(FAILURE_OUT)+
-                " " + assetList.getKey(NOHIT_OUT) + strBuf.toString()).send();
+                " - " + linkName + " " + capacity + " / " + BOUNDARY +
+                strBuf.toString()).send();
             strBuf = new StringBuffer();
         }
 
@@ -233,13 +243,13 @@ public class CacheNode extends Node {
             ruleInfo[RULE_STATUS] = NODE_RUNNING;
             ruleInfo[RULE_DMASK] = displayMask;
             ruleInfo[RULE_TIME] = tm;
-            ruleInfo[RULE_OID] = NOHIT_OUT;
+            ruleInfo[RULE_OID] = outLinkMap[NOHIT_OUT];
             ruleInfo[RULE_PID] = TYPE_BYPASS;
             rule = new HashMap<String, Object>();
             rule.put("Name", key);
             rule.put("PropertyName", displayPropertyName);
             ruleList.add(key, ruleInfo, rule);
-            outInfo = assetList.getMetaData(NOHIT_OUT);
+            outInfo = assetList.getMetaData(outLinkMap[NOHIT_OUT]);
             outInfo[OUT_NRULE] ++;
             outInfo[OUT_ORULE] ++;
 
@@ -348,7 +358,7 @@ public class CacheNode extends Node {
         rule.put("Name", ruleName);
         preferredOutName = (String) ph.get("PreferredOutLink");
         if(preferredOutName ==null || !assetList.containsKey(preferredOutName)){
-            preferredOutName = assetList.getKey(NOHIT_OUT);
+            preferredOutName = assetList.getKey(outLinkMap[NOHIT_OUT]);
             new Event(Event.WARNING, name + ": OutLink for " +
                 ruleName + " not well defined, use the default: "+
                 preferredOutName).send();
@@ -379,37 +389,61 @@ public class CacheNode extends Node {
         if ((o = ph.get("TimeToLive")) != null && o instanceof String)
             ruleInfo[RULE_TTL] = 1000 * Integer.parseInt((String) o);
 
+        // store RCRequired in RULE_MODE field
+        if ((o = ph.get("RCRequired")) != null && "false".equals((String) o))
+            ruleInfo[RULE_MODE] = 0;
+        else
+            ruleInfo[RULE_MODE] = 1;
+
         ruleInfo[RULE_OID] = assetList.getID(preferredOutName);
         ruleInfo[RULE_PID] = TYPE_BYPASS;
 
-        if (ruleInfo[RULE_OID] <= BOUNDARY) { // check static cache
-            if ((o = ph.get("StaticCache")) != null && o instanceof Map &&
-                (o = ph.get("KeyTemplate")) != null && o instanceof String) {
+        if (ruleInfo[RULE_OID] < BOUNDARY) { // check static cache
+            if ((o = ph.get("KeyTemplate")) != null && o instanceof String) {
                 rule.put("KeyTemplate", new Template((String) o));
                 if((o=ph.get("KeySubstitution")) != null && o instanceof String)
                     rule.put("KeySubstitution",new TextSubstitution((String)o));
 
-                ruleInfo[RULE_PID] = TYPE_CACHE;
-                ruleInfo[RULE_TTL] = 0;
-
                 // store request type in RULE_GID field
                 ruleInfo[RULE_GID] = OPTION_STATIC;
+                if ((o = ph.get("TargetRule")) != null && o instanceof String) {
+                    rule.put("TargetRule", (String) o);
+                    i = ruleList.getID((String) o);
+                    if (i > 0) {
+                        ruleInfo[RULE_PID] = TYPE_NONE;
+                        o = ruleList.get(i);
+                        rule.put("Cache", ((Map) o).get("Cache")); 
+                        ruleInfo[RULE_TTL] = ruleList.getMetaData(i)[RULE_TTL];
+                    }
+                    else {
+                        ruleInfo[RULE_PID] = TYPE_BYPASS;
+                        new Event(Event.WARNING, name + ": Target Rule for " +
+                            ruleName+" not well defined, use default instead: "+
+                            (String) o).send();
+                    }
+                }
+                else { // for cache
+                    ruleInfo[RULE_PID] = TYPE_CACHE;
 
-                cache = new GroupedCache(ruleName, maxGroup,
-                    QuickCache.META_DEFAULT, 0, 0);
-                rule.put("Cache", cache);
-                // load static cache
-                Map map = (Map) ph.get("StaticCache");
-                iter = map.keySet().iterator();
-                while (iter.hasNext()) {
-                    key = (String) iter.next();
-                    if (key == null || key.length() <= 0)
-                        continue;
-                    o = map.get(key);
-                    if (o == null || !(o instanceof String))
-                        continue;
-                    cache.insert(key, tm, 0, null, new String[]{ruleName}, o);
-                    ruleInfo[RULE_PEND] ++;
+                    cache = new GroupedCache(ruleName, maxGroup,
+                        QuickCache.META_DEFAULT, 0, 0);
+                    rule.put("Cache", cache);
+                    if((o = ph.get("StaticCache")) != null && o instanceof Map){
+                        // load static cache
+                        Map map = (Map) o;
+                        for (Object obj : map.keySet()) {
+                            key = (String) obj;
+                            if (key == null || key.length() <= 0)
+                                continue;
+                            o = map.get(key);
+                            if (o == null || !(o instanceof String))
+                                continue;
+                            cache.insert(key, tm, 0, null,
+                                new String[]{ruleName}, o);
+                            ruleInfo[RULE_PEND] ++;
+                        }
+                        ruleInfo[RULE_TTL] = 0;
+                    }
                 }
             }
         }
@@ -430,7 +464,14 @@ public class CacheNode extends Node {
             if ((o = ph.get("TargetRule")) != null && o instanceof String) {
                 rule.put("TargetRule", (String) o);
                 i = ruleList.getID((String) o);
-                ruleInfo[RULE_PID] = (i > 0) ? i : 0;
+                if (i > 0)
+                    ruleInfo[RULE_PID] = i;
+                else {
+                    ruleInfo[RULE_PID] = TYPE_COLLECT;
+                    new Event(Event.WARNING, name + ": Target Rule for " +
+                        ruleName + " not well defined, use default instead: " +
+                        (String) o).send();
+                }
             }
             else { // cache ruleset
                 ruleInfo[RULE_PID] = TYPE_CACHE;
@@ -438,12 +479,6 @@ public class CacheNode extends Node {
                     QuickCache.META_DEFAULT, 0, 0);
                 rule.put("Cache", cache);
             }
-
-            // store RCRequired in RULE_MODE field
-            if((o = ph.get("RCRequired")) != null && "false".equals((String) o))
-                ruleInfo[RULE_MODE] = 0;
-            else
-                ruleInfo[RULE_MODE] = 1;
 
             if ((o = ph.get("FieldName")) != null && o instanceof String) {
                 String dataField;
@@ -524,7 +559,7 @@ public class CacheNode extends Node {
      * loads the cache to the message and returns RESULT_OUT as the oid to
      * indicate the message is loaded and ready to be delivered to the oid.  
      * If there is no cache, it initializes the empty cache and returns
-     * (BOUNDARY+1) to indicate the message is a request and the oid should
+     * BOUNDARY to indicate the message is a request and the oid should
      * be determined from the ruleset.  If the cache is invalid, it returns
      * ONHOLD_OUT to indicate the message is put on-hold and pending on
      * the previous request to be fulfilled.
@@ -533,7 +568,7 @@ public class CacheNode extends Node {
         long[] ruleInfo, GroupedCache cache, Message inMessage) {
         Object o;
         String[] group;
-        int i = BOUNDARY + 1;
+        int i = BOUNDARY;
 
         if (cache == null) // no cache at all
             return i;
@@ -551,7 +586,7 @@ public class CacheNode extends Node {
                 i = RESULT_OUT;
             }
             catch (Exception e) {
-                i = BOUNDARY + 1;
+                i = BOUNDARY;
                 new Event(Event.ERR, name +": "+ ruleList.getKey(rid) +
                     " failed to load cache on " + key + ": " +
                     Event.traceStack(e)).send();
@@ -570,7 +605,7 @@ public class CacheNode extends Node {
                 group, null);
             i = pendList.reserve(cid);
             pendList.add(key, cid);
-            i = BOUNDARY + 1;
+            i = BOUNDARY;
         }
         else if (cache.isExpired(key, currentTime)) { // already expired
             switch ((int) ruleInfo[RULE_GID]) {
@@ -585,7 +620,7 @@ public class CacheNode extends Node {
                 group, null);
             i = pendList.reserve(cid);
             pendList.add(key, cid);
-            i = BOUNDARY + 1;
+            i = BOUNDARY;
         }
         else { // not expired yet but object is null and in pending state
             i = pendList.reserve(cid);
@@ -616,8 +651,7 @@ public class CacheNode extends Node {
         int[] ruleMap;
         long currentTime, previousTime, st, wt;
         long count = 0;
-        int mask, ii, sz, dspBody;
-        int i = 0, n, size, previousRid;
+        int mask, ii, sz, dspBody, i = 0, n, previousRid;
         int cid = -1; // the cell id of the message in input queue
         int rid = 0; // the id of the ruleset
         int oid = 0; // the id of the output queue
@@ -745,7 +779,8 @@ public class CacheNode extends Node {
                 rule = (Map) ruleList.get(rid);
                 propertyName = (String[]) rule.get("PropertyName");
                 if (ruleInfo[RULE_PID] == TYPE_CACHE ||
-                    ruleInfo[RULE_PID] >= 0) { // for cache or invalidation
+                    ruleInfo[RULE_PID] == TYPE_NONE ||
+                    ruleInfo[RULE_PID] > 0) { // for cache or invalidation
                     temp = (Template) rule.get("KeyTemplate");
                     tsub = (TextSubstitution) rule.get("KeySubstitution");
                     cache = (GroupedCache) rule.get("Cache");
@@ -760,16 +795,50 @@ public class CacheNode extends Node {
                 outInfo = assetList.getMetaData(oid);
             }
 
+            if ((int) ruleInfo[RULE_PID] != TYPE_BYPASS) try {
+                key = null;
+                if ((int) ruleInfo[RULE_PID] != TYPE_COLLECT) { // cache key
+                    key = MessageUtils.format(inMessage, buffer, temp);
+                    if (tsub != null && key != null)
+                        key = tsub.substitute(key);
+                }
+
+                switch ((int) ruleInfo[RULE_OPTION]) { // reset props
+                  case RESET_MAP:
+                    MessageUtils.resetProperties(inMessage);
+                    if (inMessage instanceof MapMessage)
+                       MessageUtils.resetMapBody((MapMessage) inMessage);
+                    break;
+                  case RESET_ALL:
+                    MessageUtils.resetProperties(inMessage);
+                    break;
+                  case RESET_SOME:
+                    if (!(inMessage instanceof JMSEvent))
+                        MessageUtils.resetProperties(inMessage);
+                    break;
+                  case RESET_NONE:
+                  default:
+                    break;
+                }
+            }
+            catch (Exception e) {
+                if (key != null || (int) ruleInfo[RULE_PID] == TYPE_COLLECT)
+                    new Event(Event.ERR, name + ": " + ruleName +
+                        " failed to reset props for " + key + ": " +
+                        Event.traceStack(e)).send();
+                else
+                    new Event(Event.ERR, name + ": " + ruleName +
+                        " failed to format the cache key: " +
+                        Event.traceStack(e)).send();
+            }
+
             if (i < 0) { // failed to apply filters
-                oid = FAILURE_OUT;
-                filter = null;
+                oid = outLinkMap[FAILURE_OUT];
             }
             else if ((int) ruleInfo[RULE_PID] == TYPE_CACHE) { // for cache
-                key = MessageUtils.format(inMessage, buffer, temp);
-                if (tsub != null && key != null)
-                    key = tsub.substitute(key);
-
-                if (ruleInfo[RULE_GID] == OPTION_STATIC) { // static cache
+                if (key == null)
+                    i = FAILURE_OUT;
+                else if (ruleInfo[RULE_GID] >= OPTION_STATIC) { // static cache
                     if ((o = cache.get(key, currentTime)) != null) {
                         // got cached object
                         try { // load the cache object to msg
@@ -778,8 +847,8 @@ public class CacheNode extends Node {
                                 ((TextMessage) inMessage).setText((String) o);
                             }
                             else {
-                                msgStr = (String) o;
-                       ((BytesMessage) inMessage).writeBytes(msgStr.getBytes());
+                                String str = (String) o;
+                           ((BytesMessage)inMessage).writeBytes(str.getBytes());
                             }
                             MessageUtils.setProperty(rcField, "0", inMessage);
                             i = RESULT_OUT;
@@ -791,8 +860,8 @@ public class CacheNode extends Node {
                                 Event.traceStack(e)).send();
                         }
                     }
-                    else {
-                        i = FAILURE_OUT;
+                    else { // no key in cache or key expired
+                        i = NOHIT_OUT;
                         new Event(Event.WARNING, name + ": " + ruleName +
                             " has no cache found for " + key).send();
                     }
@@ -848,120 +917,204 @@ public class CacheNode extends Node {
                 }
 
                 if (i == ONHOLD_OUT) { // msg on pending
-                    size = pendList.size();
                     if ((debug & DEBUG_UPDT) > 0)
-                        new Event(Event.DEBUG, name + " pending: " + key +
-                            " = " + cid + ":" + rid + "/" +
-                            size + " " + ruleInfo[RULE_PEND] + " " +
-                            cache.size()).send();
+                        new Event(Event.DEBUG,name + " pending: " + key +" = "+
+                             cid + ":" + rid + "/" + pendList.size() + " " +
+                             ruleInfo[RULE_PEND] + " " + cache.size()).send();
                     continue;
                 }
-                else if (i > BOUNDARY) { // for empty or invalid cache
-                    oid = (int) ruleInfo[RULE_OID];
+                else if (i >= BOUNDARY) { // for empty or invalid cache
+                    String errStr = null;
+                    filter = null;
                     if (ruleInfo[RULE_EXTRA] > 0) try { // set data field
-                        msgStr = MessageUtils.format(inMessage, buffer, tmp);
+                        String str= MessageUtils.format(inMessage, buffer, tmp);
                         if (sub != null)
-                            msgStr = sub.substitute(msgStr);
+                            str = sub.substitute(str);
                         if ("body".equals(dataField)) {
                             inMessage.clearBody();
                             if (inMessage instanceof TextMessage)
-                                ((TextMessage) inMessage).setText(msgStr);
+                                ((TextMessage) inMessage).setText(str);
                             else if (inMessage instanceof BytesMessage)
-                        ((BytesMessage)inMessage).writeBytes(msgStr.getBytes());
-                            else {
-                                oid = FAILURE_OUT;
-                                pendList.takeback(cid);
-                                cache.update(key, currentTime, 1000,
-                                    new int[]{cid, rid}, null);
-                                cache.expire(key, currentTime);
-                                new Event(Event.ERR, name + ": " + ruleName +
-                                  " failed to set body: bad msg family").send();
-                            }
+                           ((BytesMessage)inMessage).writeBytes(str.getBytes());
+                            else
+                                errStr = " failed to set body: bad msg family";
                         }
                         else
-                           MessageUtils.setProperty(dataField,msgStr,inMessage);
+                            MessageUtils.setProperty(dataField, str, inMessage);
                     }
                     catch (Exception e) {
-                        oid = FAILURE_OUT;
+                        errStr = " failed to set data field on " + dataField +
+                            ": " + e.toString();
+                    }
+
+                    if (errStr != null) { // failure
+                        oid = outLinkMap[FAILURE_OUT];
                         pendList.takeback(cid);
                         cache.update(key, currentTime, 1000,
                             new int[]{cid, rid}, null);
                         cache.expire(key, currentTime);
-                        new Event(Event.ERR, name + ": " + ruleName +
-                            " failed to set data field on " + dataField).send();
-                    }
-                }
-                else { // cache loaded
-                    oid = i;
-                }
-            }
-            else if (ruleInfo[RULE_PID] >= 0) { // for invalidation
-                key = MessageUtils.format(inMessage, buffer, temp);
-                if (tsub != null && key != null)
-                    key = tsub.substitute(key);
-                // reserve a cell in pendList to store group keys from the key
-                pendList.reserve(cid);
-                switch ((int) ruleInfo[RULE_GID]) { // get group keys from key
-                  case OPTION_JDBC:
-                    pendList.add(SQLUtils.getTables(key), cid);
-                    break;
-                  default:
-                    pendList.add(new String[]{key}, cid);
-                }
-                oid = (int) ruleInfo[RULE_OID];
-                if (ruleInfo[RULE_EXTRA] > 0) try { // set data field
-                    msgStr = MessageUtils.format(inMessage, buffer, tmp);
-                    if (sub != null)
-                        msgStr = sub.substitute(msgStr);
-                    if ("body".equals(dataField)) {
-                        inMessage.clearBody();
-                        if (inMessage instanceof TextMessage)
-                            ((TextMessage) inMessage).setText(msgStr);
-                        else if (inMessage instanceof BytesMessage)
-                        ((BytesMessage)inMessage).writeBytes(msgStr.getBytes());
-                        else {
-                            oid = FAILURE_OUT;
-                            pendList.takeback(cid);
-                            new Event(Event.ERR, name + ": " + ruleName +
-                              " failed to set body: bad msg family").send();
+                        try {
+                            MessageUtils.setProperty(rcField, "-1", inMessage);
                         }
+                        catch (Exception e) {
+                            errStr += ", and failed to set rc also";
+                        }
+                        new Event(Event.ERR, name + ": " + ruleName +
+                            errStr).send();
                     }
                     else
-                        MessageUtils.setProperty(dataField, msgStr, inMessage);
+                        oid = (int) ruleInfo[RULE_OID];
+                }
+                else if (i == RESULT_OUT) { // cache loaded
+                    oid = outLinkMap[RESULT_OUT];
+                }
+                else { // failure or nohit
+                    oid = outLinkMap[i];
+                    filter = null;
+                    try {
+                        MessageUtils.setProperty(rcField,
+                            ((i == FAILURE_OUT) ? "-1" : "1"), inMessage);
+                    }
+                    catch (Exception e) {
+                    }
+                }
+            }
+            else if (ruleInfo[RULE_PID] == TYPE_NONE) { // for update on cache
+                i = 0;
+                if (key == null || key.length() <= 0)
+                    i = FAILURE_OUT;
+                else try { // retrieve the payload and update cache
+                    int ttl = (int) ruleInfo[RULE_TTL];
+                    if (!ckBody)
+                        msgStr = MessageUtils.processBody(inMessage, buffer); 
+                    if (cache.containsKey(key)) // update
+                        cache.update(key, currentTime, ttl, null,
+                            new String(msgStr));
+                    else { // insert
+                        String str = (String) rule.get("TargetRule");
+                        cache.insert(key, currentTime, ttl, null,
+                            new String[]{str}, new String(msgStr));
+                        ruleList.getMetaData(str)[RULE_PEND] ++;
+                    }
+                    ruleInfo[RULE_PEND] ++;
+                    MessageUtils.setProperty(rcField, "0", inMessage);
                 }
                 catch (Exception e) {
-                    oid = FAILURE_OUT;
-                    pendList.takeback(cid);
+                    i = FAILURE_OUT;
                     new Event(Event.ERR, name + ": " + ruleName +
-                        " failed to set data field on " + dataField).send();
+                        " failed to update cache for " + key + ": " +
+                        Event.traceStack(e)).send();
+                }
+                if (i == FAILURE_OUT) {
+                    oid = outLinkMap[FAILURE_OUT];
+                    filter = null;
+                    try {
+                        MessageUtils.setProperty(rcField, "-1", inMessage);
+                    }
+                    catch (Exception e) {
+                    }
+                }
+                else {
+                    String str = (String) rule.get("TargetRule");
+                    oid = (int) ruleInfo[RULE_OID];
+                    if ((debug & DEBUG_UPDT) > 0)
+                        new Event(Event.DEBUG, name + " updating: " + str +
+                             " with " + key + " = "+ cid + ":" + rid + " " +
+                             ruleInfo[RULE_PEND] + " " + cache.size()).send();
+                }
+            }
+            else if (ruleInfo[RULE_PID] > 0) { // for invalidations
+                String errStr = null;
+                filter = null;
+                if (key != null && key.length() > 0) {
+                   //reserve a cell in pendList to store group keys from the key
+                    pendList.reserve(cid);
+                    switch ((int) ruleInfo[RULE_GID]) {//get group keys from key
+                      case OPTION_JDBC:
+                        pendList.add(SQLUtils.getTables(key), cid);
+                        break;
+                      default:
+                        pendList.add(new String[]{key}, cid);
+                    }
+                    if (ruleInfo[RULE_EXTRA] > 0) try { // set data field
+                        String str= MessageUtils.format(inMessage, buffer, tmp);
+                        if (sub != null)
+                            str = sub.substitute(str);
+                        if ("body".equals(dataField)) {
+                            inMessage.clearBody();
+                            if (inMessage instanceof TextMessage)
+                                ((TextMessage) inMessage).setText(str);
+                            else if (inMessage instanceof BytesMessage)
+                           ((BytesMessage)inMessage).writeBytes(str.getBytes());
+                            else
+                                errStr = " failed to set body: bad msg family";
+                        }
+                        else
+                            MessageUtils.setProperty(dataField, str, inMessage);
+                    }
+                    catch (Exception e) {
+                        errStr = " failed to set data field on " + dataField +
+                            ": " + e.toString();
+                    }
+                    if (errStr != null) { // failed
+                        pendList.takeback(cid);
+                        oid = outLinkMap[FAILURE_OUT];
+                        try {
+                            MessageUtils.setProperty(rcField, "-1", inMessage);
+                        }
+                        catch (Exception e) {
+                            errStr += ", and failed to set rc also";
+                        }
+                        new Event(Event.ERR, name +": "+ruleName+errStr).send();
+                    }
+                    else
+                        oid = (int) ruleInfo[RULE_OID];
+                }
+                else { // key is null or empty
+                    oid = outLinkMap[FAILURE_OUT];
+                    try {
+                        MessageUtils.setProperty(rcField, "-1", inMessage);
+                    }
+                    catch (Exception e) {
+                    }
                 }
             }
             else if (ruleInfo[RULE_PID] == TYPE_COLLECT) { // for collect
-                oid = (int) ruleInfo[RULE_OID];
+                String errStr = null;
+                filter = null;
                 if (ruleInfo[RULE_EXTRA] > 0) try { // set data field
-                    msgStr = MessageUtils.format(inMessage, buffer, tmp);
+                    String str = MessageUtils.format(inMessage, buffer, tmp);
                     if (sub != null)
-                        msgStr = sub.substitute(msgStr);
+                        str = sub.substitute(str);
                     if ("body".equals(dataField)) {
                         inMessage.clearBody();
                         if (inMessage instanceof TextMessage)
-                            ((TextMessage) inMessage).setText(msgStr);
+                            ((TextMessage) inMessage).setText(str);
                         else if (inMessage instanceof BytesMessage)
-                        ((BytesMessage)inMessage).writeBytes(msgStr.getBytes());
-                        else {
-                            oid = FAILURE_OUT;
-                            new Event(Event.ERR, name + ": " + ruleName +
-                              " failed to set body: bad msg family").send();
-                        }
+                           ((BytesMessage)inMessage).writeBytes(str.getBytes());
+                        else
+                            errStr = " failed to set body: bad msg family";
                     }
                     else
-                        MessageUtils.setProperty(dataField, msgStr, inMessage);
+                        MessageUtils.setProperty(dataField, str, inMessage);
                 }
                 catch (Exception e) {
-                    oid = FAILURE_OUT;
-                    new Event(Event.ERR, name + ": " + ruleName +
-                        " failed to set data field on " + dataField).send();
+                    errStr = " failed to set data field on " + dataField +
+                        ": " + e.toString();
                 }
+
+                if (errStr != null) { // failed
+                    oid = outLinkMap[FAILURE_OUT];
+                    try {
+                        MessageUtils.setProperty(rcField, "-1", inMessage);
+                    }
+                    catch (Exception e) {
+                        errStr += ", and failed to set rc also";
+                    }
+                    new Event(Event.ERR, name + ": " + ruleName +errStr).send();
+                }
+                else
+                    oid = (int) ruleInfo[RULE_OID];
             }
             else { // for bypass
                 oid = (int) ruleInfo[RULE_OID];
@@ -972,7 +1125,7 @@ public class CacheNode extends Node {
                     " rid=" + rid + " oid=" + oid).send();
 
             // display message
-            if (oid <= BOUNDARY && ruleInfo[RULE_DMASK] > 0) try {
+            if (oid < BOUNDARY && ruleInfo[RULE_DMASK] > 0) try {
                 if ((ruleInfo[RULE_DMASK] & dspBody) > 0 && !ckBody)
                     msgStr = MessageUtils.processBody(inMessage, buffer);
                 new Event(Event.INFO, name +": "+ ruleName + " processed msg "+
@@ -984,25 +1137,7 @@ public class CacheNode extends Node {
                     " failed to display msg: " + e.toString()).send();
             }
 
-            if (oid <= BOUNDARY && filter != null && filter.hasFormatter()) try{
-                switch ((int) ruleInfo[RULE_OPTION]) {
-                  case RESET_MAP:
-                    MessageUtils.resetProperties(inMessage);
-                    if (inMessage instanceof MapMessage)
-                       MessageUtils.resetMapBody((MapMessage) inMessage);
-                    break;
-                  case RESET_ALL:
-                    MessageUtils.resetProperties(inMessage);
-                    break;
-                  case RESET_SOME:
-                    if (!(inMessage instanceof JMSEvent))
-                        MessageUtils.resetProperties(inMessage);
-                    break;
-                  case RESET_NONE:
-                  default:
-                    break;
-                }
-
+            if (filter != null && filter.hasFormatter()) try {
                 filter.format(inMessage, buffer);
             }
             catch (Exception e) {
@@ -1013,7 +1148,7 @@ public class CacheNode extends Node {
             i = passthru(currentTime, inMessage, in, rid, oid, cid, 0);
             if (i > 0)
                 count ++;
-            else if (oid > BOUNDARY && ruleInfo[RULE_PID] != TYPE_COLLECT) {
+            else if (oid >= BOUNDARY && ruleInfo[RULE_PID] != TYPE_COLLECT) {
                 // rollback
                 pendList.takeback(cid);
                 cache.update(key, currentTime, 1000, new int[]{cid, rid}, null);
@@ -1054,7 +1189,7 @@ public class CacheNode extends Node {
         if (mid < 0 || mid >= capacity)
             return -1;
         state = msgList.getMetaData(mid);
-        if (state == null || (pid = (int) state[MSG_OID]) <= BOUNDARY)
+        if (state == null || (pid = (int) state[MSG_OID]) < BOUNDARY)
             return -1;
         id = (int) state[MSG_BID];
         rid = (int) state[MSG_RID];
@@ -1098,15 +1233,15 @@ public class CacheNode extends Node {
         }
 
         if (rc != 0) { // request failed somehow
-            oid = FAILURE_OUT;
+            filter = null;
+            oid = outLinkMap[FAILURE_OUT];
             new Event(Event.ERR, name + ": " + ruleName +
-                " got a failed request from " + out.getName() + ": " +
-                rc).send();
+                " got a failed request from " + out.getName() +": "+ rc).send();
         }
         else
-            oid = RESULT_OUT;
-        outInfo = assetList.getMetaData(oid);
+            oid = outLinkMap[RESULT_OUT];
 
+        outInfo = assetList.getMetaData(oid);
         int ttl = (int) ruleInfo[RULE_TTL];
         int[] meta = null;
         if (ruleInfo[RULE_PID] == TYPE_CACHE) { // for cache
@@ -1125,7 +1260,7 @@ public class CacheNode extends Node {
                     ": " + e.toString()).send();
             }
         }
-        else if (ruleInfo[RULE_PID] >= 0) { // for invalidation
+        else if (ruleInfo[RULE_PID] > 0) { // for invalidation
             // retrieve group keys for invalidation
             String[] keys = (String[]) msgList.get(mid);
             key = keys[0];
@@ -1164,24 +1299,6 @@ public class CacheNode extends Node {
         }
 
         if (filter != null && filter.hasFormatter()) try { // post format
-            switch ((int) ruleInfo[RULE_OPTION]) {
-              case RESET_MAP:
-                MessageUtils.resetProperties(msg);
-                if (msg instanceof MapMessage)
-                   MessageUtils.resetMapBody((MapMessage) msg);
-                break;
-              case RESET_ALL:
-                MessageUtils.resetProperties(msg);
-                break;
-              case RESET_SOME:
-                if (!(msg instanceof JMSEvent))
-                    MessageUtils.resetProperties(msg);
-                break;
-              case RESET_NONE:
-              default:
-                break;
-            }
-
             filter.format(msg, buffer);
         }
         catch (Exception e) {
@@ -1348,24 +1465,6 @@ public class CacheNode extends Node {
                 }
 
                 if (filter != null && filter.hasFormatter()) try { //post format
-                    switch ((int) ruleInfo[RULE_OPTION]) {
-                      case RESET_MAP:
-                        MessageUtils.resetProperties(msg);
-                        if (msg instanceof MapMessage)
-                           MessageUtils.resetMapBody((MapMessage) msg);
-                        break;
-                      case RESET_ALL:
-                        MessageUtils.resetProperties(msg);
-                        break;
-                      case RESET_SOME:
-                        if (!(msg instanceof JMSEvent))
-                            MessageUtils.resetProperties(msg);
-                        break;
-                      case RESET_NONE:
-                      default:
-                        break;
-                    }
-
                     filter.format(msg, buffer);
                 }
                 catch (Exception e) {
@@ -1495,10 +1594,10 @@ public class CacheNode extends Node {
 
             browser.reset();
             rid = 0;
-            while ((k = browser.next()) > 0) { // search for cache has key
+            while ((k = browser.next()) > 0) { // search for cache with the key
                 ruleInfo = ruleList.getMetaData(k);
-                if (ruleInfo[RULE_OID] <= BOUNDARY ||
-                    ruleInfo[RULE_PID] != TYPE_CACHE)
+                if (ruleInfo[RULE_OID] < BOUNDARY ||
+                    ruleInfo[RULE_PID] != TYPE_CACHE) // only check cache rules
                     continue;
                 rule = (Map) ruleList.get(k);
                 cache = (GroupedCache) rule.get("Cache");
@@ -1508,15 +1607,15 @@ public class CacheNode extends Node {
                 }
             }
             if (rid == 0) { // no cache contains key, default to NOHIT
-                oid = NOHIT_OUT;
+                oid = outLinkMap[NOHIT_OUT];
                 msgStr = null;
                 if (rule == null) { // make sure rule and ruleInfo is set
                     rule = (Map) ruleList.get(0);
                     ruleInfo = ruleList.getMetaData(0);
                 }
             }
-            else if ((o = cache.get(key, currentTime)) != null) { //valid cache
-                oid = RESULT_OUT;
+            else if ((o = cache.get(key, currentTime)) != null) { // valid cache
+                oid = outLinkMap[RESULT_OUT];
                 msgStr = (String) o;
             }
             else if (cache.isExpired(key, currentTime)) { // already expired
@@ -1527,7 +1626,7 @@ public class CacheNode extends Node {
                 continue;
             }
 
-            if (oid > BOUNDARY) { // retry
+            if (oid >= BOUNDARY) { // retry
                 cache.update(key, currentTime, 0, new int[]{cid, rid}, null);
             }
             else { // flush the pending msg
@@ -1686,14 +1785,14 @@ public class CacheNode extends Node {
             mid = msgList.getID(key);
             ruleInfo = ruleList.getMetaData(rid);
             if (mid < 0) { // id-th cell was empty before, add new entry to it
-                if (oid <= BOUNDARY || ruleInfo[RULE_PID] == TYPE_COLLECT)
+                if (oid < BOUNDARY || ruleInfo[RULE_PID] == TYPE_COLLECT)
                     mid = msgList.add(key, new long[]{cid, oid, id, rid, tid,
                         currentTime}, key, cid);
                 else // for requests
                     mid = msgList.add(key, new long[]{cid, oid, id, rid, tid,
                         currentTime}, pendList.takeback(cid), cid);
             }
-            else if (oid <= BOUNDARY) { // an exit msg
+            else if (oid < BOUNDARY) { // an exit msg
                 cells.collect(-1L, mid);
                 state = msgList.getMetaData(mid);
                 msgList.remove(mid);
@@ -1803,7 +1902,7 @@ public class CacheNode extends Node {
                 continue;
             out = (XQueue) asset[ASSET_XQ];
             id = (int) state[MSG_BID];
-            if (oid > BOUNDARY) { // for collectible messages
+            if (oid >= BOUNDARY) { // for collectible messages
                 collect(t, in, mid, out);
                 continue;
             }
@@ -1901,7 +2000,12 @@ public class CacheNode extends Node {
         }
     }
 
-    /** returns the BOUNDARY separating collectibles from fixed outlinks */
+    /**
+     * returns the BOUNDARY which is the lowest id of outlinks for collectibles
+     * so that any outlink with either the same id or a higher id is for
+     * collectibles. The EXTERNAL_XA bit of all outlinks for collectibles has
+     * to be disabled by the container to stop ack propagations downsstream.
+     */
     public int getOutLinkBoundary() {
         return BOUNDARY;
     }

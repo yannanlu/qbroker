@@ -1395,6 +1395,7 @@ public abstract class Node implements MessageNode {
         return assetList.size();
     }
 
+    /** returns -1 since there is no outlinks for collectibles by default */
     public int getOutLinkBoundary() {
         return -1;
     }

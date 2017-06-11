@@ -189,15 +189,15 @@ public class PublishNode extends Node {
 
         if ((debug & DEBUG_INIT) > 0) {
             new Event(Event.DEBUG, name + " LinkName: OID Capacity Partition " +
-                " - " + linkName + " " + capacity + " " +
-                assetList.getKey(POOL_OUT)+" "+assetList.getKey(FAILURE_OUT)+
-                " " + assetList.getKey(NOHIT_OUT) + strBuf.toString()).send();
+                " - " + linkName + " " + capacity + strBuf.toString()).send();
             strBuf = new StringBuffer();
         }
 
-        if (POOL_OUT == BYPASS_OUT || POOL_OUT == FAILURE_OUT ||
-            POOL_OUT == NOHIT_OUT)
-            throw(new IllegalArgumentException(name+": overlapped OutLinks"));
+        i = outLinkMap[NOHIT_OUT];
+        i = (i >= outLinkMap[FAILURE_OUT]) ? i : outLinkMap[FAILURE_OUT];
+        i = (i >= outLinkMap[BYPASS_OUT]) ? i : outLinkMap[BYPASS_OUT];
+        if (++i > assetList.size())
+            throw(new IllegalArgumentException(name+": missing some OutLinks"));
 
         try { // init perl compiler and matcher
             pc = new Perl5Compiler();

@@ -92,12 +92,13 @@ import org.qbroker.event.Event;
  * expired if their idle time exceeds SessionTimeout.  Those expired topics
  * will be removed from the cache in next session to save resources.
  *<br/><br/>
- * You are free to choose any names for the four fixed outlinks.  But
- * EventDispatcher always assumes the first outlink for the out group,
- * the second for the bypass group, the third for the failure group and
- * the last is for the nohit group.  Any two or more outlinks can share
- * the same outlink name.  It means these outlinks are sharing the same
- * output channel.
+ * You are free to choose any names for these four fixed outlinks.  But
+ * EventDispatcher always assumes the first outlink as the pool for requests,
+ * the second for the bypass messages, the third for the failures and the
+ * last is for the nohit messages. It is OK for the last three outlinks to
+ * share the same name. But the name of the first outlink has to be unique.
+ * In case some of them sharing the same name, it means these outlinks are
+ * sharing the same output channel.
  *<br/>
  * @author yannanlu@yahoo.com
  */
@@ -192,7 +193,10 @@ public class EventDispatcher extends Node {
             strBuf = new StringBuffer();
         }
 
-        if (outLinkMap[NOHIT_OUT] >= assetList.size())
+        i = outLinkMap[NOHIT_OUT];
+        i = (i >= outLinkMap[FAILURE_OUT]) ? i : outLinkMap[FAILURE_OUT];
+        i = (i >= outLinkMap[BYPASS_OUT]) ? i : outLinkMap[BYPASS_OUT];
+        if (++i > assetList.size())
             throw(new IllegalArgumentException(name+": missing some OutLinks"));
 
         try { // init perl compiler and matcher
@@ -1187,7 +1191,7 @@ public class EventDispatcher extends Node {
         }
     }
 
-    /** returns the BOUNDARY separating pool from other fixed outlinks */
+    /** returns 0 to have the ack propagation skipped on the first outlink */
     public int getOutLinkBoundary() {
         return 0;
     }

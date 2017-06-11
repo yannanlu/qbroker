@@ -51,11 +51,11 @@ public class NodeUtils {
 
     /**
      * It initializes all fixed outLinks stored in list and returns an
-     * instance of AssetList with metaData on each of outLinks.
+     * instance of AssetList with metaData on each of valid outLinks.
      * The array of overlap determines what outLinks are allowed to be 
      * overlapped with others before it.  It also initializes non-overlapping
      * outLinks after the last allowed overlap outLinks.  For those,
-     * it will skip any duplicated outLinks. 
+     * it will skip any outLinks with duplicated names.
      */
     public static AssetList initFixedOutLinks(long tm, int outCapacity,
         int size, int[] overlap, String name, List list) {
@@ -106,7 +106,7 @@ public class NodeUtils {
             if (key == null || key.length() <= 0)
                 throw(new IllegalArgumentException(name +
                     ": no name defined for OutLink at " + i));
-            else if (!outList.containsKey(key)) {
+            else if (!outList.containsKey(key)) { // new outlink
                 outInfo = new long[MessageNode.OUT_QTIME + 1];
                 for (j=0; j<=MessageNode.OUT_QTIME; j++)
                     outInfo[j] = 0;
@@ -121,7 +121,7 @@ public class NodeUtils {
                 id = outList.add(key, outInfo, new Object[]{null, str, null});
             }
             else if (overlap.length == 1) { // overlap on last one allowed
-                if (i == overlap[0] && outList.getID(key) != 0)
+                if (i == overlap[0] && outList.getID(key) != 0) //not the first
                     overlap[0] = outList.getID(key);
                 else
                     throw(new IllegalArgumentException(name +

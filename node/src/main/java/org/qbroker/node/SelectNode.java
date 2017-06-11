@@ -219,7 +219,10 @@ public class SelectNode extends Node {
             strBuf = new StringBuffer();
         }
 
-        if (outLinkMap[NOHIT_OUT] >= assetList.size())
+        i = outLinkMap[NOHIT_OUT];
+        i = (i >= outLinkMap[FAILURE_OUT]) ? i : outLinkMap[FAILURE_OUT];
+        i = (i >= outLinkMap[BYPASS_OUT]) ? i : outLinkMap[BYPASS_OUT];
+        if (++i > assetList.size())
             throw(new IllegalArgumentException(name+": missing some OutLinks"));
 
         msgList = new AssetList(name, capacity);

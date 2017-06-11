@@ -78,6 +78,8 @@ import org.qbroker.event.Event;
  * You are free to choose any names for the five fixed outlinks.  But
  * MonitorNode always assumes the first outlink for pool, the second for
  * done, the third for bypass, the fourth for failure and the last for nohit.
+ * It is OK for the last four outlinks to share the same name. But the name of
+ * the first outlink has to be unique.
  *<br/>
  * @author yannanlu@yahoo.com
  */
@@ -90,6 +92,7 @@ public class MonitorNode extends Node {
     private XQueue pool;
     private long[] poolInfo;
     private int[] heartbeat;
+    private int[] outLinkMap;
 
     private final static int TASK_ID = 0;
     private final static int TASK_GID = 1;
@@ -100,9 +103,9 @@ public class MonitorNode extends Node {
     private final static int TASK_TIME = 6;
     private final static int POOL_OUT = 0;
     private final static int RESULT_OUT = 1;
-    private int BYPASS_OUT = 2;
-    private int FAILURE_OUT = 3;
-    private int NOHIT_OUT = 4;
+    private final static int BYPASS_OUT = 2;
+    private final static int FAILURE_OUT = 3;
+    private final static int NOHIT_OUT = 4;
 
     public MonitorNode(Map props) {
         super(props);
@@ -148,22 +151,25 @@ public class MonitorNode extends Node {
         int[] overlap = new int[]{BYPASS_OUT, FAILURE_OUT, NOHIT_OUT};
         assetList = NodeUtils.initFixedOutLinks(tm, capacity, n,
             overlap, name, list);
-        BYPASS_OUT = overlap[0];
-        FAILURE_OUT = overlap[1];
-        NOHIT_OUT = overlap[2];
+        outLinkMap = new int[]{POOL_OUT, RESULT_OUT, BYPASS_OUT, FAILURE_OUT,
+            NOHIT_OUT};
+        outLinkMap[BYPASS_OUT] = overlap[0];
+        outLinkMap[FAILURE_OUT] = overlap[1];
+        outLinkMap[NOHIT_OUT] = overlap[2];
 
         if (assetList == null)
             throw(new IllegalArgumentException(name +
                 ": failed to init OutLinks"));
-        if (overlap[0] < RESULT_OUT || overlap[1] < RESULT_OUT ||
-            overlap[2] < RESULT_OUT)
+        if (overlap[0] < outLinkMap[RESULT_OUT] ||
+            overlap[1] < outLinkMap[RESULT_OUT] ||
+            overlap[2] < outLinkMap[RESULT_OUT])
             throw(new IllegalArgumentException(name + ": bad overlap outlink "+
                 overlap[0] + ", " + overlap[1] + " or " + overlap[2]));
 
         browser = assetList.browser();
         while ((i = browser.next()) >= 0) {
             outInfo = assetList.getMetaData(i);
-            if (i == POOL_OUT) // for tracking request
+            if (i == outLinkMap[POOL_OUT]) // for tracking request
                 reqList = new AssetList(name, (int) outInfo[OUT_CAPACITY]);
             if (outInfo[OUT_OFFSET] < 0 || outInfo[OUT_LENGTH] < 0 ||
                 (outInfo[OUT_LENGTH]==0 && outInfo[OUT_OFFSET]!=0) ||
@@ -183,6 +189,12 @@ public class MonitorNode extends Node {
                 " - " + linkName + " " + capacity + strBuf.toString()).send();
             strBuf = new StringBuffer();
         }
+
+        i = outLinkMap[NOHIT_OUT];
+        i = (i >= outLinkMap[FAILURE_OUT]) ? i : outLinkMap[FAILURE_OUT];
+        i = (i >= outLinkMap[BYPASS_OUT]) ? i : outLinkMap[BYPASS_OUT];
+        if (++i > assetList.size())
+            throw(new IllegalArgumentException(name+": missing some OutLinks"));
 
         cfgList = new AssetList(name, 64);
         msgList = new AssetList(name, capacity);
@@ -206,12 +218,12 @@ public class MonitorNode extends Node {
                 ruleInfo[i] = 0;
             ruleInfo[RULE_STATUS] = NODE_RUNNING;
             ruleInfo[RULE_TIME] = tm;
-            ruleInfo[RULE_OID] = NOHIT_OUT;
+            ruleInfo[RULE_OID] = outLinkMap[NOHIT_OUT];
             ruleInfo[RULE_PID] = TYPE_BYPASS;
             rule = new HashMap<String, Object>();
             rule.put("Name", key);
             ruleList.add(key, ruleInfo, rule);
-            outInfo = assetList.getMetaData(NOHIT_OUT);
+            outInfo = assetList.getMetaData(outLinkMap[NOHIT_OUT]);
             outInfo[OUT_NRULE] ++;
             outInfo[OUT_ORULE] ++;
 
@@ -345,7 +357,7 @@ public class MonitorNode extends Node {
         rule.put("Name", ruleName);
         preferredOutName = (String) ph.get("PreferredOutLink");
         if(preferredOutName !=null && (i=assetList.getID(preferredOutName))<=0){
-            preferredOutName = assetList.getKey(NOHIT_OUT);
+            preferredOutName = assetList.getKey(outLinkMap[NOHIT_OUT]);
             new Event(Event.WARNING, name + ": OutLink for " +
                 ruleName + " not well defined, use the default: "+
                 preferredOutName).send();
@@ -406,11 +418,11 @@ public class MonitorNode extends Node {
             if (ph.containsKey("EventPattern"))
                 rule.put("Selector", new EventSelector(ph));
             ruleInfo[RULE_PID] = TYPE_ACTION;
-            ruleInfo[RULE_OID] = POOL_OUT;
+            ruleInfo[RULE_OID] = outLinkMap[POOL_OUT];
         }
         else {
             ruleInfo[RULE_PID] = TYPE_BYPASS;
-            ruleInfo[RULE_OID] = NOHIT_OUT;
+            ruleInfo[RULE_OID] = outLinkMap[NOHIT_OUT];
         }
         outInfo = assetList.getMetaData((int) ruleInfo[RULE_OID]);
         outInfo[OUT_NRULE] ++;
@@ -599,8 +611,8 @@ public class MonitorNode extends Node {
             if (outInfo[OUT_CAPACITY] != out[i].getCapacity())
                 outInfo[OUT_CAPACITY] = out[i].getCapacity();
         }
-        pool = out[POOL_OUT];
-        poolInfo = assetList.getMetaData(POOL_OUT);
+        pool = out[outLinkMap[POOL_OUT]];
+        poolInfo = assetList.getMetaData(outLinkMap[POOL_OUT]);
         if (pool.getCapacity() != reqList.getCapacity()) { // rereate reqList
             reqList.clear();
             reqList = new AssetList(name, pool.getCapacity());
@@ -656,7 +668,7 @@ public class MonitorNode extends Node {
                 ruleInfo = ruleList.getMetaData(rid);
 
                 if (i < 0) // failed on filter
-                    oid = FAILURE_OUT;
+                    oid = outLinkMap[FAILURE_OUT];
                 else if (TYPE_ACTION != (int) ruleInfo[RULE_PID]) // bypass
                     oid = (int) ruleInfo[RULE_OID];
                 else try { // to init the occurrence and to add it to taskList
@@ -693,7 +705,7 @@ public class MonitorNode extends Node {
                                 taskInfo[TASK_GID] = cid;
                                 continue;
                             }
-                            oid = BYPASS_OUT;
+                            oid = outLinkMap[BYPASS_OUT];
                         }
                         else { // failed to add to the list
                             MonitorReport report;
@@ -706,23 +718,23 @@ public class MonitorNode extends Node {
                                     " failed to add new task of " + key +
                                     " " + taskList.size() + "/" +
                                     ruleInfo[RULE_EXTRA]).send();
-                                oid = FAILURE_OUT;
+                                oid = outLinkMap[FAILURE_OUT];
                             }
                             else {
                                 new Event(Event.WARNING, name +": "+ruleName+
                                     " has an active task for " + key).send();
-                                oid = BYPASS_OUT;
+                                oid = outLinkMap[BYPASS_OUT];
                             }
                         }
                     }
                     else { // failed to init occurrence
-                        oid = FAILURE_OUT;
+                        oid = outLinkMap[FAILURE_OUT];
                         new Event(Event.ERR, name + ": " + ruleName +
                             " failed to init a new task").send();
                     }
                 }
                 catch (Exception e) {
-                    oid = FAILURE_OUT;
+                    oid = outLinkMap[FAILURE_OUT];
                     new Event(Event.ERR, name + ": " + ruleName +
                         " failed to create a new task: " +
                         Event.traceStack(e)).send();
@@ -751,7 +763,7 @@ public class MonitorNode extends Node {
             currentTime = System.currentTimeMillis();
             if (currentTime < sessionTime) { // session not due yet
                 if (pool.collectible() > 0)
-                    collect(in, RESULT_OUT);
+                    collect(in, outLinkMap[RESULT_OUT]);
                 if (msgList.size() > 0)
                     feedback(in, -1L);
                 continue;
@@ -801,7 +813,8 @@ public class MonitorNode extends Node {
                         id = pool.reserve(waitTime);
                         if (id >= 0) { // reserved
                             if (reqList.existsID(id)) { // preoccupied?
-                                collect(currentTime, id, in, RESULT_OUT);
+                                collect(currentTime, id, in,
+                                    outLinkMap[RESULT_OUT]);
                             }
                             pool.add(msg, id);
                             taskInfo[TASK_ID] = id;
@@ -847,7 +860,7 @@ public class MonitorNode extends Node {
             }
 
             if (pool.collectible() > 0)
-                collect(in, RESULT_OUT);
+                collect(in, outLinkMap[RESULT_OUT]);
             if (msgList.size() > 0)
                 feedback(in, -1L);
 
@@ -1103,10 +1116,11 @@ public class MonitorNode extends Node {
         taskList.remove(tid);
         if (cid >= 0) { // wait is done so bypass the original request
             int j = passthru(currentTime, (Message) in.browse(cid), in, rid,
-                BYPASS_OUT, cid, 0);
+                outLinkMap[BYPASS_OUT], cid, 0);
             if (j <= 0)
                 new Event(Event.ERR, name + ": " +ruleList.getKey(rid) +
-                    " failed to passthru original msg to " + BYPASS_OUT).send();
+                    " failed to passthru original msg to " +
+                    outLinkMap[BYPASS_OUT]).send();
         }
         return i;
     }
@@ -1318,7 +1332,7 @@ public class MonitorNode extends Node {
         return h;
     }
 
-    /** returns the BOUNDARY separating pool from other fixed outlinks */
+    /** returns 0 to have the ack propagation skipped on the first outlink */
     public int getOutLinkBoundary() {
         return 0;
     }

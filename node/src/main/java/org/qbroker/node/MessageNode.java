@@ -64,9 +64,9 @@ public interface MessageNode {
     public String getOperation();
     /** returns the name of the node */
     public String getName();
-    /** returns the total number of OutLinks */
+    /** returns the total number of outlinks */
     public int getNumberOfOutLinks();
-    /** returns the BOUNDARY for collectibles */
+    /** returns the lowest id of outlinks for collectibles */
     public int getOutLinkBoundary();
     /** returns the name of the uplink */
     public String getLinkName();

@@ -3,6 +3,12 @@ package org.qbroker.flow;
 /* ReleaseTag.java - release tag for all the packages of qbroker */
 
 /**
+ * V1.2.2 (2017/06/11): added RequestNode to support async requests, changed
+ * BOUNDARY to the lowest id of outlinks for collectibles, updated comments on
+ * bunch of implementations of MessageNode, added support of static cache
+ * updates to CacheNode, added outLonkMap to CacheNode, CollectNode,
+ * MapReduceNode and MonitorNode
+ *<br/>
  * V1.2.1 (2017/05/27): added the support of post formatters to EventMonitor
  * and EventCorrelator for newly generated events, removed hardcoded String
  * encoding from MessageUtils, fixed a bug on the request path in QServlet
@@ -147,7 +153,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V 1.2.1 2017/05/27 11:07:45";
+    private static String ReleaseTAG = "QBroker V 1.2.2 2017/06/11 09:47:20";
 
     public ReleaseTag() {
     }

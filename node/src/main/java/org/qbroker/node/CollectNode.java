@@ -98,6 +98,9 @@ import org.qbroker.event.Event;
  * You are free to choose any names for the three fixed outlinks.  But
  * CollectNode always assumes the first outlink for done, the second for
  * failure and the third for nohit.  The rest of the outlinks are for workers.
+ * It is OK for those three fixed outlinks to share the same name. Please make
+ * sure the first fixed outlink has the actual capacity no less than that of
+ * the uplink.
  *<br/>
  * @author yannanlu@yahoo.com
  */
@@ -105,6 +108,7 @@ import org.qbroker.event.Event;
 public class CollectNode extends Node {
     private String tidField = null;
     private String rcField;
+    private int[] outLinkMap;
     private AssetList cellList = null; // used for tracking circled collectibles
     private Map<String, Object> templateMap, substitutionMap;
 
@@ -113,9 +117,9 @@ public class CollectNode extends Node {
     private final static int EXCEPTION = 2;
     private final static int DMASK = 3;
     private final static int RESULT_OUT = 0;
-    private int FAILURE_OUT = 1;
-    private int NOHIT_OUT = 2;
-    private int BOUNDARY = 2;
+    private final static int FAILURE_OUT = 1;
+    private final static int NOHIT_OUT = 2;
+    private int BOUNDARY = NOHIT_OUT + 1;
 
     public CollectNode(Map props) {
         super(props);
@@ -153,10 +157,12 @@ public class CollectNode extends Node {
 
         tm = System.currentTimeMillis();
 
-        int[] overlap = new int[]{NOHIT_OUT};
+        int[] overlap = new int[]{FAILURE_OUT, NOHIT_OUT};
         assetList = NodeUtils.initFixedOutLinks(tm, capacity, n,
             overlap, name, list);
-        NOHIT_OUT = overlap[0];
+        outLinkMap = new int[]{RESULT_OUT, FAILURE_OUT, NOHIT_OUT};
+        outLinkMap[FAILURE_OUT] = overlap[0];
+        outLinkMap[NOHIT_OUT] = overlap[1];
 
         if (assetList == null)
             throw(new IllegalArgumentException(name +
@@ -178,12 +184,14 @@ public class CollectNode extends Node {
                     "," + outInfo[OUT_LENGTH]);
         }
 
-        BOUNDARY = (NOHIT_OUT >= FAILURE_OUT) ? NOHIT_OUT : FAILURE_OUT;
+        BOUNDARY = outLinkMap[NOHIT_OUT];
+        BOUNDARY = (BOUNDARY >= outLinkMap[FAILURE_OUT]) ? BOUNDARY :
+            outLinkMap[FAILURE_OUT];
+        BOUNDARY ++;
         if ((debug & DEBUG_INIT) > 0) {
             new Event(Event.DEBUG, name + " LinkName: OID Capacity Partition " +
-                " - " + linkName + " " + capacity + " / " + BOUNDARY + " " +
-                assetList.getKey(RESULT_OUT)+" "+assetList.getKey(FAILURE_OUT)+
-                " " + assetList.getKey(NOHIT_OUT) + strBuf.toString()).send();
+                " - " + linkName + " " + capacity + " / " + BOUNDARY +
+                strBuf.toString()).send();
             strBuf = new StringBuffer();
         }
 
@@ -213,13 +221,13 @@ public class CollectNode extends Node {
             ruleInfo[RULE_STATUS] = NODE_RUNNING;
             ruleInfo[RULE_DMASK] = displayMask;
             ruleInfo[RULE_TIME] = tm;
-            ruleInfo[RULE_OID] = NOHIT_OUT;
+            ruleInfo[RULE_OID] = outLinkMap[NOHIT_OUT];
             ruleInfo[RULE_PID] = TYPE_BYPASS;
             rule = new HashMap<String, Object>();
             rule.put("Name", key);
             rule.put("PropertyName", displayPropertyName);
             ruleList.add(key, ruleInfo, rule);
-            outInfo = assetList.getMetaData(NOHIT_OUT);
+            outInfo = assetList.getMetaData(outLinkMap[NOHIT_OUT]);
             outInfo[OUT_NRULE] ++;
             outInfo[OUT_ORULE] ++;
 
@@ -335,7 +343,7 @@ public class CollectNode extends Node {
         rule.put("Name", ruleName);
         preferredOutName = (String) ph.get("PreferredOutLink");
         if(preferredOutName ==null || !assetList.containsKey(preferredOutName)){
-            preferredOutName = assetList.getKey(NOHIT_OUT);
+            preferredOutName = assetList.getKey(outLinkMap[NOHIT_OUT]);
             new Event(Event.WARNING, name + ": OutLink for " +
                 ruleName + " not well defined, use the default: "+
                 preferredOutName).send();
@@ -396,7 +404,8 @@ public class CollectNode extends Node {
         rule.put("Substitution", substitution);
 
         for (i=0; i<k; i++) { // mapping rule for the tasks
-            taskInfo[i] = new int[]{RESULT_OUT, FAILURE_OUT, NOHIT_OUT, 0};
+            taskInfo[i] = new int[]{outLinkMap[RESULT_OUT],
+                outLinkMap[FAILURE_OUT], outLinkMap[NOHIT_OUT], 0};
             if ((o = list.get(i)) == null || !(o instanceof Map))
                 continue;
             str = (String) ((Map) o).get("Success");
@@ -736,16 +745,16 @@ public class CollectNode extends Node {
                 if (i >= 0)
                     oid = (int) ruleInfo[RULE_OID];
                 else // failed to apply filters
-                    oid = FAILURE_OUT;
+                    oid = outLinkMap[FAILURE_OUT];
                 outInfo = assetList.getMetaData(oid);
-                if (oid > BOUNDARY) {
+                if (oid >= BOUNDARY) {
                     dataField = (String[]) rule.get("FieldName");
                     template = (Template[]) rule.get("Template");
                     substitution = (TextSubstitution[])rule.get("Substitution");
                 }
             }
             else if (i < 0) { // failed to apply filters
-                oid = FAILURE_OUT;
+                oid = outLinkMap[FAILURE_OUT];
                 outInfo = assetList.getMetaData(oid);
             }
             else { // in case oid pointing to FAILURE
@@ -753,7 +762,7 @@ public class CollectNode extends Node {
                 outInfo = assetList.getMetaData(oid);
             }
 
-            if (oid > BOUNDARY && dataField[0] != null) { // format
+            if (oid >= BOUNDARY && dataField[0] != null) { // format
                 switch ((int) ruleInfo[RULE_OPTION]) {
                   case RESET_MAP:
                     MessageUtils.resetProperties(inMessage);
@@ -782,8 +791,8 @@ public class CollectNode extends Node {
                     " rid=" + rid + " oid=" + oid +
                     ((key != null) ? ": " + key : "")).send();
 
-            if (oid <= BOUNDARY && ruleInfo[RULE_DMASK] > 0) try { //display msg
-                if ((ruleInfo[RULE_DMASK] & dspBody) > 0 && !ckBody)
+            if (oid < BOUNDARY && ruleInfo[RULE_DMASK] > 0) try { //display msg
+                if ((ruleInfo[RULE_DMASK] & dspBody) > 0)
                     msgStr = MessageUtils.processBody(inMessage, buffer);
                 new Event(Event.INFO, name +": "+ ruleName + " collected msg "+
                     (count + 1) + ":" + MessageUtils.display(inMessage, msgStr,
@@ -832,7 +841,7 @@ public class CollectNode extends Node {
         if (mid < 0 || mid >= capacity)
             return -1;
         state = (long[]) msgList.getMetaData(mid);
-        if (state == null || (pid = (int) state[MSG_OID]) <= BOUNDARY)
+        if (state == null || (pid = (int) state[MSG_OID]) < BOUNDARY)
             return -1;
         id = (int) state[MSG_BID];
         rid = (int) state[MSG_RID];
@@ -892,17 +901,17 @@ public class CollectNode extends Node {
             }
             else {
                 if (rc == 0)
-                    oid = RESULT_OUT;
+                    oid = outLinkMap[RESULT_OUT];
                 else
-                    oid = FAILURE_OUT;
+                    oid = outLinkMap[FAILURE_OUT];
             }
         }
 
         nid = tid;
-        if (rc != 0 && oid > BOUNDARY) { // for branch support
+        if (rc != 0 && oid >= BOUNDARY) { // for branch support
             if (oid != taskInfo[tid][SUCCESS]) { // look for leading task
                 for (i=tid; i<taskInfo.length; i++) {
-                    if (taskInfo[i][SUCCESS] <= BOUNDARY) { // exit point
+                    if (taskInfo[i][SUCCESS] < BOUNDARY) { // exit point
                         if (i+1 < taskInfo.length &&
                             oid == taskInfo[i+1][SUCCESS]) // found it
                             break;
@@ -920,14 +929,14 @@ public class CollectNode extends Node {
                     new Event(Event.WARNING, name + ": " + ruleName +
                         " failed to find leading task for "+
                         assetList.getKey(oid) + " at " + tid + "/" + rc).send();
-                    oid = NOHIT_OUT;
+                    oid = outLinkMap[NOHIT_OUT];
                 }
             }
             else // ignore failures or exceptions
                 rc = 0;
         }
 
-        if (oid <= BOUNDARY)
+        if (oid < BOUNDARY)
             m = 100;
         else
             m = 10;
@@ -1003,7 +1012,7 @@ public class CollectNode extends Node {
             t = System.currentTimeMillis();
             key = oid + "/" + id;
             m = msgList.getID(key);
-            if (m >= 0 && oid > BOUNDARY) { // next task cell not empty yet
+            if (m >= 0 && oid >= BOUNDARY) { // next task cell not empty yet
                 out.cancel(id);
                 // store oid into MSG_CID for possible circular collection
                 state[MSG_CID] = oid;
@@ -1028,13 +1037,13 @@ public class CollectNode extends Node {
                         msgList.size()).send();
             }
 
-            if (oid > BOUNDARY && rc == 0 && dataField[nid+1] != null)
+            if (oid >= BOUNDARY && rc == 0 && dataField[nid+1] != null)
                 str = format(rid, nid+1, dataField, template, substitution,
                     buffer, msg);
-            else if (oid <= BOUNDARY) { // taskflow exit
+            else if (oid < BOUNDARY) { // taskflow exit
                 String rCode = String.valueOf(rc);
                 try {
-                    if (oid == RESULT_OUT) { // cleanup RC field
+                    if (oid == outLinkMap[RESULT_OUT]) { // cleanup RC field
                         if (msg.propertyExists(rcField))
                             MessageUtils.setProperty(rcField, null, msg);
                     }
@@ -1062,7 +1071,7 @@ public class CollectNode extends Node {
                         " failed to display msg: " + e.toString()).send();
                 }
             }
-            if (oid > BOUNDARY && tidField != null) try {
+            if (oid >= BOUNDARY && tidField != null) try {
                 MessageUtils.setProperty(tidField, rid + ":" + (nid+1), msg);
             }
             catch (Exception e) {
@@ -1484,7 +1493,7 @@ public class CollectNode extends Node {
                 mid = msgList.add(key, new long[]{-1L, (long) oid, (long) id,
                     (long) rid, 0L, currentTime}, key, cid);
             }
-            else if (oid <= BOUNDARY) { // id-th cell is just empty, replace it
+            else if (oid < BOUNDARY) { // id-th cell is just empty, replace it
                 cells.collect(-1L, mid);
                 state = msgList.getMetaData(mid);
                 msgList.remove(mid);
@@ -1594,7 +1603,7 @@ public class CollectNode extends Node {
                 continue;
             out = (XQueue) asset[ASSET_XQ];
             id = (int) state[MSG_BID];
-            if (oid > BOUNDARY) { // for collectible messages
+            if (oid >= BOUNDARY) { // for collectible messages
                 if (collect(in, mid, -1, null) < 0) { // failed to collect
                     list[k++] = mid;
                     if (k >= 128) // list is full
@@ -1659,7 +1668,12 @@ public class CollectNode extends Node {
         return l;
     }
 
-    /** returns the BOUNDARY separating collectibles from fixed outlinks */
+    /**
+     * returns the BOUNDARY which is the lowest id of outlinks for collectibles
+     * so that any outlink with either the same id or a higher id is for
+     * collectibles. The EXTERNAL_XA bit of all outlinks for collectibles has
+     * to be disabled by the container to stop ack propagations downsstream.
+     */
     public int getOutLinkBoundary() {
         return BOUNDARY;
     }
