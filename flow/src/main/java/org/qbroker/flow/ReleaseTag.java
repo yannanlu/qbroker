@@ -3,6 +3,10 @@ package org.qbroker.flow;
 /* ReleaseTag.java - release tag for all the packages of qbroker */
 
 /**
+ * V1.2.3 (2017/08/19): added missing event initializtion in QServlet and
+ * MsgServlet, added logging in case jsp does not exist, changed to use println,
+ * removed the jdbc check from CQLConnector
+ *<br/>
  * V1.2.2 (2017/06/11): added RequestNode to support async requests, changed
  * BOUNDARY to the lowest id of outlinks for collectibles, updated comments on
  * bunch of implementations of MessageNode, added support of static cache
@@ -153,7 +157,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V 1.2.2 2017/06/11 09:47:20";
+    private static String ReleaseTAG = "QBroker V 1.2.3 2017/08/19 11:13:05";
 
     public ReleaseTag() {
     }

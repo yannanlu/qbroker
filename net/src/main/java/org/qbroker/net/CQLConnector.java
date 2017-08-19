@@ -79,17 +79,6 @@ public class CQLConnector implements Connector {
         uri = (String) o;
 
         try {
-            u = new URI(uri);
-        }
-        catch (URISyntaxException e) {
-            throw(new IllegalArgumentException(e.toString()));
-        }
-
-        if (!"jdbc".equals(u.getScheme()))
-            throw(new IllegalArgumentException("unsupported scheme: " +
-                u.getScheme()));
-
-        try {
             u = new URI(uri.substring(5));
         }
         catch (URISyntaxException e) {

@@ -162,16 +162,16 @@ public class MsgServlet extends HttpServlet {
 
         if (uri != null && uri.lastIndexOf(".jsp") > 0) {
             String text = getContent(uri, request, response);
-            response.getWriter().print(text);
+            response.getWriter().println(text);
         }
         else if (uri != null && (o = request.getAttribute(uri)) != null) {
             String text = (String) ((Map) o).get("text");
             request.removeAttribute(uri);
-            response.getWriter().print(text);
+            response.getWriter().println(text);
         }
         else if ((o = request.getAttribute("error")) != null) {
             response.setContentType("text/plain");
-            response.getWriter().print((String) o);
+            response.getWriter().println((String) o);
         }
     }
 
@@ -197,7 +197,9 @@ public class MsgServlet extends HttpServlet {
             String key;
             int bytesRead;
             InputStream in = request.getInputStream();
-            if (in != null) try {
+            if (in == null)
+                event = new TextEvent();
+            else try {
                 StringBuffer strBuf = new StringBuffer();
                 while ((bytesRead = in.read(buffer, 0, bufferSize)) >= 0) {
                     if (bytesRead > 0)
@@ -211,7 +213,7 @@ public class MsgServlet extends HttpServlet {
                     " failed to read raw content: " +
                     Event.traceStack(e)).send();
                 response.setContentType("text/plain");
-                response.getWriter().print("failed to read raw content: " +
+                response.getWriter().println("failed to read raw content: " +
                     Event.traceStack(e));
                 return;
             }
@@ -283,7 +285,7 @@ public class MsgServlet extends HttpServlet {
                         HttpSession session = request.getSession(true);
                         if (session.isNew()) { // not login yet
                             response.setContentType("text/plain");
-                            response.getWriter().print("please login first");
+                            response.getWriter().println("please login first");
                             return;
                         }
                         key = (String) session.getAttribute("username");
@@ -323,7 +325,7 @@ public class MsgServlet extends HttpServlet {
                             new Event(Event.DEBUG, getServletName() +
                                 ": " + key).send();
                         key += ". You may need to refresh to see the change.";
-                        response.getWriter().print(key);
+                        response.getWriter().println(key);
                     }
                     catch (Exception ee) {
                         if (conn != null) try {
@@ -345,7 +347,7 @@ public class MsgServlet extends HttpServlet {
             new Event(Event.ERR, getServletName() + " failed to upload file: " +
                 Event.traceStack(e)).send();
             response.setContentType("text/plain");
-            response.getWriter().print("file upload failed: " +
+            response.getWriter().println("file upload failed: " +
                 Event.traceStack(e));
             return;
         }
@@ -368,16 +370,16 @@ public class MsgServlet extends HttpServlet {
 
         if (uri != null && uri.lastIndexOf(".jsp") > 0) {
             String text = getContent(uri, request, response);
-            response.getWriter().print(text);
+            response.getWriter().println(text);
         }
         else if (uri != null && (o = request.getAttribute(uri)) != null) {
             String text = (String) ((Map) o).get("text");
             request.removeAttribute(uri);
-            response.getWriter().print(text);
+            response.getWriter().println(text);
         }
         else if ((o = request.getAttribute("error")) != null) {
             response.setContentType("text/plain");
-            response.getWriter().print((String) o);
+            response.getWriter().println((String) o);
         }
     }
 
@@ -397,18 +399,20 @@ public class MsgServlet extends HttpServlet {
 
         byte[] buffer = new byte[bufferSize];
         InputStream in = request.getInputStream();
-        if (in != null) try {
+        try {
             event = new BytesEvent();
-            while ((bytesRead = in.read(buffer, 0, bufferSize)) >= 0) {
-                if (bytesRead > 0)
-                    event.writeBytes(buffer, 0, bytesRead);
-                size += bytesRead;
+            if (in != null) {
+                while ((bytesRead = in.read(buffer, 0, bufferSize)) >= 0) {
+                    if (bytesRead > 0)
+                        event.writeBytes(buffer, 0, bytesRead);
+                    size += bytesRead;
+                }
+                event.reset();
+                event.setAttribute("type", request.getContentType());
+                event.setAttribute("method", request.getMethod());
+                event.setAttribute("size", String.valueOf(size));
+                event.setAttribute("path", path);
             }
-            event.reset();
-            event.setAttribute("type", request.getContentType());
-            event.setAttribute("method", request.getMethod());
-            event.setAttribute("size", String.valueOf(size));
-            event.setAttribute("path", path);
         }
         catch (Exception e) {
             new Event(Event.ERR, getServletName() +
@@ -416,7 +420,7 @@ public class MsgServlet extends HttpServlet {
                 Event.traceStack(e)).send();
             response.setStatus(HttpServletResponse.SC_GATEWAY_TIMEOUT);
             response.setContentType("text/plain");
-            response.getWriter().print("failed to read raw content: " +
+            response.getWriter().println("failed to read raw content: " +
                 Event.traceStack(e));
             return;
         }
@@ -452,17 +456,17 @@ public class MsgServlet extends HttpServlet {
 
         if (uri != null && uri.lastIndexOf(".jsp") > 0) {
             String text = getContent(uri, request, response);
-            response.getWriter().print(text);
+            response.getWriter().println(text);
         }
         else if (uri != null && (o = request.getAttribute(uri)) != null) {
             String text = (String) ((Map) o).get("text");
             request.removeAttribute(uri);
-            response.getWriter().print(text);
+            response.getWriter().println(text);
         }
         else if ((o = request.getAttribute("error")) != null) {
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             response.setContentType("text/plain");
-            response.getWriter().print((String) o);
+            response.getWriter().println((String) o);
         }
     }
 
@@ -475,16 +479,16 @@ public class MsgServlet extends HttpServlet {
 
         if (uri != null && uri.lastIndexOf(".jsp") > 0) {
             String text = getContent(uri, request, response);
-            response.getWriter().print(text);
+            response.getWriter().println(text);
         }
         else if (uri != null && (o = request.getAttribute(uri)) != null) {
             String text = (String) ((Map) o).get("text");
             request.removeAttribute(uri);
-            response.getWriter().print(text);
+            response.getWriter().println(text);
         }
         else if ((o = request.getAttribute("error")) != null) {
             response.setContentType("text/plain");
-            response.getWriter().print((String) o);
+            response.getWriter().println((String) o);
         }
     }
 
@@ -645,12 +649,12 @@ public class MsgServlet extends HttpServlet {
                 new Event(Event.INFO, getServletName() + ": " + username +
                     " logged out from "+ clientIP).send();
                 response.setContentType("text/plain");
-                response.getWriter().print("Thanks,your session is terminated");
+              response.getWriter().println("Thanks,your session is terminated");
                 return null;
             }
             catch (Exception e) {
                 response.setContentType("text/plain");
-                response.getWriter().print("Sorry, " + e.toString());
+                response.getWriter().println("Sorry, " + e.toString());
                 return null;
             }
 
