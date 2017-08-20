@@ -386,7 +386,7 @@ public class QServlet extends HttpServlet {
             String key;
             int bytesRead;
             InputStream in = request.getInputStream();
-            if (in == null)
+            if (in == null) // empty content
                 event = new TextEvent();
             else try {
                 StringBuffer strBuf = new StringBuffer();
@@ -528,8 +528,15 @@ public class QServlet extends HttpServlet {
                     return;
                 }
             }
+            else { // empty list for file upload
+               response.setStatus(HttpServletResponse.SC_NOT_ACCEPTABLE);
+               response.setContentType("text/plain");
+               response.getWriter().println("no file uploaded");
+               return;
+            }
         }
         catch (Exception e) {
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             new Event(Event.ERR, "file upload failed: " +
                 Event.traceStack(e)).send();
             response.setContentType("text/plain");
@@ -552,6 +559,7 @@ public class QServlet extends HttpServlet {
                 }
             }
         }
+        // other post requests such as forms will have event = null
         uri = processRequest(request, response, event);
 
         if (uri != null && uri.lastIndexOf(".jsp") > 0) {
@@ -1053,6 +1061,7 @@ public class QServlet extends HttpServlet {
             ("/xml".equals(path) || "/json".equals(path))) {
             if ((qf.getDebugMode() & QFlow.DEBUG_CTRL) > 0)
                 new Event(Event.DEBUG, name + " raw data: " + path).send();
+            // retrieve content from the key of either xml or json
             if ((o = props.get(path.substring(1))) != null)
                 str = ((String[]) o)[0];
             else
