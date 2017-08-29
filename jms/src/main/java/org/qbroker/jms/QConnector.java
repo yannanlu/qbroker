@@ -436,7 +436,7 @@ public class QConnector extends JMSQConnector {
             catch (NamingException ex) {
                 factory = null;
                 throw(new JMSException(
-                    "failed to lookup QueueConnnectionFactory '"+
+                    "failed to lookup QueueConnectionFactory '"+
                     connectionFactoryName + "': " + e.toString()));
             }
         }

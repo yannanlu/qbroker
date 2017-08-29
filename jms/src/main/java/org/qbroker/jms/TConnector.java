@@ -363,7 +363,7 @@ public class TConnector extends JMSTConnector {
             catch (NamingException ex) {
                 factory = null;
                 throw(new JMSException(
-                    "failed to lookup TopicConnnectionFactory '"+
+                    "failed to lookup TopicConnectionFactory '"+
                     connectionFactoryName + "': " + e.toString()));
             }
         }

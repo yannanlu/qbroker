@@ -565,7 +565,7 @@ public class QMFRequester implements Requester {
         }
         catch (NamingException e) {
             factory = null;
-            throw(new JMSException("failed to lookup ConnnectionFactory '" +
+            throw(new JMSException("failed to lookup ConnectionFactory '" +
                 connectionFactoryName + "' on " + uri + ": " +
                 TraceStackThread.traceStack(e)));
         }
