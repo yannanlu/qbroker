@@ -25,6 +25,7 @@ import java.util.TimeZone;
 import java.util.Calendar;
 import java.text.SimpleDateFormat;
 import java.text.ParsePosition;
+import org.qbroker.common.Utils;
 import org.qbroker.common.Connector;
 import org.qbroker.common.TraceStackThread;
 
@@ -90,9 +91,16 @@ public class NNTPConnector implements Connector {
 
             if ((o = props.get("Password")) != null)
                 password = (String) o;
+            else if ((o = props.get("EncryptedPassword")) != null) try {
+                password = Utils.decrypt((String) o);
+            }
+            catch (Exception e) {
+                throw(new IllegalArgumentException("failed to decrypt " +
+                    "EncryptedPassword: " + e.toString()));
+            }
+            if (password == null)
+                throw(new IllegalArgumentException("Password is not defined"));
         }
-        if (username != null && password == null)
-            throw(new IllegalArgumentException("Password is not defined"));
 
         if ((o = props.get("MaxNumberArticle")) != null)
             maxArticle = Integer.parseInt((String) o);

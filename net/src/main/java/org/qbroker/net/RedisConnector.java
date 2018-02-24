@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.Map;
 import org.qbroker.common.BytesBuffer;
 import org.qbroker.common.Connector;
+import org.qbroker.common.Utils;
 import org.qbroker.net.ClientSocket;
 
 /**
@@ -89,6 +90,13 @@ public class RedisConnector implements Connector {
             username = (String) o;
             if ((o = props.get("Password")) != null) {
                 password = (String) o;
+            }
+            else if ((o = props.get("EncryptedPassword")) != null) try {
+                password = Utils.decrypt((String) o);
+            }
+            catch (Exception e) {
+                throw(new IllegalArgumentException("failed to decrypt " +
+                    "EncryptedPassword: " + e.toString()));
             }
         }
 

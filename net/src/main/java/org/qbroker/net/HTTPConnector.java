@@ -15,6 +15,7 @@ import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Iterator;
+import org.qbroker.common.Utils;
 import org.qbroker.common.Base64Encoder;
 import org.qbroker.common.BytesBuffer;
 import org.qbroker.common.Connector;
@@ -110,6 +111,16 @@ public class HTTPConnector implements Connector {
             username = (String) o;
             if ((o = props.get("Password")) != null) {
                 password = (String) o;
+            }
+            else if ((o = props.get("EncryptedPassword")) != null) try {
+                password = Utils.decrypt((String) o);
+            }
+            catch (Exception e) {
+                throw(new IllegalArgumentException("failed to decrypt " +
+                    "EncryptedPassword: " + e.toString()));
+            }
+
+            if (password != null) {
                 authStr = username + ":" + password;
                 authStr = new String(Base64Encoder.encode(authStr.getBytes()));
                 authStr = "Basic " + authStr;
@@ -1125,8 +1136,8 @@ public class HTTPConnector implements Connector {
                 char[] buffer = new char[4096];
                 Reader in = new FileReader(filename);
                 while ((i = in.read(buffer, 0, 4096)) >= 0) {
-                   if (i > 0)
-                       strBuf.append(new String(buffer, 0, i));
+                    if (i > 0)
+                        strBuf.append(new String(buffer, 0, i));
                 }
                 in.close();
                 i = strBuf.length();

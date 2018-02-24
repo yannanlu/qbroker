@@ -215,7 +215,10 @@ public class GenericList extends Report {
           case OBJ_JMX:
             if ((o = props.get("Username")) != null) {
                 h.put("Username", o);
-                h.put("Password", props.get("Password"));
+                if ((o = props.get("Password")) != null)
+                    h.put("Password", o);
+                else if ((o = props.get("EncryptedPassword")) != null)
+                    h.put("EncryptedPassword", o);
             }
             target = (String) MonitorUtils.select(props.get("MBeanName"));
             if (target == null || target.length() <= 0)
@@ -229,13 +232,16 @@ public class GenericList extends Report {
                 h.put("MaxBytes", o);
             else
                 h.put("MaxBytes", "0");
-            if ((o = props.get("EncryptedAuthorization")) != null)
-                h.put("EncryptedAuthorization", o);
+            if ((o = props.get("BasicAuthorization")) != null)
+                h.put("BasicAuthorization", o);
             else if ((o = props.get("AuthString")) != null)
                 h.put("AuthString", o);
             else if ((o = props.get("Username")) != null) {
                 h.put("Username", o);
-                h.put("Password", props.get("Password"));
+                if ((o = props.get("Password")) != null)
+                    h.put("Password", o);
+                else if ((o = props.get("EncryptedPassword")) != null)
+                    h.put("EncryptedPassword", o);
             }
             reporter = new WebTester(h);
             break;
@@ -299,7 +305,10 @@ public class GenericList extends Report {
                 h.put("DBDriver", o);
             if ((o = props.get("Username")) != null) {
                 h.put("Username", o);
-                h.put("Password", props.get("Password"));
+                if ((o = props.get("Password")) != null)
+                    h.put("Password", o);
+                else if ((o = props.get("EncryptedPassword")) != null)
+                    h.put("EncryptedPassword", o);
             }
             if ((o = props.get("SQLQuery")) != null)
                 h.put("SQLQuery", o);
@@ -330,7 +339,10 @@ public class GenericList extends Report {
                 h.put("ResultType", o);
             if ((o = props.get("Username")) != null) {
                 h.put("Username", o);
-                h.put("Password", props.get("Password"));
+                if ((o = props.get("Password")) != null)
+                    h.put("Password", o);
+                else if ((o = props.get("EncryptedPassword")) != null)
+                    h.put("EncryptedPassword", o);
             }
             target = (String) MonitorUtils.select(props.get("PCFCommand"));
             if (target == null || target.length() <= 0)
@@ -343,7 +355,10 @@ public class GenericList extends Report {
             str = "org.qbroker.sonicmq.SonicMQRequester";
             if ((o = props.get("Username")) != null) {
                 h.put("Username", o);
-                h.put("Password", props.get("Password"));
+                if ((o = props.get("Password")) != null)
+                    h.put("Password", o);
+                else if ((o = props.get("EncryptedPassword")) != null)
+                    h.put("EncryptedPassword", o);
             }
             h.put("ConnectOnInit", "false");
             target = (String) MonitorUtils.select(props.get("RequestCommand"));
@@ -357,7 +372,10 @@ public class GenericList extends Report {
             str = (String) props.get("RequesterClass");
             if ((o = props.get("Username")) != null) {
                 h.put("Username", o);
-                h.put("Password", props.get("Password"));
+                if ((o = props.get("Password")) != null)
+                    h.put("Password", o);
+                else if ((o = props.get("EncryptedPassword")) != null)
+                    h.put("EncryptedPassword", o);
             }
             h.put("ConnectOnInit", "false");
             target = (String) MonitorUtils.select(props.get("RequestCommand"));

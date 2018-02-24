@@ -23,6 +23,7 @@ import org.apache.oro.text.regex.Pattern;
 import org.apache.oro.text.regex.Perl5Compiler;
 import org.apache.oro.text.regex.Perl5Matcher;
 import org.apache.oro.text.regex.MalformedPatternException;
+import org.qbroker.common.Utils;
 import org.qbroker.common.Service;
 import org.qbroker.common.XQueue;
 import org.qbroker.common.SerialPortDevice;
@@ -260,10 +261,19 @@ public class StreamPersister extends Persister {
                 openningMsg.setPriority(openningMsg.getPriority());
                 text = (String) h.get("Operation");
                 openningMsg.setAttribute("operation", text);
-                if ((o = props.get("Username")) != null)
+                if ((o = props.get("Username")) != null) {
                     openningMsg.setAttribute("username", (String) o);
-                if ((o = props.get("Password")) != null)
-                    openningMsg.setAttribute("password", (String) o);
+                    if ((o = props.get("Password")) != null)
+                        openningMsg.setAttribute("password", (String) o);
+                    else if ((o = props.get("EncryptedPassword")) != null) try {
+                        openningMsg.setAttribute("password",
+                            Utils.decrypt((String) o));
+                    }
+                    catch (Exception e) {
+                        throw(new IllegalArgumentException("failed to decrypt " +
+                            "EncryptedPassword: " + e.toString()));
+                    }
+                }
                 Iterator iter = h.keySet().iterator();
                 while (iter.hasNext()) { // copy properties over
                     key = (String) iter.next();
@@ -289,10 +299,19 @@ public class StreamPersister extends Persister {
                 openningMsg.setAttribute("uri", (String) o);
                 openningMsg.setPriority(openningMsg.getPriority());
                 openningMsg.setAttribute("operation", operation);
-                if ((o = props.get("Username")) != null)
+                if ((o = props.get("Username")) != null) {
                     openningMsg.setAttribute("username", (String) o);
-                if ((o = props.get("Password")) != null)
-                    openningMsg.setAttribute("password", (String) o);
+                    if ((o = props.get("Password")) != null)
+                        openningMsg.setAttribute("password", (String) o);
+                    else if ((o = props.get("EncryptedPassword")) != null) try {
+                        openningMsg.setAttribute("password",
+                            Utils.decrypt((String) o));
+                    }
+                    catch (Exception e) {
+                        throw(new IllegalArgumentException("failed to decrypt " +
+                            "EncryptedPassword: " + e.toString()));
+                    }
+                }
                 if ((o = props.get("StringProperty")) != null &&
                     o instanceof Map) { // set properties
                     String key;

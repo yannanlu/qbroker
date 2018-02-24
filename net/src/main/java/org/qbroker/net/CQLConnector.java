@@ -28,6 +28,7 @@ import com.datastax.driver.core.policies.DefaultRetryPolicy;
 import com.datastax.driver.core.policies.TokenAwarePolicy;
 import com.datastax.driver.core.policies.DCAwareRoundRobinPolicy;
 import com.datastax.driver.core.exceptions.DriverException;
+import org.qbroker.common.Utils;
 import org.qbroker.common.Connector;
 import org.qbroker.common.TraceStackThread;
 
@@ -79,6 +80,17 @@ public class CQLConnector implements Connector {
         uri = (String) o;
 
         try {
+            u = new URI(uri);
+        }
+        catch (URISyntaxException e) {
+            throw(new IllegalArgumentException(e.toString()));
+        }
+
+        if (!"jdbc".equals(u.getScheme()))
+            throw(new IllegalArgumentException("unsupported scheme: " +
+                u.getScheme()));
+
+        try {
             u = new URI(uri.substring(5));
         }
         catch (URISyntaxException e) {
@@ -101,13 +113,19 @@ public class CQLConnector implements Connector {
 
         if ((o = props.get("Username")) == null)
             username = null;
-        else
+        else {
             username = (String) o;
 
-        if ((o = props.get("Password")) == null)
-            password = null;
-        else
-            password = (String) o;
+            if ((o = props.get("Password")) != null)
+                password = (String) o;
+            else if ((o = props.get("EncryptedPassword")) != null) try {
+                password = Utils.decrypt((String) o);
+            }
+            catch (Exception e) {
+                throw(new IllegalArgumentException("failed to decrypt " +
+                    "EncryptedPassword: " + e.toString()));
+            }
+        }
 
         if ((o = props.get("SOTimeout")) != null)
             timeout = 1000 * Integer.parseInt((String) o);

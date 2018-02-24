@@ -20,6 +20,7 @@ import org.apache.oro.text.regex.Perl5Compiler;
 import org.apache.oro.text.regex.Perl5Matcher;
 import org.apache.oro.text.regex.MalformedPatternException;
 import org.qbroker.net.ClientSocket;
+import org.qbroker.common.Utils;
 import org.qbroker.event.Event;
 import org.qbroker.monitor.MonitorUtils;
 import org.qbroker.monitor.Report;
@@ -106,11 +107,22 @@ public class FTPTester extends Report {
 
         if ((o = props.get("User")) == null)
             throw(new IllegalArgumentException("User is not defined"));
-        user = (String) o;
+        else {
+            user = (String) o;
 
-        if ((o = props.get("Password")) == null)
-            throw(new IllegalArgumentException("Password is not defined"));
-        password = (String) o;
+            password = null;
+            if ((o = props.get("Password")) != null)
+                password = (String) o;
+            else if ((o = props.get("EncryptedPassword")) != null) try {
+                password = Utils.decrypt((String) o);
+            }
+            catch (Exception e) {
+                throw(new IllegalArgumentException("failed to decrypt " +
+                    "EncryptedPassword: " + e.toString()));
+            }
+            if (password == null)
+                throw(new IllegalArgumentException("Password is not defined"));
+        }
 
         if ((o = props.get("Timeout")) != null)
             timeout = 1000 * Integer.parseInt((String) o);

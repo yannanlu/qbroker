@@ -249,6 +249,12 @@ public class QClient {
             else
                 numTarget = 0;
 
+            if ((o = props.get("OpenSSLPlugin")) != null)
+                System.setProperty("OpenSSLPlugin", (String) o);
+
+            if ((o = props.get("PluginPasswordFile")) != null)
+                System.setProperty("PluginPasswordFile", (String) o);
+
             operation = (String) props.get("Operation");
             String className;
             java.lang.reflect.Constructor con;
@@ -366,7 +372,7 @@ public class QClient {
         Map hash;
         Object o;
         String sot = null, eot = null;
-        String propertyName=null, propertyValue=null;
+        List<String> propertyName, propertyValue;
         int retCode = 0;
         int removeSource = 0;
         int resultType = 1;
@@ -374,6 +380,8 @@ public class QClient {
         String storeOption = null, realSubQmgr = null;
         String brokerVersion = null, str;
 
+        propertyName = new ArrayList<String>();
+        propertyValue = new ArrayList<String>();
         if (! props.containsKey("Source"))
             props.put("Source", new ArrayList());
 
@@ -560,12 +568,12 @@ public class QClient {
               case 'p':
                 if (i + 1 >= args.length)
                     continue;
-                propertyName = args[++i];
+                propertyName.add(args[++i]);
                 break;
               case 'v':
                 if (i + 1 >= args.length)
                     continue;
-                propertyValue = args[++i];
+                propertyValue.add(args[++i]);
                 break;
               case 'j':
                 if (i + 1 >= args.length)
@@ -764,6 +772,19 @@ public class QClient {
             }
         }
 
+        int n = propertyName.size();
+        if (n > propertyValue.size()) {
+            int i = n;
+            n = propertyValue.size();
+            while (--i>=n)
+                propertyName.remove(i);
+        }
+        else {
+            int i = propertyValue.size();
+            while (--i>=n)
+                propertyValue.remove(i);
+        }
+
         if (sot != null) {
             if (sProps.size() > 0)
                 sProps.put("SOTBytes", sot);
@@ -780,27 +801,22 @@ public class QClient {
         if (sProps.containsKey("PatternGroup")) // ignore removeSource
             removeSource = 0;
 
-        if (sProps.size() > 0 && // source
-            (propertyValue != null || "JMSReplyTo".equals(propertyName))) {
+        if (sProps.size() > 0 && n > 0) { // source
             if (sProps.get("StringProperty") == null) {
                 sProps.put("StringProperty", new HashMap());
             }
             hash = (Map) sProps.get("StringProperty");
-            if (hash.size() <= 0 || !hash.containsKey(propertyName)) {
-                hash.put(propertyName, "");
+            for (int i=0; i<n; i++) {
+                hash.put(propertyName.get(i), propertyValue.get(i));
             }
-            if (propertyValue != null)
-                hash.put(propertyName, propertyValue);
-            else
-                hash.put(propertyName, "");
         }
-        else if (propertyName != null && tProps.size() > 0) { // for target
+        else if (tProps.size() > 0 && n > 0) { // for target
             if (tProps.get("StringProperty") == null) {
                 tProps.put("StringProperty", new HashMap());
             }
             hash = (Map) tProps.get("StringProperty");
-            if (hash.size() <= 0 || !hash.containsKey(propertyName)) {
-                hash.put(propertyName, "");
+            for (int i=0; i<n; i++) {
+                hash.put(propertyName.get(i), propertyValue.get(i));
             }
         }
 

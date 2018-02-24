@@ -86,10 +86,19 @@ public class SonicMQRequester implements Requester, Comparator<IMetric> {
         if (!uri.startsWith("tcp://"))
             throw(new IllegalArgumentException("Bad service URL: " + uri));
 
-        if ((o = props.get("Username")) != null)
+        if ((o = props.get("Username")) != null) {
             username = (String) o;
-        if ((o = props.get("Password")) != null)
-            password = (String) o;
+            if ((o = props.get("Password")) != null)
+                password = (String) o;
+            else if ((o = props.get("EncryptedPassword")) != null) try {
+                password = Utils.decrypt((String) o);
+            }
+            catch (Exception e) {
+                throw(new IllegalArgumentException("failed to decrypt " +
+                    "EncryptedPassword: " + e.toString()));
+            }
+        }
+
         if ((o = props.get("Timeout")) != null)
             timeout = Long.parseLong((String) o);
         if (timeout <= 0)

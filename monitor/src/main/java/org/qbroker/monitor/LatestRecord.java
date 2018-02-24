@@ -68,8 +68,13 @@ public class LatestRecord extends Monitor {
             Map<String, Object> h = new HashMap<String, Object>();
             h.put("Name", name);
             h.put("DBDriver", (String) props.get("DBDriver"));
-            h.put("Username", (String) props.get("Username"));
-            h.put("Password", (String) props.get("Password"));
+            if ((o = props.get("Username")) != null) {
+                h.put("Username", o);
+                if ((o = props.get("Password")) != null)
+                    h.put("Password", o);
+                else if ((o = props.get("EncryptedPassword")) != null)
+                    h.put("EncryptedPassword", o);
+            }
             h.put("URI", uri);
             sqlQuery = MonitorUtils.substitute((String) props.get("SQLQuery"),
                 template);

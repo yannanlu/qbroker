@@ -13,6 +13,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import org.qbroker.common.Utils;
 import org.qbroker.common.TimeWindows;
 import org.qbroker.event.Event;
 import org.qbroker.monitor.MonitorUtils;
@@ -100,11 +101,22 @@ public class DBQuery extends Monitor {
 
         if ((o = MonitorUtils.select(props.get("Username"))) == null)
             throw(new IllegalArgumentException("Username is not defined"));
-        username = (String) o;
+        else {
+            username = (String) o;
 
-        if ((o = MonitorUtils.select(props.get("Password"))) == null)
-            throw(new IllegalArgumentException("Password is not defined"));
-        password = (String) o;
+            password = null;
+            if ((o = MonitorUtils.select(props.get("Password"))) != null)
+                password = (String) o;
+            else if ((o = props.get("EncryptedPassword")) != null) try {
+                password = Utils.decrypt((String) MonitorUtils.select(o));
+            }
+            catch (Exception e) {
+                throw(new IllegalArgumentException("failed to decrypt " +
+                    "EncryptedPassword: " + e.toString()));
+            }
+            if (password == null)
+                throw(new IllegalArgumentException("Password is not defined"));
+        }
 
         if ((o = MonitorUtils.select(props.get("SQLQuery"))) == null)
             throw(new IllegalArgumentException("SQLQuery is not defined"));

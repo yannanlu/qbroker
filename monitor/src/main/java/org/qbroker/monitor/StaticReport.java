@@ -2,6 +2,10 @@ package org.qbroker.monitor;
 
 /* StaticReport.java - a shared report with static content */
 
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.Properties;
+import java.util.List;
 import java.util.Map;
 import java.util.Iterator;
 import java.util.Date;
@@ -13,7 +17,10 @@ import org.qbroker.monitor.Report;
 
 /**
  * StaticReport defines a set of key-value pairs as a shared report
- * in the name space specified by the ReportClass.
+ * in the name space specified by the ReportClass. It can pick up properties
+ * from either a given property file or a list of environment variables.
+ * The loading starts from property file, and then environment variables and
+ * inline properties at last.
  *<br/>
  * @author yannanlu@yahoo.com
  */
@@ -23,6 +30,7 @@ public class StaticReport extends Report {
     public StaticReport(Map props) {
         super(props);
         Object o;
+        String filename = null;
 
         if (type == null)
             type = "StaticReport";
@@ -32,28 +40,44 @@ public class StaticReport extends Report {
         if ((o = props.get("InitialReport")) != null && o instanceof Map)
             report = Utils.cloneProperties((Map) o);
 
-        if ((o = props.get("EnvironmentVariable")) != null && o instanceof Map){
-            String str, key, prefix;
-            Map ph = (Map) o;
-            Map<String, String> map = System.getenv();
-            Iterator iter = ph.keySet().iterator();
-            prefix = (String) props.get("Prefix");
-            while (iter.hasNext()) {
-                key = (String) iter.next();
-                if (prefix != null)
-                    str = System.getProperty(prefix + "/" + key);
-                else
-                    str = System.getProperty(key);
+        if ((o = props.get("PropertyFile")) != null) try {
+            String str;
+            Properties ph = new Properties();
+            filename = MonitorUtils.select(o);
+            FileInputStream fs = new FileInputStream(filename);
+            ph.load(fs);
+            fs.close();
+            for (String key : ph.stringPropertyNames()) {
+                str = ph.getProperty(key);
                 if (str != null)
                     report.put(key, str);
-                else if ((str = map.get(key)) != null)
-                    report.put(key, str);
-                else if ((o = ph.get(key)) != null) { // default value
-                    str = MonitorUtils.select(o);
-                    report.put(key, MonitorUtils.substitute(str, template));
+            }
+            ph.clear();
+        }
+        catch (IOException e) {
+            throw(new IllegalArgumentException("failed to load properties from "
+                + filename + ": " + e.toString()));
+        }
+
+        if ((o = props.get("EnvPrefix")) != null && o instanceof List) {
+            String str, prefix;
+            List pl = (List) o;
+            Map<String, String> map = System.getenv();
+            for (String key : map.keySet()) {
+                for (Object obj : pl) {
+                    if (obj == null || !(obj instanceof String))
+                        continue;
+                    prefix = (String) o;
+                    if (prefix.length() <= 0)
+                        continue;
+                    if (!key.startsWith(prefix))
+                        continue;
+                    if ((str = map.get(key)) != null)
+                        report.put(key, str);
                 }
             }
         }
+
         if ((o = props.get("StringProperty")) != null && o instanceof Map) {
             String str, key;
             Iterator iter = ((Map) o).keySet().iterator();
@@ -65,6 +89,7 @@ public class StaticReport extends Report {
                 report.put(key, MonitorUtils.substitute(str, template));
             }
         }
+
         if (!report.containsKey("Status"))
             report.put("Status", "0");
         if (!report.containsKey("TestTime"))

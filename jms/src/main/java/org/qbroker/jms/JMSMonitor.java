@@ -161,8 +161,11 @@ public class JMSMonitor extends Monitor {
         h.put("WaterMark", "1000");
         h.put("Step", "1");
         if ((o = props.get("Username")) != null) {
-            h.put("Username", o);
-            h.put("Password", props.get("Password"));
+            h.put("Username", MonitorUtils.select(o));
+            if ((o = props.get("Password")) != null)
+                h.put("Password", MonitorUtils.select(o));
+            else if ((o = props.get("EncryptedPassword")) != null)
+                h.put("EncryptedPassword", MonitorUtils.select(o));
         }
         if (uri.startsWith("wmq://") && operation != Q_BROWSE) { // for wmq
             if (operation == Q_RESET && (o = props.get("StatsLog")) != null) {
@@ -201,7 +204,10 @@ public class JMSMonitor extends Monitor {
         else if (uri.startsWith("tcp://") && operation != Q_BROWSE) { // sonicmq
             if ((o = props.get("Username")) != null) {
                 h.put("Username", MonitorUtils.select(o));
-                h.put("Password", MonitorUtils.select(props.get("Password")));
+                if ((o = props.get("Password")) != null)
+                    h.put("Password", MonitorUtils.select(o));
+                else if ((o = props.get("EncryptedPassword")) != null)
+                    h.put("EncryptedPassword", MonitorUtils.select(o));
             }
             if ((o = props.get("Timeout")) != null)
                 h.put("Timeout", o);
@@ -260,7 +266,10 @@ public class JMSMonitor extends Monitor {
                 MonitorUtils.select(props.get("ContextFactory")));
             if ((o = props.get("Username")) != null) {
                 h.put("Username", MonitorUtils.select(o));
-                h.put("Password", MonitorUtils.select(props.get("Password")));
+                if ((o = props.get("Password")) != null)
+                    h.put("Password", MonitorUtils.select(o));
+                else if ((o = props.get("EncryptedPassword")) != null)
+                    h.put("EncryptedPassword", MonitorUtils.select(o));
             }
             h.put("ConnectionFactoryName", connFactoryName);
 
@@ -323,7 +332,10 @@ public class JMSMonitor extends Monitor {
             h.put("Operation", "browse");
             if ((o = props.get("Username")) != null) {
                 h.put("Username", MonitorUtils.select(o));
-                h.put("Password", MonitorUtils.select(props.get("Password")));
+                if ((o = props.get("Password")) != null)
+                    h.put("Password", MonitorUtils.select(o));
+                else if ((o = props.get("EncryptedPassword")) != null)
+                    h.put("EncryptedPassword", MonitorUtils.select(o));
             }
             if ((o = props.get("SecurityExit")) != null) {
                 h.put("SecurityExit", MonitorUtils.select(o));
@@ -364,7 +376,10 @@ public class JMSMonitor extends Monitor {
             h.put("URI", uri);
             if ((o = props.get("Username")) != null) {
                 h.put("Username", MonitorUtils.select(o));
-                h.put("Password", MonitorUtils.select(props.get("Password")));
+                if ((o = props.get("Password")) != null)
+                    h.put("Password", MonitorUtils.select(o));
+                else if ((o = props.get("EncryptedPassword")) != null)
+                    h.put("EncryptedPassword", MonitorUtils.select(o));
             }
             if ((o = props.get("Timeout")) != null)
                 h.put("Timeout", o);
@@ -404,7 +419,10 @@ public class JMSMonitor extends Monitor {
                 h.put("IsPhysical",  MonitorUtils.select(o));
             if ((o = props.get("Username")) != null) {
                 h.put("Username", MonitorUtils.select(o));
-                h.put("Password", MonitorUtils.select(props.get("Password")));
+                if ((o = props.get("Password")) != null)
+                    h.put("Password", MonitorUtils.select(o));
+                else if ((o = props.get("EncryptedPassword")) != null)
+                    h.put("EncryptedPassword", MonitorUtils.select(o));
             }
             if ((o = props.get("Principal")) != null) {
                 h.put("Principal", MonitorUtils.select(o));

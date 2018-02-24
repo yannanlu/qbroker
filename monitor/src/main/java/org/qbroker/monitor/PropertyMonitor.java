@@ -2,6 +2,7 @@ package org.qbroker.monitor;
 
 /* PropertyMonitor.java - a monitor watching property's change */
 
+import java.util.Properties;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.ArrayList;
@@ -92,7 +93,12 @@ import org.qbroker.monitor.WebTester;
  * the property map. Then those objects not referenced by the list will be
  * removed for the support of projections.
  *<br/><br/>
- * Currently, it only supports web based or local JSON properties.
+ * Currently, it only supports web based or local JSON properties. Since it is
+ * always instantiated before the static reports, it can not use any of the
+ * global variables defined in the static reports. However, it does support
+ * the special variables loaded from either a local property file or a list
+ * of environment variables. The loading starts from property file first, then
+ * environment variables and the local inline properties last.
  *<br/>
  * @author yannanlu@yahoo.com
  */
@@ -122,8 +128,9 @@ public class PropertyMonitor extends Monitor {
 
     public PropertyMonitor(Map props) {
         super(props);
+        String filename = null;
         Object o;
-        Map<String, Object> h = new HashMap<String, Object>();
+        Map<String, Object> ph = new HashMap<String, Object>();
         URI u;
         int n;
 
@@ -133,9 +140,48 @@ public class PropertyMonitor extends Monitor {
         if (description == null)
             description = "monitor changes on JSON properties";
 
-        if ((o = MonitorUtils.select(props.get("URI"))) == null)
+        if ((o = props.get("PropertyFile")) != null) try {
+            String str;
+            Properties p = new Properties();
+            filename = MonitorUtils.select(o);
+            FileInputStream fs = new FileInputStream(filename);
+            p.load(fs);
+            fs.close();
+            for (String key : p.stringPropertyNames()) {
+                str = p.getProperty(key);
+                if (str != null)
+                    ph.put(key, str);
+            }
+            p.clear();
+        }
+        catch (IOException e) {
+            throw(new IllegalArgumentException("failed to load properties from "
+                + filename + ": " + e.toString()));
+        }
+
+        if ((o = props.get("EnvPrefix")) != null && o instanceof List) {
+            String str, prefix;
+            List pl = (List) o;
+            Map<String, String> map = System.getenv();
+            for (String key : map.keySet()) {
+                for (Object obj : pl) {
+                    if (obj == null || !(obj instanceof String))
+                        continue;
+                    prefix = (String) o;
+                    if (prefix.length() <= 0)
+                        continue;
+                    if (!key.startsWith(prefix))
+                        continue;
+                    if ((str = map.get(key)) != null)
+                        ph.put(key, str);
+                }
+            }
+        }
+
+        if ((o = MonitorUtils.select(props.get("URI"))) != null)
+            uri = MonitorUtils.substitute((String) o, template);
+        else if ((uri = (String) ph.get("URI")) == null)
             throw(new IllegalArgumentException("URI is not defined"));
-        uri = MonitorUtils.substitute((String) o, template);
 
         try {
             u = new URI(uri);
@@ -146,43 +192,45 @@ public class PropertyMonitor extends Monitor {
 
         if ("http".equals(u.getScheme()) || "https".equals(u.getScheme())) {
             isRemote = true;
-            if ((o = props.get("EncryptedAuthorization")) != null) {
-                h.put("EncryptedAuthorization", MonitorUtils.select(o));
+            if ((o = props.get("BasicAuthorization")) != null) {
+                ph.put("BasicAuthorization", MonitorUtils.select(o));
             }
             else if ((o = props.get("AuthString")) != null) {
-                h.put("AuthString", MonitorUtils.select(o));
+                ph.put("AuthString", MonitorUtils.select(o));
             }
             else if ((o = props.get("Username")) != null) {
-                h.put("Username", MonitorUtils.select(o));
-                o = props.get("Password");
-                h.put("Password", MonitorUtils.select(o));
+                ph.put("Username", MonitorUtils.select(o));
+                if ((o = props.get("Password")) != null)
+                    ph.put("Password", MonitorUtils.select(o));
+                else if ((o = props.get("EncryptedPassword")) != null)
+                    ph.put("EncryptedPassword", MonitorUtils.select(o));
             }
 
             if ((o = props.get("Request")) != null)
-                h.put("Request", MonitorUtils.select(o));
+                ph.put("Request", MonitorUtils.select(o));
             else if ((o = props.get("Operation")) != null)
-                h.put("Operation", MonitorUtils.select(o));
+                ph.put("Operation", MonitorUtils.select(o));
 
             if ((o = props.get("Accept")) != null)
-                h.put("Accept", o);
+                ph.put("Accept", (String) o);
 
             if ((o = props.get("ContentType")) != null)
-                h.put("ContentType", o);
+                ph.put("ContentType", (String) o);
 
             if ((o = props.get("Data")) != null)
-                h.put("Data", o);
+                ph.put("Data", (String) o);
 
-            h.put("Name", name);
-            h.put("URI", uri);
-            h.put("Step", "1");
-            h.put("Timeout", (String) props.get("Timeout"));
+            ph.put("Name", name);
+            ph.put("URI", uri);
+            ph.put("Step", "1");
+            ph.put("Timeout", (String) props.get("Timeout"));
             if ((o = props.get("MaxBytes")) != null)
-                h.put("MaxBytes", o);
+                ph.put("MaxBytes", (String) o);
             else
-                h.put("MaxBytes", "0");
+                ph.put("MaxBytes", "0");
             if ((o = props.get("WebDebug")) != null)
-                h.put("Debug", o);
-            webTester = new WebTester(h);
+                ph.put("Debug", (String) o);
+            webTester = new WebTester(ph);
 
             gmtOffset = Calendar.getInstance().get(Calendar.ZONE_OFFSET) +
                 Calendar.getInstance().get(Calendar.DST_OFFSET);

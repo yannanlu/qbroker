@@ -80,11 +80,22 @@ public class DBConnector implements Connector {
 
         if ((o = props.get("Username")) == null)
             throw(new IllegalArgumentException("Username is not defined"));
-        username = (String) o;
+        else {
+            username = (String) o;
 
-        if ((o = props.get("Password")) == null)
-            throw(new IllegalArgumentException("Password is not defined"));
-        password = (String) o;
+            password = null;
+            if ((o = props.get("Password")) != null)
+                password = (String) o;
+            else if ((o = props.get("EncryptedPassword")) != null) try {
+                password = Utils.decrypt((String) o);
+            }
+            catch (Exception e) {
+                throw(new IllegalArgumentException("failed to decrypt " +
+                    "EncryptedPassword: " + e.toString()));
+            }
+            if (password == null)
+                throw(new IllegalArgumentException("Password is not defined"));
+        }
 
         if ((o = props.get("ResultType")) != null)
             resultType = Integer.parseInt((String) o);

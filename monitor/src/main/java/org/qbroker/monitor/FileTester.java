@@ -116,8 +116,13 @@ public class FileTester extends Report {
             ftpConn = null;
             Map<String, Object> h = new HashMap<String, Object>();
             h.put("URI", uri);
-            h.put("Username", props.get("User"));
-            h.put("Password", props.get("Password"));
+            if ((o = props.get("User")) != null) {
+                h.put("Username", o);
+                if ((o = props.get("Password")) != null)
+                    h.put("Password", o);
+                else if ((o = props.get("EncryptedPassword")) != null)
+                    h.put("EncryptedPassword", o);
+            }
             h.put("SOTimeout", props.get("Timeout"));
 
             try {
@@ -136,8 +141,13 @@ public class FileTester extends Report {
             Map<String, Object> h = new HashMap<String, Object>();
             h.put("Name", name);
             h.put("URI", uri);
-            h.put("User", (String) props.get("User"));
-            h.put("Password", (String) props.get("Password"));
+            if ((o = props.get("User")) != null) {
+                h.put("User", o);
+                if ((o = props.get("Password")) != null)
+                    h.put("Password", o);
+                else if ((o = props.get("EncryptedPassword")) != null)
+                    h.put("EncryptedPassword", o);
+            }
             h.put("Timeout", (String) props.get("Timeout"));
             h.put("Step", "1");
             request.add("TYPE I\r\n");
@@ -151,8 +161,13 @@ public class FileTester extends Report {
             sftpConn = null;
             Map<String, Object> h = new HashMap<String, Object>();
             h.put("URI", uri);
-            h.put("Username", props.get("User"));
-            h.put("Password", props.get("Password"));
+            if ((o = props.get("User")) != null) {
+                h.put("Username", o);
+                if ((o = props.get("Password")) != null)
+                    h.put("Password", o);
+                else if ((o = props.get("EncryptedPassword")) != null)
+                    h.put("EncryptedPassword", o);
+            }
             h.put("SOTimeout", props.get("Timeout"));
             h.put("SetPassiveMode", props.get("SetPassiveMode"));
 

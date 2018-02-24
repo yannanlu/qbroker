@@ -106,7 +106,7 @@ public class HTTPLoginModule implements LoginModule {
         // verify the username/password
         try {
             String str = username + ":" + new String(password);
-            ph.put("EncryptedAuthorization",
+            ph.put("BasicAuthorization",
                 new String(Base64Encoder.encode(str.getBytes())));
             WebTester reporter = new WebTester(ph);
             ph = reporter.generateReport(System.currentTimeMillis());

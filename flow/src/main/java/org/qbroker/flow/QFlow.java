@@ -4808,6 +4808,12 @@ public class QFlow implements Service, Runnable {
             System.exit(0);
         }
 
+        if ((o = props.get("OpenSSLPlugin")) != null)
+            System.setProperty("OpenSSLPlugin", (String) o);
+
+        if ((o = props.get("PluginPasswordFile")) != null)
+            System.setProperty("PluginPasswordFile", (String) o);
+
         try {
             qf = new QFlow(props);
             c = new Thread(qf, "shutdown");

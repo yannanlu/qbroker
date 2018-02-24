@@ -68,8 +68,13 @@ public class DBRecord extends Monitor {
             Map<String, Object> h = new HashMap<String, Object>();
             h.put("Name", name);
             h.put("DBDriver", props.get("DBDriver"));
-            h.put("Username", props.get("Username"));
-            h.put("Password", props.get("Password"));
+            if ((o = props.get("Username")) != null) {
+                h.put("Username", o);
+                if ((o = props.get("Password")) != null)
+                    h.put("Password", o);
+                else if ((o = props.get("EncryptedPassword")) != null)
+                    h.put("EncryptedPassword", o);
+            }
             h.put("URI", uri);
             h.put("SQLQuery", props.get("SQLQuery"));
             h.put("Timeout", props.get("Timeout"));

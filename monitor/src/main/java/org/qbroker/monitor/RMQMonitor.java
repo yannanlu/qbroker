@@ -63,7 +63,10 @@ public class RMQMonitor extends Monitor {
             h.put("URI", uri);
             if ((o = props.get("Username")) != null) {
                 h.put("Username", o);
-                h.put("Password", props.get("Password"));
+                if ((o = props.get("Password")) != null)
+                    h.put("Password", o);
+                else if ((o = props.get("EncryptedPassword")) != null)
+                    h.put("EncryptedPassword", o);
             }
 
             if ("http".equals(scheme)) { // for RMQ management plugin

@@ -205,8 +205,13 @@ public class JMSHealthChecker extends Monitor {
             h.put("URI", uri);
             h.put("ContextFactory",
                 MonitorUtils.select(props.get("ContextFactory")));
-            h.put("Username", MonitorUtils.select(props.get("Username")));
-            h.put("Password", MonitorUtils.select(props.get("Password")));
+            if ((o = props.get("Username")) != null) {
+                h.put("Username", MonitorUtils.select(o));
+                if ((o = props.get("Password")) != null)
+                    h.put("Password", MonitorUtils.select(o));
+                else if ((o = props.get("EncryptedPassword")) != null)
+                    h.put("EncryptedPassword", MonitorUtils.select(o));
+            }
             h.put("ConnectionFactoryName", connFactoryName);
             h.put("DisplayMask", "0");
             h.put("TextMode", "1");

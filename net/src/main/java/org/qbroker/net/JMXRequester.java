@@ -53,10 +53,18 @@ public class JMXRequester implements Requester {
         if(!uri.startsWith("service:"))
             throw(new IllegalArgumentException("Bad service URL: " + uri));
 
-        if ((o = props.get("Username")) != null)
+        if ((o = props.get("Username")) != null) {
             username = (String) o;
-        if ((o = props.get("Password")) != null)
-            password = (String) o;
+            if ((o = props.get("Password")) != null)
+                password = (String) o;
+            else if ((o = props.get("EncryptedPassword")) != null) try {
+                password = Utils.decrypt((String) o);
+            }
+            catch (Exception e) {
+                throw(new IllegalArgumentException("failed to decrypt " +
+                    "EncryptedPassword: " + e.toString()));
+            }
+        }
 
         if ((o = props.get("ConnectOnInit")) == null || // check ConnectOnInit
             !"false".equalsIgnoreCase((String) o)) try {

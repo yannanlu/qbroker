@@ -22,6 +22,7 @@ import java.util.Set;
 import java.util.Iterator;
 import java.util.Date;
 import java.text.SimpleDateFormat;
+import org.qbroker.common.Utils;
 import org.qbroker.common.Connector;
 import org.qbroker.common.TraceStackThread;
 
@@ -110,15 +111,19 @@ public class MongoDBConnector implements Connector {
             throw(new IllegalArgumentException("no dbName specified in URI"));
         dbName = dbName.substring(1);
 
-        if ((o = props.get("Username")) == null)
-            username = null;
-        else
+        if ((o = props.get("Username")) != null) {
             username = (String) o;
 
-        if ((o = props.get("Password")) == null)
-            password = null;
-        else
-            password = (String) o;
+            if ((o = props.get("Password")) != null)
+                password = (String) o;
+            else if ((o = props.get("EncryptedPassword")) != null) try {
+                password = Utils.decrypt((String) o);
+            }
+            catch (Exception e) {
+                throw(new IllegalArgumentException("failed to decrypt " +
+                    "EncryptedPassword: " + e.toString()));
+            }
+        }
 
         if ((o = props.get("SOTimeout")) != null)
             timeout = 1000 * Integer.parseInt((String) o);

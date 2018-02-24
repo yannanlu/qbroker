@@ -213,7 +213,7 @@ public class WebTester extends Report {
                 else
                     strBuf.append("Cookie: " + (String) o + "\r\n");
             }
-            if ((o = props.get("EncryptedAuthorization")) != null)
+            if ((o = props.get("BasicAuthorization")) != null)
                 strBuf.append("Authorization: Basic " + (String) o + "\r\n");
             else if ((o = props.get("AuthString")) != null)
                 strBuf.append("Authorization: " + (String) o + "\r\n");
@@ -223,6 +223,15 @@ public class WebTester extends Report {
                     str += ":" + (String) o;
                     str = new String(Base64Encoder.encode(str.getBytes()));
                     strBuf.append("Authorization: Basic " + str + "\r\n");
+                }
+                else if ((o = props.get("EncryptedPassword")) != null) try {
+                    str += ":" + Utils.decrypt((String) o);
+                    str = new String(Base64Encoder.encode(str.getBytes()));
+                    strBuf.append("Authorization: Basic " + str + "\r\n");
+                }
+                catch (Exception e) {
+                    throw(new IllegalArgumentException("failed to decrypt " +
+                        "EncryptedPassword: " + e.toString()));
                 }
             }
 

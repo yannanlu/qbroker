@@ -17,12 +17,14 @@ import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.text.ParsePosition;
+import java.lang.reflect.InvocationTargetException;
 import org.w3c.dom.NodeList;
 import org.w3c.dom.Node;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.NamedNodeMap;
-import java.security.NoSuchAlgorithmException;
+import java.security.GeneralSecurityException;
 import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import javax.xml.xpath.XPath;
@@ -59,6 +61,7 @@ public class Utils {
     public static final String RS = "\n";
     private static ThreadLocal<DateFormat> df = new ThreadLocal<DateFormat>();
     private static final String dfStr = "yyyy/MM/dd.HH:mm:ss.SSS.zz";
+    private static java.lang.reflect.Method decrypt = null;
 
     public Utils() {
     }
@@ -1321,7 +1324,7 @@ public class Utils {
         strBuf = new StringBuffer();
         while ((bytesRead = in.read(buffer)) >= 0) {
             if (bytesRead > 0)
-                strBuf.append(new String(buffer, 0, bytesRead));
+                strBuf.append(new String(buffer, 0, bytesRead, "UTF-8"));
         }
 
         return strBuf.toString();
@@ -1366,5 +1369,52 @@ public class Utils {
             }
         }
         return n;
+    }
+
+    /** decrypts the encrypted text with OpenSSL plugin */
+    public static String decrypt(String text) throws IOException,
+        GeneralSecurityException {
+        if (decrypt == null) try {
+            initStaticMethod("decrypt");
+        }
+        catch (Exception e) {
+            throw(new IllegalArgumentException("failed to init method of "+
+                "decrypt from plugin: " + e.toString()));
+        }
+        try {
+            return (String) decrypt.invoke(null, new Object[]{text});
+        }
+        catch (InvocationTargetException e) {
+            Throwable t = e.getTargetException();
+            if (t == null)
+                throw(new IllegalArgumentException("failed to invoke: "+
+                    traceStack(e)));
+            else if (t instanceof IOException)
+                throw((IOException) t);
+            else if (t instanceof GeneralSecurityException)
+                throw((GeneralSecurityException) t);
+            else if (t instanceof RuntimeException)
+                throw((RuntimeException) t);
+            else
+                throw(new IOException("failed to invoke: "+ traceStack(t)));
+        }
+        catch (Exception e) {
+            throw(new IllegalArgumentException("failed to decrypt: "+
+                traceStack(e)));
+        }
+    }
+
+    /** initializes static methods from OpenSSL plugin */
+    private synchronized static void initStaticMethod(String name)
+        throws ClassNotFoundException, NoSuchMethodException {
+        String className = System.getProperty("OpenSSLPlugin",
+            "org.qbroker.common.AES");
+        if ("decrypt".equals(name) && decrypt == null) {
+            Class<?> cls = Class.forName(className);
+            decrypt = cls.getMethod(name, new Class[]{String.class});
+        }
+        else
+            throw(new IllegalArgumentException("method of " + name +
+                  " is not supported for OpenSSL plugin"));
     }
 }

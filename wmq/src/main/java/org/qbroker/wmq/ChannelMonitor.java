@@ -21,6 +21,7 @@ import com.ibm.mq.pcf.PCFMessage;
 import com.ibm.mq.pcf.PCFMessageAgent;
 import org.qbroker.common.TimeWindows;
 import org.qbroker.common.Template;
+import org.qbroker.common.Utils;
 import org.qbroker.common.GenericLogger;
 import org.qbroker.monitor.MonitorUtils;
 import org.qbroker.monitor.Monitor;
@@ -148,10 +149,18 @@ public class ChannelMonitor extends Monitor {
                     securityExit = (String) o;
                 if ((o = props.get("SecurityData")) != null)
                     securityData = (String) o;
-                if ((o = props.get("Username")) != null)
+                if ((o = props.get("Username")) != null) {
                     username = (String) o;
-                if ((o = props.get("Password")) != null)
-                    password = (String) o;
+                    if ((o = props.get("Password")) != null)
+                        password = (String) o;
+                    else if ((o = props.get("EncryptedPassword")) != null) try {
+                        password = Utils.decrypt((String) o);
+                    }
+                    catch (Exception e) {
+                        throw(new IllegalArgumentException("failed to decrypt " +
+                            "EncryptedPassword: " + e.toString()));
+                    }
+                }
                 if (securityData == null)
                     securityData = "";
             }

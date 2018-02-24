@@ -73,6 +73,13 @@ public class QMFRequester implements Requester {
             username = (String) o;
             if ((o = props.get("Password")) != null)
                 password = (String) o;
+            else if ((o = props.get("EncryptedPassword")) != null) try {
+                password = Utils.decrypt((String) o);
+            }
+            catch (Exception e) {
+                throw(new IllegalArgumentException("failed to decrypt " +
+                    "EncryptedPassword: " + e.toString()));
+            }
         }
 
         qName = "broker";
@@ -565,7 +572,7 @@ public class QMFRequester implements Requester {
         }
         catch (NamingException e) {
             factory = null;
-            throw(new JMSException("failed to lookup ConnectionFactory '" +
+            throw(new JMSException("failed to lookup ConnnectionFactory '" +
                 connectionFactoryName + "' on " + uri + ": " +
                 TraceStackThread.traceStack(e)));
         }

@@ -12,6 +12,7 @@ import java.util.Date;
 import java.text.SimpleDateFormat;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.exceptions.JedisException;
+import org.qbroker.common.Utils;
 import org.qbroker.common.Connector;
 import org.qbroker.common.TraceStackThread;
 
@@ -85,6 +86,13 @@ public class JedisConnector implements Connector {
 
             if ((o = props.get("Password")) != null)
                 password = (String) o;
+            else if ((o = props.get("EncryptedPassword")) != null) try {
+                password = Utils.decrypt((String) o);
+            }
+            catch (Exception e) {
+                throw(new IllegalArgumentException("failed to decrypt " +
+                    "EncryptedPassword: " + e.toString()));
+            }
         }
 
         if ((o = props.get("SOTimeout")) != null)

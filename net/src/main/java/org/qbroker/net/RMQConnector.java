@@ -21,6 +21,7 @@ import java.text.SimpleDateFormat;
 import java.text.ParsePosition;
 import org.qbroker.common.TraceStackThread;
 import org.qbroker.common.Connector;
+import org.qbroker.common.Utils;
 
 /**
  * RMQConnector connects to an exchange on a RabbitMQ server and initializes
@@ -148,10 +149,18 @@ public class RMQConnector implements Connector {
         if ((o = props.get("IsPassive")) != null &&
             "false".equalsIgnoreCase((String) o))
             isPassive = false;
-        if ((o = props.get("Username")) != null)
+        if ((o = props.get("Username")) != null) {
             username = (String) o;
-        if ((o = props.get("Password")) != null)
-            password = (String) o;
+            if ((o = props.get("Password")) != null)
+                password = (String) o;
+            else if ((o = props.get("EncryptedPassword")) != null) try {
+                password = Utils.decrypt((String) o);
+            }
+            catch (Exception e) {
+                throw(new IllegalArgumentException("failed to decrypt " +
+                    "EncryptedPassword: " + e.toString()));
+            }
+        }
 
         if ((o = props.get("Operation")) != null)
             operation = (String) o;

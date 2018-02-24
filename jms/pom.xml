@@ -4,18 +4,23 @@
   <modelVersion>4.0.0</modelVersion>
   <artifactId>jms</artifactId>
   <packaging>jar</packaging>
-  <version>1.2.0</version>
+  <version>1.2.2</version>
   <url>http://maven.apache.org</url>
   <parent>
     <groupId>org.qbroker</groupId>
     <artifactId>qbroker</artifactId>
-    <version>1.2.0</version>
+    <version>1.2.1</version>
   </parent>
   <dependencies>
     <dependency>
       <groupId>org.qbroker</groupId>
       <artifactId>monitor</artifactId>
-      <version>1.1.7</version>
+      <version>1.1.8</version>
+    </dependency>
+    <dependency>
+      <groupId>org.qbroker</groupId>
+      <artifactId>aws</artifactId>
+      <version>1.0.1</version>
     </dependency>
     <dependency>
       <groupId>javax</groupId>

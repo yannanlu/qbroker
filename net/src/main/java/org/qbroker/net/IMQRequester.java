@@ -12,6 +12,7 @@ import java.net.URISyntaxException;
 import javax.management.remote.JMXConnector;
 import com.sun.messaging.AdminConnectionFactory;
 import com.sun.messaging.AdminConnectionConfiguration;
+import org.qbroker.common.Utils;
 import org.qbroker.common.TraceStackThread;
 
 /**
@@ -26,8 +27,8 @@ import org.qbroker.common.TraceStackThread;
 public class IMQRequester extends org.qbroker.net.JMXRequester {
     private int port = 7676;
     private String hostname;
-    private String username;
-    private String password;
+    private String username = null;
+    private String password = null;
 
     public final static String[] imqAttrs = {
         "Name",
@@ -65,10 +66,18 @@ public class IMQRequester extends org.qbroker.net.JMXRequester {
             throw(new IllegalArgumentException(e.toString()));
         }
 
-        if ((o = props.get("Username")) != null)
+        if ((o = props.get("Username")) != null) {
             username = (String) o;
-        if ((o = props.get("Password")) != null)
-            password = (String) o;
+            if ((o = props.get("Password")) != null)
+                password = (String) o;
+            else if ((o = props.get("EncryptedPassword")) != null) try {
+                password = Utils.decrypt((String) o);
+            }
+            catch (Exception e) {
+                throw(new IllegalArgumentException("failed to decrypt " +
+                    "EncryptedPassword: " + e.toString()));
+            }
+        }
 
         if ((o = props.get("ConnectOnInit")) == null || // check ConnectOnInit
             !"false".equalsIgnoreCase((String) o)) try {

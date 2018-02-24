@@ -1,5 +1,10 @@
 package org.qbroker.common;
 
+/* Base64Encoder.java - a base64 encoder/decoder with encryption support */
+
+import java.util.Arrays;
+import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import org.qbroker.common.RandomNumber;
 
 /**
@@ -27,7 +32,7 @@ public class Base64Encoder {
     }
 
     /**
-     * return encrypted Base64 encoded bytes
+     * returns encrypted Base64 encoded bytes
      */
     public byte[] encrypt(byte[] input) {
         if (key != 0) {
@@ -48,7 +53,7 @@ public class Base64Encoder {
     }
 
     /**
-     * return decrypted Base64 decoded bytes
+     * returns decrypted Base64 decoded bytes
      */
     public byte[] decrypt(byte[] input) {
         if (key != 0) {
@@ -147,13 +152,14 @@ public class Base64Encoder {
     }
 
     /**
-     * return encrypted Base64 encoded String of a key-value pair
+     * returns encrypted Base64 encoded string with a given prefix of the key
      */
-    public static String encrypt(String key, String value) {
+    public static String encrypt(String key, String value)
+        throws UnsupportedEncodingException {
         if (value == null || value.length() <= 0)
             return null;
         if (key == null || key.length() <= 0)
-            return new String(encode(value.getBytes()));
+            return new String(encode(value.getBytes(StandardCharsets.UTF_8)));
         else {
             int i, k, shift = 0;
             long t = System.currentTimeMillis() / 60000;
@@ -161,53 +167,124 @@ public class Base64Encoder {
             for (i=0; i<64; i++)
                 shift = (int) (64.0 * rand.getNext());
             key += ":" + value;
-            byte[] output = encode(key.getBytes());
+            byte[] output = encode(key.getBytes(StandardCharsets.UTF_8));
             for (i=0; i<output.length; i++) {
                 if (output[i] == '=')
                     break;
                 k = fromBase64(output[i]);
                 output[i] = toBase64[(k+shift)%64];
             }
-            return new String(output);
+            return new String(output, StandardCharsets.UTF_8);
         }
     }
 
     /**
-     * return decrypted value of the key-value pair
+     * returns base64 decoded value of an encrypted string with the given prefix
      */
-    public static String decrypt(String key, String encrypted) {
+    public static String decrypt(String key, String encrypted)
+        throws UnsupportedEncodingException {
         int len;
         if (encrypted == null || encrypted.length() <= 0)
             return null;
-        if (key == null || (len = key.length()) <= 0)
-            return new String(decode(encrypted.getBytes()));
+        if (key == null || (len = key.length()) <= 0) {
+            byte[] output = decode(encrypted.getBytes(StandardCharsets.UTF_8));
+            return new String(output, StandardCharsets.UTF_8);
+        }
         else {
-            int i, k, shift;
+            int shift;
             len += 1;
             key += ":";
-            byte[] input = encrypted.getBytes();
+            byte[] input = encrypted.getBytes(StandardCharsets.UTF_8);
+            byte[] ref = key.getBytes(StandardCharsets.UTF_8);
             byte[] buffer = new byte[input.length];
-            byte[] output;
             for (shift=0; shift<64; shift++) {
-                for (i=0; i<input.length; i++) {
+                for (int i=0; i<input.length; i++) {
                     if (input[i] == '=')
                         buffer[i] = input[i];
                     else {
-                        k = fromBase64(input[i]);
+                        int k = fromBase64(input[i]);
                         buffer[i] = toBase64[(k+shift)%64];
                     }
                 }
-                output = decode(buffer); 
-                if (key.equals(new String(output, 0, len))) {
+                byte[] output = decode(buffer);
+                if (Arrays.equals(ref, Arrays.copyOfRange(output, 0, len)))
                     return new String(output, len, output.length - len);
-                }
             }
-            return "";
+            throw(new IllegalArgumentException("header is missing"));
         }
     }
 
     /**
-     * return the position of the byte in the map
+     * verifies the given header on a base64 encoded string and scrambles
+     * it with a random shuffling. It returns the scrambled string upon
+     * success or the original string otherwise.
+     */
+    public static String scramble(String header, String encoded)
+        throws UnsupportedEncodingException {
+        int len;
+        if (header == null || (len = header.length()) <= 0)
+            throw(new IllegalArgumentException("header is null"));
+        if (encoded == null || encoded.length() <= len)
+            return encoded;
+        else {
+            int k, shift = 1;
+            long t;
+            byte[] input = encoded.getBytes(StandardCharsets.UTF_8);
+            byte[] ref = header.getBytes(StandardCharsets.UTF_8);
+            byte[] output = decode(input);
+            if (output == null || output.length < len)
+                return encoded;
+            if (!Arrays.equals(ref, Arrays.copyOfRange(output, 0, len)))
+                return encoded;
+            t = System.currentTimeMillis() / 60000;
+            RandomNumber rand = new RandomNumber((int) t);
+            for (int i=0; i<64; i++)
+                shift = (int) (64.0 * rand.getNext());
+            for (int i=0; i<input.length; i++) {
+                if (input[i] == '=')
+                    break;
+                k = fromBase64(input[i]);
+                input[i] = toBase64[(k+shift)%64];
+            }
+            return new String(input, StandardCharsets.UTF_8);
+        }
+    }
+
+    /**
+     * unscrambles a scrambled string and verifies the given header on the
+     * end result. It returns the unscrambled string upon success or the
+     * scrambled string otherwise.
+     */
+    public static String unscramble(String header, String scrambled)
+        throws UnsupportedEncodingException {
+        int len;
+        if (header == null || (len = header.length()) <= 0)
+            throw(new IllegalArgumentException("header is null"));
+        if (scrambled == null || scrambled.length() < len)
+            return scrambled;
+        else {
+            byte[] input = scrambled.getBytes(StandardCharsets.UTF_8);
+            byte[] output = new byte[input.length];
+            byte[] ref = header.getBytes(StandardCharsets.UTF_8);
+            for (int shift=0; shift<64; shift++) {
+                for (int i=0; i<input.length; i++) {
+                    if (input[i] == '=')
+                        output[i] = input[i];
+                    else {
+                        int k = fromBase64(input[i]);
+                        output[i] = toBase64[(k+shift)%64];
+                    }
+                }
+                if (Arrays.equals(ref,Arrays.copyOfRange(decode(output),0,len)))
+                    return new String(output, StandardCharsets.UTF_8);
+            }
+            return scrambled;
+        }
+    }
+
+    /**
+     * returns the position of the byte in the map or throws Exception
+     * if the byte is not base64 encoded
      */
     private static byte fromBase64(byte x) {
         if (x >= 'A' && x <= 'Z') {

@@ -3,6 +3,19 @@ package org.qbroker.flow;
 /* ReleaseTag.java - release tag for all the packages of qbroker */
 
 /**
+ * V1.2.5 (2018/02/24): added AES for OpenSSL-like encryptions, added two
+ * methods of scramble and unscramble to Base64Encoder, added support of
+ * EncryptedData to all the low level classes so that they will be able to
+ * decrypt the OpenSSL encrypted data for sensitive data like password,
+ * added the method of decrypt to Utils, added support to PropertyMonitor for
+ * loading properties from a property file and/or environment variables,
+ * added support to StaticReport for loading properties from a property file,
+ * changed StaticReport to use EvnPrefix to load environment variables,
+ * changed EncryptedAuthorization to BasicAuthorization in WebTester
+ *<br/>
+ * V1.2.4 (2018/02/14): added aws package for AWS service, added support for
+ * multiple properties to QClient, fixed some typoes
+ *<br/>
  * V1.2.3 (2017/08/19): added missing event initializtion in QServlet and
  * MsgServlet, added logging in case jsp does not exist, changed to use println,
  * removed the jdbc check from CQLConnector
@@ -157,7 +170,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V 1.2.3 2017/08/19 11:13:08";
+    private static String ReleaseTAG = "QBroker V 1.2.5 2018/02/24 11:17:03";
 
     public ReleaseTag() {
     }

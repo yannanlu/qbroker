@@ -269,13 +269,16 @@ public class NumberMonitor extends Monitor {
                 h.put("MaxBytes", o);
             else
                 h.put("MaxBytes", "0");
-            if ((o = props.get("EncryptedAuthorization")) != null)
-                h.put("EncryptedAuthorization", o);
+            if ((o = props.get("BasicAuthorization")) != null)
+                h.put("BasicAuthorization", o);
             else if ((o = props.get("AuthString")) != null)
                 h.put("AuthString", o);
             else if ((o = props.get("Username")) != null) {
                 h.put("Username", o);
-                h.put("Password", props.get("Password"));
+                if ((o = props.get("Password")) != null)
+                    h.put("Password", o);
+                else if ((o = props.get("EncryptedPassword")) != null)
+                    h.put("EncryptedPassword", o);
             }
             reporter = new WebTester(h);
             break;
@@ -337,7 +340,10 @@ public class NumberMonitor extends Monitor {
                 h.put("DBDriver", o);
             if ((o = props.get("Username")) != null) {
                 h.put("Username", o);
-                h.put("Password", props.get("Password"));
+                if ((o = props.get("Password")) != null)
+                    h.put("Password", o);
+                else if ((o = props.get("EncryptedPassword")) != null)
+                    h.put("EncryptedPassword", o);
             }
             if ((o = props.get("SQLQuery")) != null)
                 h.put("SQLQuery", o);
@@ -369,10 +375,13 @@ public class NumberMonitor extends Monitor {
             reporter = null;
             break;
           case OBJ_JMX:
-            if ((o = props.get("Username")) != null)
+            if ((o = props.get("Username")) != null) {
                 h.put("Username", o);
-            if ((o = props.get("Password")) != null)
-                h.put("Password", o);
+                if ((o = props.get("Password")) != null)
+                    h.put("Password", o);
+                else if ((o = props.get("EncryptedPassword")) != null)
+                    h.put("EncryptedPassword", o);
+            }
             dataField = (String)MonitorUtils.select(props.get("AttributeName"));
             dataField = MonitorUtils.substitute(dataField, template);
             queryStr = (String) MonitorUtils.select(props.get("MBeanName"));

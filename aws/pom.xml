@@ -1,0 +1,45 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <name>aws</name>
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.qbroker</groupId>
+  <artifactId>aws</artifactId>
+  <packaging>jar</packaging>
+  <version>1.0.1</version>
+  <url>http://maven.apache.org</url>
+  <parent>
+    <groupId>org.qbroker</groupId>
+    <artifactId>qbroker</artifactId>
+    <version>1.2.1</version>
+  </parent>
+  <dependencies>
+    <dependency>
+      <groupId>org.qbroker</groupId>
+      <artifactId>common</artifactId>
+      <version>1.2.1</version>
+    </dependency>
+    <dependency>
+      <groupId>com.amazonaws</groupId>
+      <artifactId>aws-java-sdk-core</artifactId>
+      <version>1.11.272</version>
+    </dependency>
+    <dependency>
+      <groupId>com.amazonaws</groupId>
+      <artifactId>aws-java-sdk-sts</artifactId>
+      <version>1.11.272</version>
+    </dependency>
+    <dependency>
+      <groupId>com.amazonaws</groupId>
+      <artifactId>aws-java-sdk-s3</artifactId>
+      <version>1.11.272</version>
+    </dependency>
+    <dependency>
+      <groupId>com.amazonaws</groupId>
+      <artifactId>aws-java-sdk-iam</artifactId>
+      <version>1.11.272</version>
+    </dependency>
+  </dependencies>
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+</project>

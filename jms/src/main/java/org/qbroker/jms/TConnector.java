@@ -37,6 +37,7 @@ import javax.jms.TopicSubscriber;
 import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
+import org.qbroker.common.Utils;
 import org.qbroker.common.XQueue;
 import org.qbroker.common.TimeoutException;
 import org.qbroker.common.Template;
@@ -107,15 +108,30 @@ public class TConnector extends JMSTConnector {
         if ((o = props.get("StateFactories")) != null)
             env.put(Context.STATE_FACTORIES, (String) o);
 
-        if ((o = props.get("Principal")) != null)
+        if ((o = props.get("Principal")) != null) {
             env.put(Context.SECURITY_PRINCIPAL, (String) o);
-        if ((o = props.get("Credentials")) != null)
-            env.put(Context.SECURITY_CREDENTIALS, (String) o);
-
-        if ((o = props.get("Username")) != null)
+            if ((o = props.get("Credentials")) != null)
+                env.put(Context.SECURITY_CREDENTIALS, (String) o);
+            else if ((o = props.get("EncryptedCredentials")) != null) try {
+                env.put(Context.SECURITY_CREDENTIALS, Utils.decrypt((String) o));
+            }
+            catch (Exception e) {
+                throw(new IllegalArgumentException("failed to decrypt " +
+                    "EncryptedCredentials: " + e.toString()));
+            }
+        }
+        if ((o = props.get("Username")) != null) {
             username = (String) o;
-        if ((o = props.get("Password")) != null)
-            password = (String) o;
+            if ((o = props.get("Password")) != null)
+                password = (String) o;
+            else if ((o = props.get("EncryptedPassword")) != null) try {
+                password = Utils.decrypt((String) o);
+            }
+            catch (Exception e) {
+                throw(new IllegalArgumentException("failed to decrypt " +
+                    "EncryptedPassword: " + e.toString()));
+            }
+        }
 
         connectionFactoryName = (String) props.get("ConnectionFactoryName");
         if(connectionFactoryName == null || connectionFactoryName.length() <= 0)
@@ -363,7 +379,7 @@ public class TConnector extends JMSTConnector {
             catch (NamingException ex) {
                 factory = null;
                 throw(new JMSException(
-                    "failed to lookup TopicConnectionFactory '"+
+                    "failed to lookup TopicConnnectionFactory '"+
                     connectionFactoryName + "': " + e.toString()));
             }
         }

@@ -5354,6 +5354,11 @@ public class MonitorAgent implements Service, Runnable {
             System.exit(0);
         }
 
+        if ((o = props.get("OpenSSLPlugin")) != null)
+            System.setProperty("OpenSSLPlugin", (String) o);
+
+        if ((o = props.get("PluginPasswordFile")) != null)
+            System.setProperty("PluginPasswordFile", (String) o);
         try {
             agent = new MonitorAgent(props);
             c = new Thread(agent, "close");

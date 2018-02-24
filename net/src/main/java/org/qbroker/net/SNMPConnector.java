@@ -54,8 +54,6 @@ public class SNMPConnector implements Connector {
     protected InetAddress agentAddress = null;
     protected String community = "public";
     protected String agentName = null;
-    protected String username = null;
-    protected String password = null;
     protected String uri = null;
     protected String operation = "notify";
     protected int port = 161;

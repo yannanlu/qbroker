@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Date;
 import java.text.SimpleDateFormat;
+import org.qbroker.common.Utils;
 import org.qbroker.common.Connector;
 import org.qbroker.common.TraceStackThread;
 
@@ -94,11 +95,22 @@ public class FTPSConnector implements Connector {
 
         if ((o = props.get("Username")) == null)
             throw(new IllegalArgumentException("Username is not defined"));
-        username = (String) o;
+        else {
+            username = (String) o;
 
-        if ((o = props.get("Password")) == null)
-            throw(new IllegalArgumentException("Password is not defined"));
-        password = (String) o;
+            password = null;
+            if ((o = props.get("Password")) == null)
+                password = (String) o;
+            else if ((o = props.get("EncryptedPassword")) != null) try {
+                password = Utils.decrypt((String) o);
+            }
+            catch (Exception e) {
+                throw(new IllegalArgumentException("failed to decrypt " +
+                    "EncryptedPassword: " + e.toString()));
+            }
+            if (password == null)
+                throw(new IllegalArgumentException("Password is not defined"));
+        }
 
         if ((o = props.get("SOTimeout")) != null)
             timeout = 1000 * Integer.parseInt((String) o);

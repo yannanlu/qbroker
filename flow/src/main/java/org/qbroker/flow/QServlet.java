@@ -278,6 +278,12 @@ public class QServlet extends HttpServlet {
             list = new ArrayList();
         n = MonitorAgent.loadListProperties(list, cfgDir, 0, props);
 
+        if ((o = props.get("OpenSSLPlugin")) != null)
+            System.setProperty("OpenSSLPlugin", (String) o);
+
+        if ((o = props.get("PluginPasswordFile")) != null)
+            System.setProperty("PluginPasswordFile", (String) o);
+
         try {
             qf = new QFlow(props);
         }
@@ -496,9 +502,14 @@ public class QServlet extends HttpServlet {
                         ph = new HashMap<String, Object>();
                         ph.put("URI", uri);
                         str = event.getAttribute("Username");
-                        if (str != null || str.length() > 0) {
+                        if (str != null && str.length() > 0) {
                             ph.put("Username", str);
-                            ph.put("Password", event.getAttribute("Password"));
+                            str = event.getAttribute("Password");
+                            if (str != null && str.length() > 0)
+                                ph.put("Password", str);
+                            else
+                                ph.put("EncryptedPassword",
+                                    event.getAttribute("EncryptedPassword"));
                         }
                         conn = new DBConnector(ph);
                         str = ((TextEvent) event).getText();
@@ -1284,10 +1295,14 @@ public class QServlet extends HttpServlet {
                         ph = new HashMap<String, Object>();
                         ph.put("URI", uri);
                         str = ((Event) message).getAttribute("Username");
-                        if (str != null || str.length() > 0) {
+                        if (str != null && str.length() > 0) {
                             ph.put("Username", str);
-                            ph.put("Password",
-                                ((Event) message).getAttribute("Password"));
+                            str = ((Event) message).getAttribute("Password");
+                            if (str != null && str.length() > 0)
+                                ph.put("Password", str);
+                            else
+                                ph.put("EncryptedPassword",
+                             ((Event) message).getAttribute("EncryptedPassword"));
                         }
                         conn = new DBConnector(ph);
                         str = ((TextEvent) message).getText();

@@ -16,8 +16,8 @@ public interface Requester extends Connector {
     /**
      * It sends the request to the destination and fills in the response to the
      * proivided string buffer with JSON content. It returns number of items in
-     * the response buffer upon success or -1 for minor failure. In case of fatal
-     * failure, it throws WrapperException with cause set.
+     * the response buffer upon success or -1 for minor failure. In case of
+     * fatal failures, it throws WrapperException with cause set.
      */
     public int getResponse(String request, StringBuffer responseBuffer,
         boolean autoDisconnect) throws WrapperException;

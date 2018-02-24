@@ -308,9 +308,14 @@ public class MsgServlet extends HttpServlet {
                         ph = new HashMap<String, Object>();
                         ph.put("URI", uri);
                         str = event.getAttribute("Username");
-                        if (str != null || str.length() > 0) {
+                        if (str != null && str.length() > 0) {
                             ph.put("Username", str);
-                            ph.put("Password", event.getAttribute("Password"));
+                            str = event.getAttribute("Password");
+                            if (str != null && str.length() > 0)
+                                ph.put("Password", str);
+                            else
+                                ph.put("EncryptedPassword",
+                                    event.getAttribute("EncryptedPassword"));
                         }
                         conn = new DBConnector(ph);
                         str = ((TextEvent) event).getText();
@@ -1043,8 +1048,12 @@ public class MsgServlet extends HttpServlet {
                         str = ((Event) message).getAttribute("Username");
                         if (str != null || str.length() > 0) {
                             ph.put("Username", str);
-                            ph.put("Password",
-                                ((Event) message).getAttribute("Password"));
+                            str = ((Event) message).getAttribute("Password");
+                            if (str != null && str.length() > 0)
+                                ph.put("Password", str);
+                            else
+                                ph.put("EncryptedPassword",
+                             ((Event) message).getAttribute("EncryptedPassword"));
                         }
                         conn = new DBConnector(ph);
                         str = ((TextEvent) message).getText();

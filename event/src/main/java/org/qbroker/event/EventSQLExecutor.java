@@ -75,8 +75,13 @@ public class EventSQLExecutor implements EventAction {
 
         map = new HashMap();
         map.put("URI", o);
-        map.put("Username", props.get("Username"));
-        map.put("Password", props.get("Password"));
+        if ((o = props.get("Username")) != null) {
+            map.put("Username", o);
+            if ((o = props.get("Password")) != null)
+                map.put("Password", o);
+            else if ((o = props.get("EncryptedPassword")) != null)
+                map.put("EncryptedPassword", o);
+        }
         map.put("DBTimeout", props.get("DBTimeout"));
         map.put("SQLExecTimeout", props.get("SQLExecTimeout"));
         map.put("ConnectOnInit", "false");
