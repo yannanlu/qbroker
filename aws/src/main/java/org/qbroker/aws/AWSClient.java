@@ -13,6 +13,7 @@ import com.amazonaws.auth.profile.internal.BasicProfile;
 import com.amazonaws.auth.profile.internal.ProfileStaticCredentialsProvider;
 
 import org.qbroker.common.Utils;
+import org.qbroker.net.HTTPConnector;
 
 public abstract class AWSClient {
     protected Map<String, BasicProfile> cache = null;
@@ -25,16 +26,19 @@ public abstract class AWSClient {
         Object o;
         String accessKeyId = null, secretAccessKey = null;
 
+        cache = new HashMap<String, BasicProfile>();
         if ((o = props.get("Profile")) != null)
             profileName = (String) o;
         else
             profileName = "default";
 
         try {
-            cache = new ProfilesConfigFile().getAllBasicProfiles();
+            Map<String, BasicProfile> map =
+                new ProfilesConfigFile().getAllBasicProfiles();
+            for (String key : map.keySet())
+                cache.put(key, map.get(key));
         }
         catch (Exception e) {
-            cache = new HashMap<String, BasicProfile>();
         }
 
         if ((o = props.get("Region")) != null)
@@ -59,12 +63,25 @@ public abstract class AWSClient {
                     "EncryptedSecretAccessKey not defined"));
             ph.put("region", defaultRegion);
             cache.put(profileName, new BasicProfile(profileName, ph));
-            ph.clear();
         }
+        else if (cache.size() <= 0)
+            throw(new IllegalArgumentException("no credentials loaded for: " +
+                profileName));
 
         if ((credentials = getCredentials(profileName)) == null)
             throw(new IllegalArgumentException("failed to get profile for: " +
                 profileName));
+    }
+
+    /**
+     * returns the region for the profileName or the default one if not found
+     */
+    public String getRegion(String profileName) {
+        BasicProfile profile = cache.get(profileName);
+        if (profile != null)
+            return profile.getRegion();
+        else
+            return defaultRegion;
     }
 
     /**
@@ -79,6 +96,45 @@ public abstract class AWSClient {
         }
         else
             return null;
+    }
+
+    /**
+     * returns the basic profile for the profileName or null if not found
+     */
+    public BasicProfile getProfile(String profileName) {
+        return cache.get(profileName);
+    }
+
+    /** returns console url for the temporary credentials or null otherwise */
+    public static String getConsoleUrl(String id, String key, String token)
+        throws IOException {
+        int i, n=0;
+        if (id == null || id.length() <= 0 || key == null ||
+            key.length() <= 0 || token == null || token.length() <= 0)
+            return null;
+        StringBuffer strBuf = new StringBuffer();
+        strBuf.append("{\"sessionId\":\"" + id);
+        strBuf.append("\",\"sessionKey\":\"" + key);
+        strBuf.append("\",\"sessionToken\":\"" + token + "\"}");
+        String req = "https://signin.aws.amazon.com/federation" +
+            "?Action=getSigninToken&Session=" + Utils.encode(strBuf.toString());
+        Map<String, String> ph = new HashMap<String, String>();
+        ph.put("URI", "https://signin.aws.amazon.com/federation");
+        HTTPConnector conn = new HTTPConnector(ph);
+        i = conn.doGet(req, strBuf);
+        conn.close();
+        ph.clear();
+        if (i == 200 && (n = strBuf.length()) > 20) {
+            strBuf.delete(n-2, n);
+            strBuf.delete(0, 16);
+            req = "?Action=login&issuer=emory.edu&Destination=";
+            req += Utils.encode("https://console.aws.amazon.com/");
+            req += "&SigninToken=" + strBuf.toString();
+            return "https://signin.aws.amazon.com/federation" + req;
+        }
+        else
+            throw(new IOException("failed to get response with error code: " +
+                i + " / " + n));
     }
 
     public abstract Map getResponse(Map<String, String> req) throws IOException;

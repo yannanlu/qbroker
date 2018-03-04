@@ -96,9 +96,9 @@ import org.qbroker.monitor.WebTester;
  * Currently, it only supports web based or local JSON properties. Since it is
  * always instantiated before the static reports, it can not use any of the
  * global variables defined in the static reports. However, it does support
- * the special variables loaded from either a local property file or a list
- * of environment variables. The loading starts from property file first, then
- * environment variables and the local inline properties last.
+ * the special variables loaded from a set of environment variables. But they
+ * are limited to URI and authentication stuff. Those environment variables
+ * have the higher precedence over the inline properties.
  *<br/>
  * @author yannanlu@yahoo.com
  */
@@ -140,47 +140,28 @@ public class PropertyMonitor extends Monitor {
         if (description == null)
             description = "monitor changes on JSON properties";
 
-        if ((o = props.get("PropertyFile")) != null) try {
-            String str;
-            Properties p = new Properties();
-            filename = MonitorUtils.select(o);
-            FileInputStream fs = new FileInputStream(filename);
-            p.load(fs);
-            fs.close();
-            for (String key : p.stringPropertyNames()) {
-                str = p.getProperty(key);
-                if (str != null)
+        if ((o = props.get("EnvironmentVariable")) != null && o instanceof Map){
+            String str, key;
+            Map pm = (Map) o;
+            Map<String, String> map = System.getenv();
+            for (Object obj : pm.keySet()) {
+                if (obj == null || !(obj instanceof String))
+                    continue;
+                key = (String) obj;
+                if (key.length() <= 0)
+                    continue;
+                if ((str = map.get(key)) == null)
+                    continue;
+                if ((key = (String) pm.get(key)) != null && key.length() > 0) 
                     ph.put(key, str);
             }
-            p.clear();
-        }
-        catch (IOException e) {
-            throw(new IllegalArgumentException("failed to load properties from "
-                + filename + ": " + e.toString()));
         }
 
-        if ((o = props.get("EnvPrefix")) != null && o instanceof List) {
-            String str, prefix;
-            List pl = (List) o;
-            Map<String, String> map = System.getenv();
-            for (String key : map.keySet()) {
-                for (Object obj : pl) {
-                    if (obj == null || !(obj instanceof String))
-                        continue;
-                    prefix = (String) o;
-                    if (prefix.length() <= 0)
-                        continue;
-                    if (!key.startsWith(prefix))
-                        continue;
-                    if ((str = map.get(key)) != null)
-                        ph.put(key, str);
-                }
-            }
-        }
-
-        if ((o = MonitorUtils.select(props.get("URI"))) != null)
+        if ((o = ph.get("URI")) == null) // evn has higher precedence
+            uri = (String) o;
+        else if ((o = MonitorUtils.select(props.get("URI"))) != null)
             uri = MonitorUtils.substitute((String) o, template);
-        else if ((uri = (String) ph.get("URI")) == null)
+        else
             throw(new IllegalArgumentException("URI is not defined"));
 
         try {
@@ -191,8 +172,31 @@ public class PropertyMonitor extends Monitor {
         }
 
         if ("http".equals(u.getScheme()) || "https".equals(u.getScheme())) {
+            boolean hasEV = false;
             isRemote = true;
-            if ((o = props.get("BasicAuthorization")) != null) {
+            if ((o = ph.get("BasicAuthorization")) != null)
+                hasEV = true;
+            else if ((o = ph.get("AuthString")) != null)
+                hasEV = true;
+            else if ((o = props.get("Username")) != null) {
+                if ((o = ph.get("Password")) != null)
+                    hasEV = true;
+                else if ((o = ph.get("EncryptedPassword")) != null)
+                    hasEV = true;
+                else if ((o = props.get("Password")) != null)
+                    ph.put("Password", MonitorUtils.select(o));
+                else if ((o = props.get("EncryptedPassword")) != null)
+                    ph.put("EncryptedPassword", MonitorUtils.select(o));
+            }
+            else if ((o = ph.get("Password")) != null) {
+                if ((o = props.get("Username")) != null)
+                    ph.put("Username", MonitorUtils.select(o));
+            }
+            else if ((o = ph.get("EncryptedPassword")) != null) {
+                if ((o = props.get("Username")) != null)
+                    ph.put("Username", MonitorUtils.select(o));
+            }
+            else if ((o = props.get("BasicAuthorization")) != null) {
                 ph.put("BasicAuthorization", MonitorUtils.select(o));
             }
             else if ((o = props.get("AuthString")) != null) {

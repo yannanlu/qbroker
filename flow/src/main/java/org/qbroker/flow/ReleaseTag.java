@@ -8,10 +8,10 @@ package org.qbroker.flow;
  * EncryptedData to all the low level classes so that they will be able to
  * decrypt the OpenSSL encrypted data for sensitive data like password,
  * added the method of decrypt to Utils, added support to PropertyMonitor for
- * loading properties from a property file and/or environment variables,
+ * loading properties from environment variables with EnvironmentVariable map,
  * added support to StaticReport for loading properties from a property file,
- * changed StaticReport to use EvnPrefix to load environment variables,
- * changed EncryptedAuthorization to BasicAuthorization in WebTester
+ * changed StaticReport to use EnvironmentVariable map to load environment
+ * variables, renamed EncryptedAuthorization to BasicAuthorization in WebTester
  *<br/>
  * V1.2.4 (2018/02/14): added aws package for AWS service, added support for
  * multiple properties to QClient, fixed some typoes
@@ -170,7 +170,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V 1.2.5 2018/02/24 11:17:03";
+    private static String ReleaseTAG = "QBroker V 1.2.5 2018/02/24 13:51:42";
 
     public ReleaseTag() {
     }

@@ -19,8 +19,8 @@ import org.qbroker.monitor.Report;
  * StaticReport defines a set of key-value pairs as a shared report
  * in the name space specified by the ReportClass. It can pick up properties
  * from either a given property file or a list of environment variables.
- * The loading starts from property file, and then environment variables and
- * inline properties at last.
+ * The loading starts from the inline properties at first, and then property
+ * file, and environment variables at last.
  *<br/>
  * @author yannanlu@yahoo.com
  */
@@ -40,6 +40,18 @@ public class StaticReport extends Report {
         if ((o = props.get("InitialReport")) != null && o instanceof Map)
             report = Utils.cloneProperties((Map) o);
 
+        if ((o = props.get("StringProperty")) != null && o instanceof Map) {
+            String str, key;
+            Iterator iter = ((Map) o).keySet().iterator();
+            while (iter.hasNext()) {
+                key = (String) iter.next();
+                if (report.containsKey(key)) // no override
+                    continue;
+                str = MonitorUtils.select(((Map) o).get(key));
+                report.put(key, MonitorUtils.substitute(str, template));
+            }
+        }
+
         if ((o = props.get("PropertyFile")) != null) try {
             String str;
             Properties ph = new Properties();
@@ -48,6 +60,8 @@ public class StaticReport extends Report {
             ph.load(fs);
             fs.close();
             for (String key : ph.stringPropertyNames()) {
+                if ("hostname".equalsIgnoreCase(key))
+                    continue;
                 str = ph.getProperty(key);
                 if (str != null)
                     report.put(key, str);
@@ -59,34 +73,21 @@ public class StaticReport extends Report {
                 + filename + ": " + e.toString()));
         }
 
-        if ((o = props.get("EnvPrefix")) != null && o instanceof List) {
-            String str, prefix;
-            List pl = (List) o;
-            Map<String, String> map = System.getenv();
-            for (String key : map.keySet()) {
-                for (Object obj : pl) {
-                    if (obj == null || !(obj instanceof String))
-                        continue;
-                    prefix = (String) o;
-                    if (prefix.length() <= 0)
-                        continue;
-                    if (!key.startsWith(prefix))
-                        continue;
-                    if ((str = map.get(key)) != null)
-                        report.put(key, str);
-                }
-            }
-        }
-
-        if ((o = props.get("StringProperty")) != null && o instanceof Map) {
+        if ((o = props.get("EnvironmentVariable")) != null && o instanceof Map){
             String str, key;
-            Iterator iter = ((Map) o).keySet().iterator();
-            while (iter.hasNext()) {
-                key = (String) iter.next();
-                if (report.containsKey(key)) // no override
+            Map pm = (Map) o;
+            Map<String, String> map = System.getenv();
+            for (Object obj : pm.keySet()) {
+                if (obj == null || !(obj instanceof String))
                     continue;
-                str = MonitorUtils.select(((Map) o).get(key));
-                report.put(key, MonitorUtils.substitute(str, template));
+                key = (String) obj;
+                if (key.length() <= 0)
+                    continue;
+                if ((str = map.get(key)) == null)
+                    continue;
+                if ((key = (String) pm.get(key)) != null && key.length() > 0 &&
+                    !"hostname".equalsIgnoreCase(key))
+                    report.put(key, str);
             }
         }
 

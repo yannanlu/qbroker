@@ -14,6 +14,7 @@ import com.amazonaws.AmazonServiceException;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
+import com.amazonaws.auth.profile.internal.BasicProfile;
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
@@ -38,6 +39,7 @@ public class STSClient extends AWSClient {
 
         sts = AWSSecurityTokenServiceClientBuilder.standard()
             .withCredentials(new AWSStaticCredentialsProvider(credentials))
+            .withRegion(getRegion(profileName))
             .build();
     }
 
@@ -119,6 +121,7 @@ public class STSClient extends AWSClient {
             AWSCredentials credentials = getCredentials(profile);
             client = AWSSecurityTokenServiceClientBuilder.standard()
                 .withCredentials(new AWSStaticCredentialsProvider(credentials))
+                .withRegion(getRegion(profile))
                 .build();
             return getResponse(client, req);
         }
@@ -216,6 +219,16 @@ public class STSClient extends AWSClient {
                     (String) resp.get("SessionToken") + "\t" +
                     (String) resp.get("Expiration"));
             }
+            else if (needUrl) {
+                BasicProfile pf = sts.getProfile(profileName);
+                if (pf != null && pf.getAwsSessionToken() != null) {
+                    String str = getConsoleUrl(pf.getAwsAccessIdKey(),
+                        pf.getAwsSecretAccessKey(), pf.getAwsSessionToken());
+                    System.out.println(str);
+                }
+                else
+                   System.out.println("No SessionToken found for "+profileName);
+            }
             else {
                 Map resp = sts.getResponse(req);
                 System.out.println("UserId\tAccount\tArn");
@@ -234,6 +247,7 @@ public class STSClient extends AWSClient {
         System.out.println("STSClient: an AWS STS client");
         System.out.println("Usage: java org.qbroker.aws.STSClient -p profile -u user");
         System.out.println("  -?: print this message");
+        System.out.println("  -U: need console url");
         System.out.println("  -u: username");
         System.out.println("  -r: rolename");
         System.out.println("  -f: filename of the policy document");
