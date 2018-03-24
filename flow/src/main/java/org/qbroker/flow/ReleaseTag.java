@@ -3,6 +3,12 @@ package org.qbroker.flow;
 /* ReleaseTag.java - release tag for all the packages of qbroker */
 
 /**
+ * V1.2.6 (2018/03/24): added TrustAllCertificates to WebTester so that
+ * it will trust self-signed certificates for HTTPS, updated those using
+ * WebTester to query pages, fixed a typo in PropertyMonitor causing
+ * NullPoniterException, remoded those deprecated methods from ClientSocket
+ * and changed it to a static class with partial support for proxy
+ *<br/>
  * V1.2.5 (2018/02/24): added AES for OpenSSL-like encryptions, added two
  * methods of scramble and unscramble to Base64Encoder, added support of
  * EncryptedData to all the low level classes so that they will be able to
@@ -170,7 +176,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V 1.2.5 2018/02/24 13:51:42";
+    private static String ReleaseTAG = "QBroker V 1.2.6 2018/03/24 10:07:34";
 
     public ReleaseTag() {
     }

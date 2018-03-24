@@ -157,7 +157,7 @@ public class PropertyMonitor extends Monitor {
             }
         }
 
-        if ((o = ph.get("URI")) == null) // evn has higher precedence
+        if ((o = ph.get("URI")) != null) // env has higher precedence
             uri = (String) o;
         else if ((o = MonitorUtils.select(props.get("URI"))) != null)
             uri = MonitorUtils.substitute((String) o, template);
@@ -232,6 +232,9 @@ public class PropertyMonitor extends Monitor {
                 ph.put("MaxBytes", (String) o);
             else
                 ph.put("MaxBytes", "0");
+
+            if ((o = props.get("TrustAllCertificates")) != null)
+                ph.put("TrustAllCertificates", (String) o);
             if ((o = props.get("WebDebug")) != null)
                 ph.put("Debug", (String) o);
             webTester = new WebTester(ph);

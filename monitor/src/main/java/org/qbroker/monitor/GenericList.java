@@ -210,7 +210,10 @@ public class GenericList extends Report {
 
         h.put("Name", name);
         h.put("URI", uri);
-        h.put("Timeout", (String) props.get("Timeout"));
+        if ((o = props.get("Timeout")) != null)
+            h.put("Timeout", o);
+        if ((o = props.get("Debug")) != null)
+            h.put("Debug", o);
         switch (oid) {
           case OBJ_JMX:
             if ((o = props.get("Username")) != null) {
@@ -232,6 +235,8 @@ public class GenericList extends Report {
                 h.put("MaxBytes", o);
             else
                 h.put("MaxBytes", "0");
+            if ((o = props.get("TrustAllCertificates")) != null)
+                h.put("TrustAllCertificates", o);
             if ((o = props.get("BasicAuthorization")) != null)
                 h.put("BasicAuthorization", o);
             else if ((o = props.get("AuthString")) != null)

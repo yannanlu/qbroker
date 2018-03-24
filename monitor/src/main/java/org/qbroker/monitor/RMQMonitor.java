@@ -61,6 +61,12 @@ public class RMQMonitor extends Monitor {
 
             h.put("Name", name);
             h.put("URI", uri);
+            if ((o = props.get("Timeout")) != null)
+                h.put("Timeout", o);
+            if ((o = props.get("Debug")) != null)
+                h.put("Debug", o);
+            if ((o = props.get("TrustAllCertificates")) != null)
+                h.put("TrustAllCertificates", o);
             if ((o = props.get("Username")) != null) {
                 h.put("Username", o);
                 if ((o = props.get("Password")) != null)

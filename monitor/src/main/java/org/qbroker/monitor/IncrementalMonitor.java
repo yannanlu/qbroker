@@ -222,7 +222,10 @@ public class IncrementalMonitor extends Monitor {
         requester = null;
         h.put("Name", name);
         h.put("URI", uri);
-        h.put("Timeout", (String) props.get("Timeout"));
+        if ((o = props.get("Timeout")) != null)
+            h.put("Timeout", o);
+        if ((o = props.get("Debug")) != null)
+            h.put("Debug", o);
         h.put("Step", "1");
         Map<String, Object> map = new HashMap<String, Object>();
         switch (oid) {
@@ -273,6 +276,8 @@ public class IncrementalMonitor extends Monitor {
                 h.put("MaxBytes", o);
             else
                 h.put("MaxBytes", "0");
+            if ((o = props.get("TrustAllCertificates")) != null)
+                h.put("TrustAllCertificates", o);
             if ((o = props.get("BasicAuthorization")) != null)
                 h.put("BasicAuthorization", o);
             else if ((o = props.get("AuthString")) != null)

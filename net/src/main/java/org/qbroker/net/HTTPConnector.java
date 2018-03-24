@@ -45,7 +45,8 @@ public class HTTPConnector implements Connector {
     private String host = null;
     private String referer = null;
     private String cookie = null;
-    private int port;
+    private String proxyHost = null;
+    private int port, proxyPort = 1080;
     private int timeout = 60000;
     private Socket sock = null;
     private byte[] request;
@@ -125,6 +126,12 @@ public class HTTPConnector implements Connector {
                 authStr = new String(Base64Encoder.encode(authStr.getBytes()));
                 authStr = "Basic " + authStr;
             }
+        }
+
+        if ((o = props.get("ProxyHost")) != null) {
+            proxyHost = (String) o;
+            if ((o = props.get("ProxyPort")) != null)
+                proxyPort = Integer.parseInt((String) o);
         }
 
         if ((o = props.get("HTTPVersion")) != null && "1.1".equals((String) o))
@@ -944,7 +951,8 @@ public class HTTPConnector implements Connector {
         else
             type = ClientSocket.TYPE_TCP;
         try {
-            sock = ClientSocket.connect(host, port, timeout, type);
+            sock = ClientSocket.connect(host, port, timeout, type, proxyHost,
+                proxyPort);
         }
         catch (Exception e) {
             throw(new IOException(TraceStackThread.traceStack(e)));
@@ -1092,6 +1100,14 @@ public class HTTPConnector implements Connector {
                 if (i+1 < args.length)
                     props.put("HTTPVersion", args[++i]);
                 break;
+              case 'x':
+                if (i+1 < args.length)
+                    props.put("ProxyHost", args[++i]);
+                break;
+              case 'P':
+                if (i+1 < args.length)
+                    props.put("ProxyPort", args[++i]);
+                break;
               case 't':
                 if (i+1 < args.length)
                     timeout = Integer.parseInt(args[++i]);
@@ -1236,6 +1252,8 @@ public class HTTPConnector implements Connector {
         System.out.println("  -t: timeout in sec (default: 60)");
         System.out.println("  -q: query string or content for post or put; or header name for get");
         System.out.println("  -f: full path to the file containing data for post or put");
+        System.out.println("  -x: proxy host");
+        System.out.println("  -P: proxy port");
         System.out.println("  -h: request header");
     }
 }

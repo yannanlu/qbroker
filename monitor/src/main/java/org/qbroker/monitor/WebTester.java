@@ -125,7 +125,11 @@ public class WebTester extends Report {
             isHTTP = true;
         else if ("https".equals(u.getScheme())) {
             isHTTP = true;
-            socketType = ClientSocket.TYPE_HTTPS;
+            if ((o = props.get("TrustAllCertificates")) != null &&
+                "true".equalsIgnoreCase((String) o))
+                socketType = ClientSocket.TYPE_SSL;
+            else
+                socketType = ClientSocket.TYPE_HTTPS;
         }
         else if ("tcp".equals(u.getScheme()))
             isHTTP = false;
@@ -136,7 +140,7 @@ public class WebTester extends Report {
         host = u.getHost();
 
         if ((port = u.getPort()) <= 0)
-            port = (socketType == ClientSocket.TYPE_HTTPS) ? 443 : 80;
+            port = (socketType == ClientSocket.TYPE_TCP) ? 80 : 443;
 
         if ((path = u.getPath()) == null || path.length() == 0)
             path = "/";
