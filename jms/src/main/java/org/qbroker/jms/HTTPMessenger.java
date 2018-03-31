@@ -34,7 +34,8 @@ import org.qbroker.common.TextSubstitution;
 import org.qbroker.common.Utils;
 import org.qbroker.common.BytesBuffer;
 import org.qbroker.common.TimeoutException;
-import org.qbroker.net.HTTPConnector;
+import org.qbroker.common.HTTPConnector;
+import org.qbroker.net.HTTPClient;
 import org.qbroker.jms.MessageOutputStream;
 import org.qbroker.jms.MessageUtils;
 import org.qbroker.jms.Msg2Text;
@@ -70,12 +71,14 @@ import org.qbroker.event.Event;
  * @author yannanlu@yahoo.com
  */
 
-public class HTTPMessenger extends HTTPConnector {
+public class HTTPMessenger {
+    private String uri = null;
     private String msgID = null;
     private int bufferSize = 4096;
     private int port = 80;
     private Msg2Text msg2Text = null;
     private QuickCache cache = null;
+    private HTTPConnector conn = null;
 
     private String fieldName;
     private String path;
@@ -131,13 +134,13 @@ public class HTTPMessenger extends HTTPConnector {
 
     /** Creates new HTTPMessenger */
     public HTTPMessenger(Map props) {
-        super(props);
-
         Object o;
         Map<String, Object> ph;
         URI u;
 
-        if (uri == null)
+        if ((o = props.get("URI")) != null)
+            uri = (String) o;
+        else
             throw(new IllegalArgumentException("URI is not defined"));
 
         try {
@@ -168,6 +171,11 @@ public class HTTPMessenger extends HTTPConnector {
 
         if (pathType == PATH_NONE)
           throw(new IllegalArgumentException("Path and FieldName not defined"));
+
+        if ((o = props.get("ProxyHost")) != null)
+            conn = new HTTPClient(props);
+        else
+            conn = new org.qbroker.net.HTTPConnector(props);
 
         if ((o = props.get("RCField")) != null && o instanceof String)
             rcField = (String) o; 
@@ -434,9 +442,9 @@ public class HTTPMessenger extends HTTPConnector {
             strBuf = new StringBuffer();
             try {
                 if (isText)
-                    retCode = doGet(uri, extraHeader, strBuf, msgBuf);
+                    retCode = conn.doGet(uri, extraHeader, strBuf, msgBuf);
                 else
-                    retCode = doGet(uri, extraHeader, strBuf, out);
+                    retCode = conn.doGet(uri, extraHeader, strBuf, out);
             }
             catch (Exception e) {
                 retCode = HttpURLConnection.HTTP_INTERNAL_ERROR;
@@ -470,7 +478,7 @@ public class HTTPMessenger extends HTTPConnector {
             }
             catch (InterruptedException e) {
             }
-            if (i < retry && reconnect() != null)
+            if (i < retry && conn.reconnect() != null)
                 break;
             if (isText)
                 msgBuf.reset();
@@ -506,7 +514,7 @@ public class HTTPMessenger extends HTTPConnector {
                 for (i=0; i<respPropertyName.length; i++) {
                      if (respPropertyName[i] == null)
                          continue;
-                     value = getHeader(respPropertyName[i], str);
+                     value = Utils.getHttpHeader(respPropertyName[i], str);
                      if (value == null || value.length() <= 0)
                          continue;
                      MessageUtils.setProperty(respPropertyValue[i],
@@ -590,7 +598,7 @@ public class HTTPMessenger extends HTTPConnector {
         int retCode = HttpURLConnection.HTTP_INTERNAL_ERROR;
         boolean checkIdle = (maxIdleTime > 0);
         boolean hasTemplate = (msg2Text != null);
-        boolean isPost = isPost();
+        boolean isPost = conn.isPost();
         boolean ack = ((xq.getGlobalMask() & XQueue.EXTERNAL_XA) > 0);
         boolean isLocal = false;
         boolean isBytes = false;
@@ -723,7 +731,7 @@ public class HTTPMessenger extends HTTPConnector {
                 isLocal = true;
                 // make sure local dir exists
                 if (verifyDirectory &&
-                    (folder = getParent(localFilename)) != null) {
+                    (folder = Utils.getParent(localFilename)) != null) {
                     File dir = new File(folder);
                     if (!dir.exists()) {
                         for (i=0; i<=retry; i++) {
@@ -755,17 +763,17 @@ public class HTTPMessenger extends HTTPConnector {
                     try {
                         out = new FileOutputStream(new File(localFilename));
                         if (isPost)
-                            retCode = doPost(urlName, extraHeader, buf,
+                            retCode = conn.doPost(urlName, extraHeader, buf,
                                 strBuf, out);
                         else if (usePut)
-                            retCode = doPut(urlName, extraHeader, buf,
+                            retCode = conn.doPut(urlName, extraHeader, buf,
                                 strBuf, out);
                         else if (msgStr != null && msgStr.length() > 0)
-                            retCode = doGet(urlName + msgStr, extraHeader,
+                            retCode = conn.doGet(urlName + msgStr, extraHeader,
                                 strBuf, out);
                         else {
                             msgStr = "";
-                            retCode = doGet(urlName, extraHeader, strBuf, out);
+                            retCode =conn.doGet(urlName,extraHeader,strBuf,out);
                         }
                     }
                     catch (Exception e) {
@@ -826,7 +834,7 @@ public class HTTPMessenger extends HTTPConnector {
                     }
                     catch (InterruptedException e) {
                     }
-                    if (i < retry && reconnect() != null)
+                    if (i < retry && conn.reconnect() != null)
                         break;
                 }
             }
@@ -855,31 +863,33 @@ public class HTTPMessenger extends HTTPConnector {
                     try {
                         if (isBytes) { // bytes
                             if (isPost)
-                                retCode = doPost(urlName, extraHeader, buf,
+                                retCode = conn.doPost(urlName, extraHeader, buf,
                                     strBuf, out);
                             else if (usePut)
-                                retCode = doPut(urlName, extraHeader, buf,
+                                retCode = conn.doPut(urlName, extraHeader, buf,
                                     strBuf, out);
                             else if (msgStr != null && msgStr.length() > 0)
-                                retCode = doGet(urlName + msgStr, extraHeader,
+                                retCode = conn.doGet(urlName+msgStr,extraHeader,
                                     strBuf, out);
                             else {
                                 msgStr = "";
-                                retCode = doGet(urlName,extraHeader,strBuf,out);
+                                retCode = conn.doGet(urlName, extraHeader,
+                                    strBuf, out);
                             }
                         }
                         else if (isPost)
-                            retCode = doPost(urlName, extraHeader, buf,
+                            retCode = conn.doPost(urlName, extraHeader, buf,
                                 strBuf, msgBuf);
                         else if (usePut)
-                            retCode = doPut(urlName, extraHeader, buf,
+                            retCode = conn.doPut(urlName, extraHeader, buf,
                                 strBuf, msgBuf);
                         else if (msgStr != null && msgStr.length() > 0)
-                            retCode = doGet(urlName + msgStr, extraHeader,
+                            retCode = conn.doGet(urlName + msgStr, extraHeader,
                                 strBuf, msgBuf);
                         else {
                             msgStr = "";
-                            retCode = doGet(urlName,extraHeader,strBuf,msgBuf);
+                            retCode = conn.doGet(urlName, extraHeader, strBuf,
+                                msgBuf);
                         }
                     }
                     catch (Exception e) {
@@ -929,7 +939,7 @@ public class HTTPMessenger extends HTTPConnector {
                     }
                     catch (InterruptedException e) {
                     }
-                    if (i < retry && reconnect() != null)
+                    if (i < retry && conn.reconnect() != null)
                         break;
                     if (!isBytes)
                         msgBuf.reset();
@@ -1025,7 +1035,7 @@ public class HTTPMessenger extends HTTPConnector {
                         for (i=0; i<respPropertyName.length; i++) {
                              if (respPropertyName[i] == null)
                                  continue;
-                             value = getHeader(respPropertyName[i], str);
+                             value=Utils.getHttpHeader(respPropertyName[i],str);
                              if (value == null || value.length() <= 0)
                                  continue;
                              MessageUtils.setProperty(respPropertyValue[i],
@@ -1044,7 +1054,7 @@ public class HTTPMessenger extends HTTPConnector {
                         for (i=0; i<respPropertyName.length; i++) {
                              if (respPropertyName[i] == null)
                                  continue;
-                             value = getHeader(respPropertyName[i], str);
+                             value=Utils.getHttpHeader(respPropertyName[i],str);
                              if (value == null || value.length() <= 0)
                                  continue;
                              MessageUtils.setProperty(respPropertyValue[i],
@@ -1233,7 +1243,7 @@ public class HTTPMessenger extends HTTPConnector {
         int retCode = HttpURLConnection.HTTP_INTERNAL_ERROR;
         boolean checkIdle = (maxIdleTime > 0);
         boolean hasTemplate = (msg2Text != null);
-        boolean isPost = isPost();
+        boolean isPost = conn.isPost();
         boolean ack = ((xq.getGlobalMask() & XQueue.EXTERNAL_XA) > 0);
         int ttl = 3600000;
         long count = 0;
@@ -1395,11 +1405,11 @@ public class HTTPMessenger extends HTTPConnector {
             strBuf = new StringBuffer();
             try {
                 if (isPost)
-                    retCode = doPost(urlName, msgBuf, strBuf);
+                    retCode = conn.doPost(urlName, msgBuf, strBuf);
                 else if (msgStr != null && msgStr.length() > 0)
-                    retCode = doGet(urlName + msgStr, strBuf);
+                    retCode = conn.doGet(urlName + msgStr, strBuf);
                 else
-                    retCode = doGet(urlName, strBuf);
+                    retCode = conn.doGet(urlName, strBuf);
             }
             catch (Exception e) {
                 retCode = HttpURLConnection.HTTP_INTERNAL_ERROR;
@@ -1489,7 +1499,7 @@ public class HTTPMessenger extends HTTPConnector {
                 } while (tm > System.currentTimeMillis());
                 strBuf = new StringBuffer();
                 try {
-                    retCode = doGet(urlName, strBuf);
+                    retCode = conn.doGet(urlName, strBuf);
                 }
                 catch (Exception e) {
                     retCode = HttpURLConnection.HTTP_INTERNAL_ERROR;
@@ -1516,7 +1526,7 @@ public class HTTPMessenger extends HTTPConnector {
                 if (i == 0 && retCode >= HttpURLConnection.HTTP_INTERNAL_ERROR)
                     new Event(Event.WARNING, "failed to check fulfillment on " +
                         urlName + ": " + retCode).send();
-                if (i < retry && reconnect() != null)
+                if (i < retry && conn.reconnect() != null)
                     break;
             }
             if (retCode >= HttpURLConnection.HTTP_INTERNAL_ERROR) {
@@ -1844,11 +1854,11 @@ public class HTTPMessenger extends HTTPConnector {
                 strBuf = new StringBuffer();
                 try {
                     if (usePut)
-                        retCode = doPut(urlName, extraHeader, msgBuf, strBuf,
-                            new BytesBuffer());
+                        retCode = conn.doPut(urlName, extraHeader, msgBuf,
+                            strBuf, new BytesBuffer());
                     else
-                        retCode = doPost(urlName, extraHeader, msgBuf, strBuf,
-                            new BytesBuffer());
+                        retCode = conn.doPost(urlName, extraHeader, msgBuf,
+                            strBuf, new BytesBuffer());
                 }
                 catch (Exception e) {
                     retCode = HttpURLConnection.HTTP_INTERNAL_ERROR;
@@ -1887,7 +1897,7 @@ public class HTTPMessenger extends HTTPConnector {
                 }
                 catch (InterruptedException e) {
                 }
-                if (i < retry && reconnect() != null)
+                if (i < retry && conn.reconnect() != null)
                     break;
             }
             msgBuf.close();
@@ -1994,7 +2004,24 @@ public class HTTPMessenger extends HTTPConnector {
             new Event(Event.INFO, "stored " + count + " msgs to " + uri).send();
     }
 
+    public void close() {
+        if (conn != null)
+            conn.close();
+    }
+
+    public String reconnect() {
+        return conn.reconnect();
+    }
+
     public String getOperation() {
         return operation;
+    }
+
+    public String getURI() {
+        return uri;
+    }
+
+    public boolean isConnected() {
+        return conn.isConnected();
     }
 }

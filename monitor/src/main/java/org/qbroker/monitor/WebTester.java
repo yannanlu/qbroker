@@ -239,6 +239,9 @@ public class WebTester extends Report {
                 }
             }
 
+            if (debug > 2)
+                new Event(Event.DEBUG, name+" request header: "+strBuf).send();
+
             if ((o = props.get("Connection")) != null)
                 strBuf.append("Connection: " + (String) o + "\r\n");
 

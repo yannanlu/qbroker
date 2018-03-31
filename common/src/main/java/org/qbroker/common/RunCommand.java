@@ -158,7 +158,7 @@ public class RunCommand implements Runnable {
 
     public static String[] parseCmd(String cmd) {
         int i, n, quo = -1, pos = -1;
-        char c;
+        char c = ' ', p;
         String[] cmdArray = null;
         ArrayList<String> cmdList = new ArrayList<String>();
 
@@ -166,6 +166,7 @@ public class RunCommand implements Runnable {
             return null;
         n = cmd.length();
         for (i=0; i<n; i++) {
+            p = c;
             c = cmd.charAt(i);
             if (c == ' ') {
                 if (pos >= 0) {
@@ -173,15 +174,22 @@ public class RunCommand implements Runnable {
                     pos = -1;
                 }
             }
-            else if (c == '\"') {
+            else if (c == '\"' && p != '\\') {
                 if (quo >= 0 && pos >= 0) {
-                    cmdList.add(cmd.substring(pos, quo) +
-                        cmd.substring(quo+1, i));
+                    String str = cmd.substring(pos,quo)+cmd.substring(quo+1,i);
+                    if (str.indexOf("\\\"") >= 0)
+                        cmdList.add(str.replaceAll("\\\\\"", "\""));
+                    else
+                        cmdList.add(str);
                     quo = -1;
                     pos = -1;
                 }
                 else if (quo >= 0 && i > quo + 1) {
-                    cmdList.add(cmd.substring(quo+1, i));
+                    String str = cmd.substring(quo+1, i);
+                    if (str.indexOf("\\\"") >= 0)
+                        cmdList.add(str.replaceAll("\\\\\"", "\""));
+                    else
+                        cmdList.add(str);
                     quo = -1;
                 }
                 else if (quo < 0)

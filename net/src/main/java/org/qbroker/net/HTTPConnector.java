@@ -18,7 +18,6 @@ import java.util.Iterator;
 import org.qbroker.common.Utils;
 import org.qbroker.common.Base64Encoder;
 import org.qbroker.common.BytesBuffer;
-import org.qbroker.common.Connector;
 import org.qbroker.common.TraceStackThread;
 import org.qbroker.net.ClientSocket;
 
@@ -38,7 +37,7 @@ import org.qbroker.net.ClientSocket;
  * @author yannanlu@yahoo.com
  */
 
-public class HTTPConnector implements Connector {
+public class HTTPConnector implements org.qbroker.common.HTTPConnector {
     protected String uri = null;
     private String username = null;
     private String password = null;
@@ -56,14 +55,6 @@ public class HTTPConnector implements Connector {
     private boolean isNewVersion = false;
     private boolean isHTTPS = false;
     private boolean trustAll = false;
-
-    public final static int ACTION_HEAD = 0;
-    public final static int ACTION_GET = 1;
-    public final static int ACTION_PUT = 2;
-    public final static int ACTION_POST = 3;
-    public final static int ACTION_DELETE = 4;
-    public final static String LINE_SEPARATOR =
-        System.getProperty("line.separator");
 
     /** Creates new HTTPConnector */
     public HTTPConnector(Map props) {
@@ -424,12 +415,12 @@ public class HTTPConnector implements Connector {
      * with the error message stored in the response buffer.
      */
     public int doHead(String urlStr, Map extra, StringBuffer response)
-        throws IOException{
+        throws IOException {
         BytesBuffer msgBuf = new BytesBuffer();
         return request(ACTION_HEAD, urlStr, null, null, response, msgBuf);
     }
 
-    public int doHead(String urlStr, StringBuffer response) throws IOException{
+    public int doHead(String urlStr, StringBuffer response) throws IOException {
         return doHead(urlStr, null, response);
     }
 
@@ -441,7 +432,7 @@ public class HTTPConnector implements Connector {
      * with the error message stored in the response buffer.
      */
     public int doDelete(String urlStr, Map extra, StringBuffer response)
-        throws IOException{
+        throws IOException {
         BytesBuffer msgBuf = new BytesBuffer();
         return request(ACTION_DELETE, urlStr, extra, null, response, msgBuf);
     }
@@ -910,10 +901,6 @@ public class HTTPConnector implements Connector {
         return httpStatus;
     }
 
-    public boolean isNewVersion() {
-        return isNewVersion;
-    }
-
     public boolean isPost() {
         return isPost;
     }
@@ -949,7 +936,7 @@ public class HTTPConnector implements Connector {
         if (isHTTPS)
             type = (trustAll) ? ClientSocket.TYPE_SSL : ClientSocket.TYPE_HTTPS;
         else
-            type = ClientSocket.TYPE_TCP;
+            type = ClientSocket.TYPE_HTTP;
         try {
             sock = ClientSocket.connect(host, port, timeout, type, proxyHost,
                 proxyPort);
@@ -995,53 +982,6 @@ public class HTTPConnector implements Connector {
         }
         catch (Exception e) {
         }
-    }
-
-    /**
-     * It returns the value of the header for the key or null if there is
-     * no such key in the headers.
-     */
-    public static String getHeader(String key, String headers) {
-        int i, j, k;
-        if (headers == null || headers.length() <= 0 || key == null ||
-            key.length() <= 0)
-            return null;
-        if ((i = headers.indexOf(key + ": ")) < 0)
-            return null;
-        else if (i == 0) {
-           k = key.length() + 2;
-           if ((j = headers.indexOf("\r\n", i + k)) >= i + k)
-               return headers.substring(i+k, j);
-           else
-               return null;
-        }
-        else if ((i = headers.indexOf("\n" + key + ": ")) > 0) {
-           i ++;
-           k = key.length() + 2;
-           if ((j = headers.indexOf("\r\n", i + k)) >= i + k)
-               return headers.substring(i+k, j);
-           else
-               return null;
-        }
-        else
-            return null;
-    }
-
-    /**
-     * It returns dirname of the filename or null if it is a relative path.
-     */
-    public static String getParent(String filename) {
-        char fs;
-        int i, k;
-        if (filename == null || (k = filename.length()) <= 0) // bad argument
-            return null;
-        fs = filename.charAt(0);
-        if (fs != '/' && fs != '\\') // no file separator found
-            return null;
-        if ((i = filename.lastIndexOf(fs, k-1)) >= 0)
-            return filename.substring(0, i);
-        else
-            return null;
     }
 
     public static void main(String args[]) {
@@ -1224,7 +1164,7 @@ public class HTTPConnector implements Connector {
                     System.err.println("\n" + strBuf.toString());
                 else // a specific header
                     System.err.println("\n" + query + ": " +
-                        getHeader(query, strBuf.toString()));
+                        Utils.getHttpHeader(query, strBuf.toString()));
             }
             else
                 System.out.print(msgBuf.toString());

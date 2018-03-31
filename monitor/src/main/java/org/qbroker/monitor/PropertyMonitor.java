@@ -172,29 +172,13 @@ public class PropertyMonitor extends Monitor {
         }
 
         if ("http".equals(u.getScheme()) || "https".equals(u.getScheme())) {
-            boolean hasEV = false;
             isRemote = true;
             if ((o = ph.get("BasicAuthorization")) != null)
-                hasEV = true;
+                isRemote = true;
             else if ((o = ph.get("AuthString")) != null)
-                hasEV = true;
-            else if ((o = props.get("Username")) != null) {
-                if ((o = ph.get("Password")) != null)
-                    hasEV = true;
-                else if ((o = ph.get("EncryptedPassword")) != null)
-                    hasEV = true;
-                else if ((o = props.get("Password")) != null)
-                    ph.put("Password", MonitorUtils.select(o));
-                else if ((o = props.get("EncryptedPassword")) != null)
-                    ph.put("EncryptedPassword", MonitorUtils.select(o));
-            }
-            else if ((o = ph.get("Password")) != null) {
-                if ((o = props.get("Username")) != null)
-                    ph.put("Username", MonitorUtils.select(o));
-            }
-            else if ((o = ph.get("EncryptedPassword")) != null) {
-                if ((o = props.get("Username")) != null)
-                    ph.put("Username", MonitorUtils.select(o));
+                isRemote = true;
+            else if ((o = ph.get("Username")) != null) {
+                isRemote = true;
             }
             else if ((o = props.get("BasicAuthorization")) != null) {
                 ph.put("BasicAuthorization", MonitorUtils.select(o));

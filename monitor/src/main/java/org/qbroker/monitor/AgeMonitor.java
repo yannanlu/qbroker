@@ -81,7 +81,8 @@ public class AgeMonitor extends Monitor {
     private long previousTime, previousRefTime, previousLeadTime, t0 = 0L;
     private int triggerSize, timeOffset, previousTrigger, oid, op = NUM_MIN;
     private int updateCount, previousLevel;
-    private boolean isNumber= false, isETime= false, emptyDataIgnored;
+    private boolean isNumber = false, isETime = false, emptyDataIgnored;
+    private boolean logDetail = false;
     private SimpleDateFormat dateFormat;
     private MonitorReport reference;
     private final static int OBJ_HTTP = 1;
@@ -430,6 +431,9 @@ public class AgeMonitor extends Monitor {
             ev.setAttribute("status", "Normal");
             queryStr = Event.getIPAddress() + " " + EventUtils.collectible(ev);
         }
+
+        if ((o = props.get("LogDetail")) != null && "true".equals((String) o))
+            logDetail = true;
 
         timeDifference = 0L;
         if ((o = props.get("TimeDifference")) != null)
@@ -799,25 +803,37 @@ public class AgeMonitor extends Monitor {
                     continue;
                 else if (init == 0) {
                     leadingTime = mtime;
-                    report.put("LeadingBlock", (String) dataBlock.get(i));
+                    if (logDetail)
+                        report.put("LeadingBlock", (String) dataBlock.get(i));
+                    else
+                        report.put("LeadingBlock", strBuf.toString());
                     init = 1;
                 }
                 else switch (op) { // aggregation
                   case NUM_MAX:
                     if (mtime > leadingTime) {
                         leadingTime = mtime;
-                        report.put("LeadingBlock", (String) dataBlock.get(i));
+                        if (logDetail)
+                            report.put("LeadingBlock",(String)dataBlock.get(i));
+                        else
+                            report.put("LeadingBlock", strBuf.toString());
                     }
                     break;
                   case NUM_MIN:
                     if (mtime < leadingTime) {
                         leadingTime = mtime;
-                        report.put("LeadingBlock", (String) dataBlock.get(i));
+                        if (logDetail)
+                            report.put("LeadingBlock",(String)dataBlock.get(i));
+                        else
+                            report.put("LeadingBlock", strBuf.toString());
                     }
                     break;
                   case NUM_LAST:
                     leadingTime = mtime;
-                    report.put("LeadingBlock", (String) dataBlock.get(i));
+                    if (logDetail)
+                        report.put("LeadingBlock", (String) dataBlock.get(i));
+                    else
+                        report.put("LeadingBlock", strBuf.toString());
                     break;
                   case NUM_FIRST:
                   default:

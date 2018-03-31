@@ -17,9 +17,10 @@ import org.apache.oro.text.regex.Perl5Matcher;
 import org.apache.oro.text.regex.MalformedPatternException;
 import org.qbroker.common.Utils;
 import org.qbroker.common.Template;
+import org.qbroker.common.HTTPConnector;
 import org.qbroker.net.FTPConnector;
 import org.qbroker.net.SFTPConnector;
-import org.qbroker.net.HTTPConnector;
+import org.qbroker.net.HTTPClient;
 import org.qbroker.event.Event;
 
 /**
@@ -100,7 +101,10 @@ public class FileSynchronizer implements EventAction {
             h.remove("Priority");
             if ((o = h.remove("Timeout")) != null)
                 h.put("SOTimeout", o);
-            httpConn = new HTTPConnector(h);
+            if ((o = h.get("ProxyHost")) != null)
+                httpConn = new HTTPClient(h);
+            else
+                httpConn = new org.qbroker.net.HTTPConnector(h);
         }
         else if ("ftp".equals(u.getScheme())) {
             sourceType = SOURCE_FTP;

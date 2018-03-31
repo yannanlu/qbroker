@@ -13,7 +13,8 @@ import com.amazonaws.auth.profile.internal.BasicProfile;
 import com.amazonaws.auth.profile.internal.ProfileStaticCredentialsProvider;
 
 import org.qbroker.common.Utils;
-import org.qbroker.net.HTTPConnector;
+import org.qbroker.common.HTTPConnector;
+import org.qbroker.net.HTTPClient;
 
 public abstract class AWSClient {
     protected Map<String, BasicProfile> cache = null;
@@ -120,7 +121,7 @@ public abstract class AWSClient {
             "?Action=getSigninToken&Session=" + Utils.encode(strBuf.toString());
         Map<String, String> ph = new HashMap<String, String>();
         ph.put("URI", "https://signin.aws.amazon.com/federation");
-        HTTPConnector conn = new HTTPConnector(ph);
+        HTTPConnector conn = new HTTPClient(ph);
         i = conn.doGet(req, strBuf);
         conn.close();
         ph.clear();

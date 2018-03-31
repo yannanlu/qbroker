@@ -68,7 +68,7 @@ public class NumberMonitor extends Monitor {
     private TextSubstitution tSub = null;
     private int oid, op = NUM_COUNT, previousLevel;
     private double scale, shift;
-    private boolean isDouble = false, emptyDataIgnored;
+    private boolean isDouble = false, emptyDataIgnored, logDetail = false;
     protected final static int OBJ_HTTP = 1;
     protected final static int OBJ_SCRIPT = 2;
     protected final static int OBJ_REPORT = 3;
@@ -192,6 +192,9 @@ public class NumberMonitor extends Monitor {
             else
                 op = NUM_COUNT;
         }
+
+        if ((o = props.get("LogDetail")) != null && "true".equals((String) o))
+            logDetail = true;
 
         if((o = props.get("CriticalRange")) != null && o instanceof List &&
             ((List) o).size() > 0) {
@@ -655,41 +658,68 @@ public class NumberMonitor extends Monitor {
                                 doubleNumber = f;
                             else
                                 leadingNumber = number;
-                            report.put("LeadingBlock",(String)dataBlock.get(i));
+                            if (logDetail)
+                                report.put("LeadingBlock",
+                                    (String) dataBlock.get(i));
+                            else
+                                report.put("LeadingBlock", str);
                         }
                         else if (isDouble && ((op == NUM_MAX &&
                             f > doubleNumber) || (op == NUM_MIN &&
                             f < doubleNumber))) {
                             doubleNumber = f;
-                            report.put("LeadingBlock",(String)dataBlock.get(i));
+                            if (logDetail)
+                                report.put("LeadingBlock",
+                                    (String) dataBlock.get(i));
+                            else
+                                report.put("LeadingBlock", str);
                         }
                         else if (!isDouble && ((op == NUM_MAX &&
                             number > leadingNumber) || (op == NUM_MIN &&
                             number < leadingNumber))) {
                             leadingNumber = number;
-                            report.put("LeadingBlock",(String)dataBlock.get(i));
+                            if (logDetail)
+                                report.put("LeadingBlock",
+                                    (String) dataBlock.get(i));
+                            else
+                                report.put("LeadingBlock", str);
                         }
                         else if (op == NUM_SUM || op == NUM_AVG) {
                             if (isDouble)
                                 doubleNumber += f;
                             else
                                 leadingNumber += number;
-                            report.put("LeadingBlock",(String)dataBlock.get(i));
+                            if (logDetail)
+                                report.put("LeadingBlock",
+                                    (String) dataBlock.get(i));
+                            else
+                                report.put("LeadingBlock", str);
                             init ++;
                         }
                     }
                     break;
                   case NUM_COUNT:
                   default:
+                    str = (String) dataBlock.get(i);
                     if (init < 0) {
                         init = 1;
                         number = 1;
-                        report.put("LeadingBlock", (String) dataBlock.get(i));
+                        if (logDetail)
+                            report.put("LeadingBlock", str);
+                        else if (str != null && str.length() > 128)
+                            report.put("LeadingBlock", str.substring(0, 128));
+                        else
+                            report.put("LeadingBlock", str);
                     }
                     else {
                         init ++;
                         number ++;
-                        report.put("LeadingBlock", (String) dataBlock.get(i));
+                        if (logDetail)
+                            report.put("LeadingBlock", str);
+                        else if (str != null && str.length() > 128)
+                            report.put("LeadingBlock", str.substring(0, 128));
+                        else
+                            report.put("LeadingBlock", str);
                     }
                     break;
                 }

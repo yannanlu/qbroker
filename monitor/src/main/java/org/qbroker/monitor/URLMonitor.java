@@ -21,7 +21,6 @@ import org.apache.oro.text.regex.Perl5Matcher;
 import org.apache.oro.text.regex.MalformedPatternException;
 import org.qbroker.common.TimeWindows;
 import org.qbroker.common.Utils;
-import org.qbroker.net.HTTPConnector;
 import org.qbroker.event.Event;
 import org.qbroker.monitor.MonitorUtils;
 import org.qbroker.monitor.Monitor;
@@ -291,7 +290,7 @@ public class URLMonitor extends Monitor {
             String response = (String) r.get("Response");
             size = (long) response.length();
             if (checkETag) { // check etag only
-                etag = HTTPConnector.getHeader("ETag", response);
+                etag = Utils.getHttpHeader("ETag", response);
                 if (etag == null || etag.length() <= 0)
                     throw(new IOException("failed to get ETag: " + response));
             }

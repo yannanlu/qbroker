@@ -1404,6 +1404,53 @@ public class Utils {
         }
     }
 
+    /**
+     * It returns dirname of the filename or null if it is a relative path.
+     */
+    public static String getParent(String filename) {
+        char fs;
+        int i, k;
+        if (filename == null || (k = filename.length()) <= 0) // bad argument
+            return null;
+        fs = filename.charAt(0);
+        if (fs != '/' && fs != '\\') // no file separator found
+            return null;
+        if ((i = filename.lastIndexOf(fs, k-1)) >= 0)
+            return filename.substring(0, i);
+        else
+            return null;
+    }
+
+    /**
+     * It returns the value of the http header for the key or null if there is
+     * no such key in the headers.
+     */
+    public static String getHttpHeader(String key, String headers) {
+        int i, j, k;
+        if (headers == null || headers.length() <= 0 || key == null ||
+            key.length() <= 0)
+            return null;
+        if ((i = headers.indexOf(key + ": ")) < 0)
+            return null;
+        else if (i == 0) {
+           k = key.length() + 2;
+           if ((j = headers.indexOf("\r\n", i + k)) >= i + k)
+               return headers.substring(i+k, j);
+           else
+               return null;
+        }
+        else if ((i = headers.indexOf("\n" + key + ": ")) > 0) {
+           i ++;
+           k = key.length() + 2;
+           if ((j = headers.indexOf("\r\n", i + k)) >= i + k)
+               return headers.substring(i+k, j);
+           else
+               return null;
+        }
+        else
+            return null;
+    }
+
     /** initializes static methods from OpenSSL plugin */
     private synchronized static void initStaticMethod(String name)
         throws ClassNotFoundException, NoSuchMethodException {

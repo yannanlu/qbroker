@@ -94,7 +94,7 @@ public class EventActionGroup implements EventAction {
                     className = "org.qbroker.event.EventScriptLauncher";
                 else if ("smtp".equals(s))
                     className = "org.qbroker.event.FormattedEventMailer";
-                else if ("http".equals(s))
+                else if ("http".equals(s) || "https".equals(s))
                     className = "org.qbroker.event.EventPoster";
                 else if ("log".equals(s) || "file".equals(s))
                     className = "org.qbroker.event.EventAppender";

@@ -33,7 +33,7 @@ import org.qbroker.common.TimeWindows;
 import org.qbroker.common.NewlogFetcher;
 import org.qbroker.common.DirectoryTree;
 import org.qbroker.common.TimeWindows;
-import org.qbroker.net.HTTPConnector;
+import org.qbroker.common.Utils;
 import org.qbroker.jms.MessageUtils;
 import org.qbroker.jms.MessageFilter;
 import org.qbroker.jms.JMSEvent;
@@ -1255,7 +1255,7 @@ public class MessageLogger {
                 continue;
             }
             if ((!append) && verifyDirectory) { // make sure dir exists
-                String folder = HTTPConnector.getParent(filename);
+                String folder = Utils.getParent(filename);
                 if (folder != null) { // full path
                     File dir = new File(folder);
                     if (!dir.exists()) {

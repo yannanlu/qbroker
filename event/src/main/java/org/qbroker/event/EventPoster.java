@@ -17,7 +17,8 @@ import org.apache.oro.text.regex.MalformedPatternException;
 import org.qbroker.common.Template;
 import org.qbroker.common.TextSubstitution;
 import org.qbroker.common.Utils;
-import org.qbroker.net.HTTPConnector;
+import org.qbroker.common.HTTPConnector;
+import org.qbroker.net.HTTPClient;
 import org.qbroker.event.Event;
 import org.qbroker.event.EventAction;
 
@@ -99,7 +100,10 @@ public class EventPoster implements EventAction {
             ph.put("SOTimeout", o);
         if (!props.containsKey("IsPost")) // default is POST
             ph.put("IsPost", "true");
-        conn = new HTTPConnector(ph);
+        if ((o = ph.get("ProxyHost")) != null)
+            conn = new HTTPClient(ph);
+        else
+            conn = new org.qbroker.net.HTTPConnector(ph);
         isPost = conn.isPost();
 
         if ((o = ph.get("QueryTemplate")) != null && o instanceof String) {
@@ -348,7 +352,8 @@ public class EventPoster implements EventAction {
                 str = doGet(event, map);
         }
         catch (Exception e) {
-            new Event(Event.ERR, name + ": failed to query " + uri + " for " +
+            str = (isPost) ? "post " : "query ";
+            new Event(Event.ERR, name + ": failed to " + str + uri + " for " +
                 eventType + ": " + e.toString()).send();
             return;
         }

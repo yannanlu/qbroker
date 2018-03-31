@@ -3,10 +3,21 @@ package org.qbroker.flow;
 /* ReleaseTag.java - release tag for all the packages of qbroker */
 
 /**
+ * V1.2.7 (2018/03/31): added the interface of HTTPConnector to common package
+ * and added HTTPClient as the wrapper of HttpClient to implement HTTPConnector,
+ * changed net.HTTPConnector to implement the same interface, updated
+ * HTTPMessenger to use HTTPClient in case of ProxyHost defined, updated
+ * EventPoster, FileSyncronizer to use HTTPClient in case of ProxyHost
+ * defined, changed AWSClient to use HTTPClient to support proxy, added debug
+ * on the request header to WebTester, added LogDetail to AgeMonitor,
+ * NumberMonitor and IncrementalMonitor to limit logging on leadingBlock,
+ * fixed a bug in RunCommand on its method of parseCmd for handling escapted
+ * quotes, added support of https on EventActionGroup
+ *<br/>
  * V1.2.6 (2018/03/24): added TrustAllCertificates to WebTester so that
  * it will trust self-signed certificates for HTTPS, updated those using
  * WebTester to query pages, fixed a typo in PropertyMonitor causing
- * NullPoniterException, remoded those deprecated methods from ClientSocket
+ * NullPoniterException, removded those deprecated methods from ClientSocket
  * and changed it to a static class with partial support for proxy
  *<br/>
  * V1.2.5 (2018/02/24): added AES for OpenSSL-like encryptions, added two
@@ -176,7 +187,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V 1.2.6 2018/03/24 10:07:34";
+    private static String ReleaseTAG = "QBroker V 1.2.7 2018/03/31 09:52:41";
 
     public ReleaseTag() {
     }
