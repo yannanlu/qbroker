@@ -20,32 +20,22 @@
     <dependency>
       <groupId>com.progress.sonic.mq</groupId>
       <artifactId>mfcontext</artifactId>
-      <version>7.6.0</version>
+      <version>8.6</version>
     </dependency>
     <dependency>
       <groupId>com.progress.sonic.mq</groupId>
       <artifactId>sonic_Client</artifactId>
-      <version>7.6.0</version>
-    </dependency>
-    <dependency>
-      <groupId>com.progress.sonic.mq</groupId>
-      <artifactId>sonic_Crypto</artifactId>
-      <version>7.6.0</version>
-    </dependency>
-    <dependency>
-      <groupId>com.progress.sonic.mq</groupId>
-      <artifactId>sonic_XA</artifactId>
-      <version>7.6.0</version>
+      <version>8.6</version>
     </dependency>
     <dependency>
       <groupId>com.progress.sonic.mq</groupId>
       <artifactId>sonic_mgmt_client</artifactId>
-      <version>7.6.0</version>
+      <version>8.6</version>
     </dependency>
     <dependency>
       <groupId>com.progress.sonic.mq</groupId>
       <artifactId>mgmt_client</artifactId>
-      <version>7.6.0</version>
+      <version>8.6</version>
     </dependency>
   </dependencies>
 </project>

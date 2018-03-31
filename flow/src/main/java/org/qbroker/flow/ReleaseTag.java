@@ -12,7 +12,8 @@ package org.qbroker.flow;
  * on the request header to WebTester, added LogDetail to AgeMonitor,
  * NumberMonitor and IncrementalMonitor to limit logging on leadingBlock,
  * fixed a bug in RunCommand on its method of parseCmd for handling escapted
- * quotes, added support of https on EventActionGroup
+ * quotes, added support of https on EventActionGroup, upgraded sonicmq lib
+ * from 7.6 to 8.6
  *<br/>
  * V1.2.6 (2018/03/24): added TrustAllCertificates to WebTester so that
  * it will trust self-signed certificates for HTTPS, updated those using
@@ -187,7 +188,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V 1.2.7 2018/03/31 09:52:41";
+    private static String ReleaseTAG = "QBroker V 1.2.7 2018/03/31 10:14:05";
 
     public ReleaseTag() {
     }
