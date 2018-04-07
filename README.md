@@ -9,10 +9,10 @@ This is a Maven 2 project for QBroker, an integration tool for various data sour
 | com.ibm.mqjms.jar     |   com.ibm                  |   com.ibm.mqjms     |   6.1     |
 | com.ibm.mq.pcf.jar    |   com.ibm                  |   com.ibm.mq.pcf    |   6.1     |
 | dhbcore.jar           |   com.ibm                  |   dhbcore           |   6.1     |
-| mfcontext.jar         |   com.progress.sonic.mq    |   mfcontext         |   8.6     |
-| sonic_Client.jar      |   com.progress.sonic.mq    |   sonic_Client      |   8.6     |
-| sonic_mgmt_client.jar |   com.progress.sonic.mq    |   sonic_mgmt_client |   8.6     |
-| mgmt_client.jar       |   com.progress.sonic.mq    |   mgmt_client       |   8.6     |
+| mfcontext.jar         |   com.progress.sonic.mq    |   mfcontext         |   10.0    |
+| sonic_Client.jar      |   com.progress.sonic.mq    |   sonic_Client      |   10.0    |
+| sonic_mgmt_client.jar |   com.progress.sonic.mq    |   sonic_mgmt_client |   10.0    |
+| mgmt_client.jar       |   com.progress.sonic.mq    |   mgmt_client       |   10.0    |
 
 In case you do not need to work with WebSphereMQ and SonicMQ, you can remove the sub modules from project and update the corresponding pom.xml. Otherwise, you can contact me for them.
 

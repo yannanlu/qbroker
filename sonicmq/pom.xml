@@ -20,22 +20,22 @@
     <dependency>
       <groupId>com.progress.sonic.mq</groupId>
       <artifactId>mfcontext</artifactId>
-      <version>8.6</version>
+      <version>10.0</version>
     </dependency>
     <dependency>
       <groupId>com.progress.sonic.mq</groupId>
       <artifactId>sonic_Client</artifactId>
-      <version>8.6</version>
+      <version>10.0</version>
     </dependency>
     <dependency>
       <groupId>com.progress.sonic.mq</groupId>
       <artifactId>sonic_mgmt_client</artifactId>
-      <version>8.6</version>
+      <version>10.0</version>
     </dependency>
     <dependency>
       <groupId>com.progress.sonic.mq</groupId>
       <artifactId>mgmt_client</artifactId>
-      <version>8.6</version>
+      <version>10.0</version>
     </dependency>
   </dependencies>
 </project>
