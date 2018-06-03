@@ -11,7 +11,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Iterator;
 import java.util.Comparator;
-import java.util.Set;
+import java.util.HashSet;
 import java.io.IOException;
 import javax.management.ObjectName;
 import javax.management.Attribute;
@@ -274,6 +274,64 @@ public class SonicMQRequester implements Requester, Comparator<IMetric> {
               case 'm':
                 prefix = objName.getKeyProperty("type");
                 id = objName.getKeyProperty("name");
+                if (id == null && "connection".equals(prefix) && // check user
+                    (id = objName.getKeyProperty("user")) != null) {
+                    Map<String, String> tag = new HashMap<String, String>();
+                    topic = objName.getKeyProperty("topic");
+                    StringBuffer strBuf = new StringBuffer();
+                    if (topic != null) { // for topic connections
+                        sid = objName.getKeyProperty("subscription_id");
+                        list = querySubscribers(broker, id, null, topic,
+                            null, sid, regex);
+                        for (Map ph : list) {
+                            id = (String) ph.get("connect_id");
+                            tag.put(id, (String) ph.get("host"));
+                            if (strBuf.length() > 0)
+                                strBuf.append("|");
+                            strBuf.append(id.replaceAll("\\$", "\\\\\\$"));
+                        }
+                    }
+                    else if (objName.getKeyProperty("queue") != null) {
+                        HashSet<String> h = new HashSet<String>();
+                        list = querySubscribers(broker, id, null, null,
+                            null, null, null);
+                        for (Map ph : list) {
+                            h.add((String) ph.get("connect_id"));
+                        }
+                        list.clear();
+                        list = queryConnections(broker, id, null, regex);
+                        for (Map ph : list) {
+                            id = (String) ph.get("connect_id");
+                            if (h.contains(id)) // excluding topic connections
+                                continue;
+                            tag.put(id, (String) ph.get("host"));
+                            if (strBuf.length() > 0)
+                                strBuf.append("|");
+                            strBuf.append(id.replaceAll("\\$", "\\\\\\$"));
+                        }
+                    }
+                    else { // for all connections
+                        list = queryConnections(broker, id, null, regex);
+                        for (Map ph : list) {
+                            id = (String) ph.get("connect_id");
+                            tag.put(id, (String) ph.get("host"));
+                            if (strBuf.length() > 0)
+                                strBuf.append("|");
+                            strBuf.append(id.replaceAll("\\$", "\\\\\\$"));
+                        }
+                    }
+                    if (tag.size() <= 0) // no connection found
+                        list = new ArrayList<Map>();
+                    else { // reset regex
+                        regex = "^.*(" + strBuf.toString() + ")$";
+                        list = queryActiveMetrics(broker, prefix, null, regex);
+                        for (Map ph : list) { // add host as a tag
+                            id = (String) ph.get("name");
+                            ph.put("host", tag.get(id));
+                        }
+                    }
+                    break;
+                }
                 list = queryActiveMetrics(broker, prefix, id, regex);
                 break;
               case 'u':
@@ -776,11 +834,13 @@ public class SonicMQRequester implements Requester, Comparator<IMetric> {
                 if (attrs == null || attrs.length() <= 0) // select all
                     list = query(target, null);
                 else if (attrs.indexOf(':') > 0) { // select many
+                    attrs = attrs.replaceAll("\\$", "\\\\\\$");
                     attrs = attrs.replace(':', '|');
-                    list = query(target, ".*(" + attrs + ")$");
+                    list = query(target, "^.*(" + attrs + ")$");
                 }
                 else { // select one
-                    list = query(target, ".*" + attrs + "$");
+                    attrs = attrs.replaceAll("\\$", "\\\\\\$");
+                    list = query(target, "^.*" + attrs + "$");
                 }
             }
             catch (JMException e) {
@@ -1269,33 +1329,33 @@ public class SonicMQRequester implements Requester, Comparator<IMetric> {
                 ids[i] = ida[i];
             ida = broker.getActiveMetrics(ids);
             n = ida.length;
-            k = 0;
             if (withName && n > 0) {
+                k = 0;
                 ids = new IMetricIdentity[n];
                 for (int i=0; i<n; i++) {
                     if (!ida[i].getName().endsWith(name)) // filtering out
                         continue;
                     ids[k++] = ida[i];
                 }
+                if (k < n) { // shrunked
+                    ida = new IMetricIdentity[k];
+                    for (int i=0; i<k; i++)
+                        ida[i] = ids[i];
+                }
             }
             else if (withRegex && n > 0) {
+                k = 0;
                 ids = new IMetricIdentity[n];
                 for (int i=0; i<n; i++) {
                     if (!ida[i].getName().matches(regex)) // filtering out
                         continue;
                     ids[k++] = ida[i];
                 }
-            }
-            else {
-                ids = new IMetricIdentity[n];
-                for (int i=0; i<n; i++) {
-                    ids[k++] = ida[i];
+                if (k < n) { // shrunked
+                    ida = new IMetricIdentity[k];
+                    for (int i=0; i<k; i++)
+                        ida[i] = ids[i];
                 }
-            }
-            if (k < n) { // shrunked
-                ida = new IMetricIdentity[k];
-                for (int i=0; i<k; i++)
-                    ida[i] = ids[i];
             }
         }
         if (ida.length > 0) {
@@ -1580,11 +1640,13 @@ public class SonicMQRequester implements Requester, Comparator<IMetric> {
                 if (attr == null || attr.length() <= 0) // select all
                     list = jmx.query(target, null);
                 else if (attr.indexOf(':') > 0) { // select many
+                    attr = attr.replaceAll("\\$", "\\\\\\$");
                     attr = attr.replace(':', '|');
-                    list = jmx.query(target, ".*(" + attr + ")$");
+                    list = jmx.query(target, "^.*(" + attr + ")$");
                 }
                 else { // select one
-                    list = jmx.query(target, ".*" + attr + "$");
+                    attr = attr.replaceAll("\\$", "\\\\\\$");
+                    list = jmx.query(target, "^.*" + attr + "$");
                 }
                 i = 0;
                 for (Map mp : list) {

@@ -108,7 +108,7 @@ public class QConnector extends JMSQConnector {
             if ((o = props.get("Credentials")) != null)
                 env.put(Context.SECURITY_CREDENTIALS, (String) o);
             else if ((o = props.get("EncryptedCredentials")) != null) try {
-                env.put(Context.SECURITY_CREDENTIALS, Utils.decrypt((String) o));
+                env.put(Context.SECURITY_CREDENTIALS, Utils.decrypt((String)o));
             }
             catch (Exception e) {
                 throw(new IllegalArgumentException("failed to decrypt " +
@@ -279,6 +279,32 @@ public class QConnector extends JMSQConnector {
                 "true".equalsIgnoreCase((String) o)) // for SonicMQ only
                 withFlowControlDisabled = true;
         }
+        else if ("request".equals(operation)) {
+            if ((o = props.get("RCField")) != null && o instanceof String)
+                rcField = (String) o;
+            else
+                rcField = "ReturnCode";
+
+            if ((o = props.get("ResponseProperty")) != null &&
+                o instanceof List) {
+                String key;
+                List<String> pl = new ArrayList<String>();
+                for (Object obj : (List) o) {
+                    if (obj == null || !(obj instanceof String))
+                        continue;
+                    key = (String) obj;
+                    if (key.length() <= 0)
+                        continue;
+                    key = MessageUtils.getPropertyID(key);
+                    if (key != null)
+                        pl.add(key);
+                    else
+                        pl.add((String) obj);
+                }
+                respPropertyName = pl.toArray(new String[pl.size()]);
+                pl.clear();
+            }
+        }
         else if ("query".equals(operation)) {
             String saxParser = null;
             Map<String, String> h = new HashMap<String, String>();
@@ -442,15 +468,27 @@ public class QConnector extends JMSQConnector {
         }
         catch (NamingException e) {
             try {
+                ctx.close();
+            }
+            catch (NamingException ex) {
+            }
+            try {
                 Thread.sleep(500L);
             }
             catch (Exception ex) {
             }
+            ctx = null;
             try { // retry
+                ctx = new InitialContext(env);
               factory=(QueueConnectionFactory)ctx.lookup(connectionFactoryName);
             }
             catch (NamingException ex) {
                 factory = null;
+                try {
+                    ctx.close();
+                }
+                catch (NamingException ee) {
+                }
                 throw(new JMSException(
                     "failed to lookup QueueConnnectionFactory '"+
                     connectionFactoryName + "': " + e.toString()));
@@ -471,9 +509,20 @@ public class QConnector extends JMSQConnector {
             }
             catch (NamingException ex) {
                 queue = null;
+                try {
+                    ctx.close();
+                }
+                catch (NamingException ee) {
+                }
                 throw(new JMSException("failed to lookup queue '" + qName +
                     "': " + e.toString()));
             }
+        }
+
+        try {
+            ctx.close();
+        }
+        catch (NamingException e) {
         }
 
         return factory;

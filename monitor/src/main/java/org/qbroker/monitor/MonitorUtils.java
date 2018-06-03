@@ -26,6 +26,7 @@ import org.qbroker.common.TimeoutException;
 import org.qbroker.common.DisabledException;
 import org.qbroker.common.RunCommand;
 import org.qbroker.common.Template;
+import org.qbroker.common.TextSubstitution;
 import org.qbroker.common.Utils;
 import org.qbroker.json.JSON2Map;
 import org.qbroker.monitor.MonitorReport;
@@ -1014,5 +1015,67 @@ public class MonitorUtils {
         else
             throw(new IllegalArgumentException("no such method of " + name +
                   " defined in " + className));
+    }
+
+    /**
+     * It returns a list of maps with each map contains two objects of
+     * Pattern and TextSubstitution. The list is for mapping a name into
+     * a new name with the hit pattern to select the substitution.
+     */
+    public static List<Map> getGenericMapList(List list,
+        Perl5Compiler pc) throws MalformedPatternException {
+        String patternStr, expStr;
+        Map<String, Object> ph;
+        List<Map> mapList = new ArrayList<Map>();
+
+        if (list != null) for (Object obj : list) {
+            if (!(obj instanceof Map))
+                continue;
+            Map map = (Map) obj;
+            patternStr = (String) map.get("Pattern");
+            if (patternStr == null || patternStr.length() <= 0)
+                continue;
+            expStr = (String) map.get("Substitution");
+            if (expStr == null || expStr.length() <= 0)
+                continue;
+            ph = new HashMap<String, Object>();
+            ph.put("Pattern", pc.compile(patternStr));
+            ph.put("Substitution",
+                new TextSubstitution(patternStr, expStr));
+            mapList.add(ph);
+        }
+
+        return mapList;
+    }
+
+    /**
+     * Based on a list of generic name mapping rules, it trys to match the 
+     * given name with the pattern to select the substition. Once it finds
+     * a match, the name will be transformed with the substition rule.
+     * The result will be returned as the new name. Otherwise, the original
+     * name will be returned.
+     */
+    public static String getMappedName(String name,
+        List<Map> mapList, Perl5Matcher pm) {
+        Pattern pattern;
+        TextSubstitution tsub;
+
+        if (mapList == null || mapList.isEmpty() || name == null ||
+            name.length() <= 0)
+            return name;
+
+        for (Map map : mapList) {
+            pattern = (Pattern) map.get("Pattern");
+            if (pattern == null)
+                continue;
+            tsub = (TextSubstitution) map.get("Substitution");
+            if (tsub == null)
+                continue;
+            if (!pm.contains(name, pattern))
+                continue;
+            return tsub.substitute(name);
+        }
+
+        return name;
     }
 }

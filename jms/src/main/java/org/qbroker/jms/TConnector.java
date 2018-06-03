@@ -367,17 +367,27 @@ public class TConnector extends JMSTConnector {
         }
         catch (NamingException e) {
             try {
+                ctx.close();
+            }
+            catch (NamingException ex) {
+            }
+            try {
                 Thread.sleep(500L);
             }
             catch (Exception ex) {
             }
+            ctx = null;
             try { // retry
-                ctx = null;
                 ctx = new InitialContext(env);
               factory=(TopicConnectionFactory)ctx.lookup(connectionFactoryName);
             }
             catch (NamingException ex) {
                 factory = null;
+                try {
+                    ctx.close();
+                }
+                catch (NamingException ee) {
+                }
                 throw(new JMSException(
                     "failed to lookup TopicConnnectionFactory '"+
                     connectionFactoryName + "': " + e.toString()));
@@ -398,9 +408,20 @@ public class TConnector extends JMSTConnector {
             }
             catch (NamingException ex) {
                 topic = null;
+                try {
+                    ctx.close();
+                }
+                catch (NamingException ee) {
+                }
                 throw(new JMSException("failed to lookup topic '" + tName +
                     "': " + e.toString()));
             }
+        }
+
+        try {
+            ctx.close();
+        }
+        catch (NamingException e) {
         }
 
         return factory;

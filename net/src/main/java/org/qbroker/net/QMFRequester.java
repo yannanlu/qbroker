@@ -572,6 +572,11 @@ public class QMFRequester implements Requester {
         }
         catch (NamingException e) {
             factory = null;
+            try {
+                ctx.close();
+            }
+            catch (NamingException ex) {
+            }
             throw(new JMSException("failed to lookup ConnnectionFactory '" +
                 connectionFactoryName + "' on " + uri + ": " +
                 TraceStackThread.traceStack(e)));
@@ -582,6 +587,11 @@ public class QMFRequester implements Requester {
         }
         catch (NamingException e) {
             queue = null;
+            try {
+                ctx.close();
+            }
+            catch (NamingException ex) {
+            }
             throw(new JMSException("failed to lookup queue '" + qName +
                 "' on " + uri + ": " + TraceStackThread.traceStack(e)));
         }

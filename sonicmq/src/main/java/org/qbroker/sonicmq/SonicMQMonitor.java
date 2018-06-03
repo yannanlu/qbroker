@@ -6,13 +6,18 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Date;
 import javax.management.ObjectName;
 import javax.management.MalformedObjectNameException;
 import javax.management.JMException;
+import org.apache.oro.text.regex.Pattern;
+import org.apache.oro.text.regex.Perl5Compiler;
+import org.apache.oro.text.regex.Perl5Matcher;
 import java.net.URI;
 import java.net.URISyntaxException;
 import org.qbroker.common.TimeWindows;
+import org.qbroker.json.JSON2Map;
 import org.qbroker.monitor.MonitorUtils;
 import org.qbroker.monitor.Monitor;
 import org.qbroker.sonicmq.SonicMQRequester;
@@ -21,8 +26,25 @@ import org.qbroker.event.Event;
 /**
  * SonicMQMonitor monitors the message storage on a SonicMQ broker via JMS/JMX. 
  * Currently, it only supports broker, queues and durable subscriptions. Since
- * there is no metric for number of deq and enq, it is not able report the
- * flow rate. 
+ * there is no metric for deq and enq on destinations, it queries the metrics
+ * of connections associated with the specific destination. Unfortunately,
+ * SonicMQ management API does not provide a easy way to query all connections
+ * on a queue. So it is assumed that the consumer application of the queue is
+ * is running as a dedicated user only on certain well known hosts. Therefore,
+ * SonicMQMonitor is able to use the combinations of the user and the hostnames
+ * to associate non-topic connections with a specific queue.
+ *<br/></br>
+ * HostPattern is a Perl5Pattern expression to select hostnames for the
+ * consumer applications. UserMappingRule is a list of maps with two items of
+ * Pattern and Substitution. On a given name of the destination, SonicMQMonitor 
+ * loops through the list to apply patterns matching the name one by one until
+ * it finds a match. Then its substitution part is applied on the name to map
+ * the destination name to the username. One example is to cut off the ending
+ * "Queue" to convert a queue name to a user name.
+ *<br/></br>
+ * In order for SonicMQMonitor to work, the metrics on connections, queues and
+ * brokers must be enabled. Please check the source code to figure out the list
+ * of the metrics.
  *<br/>
  * @author yannanlu@yahoo.com
  */
@@ -30,11 +52,14 @@ import org.qbroker.event.Event;
 public class SonicMQMonitor extends Monitor {
     private String qName = null, uri, target = null;
     private SonicMQRequester jmxc = null;
+    private Map<String, String> cache = null;
+    private List<Map> mapList = null;
     private int watermark = 0;
     private long previousDepth, previousIn, previousOut;
     private String previousQStatus, brokerName, subID = null;
+    private String targetConn = null, connUser = null, hostPattern = null;
     private boolean isTopic = false;
-    private boolean isQueue = true;
+    private boolean isQueue = false;
     private boolean withPrivateReport = false;
 
     public SonicMQMonitor(Map props) {
@@ -84,6 +109,18 @@ public class SonicMQMonitor extends Monitor {
             throw(new IllegalArgumentException("URI is not defined"));
         }
 
+        if ((o = props.get("HostPattern")) != null)
+            hostPattern = (String) o;
+
+        if((o = props.get("UserMappingRule")) != null && o instanceof List) try{
+            Perl5Compiler pc = new Perl5Compiler();
+            mapList = MonitorUtils.getGenericMapList((List) o, pc);
+        }
+        catch (Exception e) {
+            throw(new IllegalArgumentException("failed to compile patterns: " +
+                e.toString()));
+        }
+
         if ((o = props.get("WithPrivateReport")) != null &&
             "true".equals((String) o)) // for private report
             withPrivateReport = true;
@@ -102,15 +139,32 @@ public class SonicMQMonitor extends Monitor {
 
         brokerName = objName.getKeyProperty("ID");
         qName = objName.getKeyProperty("name");
-        if (qName == null || qName.length() <= 0) {
-            isQueue = false;
+        if (qName != null && qName.length() > 0) { // for queue
+            Perl5Matcher pm = new Perl5Matcher();
+            isQueue = true;
+            targetConn = target;
+            connUser = MonitorUtils.getMappedName(qName, mapList, pm);
+            targetConn = target.replaceFirst(",category=.*$", "") +
+                ",category=metric,type=connection,user=" + connUser +
+                ",queue=" + qName;
+            cache = new HashMap<String, String>();
+        }
+        else { // for topic or broker
             qName = objName.getKeyProperty("topic");
             if (qName == null || qName.length() <= 0) { // default is broker
                 qName = brokerName;
             }
             else { // for topic and replace '.' with ':' due to the hack
-                subID =
-                    objName.getKeyProperty("subscription_id").replace('.',':');
+                subID = objName.getKeyProperty("subscription_id");
+                connUser = objName.getKeyProperty("user");
+                if (connUser == null || connUser.length() <= 0) {
+                    Perl5Matcher pm = new Perl5Matcher();
+                    connUser = MonitorUtils.getMappedName(qName, mapList, pm);
+                }
+                targetConn = target.replaceFirst(",category=.*$", "") +
+                    ",category=metric,type=connection,user=" + connUser +
+                    ",topic=" + qName + ",subscription_id=" + subID;
+                subID = subID.replace('.', ':');
                 isTopic = true;
             }
         }
@@ -132,7 +186,7 @@ public class SonicMQMonitor extends Monitor {
     public Map<String, Object> generateReport(long currentTime)
         throws JMException {
         long curDepth = 0, totalMsgs = 0, inMsgs = 0, outMsgs = 0;
-        long oppsCount = 0, ippsCount = 0,previousIppsCount = 0;
+        long oppsCount = 0, ippsCount = 0, previousIppsCount = 0;
         String qStatus;
         Object o;
         List<Map> list = null;
@@ -174,12 +228,12 @@ public class SonicMQMonitor extends Monitor {
             return report;
         }
 
-        if (!withPrivateReport) {
-            qStatus = jmxc.reconnect();
-            if (qStatus != null)
-                throw(new JMException("failed to connect to " + uri + " for " +
-                    qName + ": " + qStatus));
+        qStatus = jmxc.reconnect();
+        if (qStatus != null)
+            throw(new JMException("failed to connect to " + uri + " for " +
+                qName + ": " + qStatus));
 
+        if (!withPrivateReport) {
             try {
                 list = jmxc.query(target, null);
             }
@@ -196,10 +250,12 @@ public class SonicMQMonitor extends Monitor {
                 catch (Exception ex) {
                     jmxc.close();
                     throw(new JMException("failed to get SonicMQ metrics on " +
-                        qName + ": " + Event.traceStack(e)));
+                        qName + " from " + target + ": " +
+                        Event.traceStack(e)));
                 }
             }
-            jmxc.close();
+            if (!isTopic && !isQueue)
+                jmxc.close();
         }
         else try { // for private report
             list = new ArrayList<Map>();
@@ -212,82 +268,176 @@ public class SonicMQMonitor extends Monitor {
                 "SonicMQ metrics of " + qName + ": " + Event.traceStack(e)));
         }
 
-        if (list == null || list.size() <= 0)
-            throw(new JMException("failed to get metrics"));
-        else try {
-            String str;
-            Map map = list.get(0);
-            if (isTopic) {
-                if (serialNumber == 1) { // make sure the data is right
-                    str = (String) map.get("topic");
-                    if (!qName.equals(str))
-                        new Event(Event.ERR, name + " got a different topic: " +
-                            str).send();
-                }
-                str = (String) map.get("messagecount");
+        if (list == null || list.size() <= 0) {
+            throw(new JMException("failed to get metrics on " + qName +
+               " from " + ((withPrivateReport)? "private report" : target)));
+        }
+
+        String str;
+        Map map = list.get(0);
+        list.clear();
+        if (isTopic) { // for topic metrics
+            if (serialNumber == 1) { // make sure the data is right
+                str = (String) map.get("topic");
+                if (!qName.equals(str))
+                    new Event(Event.ERR, name + " got a different topic: " +
+                        str).send();
+            }
+            str = (String) map.get("lastconnectedtime");
+            if ("-1".equals(str)) try { // subscription is active
+                list = jmxc.query(targetConn, hostPattern);
+                ippsCount = list.size();
+            }
+            catch (Exception e) {
+                ippsCount = -1L;
+                new Event(Event.ERR, "failed to get SonicMQ metrics on " +
+                    "connections for " + qName + " from " + targetConn + ": " +
+                    Event.traceStack(e)).send();
+            }
+            jmxc.close();
+            str = (String) map.get("messagecount");
+            map.clear();
+            try {
                 curDepth = Long.parseLong(str);
-                str = (String) map.get("lastconnectedtime");
-                ippsCount = ("-1".equals(str)) ? 1L : 0L;
-                oppsCount = 0;
+                if (ippsCount > 0) { // got connection metrics
+                    map = list.get(0);
+                    str = (String) map.get("messages_Delivered");
+                    totalMsgs = Long.parseLong(str);
+                    map.clear();
+                    list.clear();
+                }
+                else
+                    totalMsgs = -1;
+            }
+            catch (Exception e) {
+                map.clear();
+                list.clear();
+                throw(new JMException("failed to parse metrics for " + qName +
+                    " with " + JSON2Map.toJSON(map, null, null) + ": " +
+                    Event.traceStack(e)));
+            }
+
+            oppsCount = 0;
+            if (totalMsgs >= 0) {
+                outMsgs = (totalMsgs >= previousOut) ?
+                    totalMsgs - previousOut : totalMsgs;
+                inMsgs = outMsgs - previousDepth + curDepth;
+                if (inMsgs < 0)
+                    inMsgs = 0;
+                previousOut = totalMsgs;
+            }
+            else {
                 inMsgs = 0;
                 outMsgs = 0;
-                if (serialNumber == 1) { // initial reset
-                    qStatus = "OK";
-                    previousIppsCount = 1;
-                }
-                else if (curDepth > 0 && previousIppsCount <= 0 &&
-                    ippsCount <= 0)
-                    qStatus = "STUCK";
-                else
-                    qStatus = "OK";
             }
-            else if (isQueue) { // for queue metrics
-                if (serialNumber == 1) { // make sure the data is right
-                    str = (String) map.get("name");
-                    if (!qName.equals(str))
-                        new Event(Event.ERR, name + " got a different queue: " +
-                            str).send();
+
+            if (serialNumber == 1) { // initial reset
+                qStatus = "OK";
+                previousIppsCount = 1;
+            }
+            else if (curDepth > 0 && previousIppsCount <= 0 && ippsCount <= 0)
+                qStatus = "STUCK";
+            else
+                qStatus = "OK";
+        }
+        else if (isQueue) { // for queue metrics
+            if (serialNumber == 1) { // make sure the data is right
+                str = (String) map.get("name");
+                if (!qName.equals(str))
+                    new Event(Event.ERR, name + " got a different queue: " +
+                        str).send();
+            }
+            try {
+                list = jmxc.query(targetConn, hostPattern);
+                ippsCount = list.size();
+            }
+            catch (Exception e) {
+                ippsCount = -1L;
+                new Event(Event.ERR, "failed to get SonicMQ metrics on " +
+                    "connections for " + qName + " from " + targetConn + ": " +
+                    Event.traceStack(e)).send();
+            }
+            jmxc.close();
+            if (ippsCount > 0) { // clean up cache
+                HashSet<String> hset = new HashSet<String>();
+                for (Map mp : list) {
+                    str = (String) mp.get("host");
+                    str += "/" + (String) mp.get("name");
+                    hset.add(str);
                 }
-                str = (String) map.get("messages_Count");
+                for (String key : cache.keySet()) {
+                    if (!hset.contains(key))
+                        cache.remove(key);
+                }
+                hset.clear();
+            }
+
+            outMsgs = 0;
+            str = (String) map.get("messages_Count");
+            map.clear();
+            try {
+                long prev;
                 curDepth = Long.parseLong(str);
-                str = (String) map.get("messages_DeliveredPerSecond");
-                outMsgs = Long.parseLong(str);
-                str = (String) map.get("messages_ReceivedPerSecond");
-                inMsgs = Long.parseLong(str);
-                ippsCount = 0;
-                oppsCount = 0;
-                if (serialNumber == 1) { // initial reset
-                    qStatus = "OK";
+                if (ippsCount > 0) for (Map mp : list) {
+                    map = mp;
+                    String key = (String) mp.get("host");
+                    key += "/" + (String) mp.get("name");
+                    if (cache.containsKey(key))
+                        prev = Long.parseLong(cache.get(key)); 
+                    else
+                        prev = 0;
+                    str = (String) mp.get("messages_Delivered");
+                    cache.put(key, str);
+                    totalMsgs = Long.parseLong(str);
+                    outMsgs += (totalMsgs >= prev) ? totalMsgs-prev : totalMsgs;
+                    mp.clear();
                 }
-                else if (curDepth > 0 && previousDepth > 0 && outMsgs <= 0)
-                    qStatus = "STUCK";
-                else
-                    qStatus = "OK";
+                list.clear();
             }
-            else { // for broker metrics
-                str = (String) map.get("bytes_TopicDBSize");
-                curDepth = Long.parseLong(str);
-                str = (String) map.get("connections_Count");
-                ippsCount = Long.parseLong(str);
-                str = (String) map.get("messages_Received");
-                inMsgs = Long.parseLong(str);
-                str = (String) map.get("messages_Delivered");
-                outMsgs = Long.parseLong(str);
-                str = (String) map.get("messages_ReceivedPerSecond");
-                oppsCount = Long.parseLong(str);
-                str = (String) map.get("messages_DeliveredPerSecond");
-                totalMsgs = Long.parseLong(str);
-                if (watermark > 0 && curDepth > watermark)
-                    qStatus = "BUSY";
-                else
-                    qStatus = "OK";
+            catch (Exception e) {
+                list.clear();
+                throw(new JMException(name + " failed to parse metrics for " +
+                    qName + " with " + JSON2Map.toJSON(map, null, null) + ": "+
+                    Event.traceStack(e)));
             }
-            report.put("StateLabel", qStatus);
+
+            oppsCount = 0;
+            inMsgs = outMsgs - previousDepth + curDepth;
+            if (inMsgs < 0)
+                inMsgs = 0;
+
+            if (serialNumber == 1) { // initial reset
+                qStatus = "OK";
+                previousIppsCount = 1;
+            }
+            else if (curDepth > 0 && previousDepth > 0 && outMsgs <= 0)
+                qStatus = "STUCK";
+            else
+                qStatus = "OK";
+        }
+        else try { // for broker metrics
+            str = (String) map.get("bytes_FlowToDiskMemorySize");
+            curDepth = Long.parseLong(str);
+            str = (String) map.get("connections_Count");
+            ippsCount = Long.parseLong(str);
+            str = (String) map.get("messages_Received");
+            inMsgs = Long.parseLong(str);
+            str = (String) map.get("messages_Delivered");
+            outMsgs = Long.parseLong(str);
+            str = (String) map.get("bytes_TopicDBSize");
+            oppsCount = Long.parseLong(str);
+            str = (String) map.get("connections_RejectedPerMinute");
+            totalMsgs = Long.parseLong(str);
+            if (watermark > 0 && curDepth > watermark)
+                qStatus = "BUSY";
+            else
+                qStatus = "OK";
         }
         catch (Exception e) {
-            throw(new JMException(name + " failed to parse metrics for " +
+            throw(new JMException(name + " failed to parse metric for " +
                 qName + ": " + Event.traceStack(e)));
         }
+        report.put("StateLabel", qStatus);
 
         if (statsLogger != null) {
             StringBuffer strBuf = new StringBuffer();
@@ -522,13 +672,15 @@ public class SonicMQMonitor extends Monitor {
         Event event = new Event(level, strBuf.toString());
         if (status < TimeWindows.BLACKOUT) {
             count = exceptionCount;
-            event.setAttribute("currentDepth", "N/A");
+            if (isQueue || isTopic)
+                event.setAttribute("currentDepth", "N/A");
             event.setAttribute("inMessages", "N/A");
             event.setAttribute("outMessages", "N/A");
         }
         else {
             count = actionCount;
-            event.setAttribute("currentDepth", String.valueOf(curDepth));
+            if (isQueue || isTopic)
+                event.setAttribute("currentDepth", String.valueOf(curDepth));
             event.setAttribute("inMessages", String.valueOf(inMsgs));
             event.setAttribute("outMessages", String.valueOf(outMsgs));
         }
@@ -545,13 +697,22 @@ public class SonicMQMonitor extends Monitor {
             event.setAttribute("subscription_id", subID);
             event.setAttribute("ipps", String.valueOf(ipps));
             event.setAttribute("tStatus", qStatus);
+            event.setAttribute("user", connUser);
         }
         else if (isQueue) {
             event.setAttribute("queue", qName);
             event.setAttribute("qStatus", qStatus);
+            event.setAttribute("user", connUser);
         }
         else {
-            event.setAttribute("connectionCount", String.valueOf(ipps));
+            if (status < TimeWindows.BLACKOUT) {
+                event.setAttribute("connectionCount", "N/A");
+                event.setAttribute("flow2DiskSize", "N/A");
+            }
+            else {
+                event.setAttribute("flow2DiskSize", String.valueOf(curDepth));
+                event.setAttribute("connectionCount", String.valueOf(ipps));
+            }
             event.setAttribute("bStatus", qStatus);
         }
         event.setAttribute("actionCount", String.valueOf(count));
@@ -665,6 +826,14 @@ public class SonicMQMonitor extends Monitor {
 
     public void destroy() {
         super.destroy();
+        if (cache != null) {
+            cache.clear();
+            cache = null;
+        }
+        if (mapList != null) {
+            mapList.clear();
+            mapList = null;
+        }
         if (jmxc != null) {
             jmxc.close();
             jmxc = null;
@@ -708,7 +877,8 @@ public class SonicMQMonitor extends Monitor {
             String str = (String) r.get("StateLabel");
             if (str != null)
                 System.out.println(str + ": " + r.get("CurrentDepth") + " " +
-                    r.get("InMessages") + " " + r.get("OutMessages"));
+                    r.get("InMessages") + " " + r.get("OutMessages") + " " +
+                    r.get("IppsCount") + " " + r.get("OppsCount"));
             else
                 System.out.println("failed to get sonicmq stats");
             if (report != null)

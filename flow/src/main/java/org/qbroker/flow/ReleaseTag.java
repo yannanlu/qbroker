@@ -3,6 +3,17 @@ package org.qbroker.flow;
 /* ReleaseTag.java - release tag for all the packages of qbroker */
 
 /**
+ * V1.2.8 (2018/06/02): fixed a typo in the comments of ASE, added
+ * createTemporaryQueue() to JMSQConnector, added ctx.close() to QConnector,
+ * TConnector and QMFRequester for cleanups, added request() to QueueConnector
+ * and JMSQConnector, updated QConnector in both jms and wmq packages, updated
+ * JMSPersister to support the operation of request, added query of metrics
+ * on connections with support for a specific user to SonicMQRequester, added
+ * query support on connection metrics for a queue or a topic to SonicMQMonitor,
+ * added getMappedName() and getGenericMapList() to MonitorUtils for generic
+ * name mappings, changed SonicMQMonitor so that curDepth is for
+ * FlowToDiskMemorySize rather than TopicDBSize and oppsCount is for TopicDBSize
+ *<br/>
  * V1.2.7 (2018/03/31): added the interface of HTTPConnector to common package
  * and added HTTPClient as the wrapper of HttpClient to implement HTTPConnector,
  * changed net.HTTPConnector to implement the same interface, updated
@@ -188,7 +199,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V 1.2.7 2018/03/31 11:36:47";
+    private static String ReleaseTAG = "QBroker V 1.2.8 2018/06/02 11:49:13";
 
     public ReleaseTag() {
     }

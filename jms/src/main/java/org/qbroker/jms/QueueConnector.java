@@ -33,18 +33,24 @@ public interface QueueConnector extends ExceptionListener {
      * to the output, either a queue, a topic, a stream or an XQueue.
      */
     public void get(Object out) throws IOException, JMSException;
-    /** continuously gets the JMS messages from the XQueue and puts them
-     * to the JMS queue.
+    /** continuously gets the JMS messages from the XQueue and sends them
+     * to the JMS queue as requests and waits for responses from given queue.
      */
-    public void put(XQueue xq) throws TimeoutException, JMSException;
+    public void request(XQueue xq, String rq) throws TimeoutException, JMSException;
     /** continuously gets the JMS messages from the InputStream and puts them
      * to the JMS queue.
      */
     public void put(InputStream in) throws IOException, JMSException;
+    /** continuously gets the JMS messages from the XQueue and puts them
+     * to the JMS queue.
+     */
+    public void put(XQueue xq) throws TimeoutException, JMSException;
     /** returns a JMS Message with the initialized JMSSession */
     public Message createMessage(int type) throws JMSException;
     /** returns the queue created for the given name */
     public Queue createQueue(String name) throws JMSException;
+    /** returns the temporary queue created */
+    public Queue createTemporaryQueue() throws JMSException;
     /** returns an on-demand browser in a separate session */
     public QueueBrowser getQueueBrowser();
     /** returns an on-demand receiver in a separate session */

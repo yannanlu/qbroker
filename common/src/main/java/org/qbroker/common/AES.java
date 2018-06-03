@@ -249,7 +249,7 @@ public class AES {
 
     private static void printUsage() {
         System.out.println("AES Version 1.0 (written by Yannan Lu)");
-        System.out.println("AES: an OpenSSL-like utility to encrypt or decryt a text");
+        System.out.println("AES: an OpenSSL-like utility to encrypt or decrypt a text");
         System.out.println("Usage: java org.qbroker.common.AES -p password -t text -a action");
         System.out.println("  -?: print this message");
         System.out.println("  -a: action of encrypt, decrypt, scramble and unscramble");

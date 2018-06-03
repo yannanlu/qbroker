@@ -729,8 +729,12 @@ public class QClient {
                 tProps.put("XAMode", args[i]);
                 break;
               case 'G':
-                sProps.put("Mode", "daemon");
                 props.put("Mode", "daemon");
+                list = (List) props.get("Source");
+                if (list.size() == 1)
+                    sProps.put("Mode", "daemon");
+                else for (Object obj : list)
+                    ((Map) obj).put("Mode", "daemon");
                 break;
               case 'L':
                 if (i + 1 >= args.length)
@@ -909,17 +913,19 @@ public class QClient {
             sProps.remove("BrokerControlQueue");
             tProps.put("Operation", "pub");
             operation =  (String) sProps.get("Operation");
-            if (removeSource > 0) {
+            if (removeSource > 0) { // overwrite operations of sources
                 props.put("Operation", "qpub");
-                sProps.put("Operation", "get");
-            }
-            else if ("get".equals(operation)) {
-                props.put("Operation", "qpub");
-                sProps.put("Operation", "get");
-            }
-            else {
-                props.put("Operation", "bpub");
-                sProps.put("Operation", "browse");
+                list = (List) props.get("Source");
+                if (list.size() == 1) {
+                    operation =  (String) sProps.get("Operation");
+                    if ("browse".equals(operation))
+                        sProps.put("Operation", "get");
+                }
+                else for (Object obj : list) { // more than one receivers
+                    operation =  (String) ((Map) obj).get("Operation");
+                    if ("browse".equals(operation))
+                        ((Map) obj).put("Operation", "get");
+                }
             }
             if (brokerVersion != null)
                 tProps.put("BrokerVersion", brokerVersion);
@@ -976,32 +982,36 @@ public class QClient {
             tProps.remove("BrokerControlQueue");
             if (tProps.get("Operation") == null)
                 tProps.put("Operation", "put");
-            operation =  (String) sProps.get("Operation");
-            if (removeSource > 0) {
+            if (removeSource > 0) { // overwrite operations of sources
                 props.put("Operation", "move");
-                sProps.put("Operation", "get");
-            }
-            else if ("get".equals(operation)) {
-                props.put("Operation", "move");
-            }
-            else {
-                props.put("Operation", "copy");
-                sProps.put("Operation", "browse");
+                list = (List) props.get("Source");
+                if (list.size() == 1) {
+                    operation =  (String) sProps.get("Operation");
+                    if ("browse".equals(operation))
+                        sProps.put("Operation", "get");
+                }
+                else for (Object obj : list) { // more than one receivers
+                    operation =  (String) ((Map) obj).get("Operation");
+                    if ("browse".equals(operation))
+                        ((Map) obj).put("Operation", "get");
+                }
             }
         }
         else if (input != null && tProps.isEmpty()) { // get or browse only
             tProps.clear();
-            operation =  (String) sProps.get("Operation");
-            if (removeSource > 0) {
+            if (removeSource > 0) { // overwrite operations of sources
                 props.put("Operation", "get");
-                sProps.put("Operation", "get");
-            }
-            else if ("get".equals(operation)) {
-                props.put("Operation", "get");
-            }
-            else {
-                props.put("Operation", "browse");
-                sProps.put("Operation", "browse");
+                list = (List) props.get("Source");
+                if (list.size() == 1) {
+                    operation =  (String) sProps.get("Operation");
+                    if ("browse".equals(operation))
+                        sProps.put("Operation", "get");
+                }
+                else for (Object obj : list) { // more than one receivers
+                    operation =  (String) ((Map) obj).get("Operation");
+                    if ("browse".equals(operation))
+                        ((Map) obj).put("Operation", "get");
+                }
             }
         }
         else if (input != null && "-".equals(input)) { // read to others
@@ -1042,11 +1052,19 @@ public class QClient {
                 operation = (String) tProps.get("Operation");
                 props.put("Operation", operation);
             }
-            operation =  (String) sProps.get("Operation");
-            if (removeSource > 0)
-                sProps.put("Operation", "get");
-            else if (!"get".equals(operation))
-                sProps.put("Operation", "browse");
+            if (removeSource > 0) { // overwrite operations of sources
+                list = (List) props.get("Source");
+                if (list.size() == 1) {
+                    operation =  (String) sProps.get("Operation");
+                    if ("browse".equals(operation))
+                        sProps.put("Operation", "get");
+                }
+                else for (Object obj : list) { // more than one receivers
+                    operation =  (String) ((Map) obj).get("Operation");
+                    if ("browse".equals(operation))
+                        ((Map) obj).put("Operation", "get");
+                }
+            }
         }
         else if (sProps.isEmpty() && output != null) { // put only
             sProps.clear();
@@ -1055,8 +1073,10 @@ public class QClient {
             if (props.get("TextMode") != null)
                 tProps.put("TextMode", props.get("TextMode"));
         }
-        else if (output != null) { // put from others
-            tProps.put("Operation", "put");
+        else if (output != null) { // put or request from others
+            operation = (String) tProps.get("Operation");
+            if (operation == null)
+                tProps.put("Operation", "put");
             operation = (String) tProps.get("Operation");
             props.put("Operation", operation);
             if (props.get("TextMode") != null)

@@ -269,7 +269,33 @@ public class QConnector extends JMSQConnector {
         if ((o = props.get("MaxMsgLength")) != null)
             maxMsgLength =Integer.parseInt((String) o);
 
-        if ("query".equals(operation)) {
+        if ("request".equals(operation)) {
+            if ((o = props.get("RCField")) != null && o instanceof String)
+                rcField = (String) o;
+            else
+                rcField = "ReturnCode";
+
+            if ((o = props.get("ResponseProperty")) != null &&
+                o instanceof List) {
+                String key;
+                List<String> pl = new ArrayList<String>();
+                for (Object obj : (List) o) {
+                    if (obj == null || !(obj instanceof String))
+                        continue;
+                    key = (String) obj;
+                    if (key.length() <= 0)
+                        continue;
+                    key = MessageUtils.getPropertyID(key);
+                    if (key != null)
+                        pl.add(key);
+                    else
+                        pl.add((String) obj);
+                }
+                respPropertyName = pl.toArray(new String[pl.size()]);
+                pl.clear();
+            }
+        }
+        else if ("query".equals(operation)) {
             String saxParser = null;
             Map<String, Object> h = new HashMap<String, Object>();
 

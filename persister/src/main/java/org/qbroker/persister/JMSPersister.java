@@ -33,7 +33,7 @@ import org.qbroker.event.Event;
 
 public class JMSPersister extends Persister {
     private QueueConnector qConn = null;
-    private String qName, msgID;
+    private String qName, msgID, responseQueue = null;
     private int retryCount;
     private long sessionTime;
     private boolean isConnected = false;
@@ -67,6 +67,8 @@ public class JMSPersister extends Persister {
             xaMode = QueueConnector.XA_CLIENT;
 
         qName = (String) props.get("QueueName");
+        if ((o = props.get("ResponseQueue")) != null)
+            responseQueue = (String) o;
 
         if ((o = props.get("JMSClassName")) != null) {
             className = (String) o;
@@ -104,7 +106,8 @@ public class JMSPersister extends Persister {
         }
 
         operation = qConn.getOperation();
-        if (!"put".equals(operation) && !"query".equals(operation)) {
+        if (!"put".equals(operation) && !"query".equals(operation) &&
+            !"request".equals(operation)) {
             disconnect();
             throw(new IllegalArgumentException("unsupported operation: " +
                 operation));
@@ -255,6 +258,8 @@ public class JMSPersister extends Persister {
                 split(xq);
             else if ("query".equals(operation))
                 qConn.query(xq);
+            else if ("request".equals(operation))
+                qConn.request(xq, responseQueue);
             else
                 qConn.put(xq);
         }

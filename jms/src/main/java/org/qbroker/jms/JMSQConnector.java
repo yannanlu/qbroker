@@ -24,6 +24,7 @@ import javax.jms.InvalidDestinationException;
 import javax.jms.Destination;
 import javax.jms.DeliveryMode;
 import javax.jms.Queue;
+import javax.jms.TemporaryQueue;
 import javax.jms.QueueConnection;
 import javax.jms.QueueConnectionFactory;
 import javax.jms.QueueSender;
@@ -52,8 +53,8 @@ import org.qbroker.event.Event;
  * has only one abstract methods, initialize() that is vendor specific. It
  * creates a QueueConnectionFactory for all the operations. JMSQConnector has
  * implemented all the public methods of QueueConnector. But they can be
- * overriden if it is neccessary. Most important methods are connect(),
- * browse(), query(), get(), put(), etc. It supports repeated browse on a queue
+ * overriden if it is neccessary. Most important methods are connect(), get(),
+ * put(), browse(), query(), request(). It supports repeated browse on a queue
  * with auto increment of JMSTimestamp.  But it requires Mode is set to daemon
  * and SequentialSearch is on.  The application is supposed to reset the
  * browser every time with null string as the only argument.  If ReferenceFile
@@ -99,6 +100,7 @@ public abstract class JMSQConnector implements QueueConnector {
 
     protected String[] propertyName = null;
     protected String[] propertyValue = null;
+    protected String[] respPropertyName = null;
     protected String msgSelector = null;
     protected String operation = "browse";
     protected String msField = null, rcField = null, resultField = null;
@@ -161,6 +163,13 @@ public abstract class JMSQConnector implements QueueConnector {
             if (withFlowControlDisabled) // for SonicMQ only
                 MessageUtils.disableFlowControl(qSession);
         }
+        else if (operation.equals("request")) {
+            qSession = qConnection.createQueueSession(false,
+                QueueSession.AUTO_ACKNOWLEDGE);
+
+            if (withFlowControlDisabled) // for SonicMQ only
+                MessageUtils.disableFlowControl(qSession);
+        }
         else {
             qSession = qConnection.createQueueSession(false,
                 QueueSession.AUTO_ACKNOWLEDGE);
@@ -184,7 +193,7 @@ public abstract class JMSQConnector implements QueueConnector {
             else
                 qReceiver = qSession.createReceiver(queue);
         }
-        else if (operation.equals("put")) {
+        else if (operation.equals("put") || operation.equals("request")) {
             qSender = qSession.createSender(queue);
         }
         else {
@@ -2127,30 +2136,8 @@ public abstract class JMSQConnector implements QueueConnector {
                     }
                 }
             }
-            else if (ack) {
-                try {
-                    message.acknowledge();
-                }
-                catch (JMSException e) {
-                    String str = "";
-                    Exception ee = e.getLinkedException();
-                    if (ee != null)
-                        str += "Linked exception: " + ee.getMessage()+ "\n";
-                    new Event(Event.ERR, "failed to ack msg after put to " +
-                        qName + ": " + str + Event.traceStack(e)).send();
-                }
-                catch (Exception e) {
-                    new Event(Event.ERR, "failed to ack msg after put to " +
-                        qName + ": " + Event.traceStack(e)).send();
-                }
-                catch (Error e) {
-                    xq.remove(sid);
-                    new Event(Event.ERR, "failed to ack msg after put to " +
-                        qName + ": " + e.toString()).send();
-                    Event.flush(e);
-                }
-                xq.remove(sid);
-            }
+            else if (ack)
+                ackMessage(sid, xq, message);
             else
                 xq.remove(sid);
 
@@ -2187,6 +2174,447 @@ public abstract class JMSQConnector implements QueueConnector {
         }
         if (displayMask != 0)
             new Event(Event.INFO, "put " + count + " msgs to " + qName).send();
+    }
+
+    /**
+     * It gets JMS messages from the XQueue and puts them into a JMS queue as
+     * requests. Then it receives response messages one by one and copies the
+     * message body from the response to the request message and reset its
+     * rcField with a success code before removing it from the XQueue.
+     <br/><br/>
+     * It supports the message acknowledgement at the source. In the send
+     * operation, the persistence, the priority, and the expiration time of
+     * each message may get reset according to the overwrite mask. If overwrite
+     * mask is 0, the persistence, the priority, and the time-to-live will be
+     * recovered from each message for send operation. Otherwise, certain
+     * configuration values will be used. In this case, the overwrite mask of
+     * 1 is to reset the persistence to a specific value. 2 is to reset the
+     * priority to a certain value. 4 is to reset the expiration time with a
+     * given time-to-live.
+     *<br/><br/>
+     * For each sent request, it tries to receive the response message from
+     * the given response queue without message selectors. If the response
+     * queue name is null, a temporary queue will be created for each of the
+     * request. Once the response is received, the message body will be copied
+     * into the request message as the response. The rcField of the message
+     * will be reset to the value of "0". In case of timeout on the receive
+     * process, the expRC will be set to indicate the failure. In case of
+     * failure, the error text will be set to the request body.
+     *<br/><br/>
+     * It catches JMSException in the operations regarding to the message
+     * itself, like get/set JMS properties or acknowlegement. In this case,
+     * it removes the message from the XQueue and logs the errors.
+     *<br/><br/>
+     * If the MaxIdleTime is set to none-zero, it will monitor the idle time
+     * and will throw TimeoutException once the idle time exceeds MaxIdleTime. 
+     * It is up to the caller to handle this exception.
+     */
+    public void request(XQueue xq, String responseQueueName)
+        throws TimeoutException, JMSException {
+        Message message;
+        Queue rq = null;
+        JMSException ex = null;
+        String dt = null, id = null, msgStr = null;
+        String okRC = String.valueOf(MessageUtils.RC_OK);
+        String reqRC = String.valueOf(MessageUtils.RC_REQERROR);
+        String msgRC = String.valueOf(MessageUtils.RC_MSGERROR);
+        String expRC = String.valueOf(MessageUtils.RC_EXPIRED);
+        boolean ack = ((xq.getGlobalMask() & XQueue.EXTERNAL_XA) > 0);
+        boolean checkIdle = (maxIdleTime > 0);
+        boolean isSleepy = (sleepTime > 0);
+        boolean isTempQ = (responseQueueName == null);
+        boolean withResp = (respPropertyName != null);
+        long currentTime, idleTime, ttl, count = 0, stm = 0;
+        int mask;
+        int sid = -1;
+        int n;
+        int dmask = MessageUtils.SHOW_DATE;
+        byte[] buffer = new byte[bufferSize];
+        dmask ^= displayMask;
+        dmask &= displayMask;
+
+        if (qSender == null)
+            throw(new JMSException("qSender for "+qName+" is not initialized"));
+
+        if (!isTempQ) { // for permanent response queue
+            rq = qSession.createQueue(responseQueueName);
+            qReceiver = qSession.createReceiver(rq);
+        }
+
+        if (isSleepy)
+            stm = (sleepTime > receiveTime) ? receiveTime : sleepTime;
+
+        n = 0;
+        currentTime = System.currentTimeMillis();
+        idleTime = currentTime;
+        while (((mask = xq.getGlobalMask()) & XQueue.KEEP_RUNNING) > 0) {
+            if ((mask & XQueue.STANDBY) > 0) { // standby temporarily
+                break;
+            }
+            if ((sid = xq.getNextCell(waitTime)) < 0) {
+                if (checkIdle) {
+                    if (n++ == 0) {
+                        currentTime = System.currentTimeMillis();
+                        idleTime = currentTime;
+                    }
+                    else if (n > 10) {
+                        n = 0;
+                        currentTime = System.currentTimeMillis();
+                        if (currentTime >= idleTime + maxIdleTime)
+                            throw(new TimeoutException("idled for too long"));
+                    }
+                }
+                continue;
+            }
+            n = 0;
+
+            message = (Message) xq.browse(sid);
+            if (message == null) { // msg is not supposed to be null
+                xq.remove(sid);
+                new Event(Event.WARNING, "dropped a null msg from " +
+                    xq.getName()).send();
+                continue;
+            }
+
+            // setting default RC
+            try {
+                MessageUtils.setProperty(rcField, msgRC, message);
+            }
+            catch (MessageNotWriteableException e) {
+                try {
+                    MessageUtils.resetProperties(message);
+                    MessageUtils.setProperty(rcField, msgRC, message);
+                }
+                catch (Exception ee) {
+                    new Event(Event.ERR,
+                       "failed to set RC on msg from "+xq.getName()).send();
+                    if (ack)
+                        ackMessage(sid, xq, message);
+                    else
+                        xq.remove(sid);
+                    message = null;
+                    continue;
+                }
+            }
+            catch (Exception e) {
+                new Event(Event.ERR, "failed to set RC on request from " +
+                    xq.getName()).send();
+                if (ack)
+                    ackMessage(sid, xq, message);
+                else
+                    xq.remove(sid);
+                message = null;
+                continue;
+            }
+
+            if (isTempQ) try { // init temp queue and the receiver
+                rq = qSession.createTemporaryQueue();
+                qReceiver = qSession.createReceiver(rq);
+            }
+            catch (Throwable t) {
+                xq.remove(sid);
+                new Event(Event.ERR, "failed to create TempQ: " + 
+                    Event.traceStack(t)).send();
+                cleanupTemporaryQueue((TemporaryQueue) rq);
+                rq = null;
+                qReceiver = null;
+                if (t instanceof Exception)
+                    continue;
+                else
+                    throw((Error) t);
+            }
+
+            dt = null;
+            ttl = -1;
+            try {
+                if ((displayMask & MessageUtils.SHOW_DATE) > 0)
+                   dt = Event.dateFormat(new Date(message.getJMSTimestamp()));
+                id = message.getJMSMessageID();
+                ttl = message.getJMSExpiration();
+                message.setJMSReplyTo(rq);
+                MessageUtils.setProperty(rcField, reqRC, message);
+            }
+            catch (JMSException e) {
+                if (ttl < 0)
+                    ttl = 0;
+                id = null;
+                new Event(Event.WARNING, "failed to get JMS property for "+
+                    qName + ": " + Event.traceStack(e)).send();
+            }
+
+            if (ttl > 0) { // recover ttl first
+                ttl -= System.currentTimeMillis();
+                if (ttl <= 0) // reset ttl to default
+                    ttl = 1000L;
+            }
+
+            msgStr = null;
+            try {
+                if (count == 0 && msgID != null) { // for retries
+                    if (!msgID.equals(id)) switch (overwrite) {
+                      case 0:
+                        qSender.send(message, message.getJMSDeliveryMode(),
+                            message.getJMSPriority(), ttl);
+                        break;
+                      case 1:
+                        qSender.send(message, persistence,
+                            message.getJMSPriority(), ttl);
+                        break;
+                      case 2:
+                        qSender.send(message, message.getJMSDeliveryMode(),
+                            priority, ttl);
+                        break;
+                      case 3:
+                        qSender.send(message, persistence, priority, ttl);
+                        break;
+                      case 4:
+                        qSender.send(message, message.getJMSDeliveryMode(),
+                            message.getJMSPriority(), expiry);
+                        break;
+                      case 5:
+                        qSender.send(message, persistence,
+                            message.getJMSPriority(), expiry);
+                        break;
+                      case 6:
+                        qSender.send(message, message.getJMSDeliveryMode(),
+                            priority, expiry);
+                        break;
+                      case 7:
+                        qSender.send(message, persistence, priority, expiry);
+                        break;
+                      default:
+                        qSender.send(message, message.getJMSDeliveryMode(),
+                            message.getJMSPriority(), ttl);
+                        break;
+                    }
+                    else { // skipping the resend
+                        new Event(Event.NOTICE, "msg of " + msgID +
+                            " has already been delivered to " + qName).send();
+                    }
+                }
+                else {
+                    switch (overwrite) {
+                      case 0:
+                        qSender.send(message, message.getJMSDeliveryMode(),
+                            message.getJMSPriority(), ttl);
+                        break;
+                      case 1:
+                        qSender.send(message, persistence,
+                            message.getJMSPriority(), ttl);
+                        break;
+                      case 2:
+                        qSender.send(message, message.getJMSDeliveryMode(),
+                            priority, ttl);
+                        break;
+                      case 3:
+                        qSender.send(message, persistence, priority, ttl);
+                        break;
+                      case 4:
+                        qSender.send(message, message.getJMSDeliveryMode(),
+                            message.getJMSPriority(), expiry);
+                        break;
+                      case 5:
+                        qSender.send(message, persistence,
+                            message.getJMSPriority(), expiry);
+                        break;
+                      case 6:
+                        qSender.send(message, message.getJMSDeliveryMode(),
+                            priority, expiry);
+                        break;
+                      case 7:
+                        qSender.send(message, persistence, priority, expiry);
+                        break;
+                      default:
+                        qSender.send(message, message.getJMSDeliveryMode(),
+                            message.getJMSPriority(), ttl);
+                        break;
+                    }
+                }
+            }
+            catch (InvalidDestinationException e) {
+                msgStr = "Invalid JMS Destination for "+
+                    qName + ": " + Event.traceStack(e);
+                new Event(Event.WARNING, msgStr).send();
+            }
+            catch (JMSException e) {
+                xq.putback(sid);
+                if (isTempQ) { // clean up tempQ
+                    cleanupTemporaryQueue((TemporaryQueue) rq);
+                    rq = null;
+                    qReceiver = null;
+                }
+                throw(e);
+            }
+            catch (Exception e) {
+                xq.putback(sid);
+                if (isTempQ) { // clean up tempQ
+                    cleanupTemporaryQueue((TemporaryQueue) rq);
+                    rq = null;
+                    qReceiver = null;
+                }
+                throw(new RuntimeException(e.getMessage()));
+            }
+            catch (Error e) {
+                xq.putback(sid);
+                if (isTempQ) { // clean up tempQ
+                    cleanupTemporaryQueue((TemporaryQueue) rq);
+                    rq = null;
+                    qReceiver = null;
+                }
+                Event.flush(e);
+            }
+
+            if (msgStr == null) { // request sent out, wait for response
+                Message msg = null;
+                try {
+                    msg = (Message) qReceiver.receive(receiveTime);
+                }
+                catch (Exception e) {
+                    msg = null;
+                    msgStr = "failed to get response for request to "+
+                        qName + ": " + Event.traceStack(e);
+                }
+
+                if (msgStr != null) // exception
+                    new Event(Event.ERR, msgStr).send();
+                else if (msg == null) { // timed out
+                    msgStr = "response timed out for request to "+ qName;
+                    new Event(Event.ERR, msgStr).send();
+                    try {
+                        MessageUtils.setProperty(rcField, expRC, message);
+                    }
+                    catch (JMSException e) {
+                        new Event(Event.ERR,
+                            "failed to set RC of timeout on request for "+
+                            qName + ": " + Event.traceStack(e)).send();
+                    }
+                }
+                else try { // copy response
+                    message.clearBody();
+                    msgStr = MessageUtils.processBody(msg, buffer);
+                    if (message instanceof TextMessage)
+                        ((TextMessage) message).setText(msgStr);
+                    else
+                        ((BytesMessage) message).writeBytes(msgStr.getBytes());
+
+                    if (withResp) { // copy properties over
+                        if (respPropertyName.length <= 0) {//copy all properties
+                            Enumeration propNames = msg.getPropertyNames();
+                            while (propNames.hasMoreElements()) {
+                                String key = (String) propNames.nextElement();
+                                if (key == null || key.length() <= 0)
+                                    continue;
+                                if (key.startsWith("JMS"))
+                                    continue;
+                                Object obj = msg.getObjectProperty(key);
+                                if (obj != null)
+                                    message.setObjectProperty(key, obj);
+                            }
+                        }
+                        else for (String key : respPropertyName) {
+                            String str = MessageUtils.getProperty(key, msg);
+                            if (str != null && str.length() > 0)
+                                MessageUtils.setProperty(key, str, msg);
+                        }
+                    }
+                    MessageUtils.setProperty(rcField, okRC, message);
+                }
+                catch (JMSException e) {
+                    new Event(Event.ERR, "failed to load response for " +
+                        qName + ": " + Event.traceStack(e)).send();
+                }
+                msg = null;
+            }
+
+            msgID = id;
+            if (ack)
+                ackMessage(sid, xq, message);
+            else
+                xq.remove(sid);
+
+            if (displayMask > 0) try { // display the message
+                String line = MessageUtils.display(message, msgStr, dmask,
+                    propertyName);
+                if ((displayMask & MessageUtils.SHOW_DATE) > 0)
+                    new Event(Event.INFO, "requested a msg to " + qName +
+                        " with ( Date: " + dt + line + " )").send();
+                else // no date
+                    new Event(Event.INFO, "requested a msg to " + qName +
+                        " with (" + line + " )").send();
+            }
+            catch (Exception e) {
+                new Event(Event.INFO, "requested a msg to " + qName).send();
+            }
+            count ++;
+            message = null;
+            msgStr = null;
+
+            if (isTempQ) { // clean up tempQ
+                cleanupTemporaryQueue((TemporaryQueue) rq);
+                rq = null;
+                qReceiver = null;
+            }
+
+            if (isSleepy) { // slow down for a while
+                long tm = System.currentTimeMillis() + sleepTime;
+                do {
+                    mask = xq.getGlobalMask();
+                    if ((mask & XQueue.KEEP_RUNNING) > 0 &&
+                        (mask & XQueue.STANDBY) > 0) // temporarily disabled
+                        break;
+                    else try {
+                        Thread.sleep(stm);
+                    }
+                    catch (InterruptedException e) {
+                    }
+                } while (tm > System.currentTimeMillis());
+            }
+        }
+        if (displayMask != 0)
+            new Event(Event.INFO, "requested " + count + " msgs to " +
+                qName).send();
+    }
+
+    private void ackMessage(int sid, XQueue xq, Message message) {
+        try {
+            message.acknowledge();
+        }
+        catch (JMSException e) {
+            String str = "";
+            Exception ee = e.getLinkedException();
+            if (ee != null)
+                str += "Linked exception: " + ee.getMessage()+ "\n";
+            new Event(Event.ERR, "failed to ack msg after request to " +
+                qName + ": " + str + Event.traceStack(e)).send();
+        }
+        catch (Exception e) {
+            new Event(Event.ERR, "failed to ack msg after request to " +
+                qName + ": " + Event.traceStack(e)).send();
+        }
+        catch (Error e) {
+            xq.remove(sid);
+            new Event(Event.ERR, "failed to ack msg after request to " +
+                qName + ": " + e.toString()).send();
+            Event.flush(e);
+        }
+        xq.remove(sid);
+    }
+
+    private void cleanupTemporaryQueue(TemporaryQueue rq) {
+        if (qReceiver != null) try {
+            qReceiver.close();
+        }
+        catch (Exception e) {
+            new Event(Event.WARNING, "failed to close temp qreceiver: " +
+                Event.traceStack(e)).send();
+        }
+        if (rq != null) try {
+            rq.delete();
+        }
+        catch (Exception e) {
+            new Event(Event.WARNING, "failed to delete temp queue: " +
+                Event.traceStack(e)).send();
+        }
     }
 
     /** commits messages sent in the batch and returns exception upon failure */
@@ -2363,6 +2791,10 @@ public abstract class JMSQConnector implements QueueConnector {
 
     public Queue createQueue(String queueName) throws JMSException {
         return qSession.createQueue(queueName);
+    }
+
+    public TemporaryQueue createTemporaryQueue() throws JMSException {
+        return qSession.createTemporaryQueue();
     }
 
     public void onException(JMSException e) {
