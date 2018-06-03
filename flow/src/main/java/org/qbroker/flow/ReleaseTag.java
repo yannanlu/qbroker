@@ -12,7 +12,8 @@ package org.qbroker.flow;
  * query support on connection metrics for a queue or a topic to SonicMQMonitor,
  * added getMappedName() and getGenericMapList() to MonitorUtils for generic
  * name mappings, changed SonicMQMonitor so that curDepth is for
- * FlowToDiskMemorySize rather than TopicDBSize and oppsCount is for TopicDBSize
+ * FlowToDiskMemorySize rather than TopicDBSize and oppsCount is for
+ * TopicDBSize, added JNDILookup as a utility to jndi package
  *<br/>
  * V1.2.7 (2018/03/31): added the interface of HTTPConnector to common package
  * and added HTTPClient as the wrapper of HttpClient to implement HTTPConnector,
@@ -199,7 +200,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V 1.2.8 2018/06/02 11:49:13";
+    private static String ReleaseTAG = "QBroker V 1.2.8 2018/06/03 11:33:56";
 
     public ReleaseTag() {
     }
