@@ -48,7 +48,7 @@ public abstract class Monitor implements MonitorReport, MonitorAction {
     protected int maxRetry, maxPage, tolerance, exceptionTolerance;
     protected int repeatPeriod, step, normalStep, serialNumber;
     protected int previousStatus, skip, actionCount, exceptionCount;
-    protected int disableMode, reportMode, checkpointTimeout, statusOffset;
+    protected int disableMode, reportMode, statusOffset;
     protected int cachedSkip = NOSKIP, resolution = 1000;
     protected boolean disabledWithReport = false;
     protected GenericLogger statsLogger = null;
@@ -235,10 +235,6 @@ public abstract class Monitor implements MonitorReport, MonitorAction {
                 statsLogger = new GenericLogger(loggerName);
         }
 
-        if ((o = props.get("CheckpointTimeout")) == null ||
-            (checkpointTimeout = 1000*Integer.parseInt((String) o)) < 0)
-            checkpointTimeout = 480000;
-
         report = new HashMap<String, Object>();
 
         serialNumber = 0;
@@ -299,13 +295,6 @@ public abstract class Monitor implements MonitorReport, MonitorAction {
         if (chkpt == null || chkpt.size() == 0 || serialNumber > 0)
             return;
         if ((o = chkpt.get("Name")) == null || !name.equals((String) o))
-            return;
-        if ((o = chkpt.get("CheckpointTime")) != null) {
-            ct = Long.parseLong((String) o);
-            if (ct <= System.currentTimeMillis() - checkpointTimeout)
-                return;
-        }
-        else
             return;
 
         if ((o = chkpt.get("SerialNumber")) != null)

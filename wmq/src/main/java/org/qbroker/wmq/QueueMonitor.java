@@ -107,7 +107,7 @@ public class QueueMonitor extends Monitor {
                         password = Utils.decrypt((String) o);
                     }
                     catch (Exception e) {
-                        throw(new IllegalArgumentException("failed to decrypt " +
+                        throw(new IllegalArgumentException("failed to decrypt "+
                             "EncryptedPassword: " + e.toString()));
                     }
                 }
@@ -665,13 +665,6 @@ public class QueueMonitor extends Monitor {
         if (chkpt == null || chkpt.size() == 0 || serialNumber > 0)
             return;
         if ((o = chkpt.get("Name")) == null || !name.equals((String) o))
-            return;
-        if ((o = chkpt.get("CheckpointTime")) != null) {
-            ct = Long.parseLong((String) o);
-            if (ct <= System.currentTimeMillis() - checkpointTimeout)
-                return;
-        }
-        else
             return;
 
         if ((o = chkpt.get("SerialNumber")) != null)

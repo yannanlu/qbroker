@@ -17,6 +17,7 @@ import org.apache.oro.text.regex.Perl5Matcher;
 import java.net.URI;
 import java.net.URISyntaxException;
 import org.qbroker.common.TimeWindows;
+import org.qbroker.common.Utils;
 import org.qbroker.json.JSON2Map;
 import org.qbroker.monitor.MonitorUtils;
 import org.qbroker.monitor.Monitor;
@@ -55,7 +56,7 @@ public class SonicMQMonitor extends Monitor {
     private Map<String, String> cache = null;
     private List<Map> mapList = null;
     private int watermark = 0;
-    private long previousDepth, previousIn, previousOut;
+    private long previousDepth, previousMsgs;
     private String previousQStatus, brokerName, subID = null;
     private String targetConn = null, connUser = null, hostPattern = null;
     private boolean isTopic = false;
@@ -177,8 +178,7 @@ public class SonicMQMonitor extends Monitor {
             (watermark = Integer.parseInt((String) o)) < 0)
             watermark = 0;
 
-        previousIn = 0;
-        previousOut = 0;
+        previousMsgs = 0;
         previousDepth = 0;
         previousQStatus = "UNKNOWN";
     }
@@ -318,13 +318,15 @@ public class SonicMQMonitor extends Monitor {
             }
 
             oppsCount = 0;
-            if (totalMsgs >= 0) {
-                outMsgs = (totalMsgs >= previousOut) ?
-                    totalMsgs - previousOut : totalMsgs;
+            if (totalMsgs >= 0) { //calculate in/out with cur = pre + ins - outs
+                if (previousStatus < TimeWindows.EXCEPTION) { // initial reset
+                    previousMsgs = totalMsgs;
+                    previousDepth = curDepth;
+                }
+                outMsgs = (totalMsgs >= previousMsgs) ?
+                    totalMsgs - previousMsgs : totalMsgs;
                 inMsgs = outMsgs - previousDepth + curDepth;
-                if (inMsgs < 0)
-                    inMsgs = 0;
-                previousOut = totalMsgs;
+                previousMsgs = totalMsgs;
             }
             else {
                 inMsgs = 0;
@@ -358,18 +360,27 @@ public class SonicMQMonitor extends Monitor {
                     Event.traceStack(e)).send();
             }
             jmxc.close();
-            if (ippsCount > 0) { // clean up cache
-                HashSet<String> hset = new HashSet<String>();
-                for (Map mp : list) {
-                    str = (String) mp.get("host");
-                    str += "/" + (String) mp.get("name");
-                    hset.add(str);
+            if (ippsCount > 0) {
+                if (previousStatus < TimeWindows.EXCEPTION) { // initial reset
+                    for (Map mp : list) {
+                        str = (String) mp.get("host");
+                        str += "/" + (String) mp.get("name");
+                        cache.put(str, (String) mp.get("messages_Delivered"));
+                    }
                 }
-                for (String key : cache.keySet()) {
-                    if (!hset.contains(key))
-                        cache.remove(key);
+                else { // clean up cache
+                    HashSet<String> hset = new HashSet<String>();
+                    for (Map mp : list) {
+                        str = (String) mp.get("host");
+                        str += "/" + (String) mp.get("name");
+                        hset.add(str);
+                    }
+                    for (String key : cache.keySet()) {
+                        if (!hset.contains(key))
+                            cache.remove(key);
+                    }
+                    hset.clear();
                 }
-                hset.clear();
             }
 
             outMsgs = 0;
@@ -378,6 +389,7 @@ public class SonicMQMonitor extends Monitor {
             try {
                 long prev;
                 curDepth = Long.parseLong(str);
+                previousMsgs = 0;
                 if (ippsCount > 0) for (Map mp : list) {
                     map = mp;
                     String key = (String) mp.get("host");
@@ -390,6 +402,7 @@ public class SonicMQMonitor extends Monitor {
                     cache.put(key, str);
                     totalMsgs = Long.parseLong(str);
                     outMsgs += (totalMsgs >= prev) ? totalMsgs-prev : totalMsgs;
+                    previousMsgs += totalMsgs;
                     mp.clear();
                 }
                 list.clear();
@@ -402,9 +415,9 @@ public class SonicMQMonitor extends Monitor {
             }
 
             oppsCount = 0;
+            if (previousStatus < TimeWindows.EXCEPTION) // initial reset
+                previousDepth = curDepth;
             inMsgs = outMsgs - previousDepth + curDepth;
-            if (inMsgs < 0)
-                inMsgs = 0;
 
             if (serialNumber == 1) { // initial reset
                 qStatus = "OK";
@@ -428,6 +441,7 @@ public class SonicMQMonitor extends Monitor {
             oppsCount = Long.parseLong(str);
             str = (String) map.get("connections_RejectedPerMinute");
             totalMsgs = Long.parseLong(str);
+            previousMsgs = outMsgs;
             if (watermark > 0 && curDepth > watermark)
                 qStatus = "BUSY";
             else
@@ -756,27 +770,21 @@ public class SonicMQMonitor extends Monitor {
         Map<String, Object> chkpt = super.checkpoint();
         chkpt.put("PreviousQStatus", String.valueOf(previousQStatus));
         chkpt.put("PreviousDepth", String.valueOf(previousDepth));
-        chkpt.put("PreviousIn", String.valueOf(previousIn));
-        chkpt.put("PreviousOut", String.valueOf(previousOut));
+        chkpt.put("PreviousMsgs", String.valueOf(previousMsgs));
+        if (isQueue && cache != null)
+            chkpt.put("Cache", Utils.cloneProperties(cache));
         return chkpt;
     }
 
     public void restoreFromCheckpoint(Map<String, Object> chkpt) {
         Object o;
-        long ct, pDepth, pIn, pOut;
+        long ct, pDepth, pMsgs;
         int aCount, eCount, pStatus, sNumber;
         String pQStatus;
 
         if (chkpt == null || chkpt.size() == 0 || serialNumber > 0)
             return;
         if ((o = chkpt.get("Name")) == null || !name.equals((String) o))
-            return;
-        if ((o = chkpt.get("CheckpointTime")) != null) {
-            ct = Long.parseLong((String) o);
-            if (ct <= System.currentTimeMillis() - checkpointTimeout)
-                return;
-        }
-        else
             return;
 
         if ((o = chkpt.get("SerialNumber")) != null)
@@ -796,12 +804,8 @@ public class SonicMQMonitor extends Monitor {
         else
             return;
 
-        if ((o = chkpt.get("PreviousIn")) != null)
-            pIn = Long.parseLong((String) o);
-        else
-            return;
-        if ((o = chkpt.get("PreviousOut")) != null)
-            pOut = Long.parseLong((String) o);
+        if ((o = chkpt.get("PreviousMsgs")) != null)
+            pMsgs = Long.parseLong((String) o);
         else
             return;
         if ((o = chkpt.get("PreviousDepth")) != null)
@@ -820,8 +824,16 @@ public class SonicMQMonitor extends Monitor {
         serialNumber = sNumber;
         previousDepth = pDepth;
         previousQStatus = pQStatus;
-        previousIn = pIn;
-        previousOut = pOut;
+        previousMsgs = pMsgs;
+
+        if (isQueue && (o = chkpt.get("Cache")) != null && o instanceof Map) {
+            Map map = (Map) o;
+            for (Object obj : map.keySet()) {
+                String key = (String) obj;
+                if (key != null && key.length() > 0)
+                    cache.put(key, (String) map.get(key));
+            }
+        }
     }
 
     public void destroy() {

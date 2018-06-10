@@ -3,7 +3,14 @@ package org.qbroker.flow;
 /* ReleaseTag.java - release tag for all the packages of qbroker */
 
 /**
- * V1.2.8 (2018/06/02): fixed a typo in the comments of ASE, added
+ * V1.2.9 (2018/06/09): removed the space between release version and "V" from
+ * ReleaseTag, added the support of base64 encoded names for checkpointing to
+ * MonintorGroup and Node, changed CheckpointTimeout to CheckpointExpration for
+ * MonintorGroup, added cache to checkpoint() and restore() of SonicMQMonitor,
+ * removed CheckpointTimeout from all implementations of Monitor, added the
+ * initial reset to all queue monitors
+ *<br/>
+ * V1.2.8 (2018/06/03): fixed a typo in the comments of ASE, added
  * createTemporaryQueue() to JMSQConnector, added ctx.close() to QConnector,
  * TConnector and QMFRequester for cleanups, added request() to QueueConnector
  * and JMSQConnector, updated QConnector in both jms and wmq packages, updated
@@ -200,17 +207,17 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V 1.2.8 2018/06/03 11:33:56";
+    private static String ReleaseTAG = "QBroker V1.2.9 2018/06/09 10:17:34";
 
     public ReleaseTag() {
     }
 
     public static String getTag() {
         if (TAG == null) {
-            int j, i = ReleaseTAG.indexOf(" V ");
+            int j, i = ReleaseTAG.indexOf(" V");
             if (i > 0) {
-                j = ReleaseTAG.indexOf(" ", i+3);
-                TAG = ReleaseTAG.substring(i+3, j);
+                j = ReleaseTAG.indexOf(" ", i+2);
+                TAG = ReleaseTAG.substring(i+2, j);
             }
         }
         return TAG;

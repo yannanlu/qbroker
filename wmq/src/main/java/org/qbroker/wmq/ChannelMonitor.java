@@ -157,7 +157,7 @@ public class ChannelMonitor extends Monitor {
                         password = Utils.decrypt((String) o);
                     }
                     catch (Exception e) {
-                        throw(new IllegalArgumentException("failed to decrypt " +
+                        throw(new IllegalArgumentException("failed to decrypt "+
                             "EncryptedPassword: " + e.toString()));
                     }
                 }
@@ -482,7 +482,7 @@ public class ChannelMonitor extends Monitor {
 
         if (chStatus > CH_NOTFOUND && chStatus < CH_INITIALIZING) {
             // calculate the in/out rate with cur = pre + ins - outs
-            if (previousStatus < TimeWindows.EXCEPTION) { // OM just got bounced
+            if (previousStatus < TimeWindows.EXCEPTION) { // initial reset
                 previousMsgs = msgs;
                 previousDepth = curDepth;
                 previousBytes = (chType == CH_SENDER) ? bytesSent : bytesRcvd;
@@ -927,13 +927,6 @@ public class ChannelMonitor extends Monitor {
         if (chkpt == null || chkpt.size() == 0 || serialNumber > 0)
             return;
         if ((o = chkpt.get("Name")) == null || !name.equals((String) o))
-            return;
-        if ((o = chkpt.get("CheckpointTime")) != null) {
-            ct = Long.parseLong((String) o);
-            if (ct <= System.currentTimeMillis() - checkpointTimeout)
-                return;
-        }
-        else
             return;
 
         if ((o = chkpt.get("SerialNumber")) != null)

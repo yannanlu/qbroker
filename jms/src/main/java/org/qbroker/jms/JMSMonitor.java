@@ -55,7 +55,7 @@ public class JMSMonitor extends Monitor {
     private QueueConnector jmsQ = null;
     private UnixlogMonitor log = null;
     private int previousQStatus, previousDepth, operation, qStatusOffset;
-    private int disableMode, port, waterMark, checkpointTimeout;
+    private int disableMode, port, waterMark;
     private boolean isTopic = false;
     public final static int Q_SLOW = -4;
     public final static int Q_STUCK = -3;
@@ -1047,13 +1047,6 @@ public class JMSMonitor extends Monitor {
         if (chkpt == null || chkpt.size() == 0 || serialNumber > 0)
             return;
         if ((o = chkpt.get("Name")) == null || !name.equals((String) o))
-            return;
-        if ((o = chkpt.get("CheckpointTime")) != null) {
-            ct = Long.parseLong((String) o);
-            if (ct <= System.currentTimeMillis() - checkpointTimeout)
-                return;
-        }
-        else
             return;
 
         if ((o = chkpt.get("SerialNumber")) != null)

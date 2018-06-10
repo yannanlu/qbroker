@@ -68,8 +68,8 @@ public abstract class Node implements MessageNode {
     protected int debug = 0;
     protected int status = NODE_READY;
     protected int bufferSize = DEFAULT_BUFFER_SIZE;
+    protected int chkptExpiration = DEFAULT_CHKPT_EXPIRATION;
     protected long waitTime = DEFAULT_WAITTIME;
-    protected long chkptTimeout = DEFAULT_CHKPT_TIMEOUT;
 
     protected String[] displayPropertyName = null;
 
@@ -87,8 +87,8 @@ public abstract class Node implements MessageNode {
     protected java.lang.reflect.Method callbackMethod = null;
 
     private final static int DEFAULT_BUFFER_SIZE = 4096;
+    private final static int DEFAULT_CHKPT_EXPIRATION = 0;
     private final static long DEFAULT_WAITTIME = 50L;
-    private final static long DEFAULT_CHKPT_TIMEOUT = 0L;
 
     // for debugging
     protected final static int DEBUG_INIT = 1;
@@ -163,9 +163,9 @@ public abstract class Node implements MessageNode {
             if (waitTime <= 0L)
                 waitTime = 50L;
         }
-        if ((o = props.get("CheckpointTimeout")) != null &&
-            (chkptTimeout = 1000 * Integer.parseInt((String) o)) < 0)
-            chkptTimeout = 0;
+        if ((o = props.get("CheckpointExpiration")) != null &&
+            (chkptExpiration = 1000 * Integer.parseInt((String) o)) < 0)
+            chkptExpiration = DEFAULT_CHKPT_EXPIRATION;
 
         if ((o = props.get("Capacity")) == null ||
             (capacity = Integer.parseInt((String) o)) <= 0)
@@ -587,15 +587,15 @@ public abstract class Node implements MessageNode {
             waitTime = DEFAULT_WAITTIME;
             n++;
         }
-        if ((o = ph.get("CheckpointTimeout")) != null) {
-            long t = 1000 * Long.parseLong((String) o);
-            if (t >= 0 && t != chkptTimeout) {
-                chkptTimeout = t;
+        if ((o = ph.get("CheckpointExpiration")) != null) {
+            i = 1000 * Integer.parseInt((String) o);
+            if (i > 0 && i != chkptExpiration) {
+                chkptExpiration = i;
                 n ++;
             }
         }
-        else if (chkptTimeout != DEFAULT_CHKPT_TIMEOUT) { // reset to default
-            chkptTimeout = DEFAULT_CHKPT_TIMEOUT;
+        else if(chkptExpiration != DEFAULT_CHKPT_EXPIRATION){ //reset to default
+            chkptExpiration = DEFAULT_CHKPT_EXPIRATION;
             n ++;
         }
 

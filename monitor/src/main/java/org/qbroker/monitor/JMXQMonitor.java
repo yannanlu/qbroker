@@ -250,18 +250,18 @@ public class JMXQMonitor extends Monitor {
                 qStatus = (String) map.get("StateLabel");
                 o = map.get("NumMsgsIn");
                 totalMsgs = ((Long) o).longValue();
+                if (previousStatus < TimeWindows.EXCEPTION) // initial reset
+                    previousIn = totalMsgs;
                 inMsgs = (totalMsgs >= previousIn) ? totalMsgs - previousIn :
                     totalMsgs;
                 previousIn = totalMsgs;
                 o = map.get("NumMsgsOut");
                 totalMsgs = ((Long) o).longValue();
+                if (previousStatus < TimeWindows.EXCEPTION) // initial reset
+                    previousOut = totalMsgs;
                 outMsgs = (totalMsgs >= previousOut) ? totalMsgs - previousOut:
                     totalMsgs;
                 previousOut = totalMsgs;
-                if (serialNumber == 1) { // initial reset
-                    inMsgs = 0;
-                    outMsgs = 0;
-                }
                 o = map.get("NumMsgs");
                 curDepth = ((Long) o).longValue();
                 o = map.get("NumConsumers");
@@ -272,11 +272,15 @@ public class JMXQMonitor extends Monitor {
             else if (vendorId == JMX_AMQ) {
                 o = map.get("EnqueueCount");
                 totalMsgs = ((Long) o).longValue();
+                if (previousStatus < TimeWindows.EXCEPTION) // initial reset
+                    previousIn = totalMsgs;
                 inMsgs = (totalMsgs >= previousIn) ? totalMsgs - previousIn :
                     totalMsgs;
                 previousIn = totalMsgs;
                 o = map.get("DequeueCount");
                 totalMsgs = ((Long) o).longValue();
+                if (previousStatus < TimeWindows.EXCEPTION) // initial reset
+                    previousOut = totalMsgs;
                 outMsgs = (totalMsgs >= previousOut) ? totalMsgs - previousOut:
                     totalMsgs;
                 previousOut = totalMsgs;
@@ -286,43 +290,33 @@ public class JMXQMonitor extends Monitor {
                 ippsCount = (int) ((Long) o).longValue();
                 o = map.get("ProducerCount");
                 oppsCount = (int) ((Long) o).longValue();
-                if (serialNumber == 1) { // initial reset
-                    inMsgs = 0;
-                    outMsgs = 0;
-                    qStatus = "OK";
-                }
-                else if (curDepth > 0 && previousDepth > 0 && outMsgs <= 0)
-                    qStatus = (ippsCount == 0) ? "NOAPPS" : "STUCK";
-                else
-                    qStatus = "OK";
             }
             else if (vendorId == JMX_QPID) {
                 o = map.get("ReceivedMessageCount");
                 totalMsgs = ((Long) o).longValue();
+                if (previousStatus < TimeWindows.EXCEPTION) // initial reset
+                    previousIn = totalMsgs;
                 inMsgs = (totalMsgs >= previousIn) ? totalMsgs - previousIn :
                     totalMsgs;
                 previousIn = totalMsgs;
                 o = map.get("MessageCount");
                 curDepth = ((Integer) o).intValue();
+                if (previousStatus < TimeWindows.EXCEPTION) // initial reset
+                    previousDepth = curDepth;
                 outMsgs = inMsgs - curDepth + previousDepth;
-                if (outMsgs < 0)
-                    outMsgs = 0;
                 o = map.get("ActiveConsumerCount");
                 ippsCount = ((Integer) o).intValue();
                 oppsCount = 0;
-                if (serialNumber == 1) { // initial reset
-                    inMsgs = 0;
-                    outMsgs = 0;
-                    qStatus = "OK";
-                }
-                else if (curDepth > 0 && previousDepth > 0 && outMsgs <= 0)
-                    qStatus = (ippsCount == 0) ? "NOAPPS" : "STUCK";
-                else
-                    qStatus = "OK";
             }
             else
                 throw(new IllegalArgumentException("unsupported vendor " +
                     vendorId));
+            if (serialNumber == 1)
+                qStatus = "OK";
+            else if (curDepth > 0 && previousDepth > 0 && outMsgs <= 0)
+                qStatus = (ippsCount == 0) ? "NOAPPS" : "STUCK";
+            else
+                qStatus = "OK";
             report.put("StateLabel", qStatus);
         }
         catch (Exception e) {
@@ -583,13 +577,6 @@ public class JMXQMonitor extends Monitor {
         if (chkpt == null || chkpt.size() == 0 || serialNumber > 0)
             return;
         if ((o = chkpt.get("Name")) == null || !name.equals((String) o))
-            return;
-        if ((o = chkpt.get("CheckpointTime")) != null) {
-            ct = Long.parseLong((String) o);
-            if (ct <= System.currentTimeMillis() - checkpointTimeout)
-                return;
-        }
-        else
             return;
 
         if ((o = chkpt.get("SerialNumber")) != null)

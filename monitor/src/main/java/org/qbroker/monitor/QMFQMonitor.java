@@ -179,22 +179,21 @@ public class QMFQMonitor extends Monitor {
         else try {
             o = map.get("msgTotalEnqueues");
             totalMsgs = ((Long) o).longValue();
+            if (previousStatus < TimeWindows.EXCEPTION) // initial reset
+                previousIn = totalMsgs;
             inMsgs = (totalMsgs >= previousIn) ? totalMsgs-previousIn:totalMsgs;
             previousIn = totalMsgs;
             o = map.get("msgDepth");
             curDepth = ((Long) o).longValue();
+            if (previousStatus < TimeWindows.EXCEPTION) // initial reset
+                previousDepth = curDepth;
             outMsgs = inMsgs - curDepth + previousDepth;
-            if (outMsgs < 0)
-                outMsgs = 0;
             o = map.get("consumerCount");
             ippsCount = ((Long) o).longValue();
             o = map.get("bindingCount");
             oppsCount = ((Long) o).longValue();
-            if (serialNumber == 1) { // initial reset
-                inMsgs = 0;
-                outMsgs = 0;
+            if (serialNumber == 1) // initial reset
                 qStatus = "OK";
-            }
             else if (curDepth > 0 && previousDepth > 0 && outMsgs <= 0)
                 qStatus = (ippsCount == 0) ? "NOAPPS" : "STUCK";
             else
@@ -459,13 +458,6 @@ public class QMFQMonitor extends Monitor {
         if (chkpt == null || chkpt.size() == 0 || serialNumber > 0)
             return;
         if ((o = chkpt.get("Name")) == null || !name.equals((String) o))
-            return;
-        if ((o = chkpt.get("CheckpointTime")) != null) {
-            ct = Long.parseLong((String) o);
-            if (ct <= System.currentTimeMillis() - checkpointTimeout)
-                return;
-        }
-        else
             return;
 
         if ((o = chkpt.get("SerialNumber")) != null)

@@ -64,7 +64,7 @@ public class EventTracker implements EventEscalation {
     private boolean isJMSEvent = false;
     private int statusOffset, initStatus;
     private int maxRetry, maxPage, tolerance, repeatPeriod, serialNumber;
-    private int checkpointTimeout, escalationOrder = ORDER_NONE;
+    private int checkpointExpiration, escalationOrder = ORDER_NONE;
     private final static String statusText[] = {"Exception",
         "Exception in blackout", "Disabled", "Blackout",
         "Normal", "Occurred"};
@@ -170,9 +170,9 @@ public class EventTracker implements EventEscalation {
 
         repeatPeriod = maxRetry + maxPage + n;
 
-        if ((o = props.get("CheckpointTimeout")) == null ||
-            (checkpointTimeout = 1000*Integer.parseInt((String) o)) < 0)
-            checkpointTimeout = 480000;
+        if ((o = props.get("CheckpointExpiration")) == null ||
+            (checkpointExpiration = 1000*Integer.parseInt((String) o)) <= 0)
+            checkpointExpiration = 480000;
 
         serialNumber = 0;
         initStatus = TimeWindows.ELATE;
@@ -456,15 +456,15 @@ public class EventTracker implements EventEscalation {
 
     public void restoreFromCheckpoint(Map<String, Object> chkpt) {
         Object o;
-        long ct, pTimestamp;
+        long dt, pTimestamp;
         int eCount, pValue, pStatus, sNumber, pPriority;
         if (chkpt == null || chkpt.size() == 0 || serialNumber > 0)
             return;
         if ((o = chkpt.get("Name")) == null || !name.equals((String) o))
             return;
         if ((o = chkpt.get("CheckpointTime")) != null) {
-            ct = Long.parseLong((String) o);
-            if (ct <= System.currentTimeMillis() - checkpointTimeout)
+            dt = System.currentTimeMillis() - Long.parseLong((String) o);
+            if (dt >= checkpointExpiration)
                 return;
         }
         else

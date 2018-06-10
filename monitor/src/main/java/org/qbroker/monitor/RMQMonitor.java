@@ -185,38 +185,27 @@ public class RMQMonitor extends Monitor {
             pubCount = Long.parseLong((String) o);
             o = JSON2Map.get(map, "message_stats.deliver_get");
             dlvCount = Long.parseLong((String) o);
+            if (previousStatus < TimeWindows.EXCEPTION) { // initial reset
+                previousOut = dlvCount;
+                previousIn = pubCount;
+                previousDepth = curDepth;
+            }
             if (ippsCount > 0 && previousCount > 0) {//consumer has been running
                 if (dlvCount > 0 && previousOut > 0 && dlvCount >= previousOut){
                     outMsgs = dlvCount - previousOut;
                     inMsgs = outMsgs + curDepth - previousDepth;
-                    if (inMsgs < 0)
-                        inMsgs = 0;
                 }
                 else if(pubCount > 0 && previousIn > 0 && pubCount>=previousIn){
                     inMsgs = pubCount - previousIn;
                     outMsgs = inMsgs + previousDepth - curDepth;
-                    if (curDepth == 0) {
-                        if (outMsgs < dlvCount)
-                            outMsgs = dlvCount;
-                    }
-                    else if (outMsgs < 0)
-                        outMsgs = 0;
                 }
                 else if (dlvCount > 0) { // consumer bounced
                     outMsgs = dlvCount;
                     inMsgs = outMsgs + curDepth - previousDepth;
-                    if (inMsgs < 0)
-                        inMsgs = 0;
                 }
                 else if (pubCount > 0) {
                     inMsgs = pubCount;
                     outMsgs = inMsgs + previousDepth - curDepth;
-                    if (curDepth == 0) {
-                        if (outMsgs < dlvCount)
-                            outMsgs = dlvCount;
-                    }
-                    else if (outMsgs < 0)
-                        outMsgs = 0;
                 }
                 else if (curDepth >= previousDepth) {
                     inMsgs = curDepth - previousDepth;
@@ -231,24 +220,14 @@ public class RMQMonitor extends Monitor {
                 if (pubCount > 0 && previousIn > 0 && pubCount >= previousIn) {
                     inMsgs = pubCount - previousIn;
                     outMsgs = inMsgs + previousDepth - curDepth;
-                    if (curDepth == 0) {
-                        if (outMsgs < dlvCount)
-                            outMsgs = dlvCount;
-                    }
-                    else if (outMsgs < 0)
-                        outMsgs = 0;
                 }
                 else if (dlvCount > 0) {
                     outMsgs = dlvCount;
                     inMsgs = outMsgs + curDepth - previousDepth;
-                    if (inMsgs < 0)
-                        inMsgs = 0;
                 }
                 else if (pubCount > 0) {
                     inMsgs = pubCount;
                     outMsgs = inMsgs + previousDepth - curDepth;
-                    if (outMsgs < 0)
-                        outMsgs = 0;
                 }
                 else if (curDepth >= previousDepth) {
                     inMsgs = curDepth - previousDepth;
@@ -263,14 +242,10 @@ public class RMQMonitor extends Monitor {
                 if (pubCount > 0 && previousIn > 0 && pubCount >= previousIn) {
                     inMsgs = pubCount - previousIn;
                     outMsgs = inMsgs + previousDepth - curDepth;
-                    if (outMsgs < 0)
-                        outMsgs = 0;
                 }
                 else if (pubCount > 0) {
                     inMsgs = pubCount;
                     outMsgs = inMsgs + previousDepth - curDepth;
-                    if (outMsgs < 0)
-                        outMsgs = 0;
                 }
                 else if (curDepth >= previousDepth) {
                     inMsgs = curDepth - previousDepth;
@@ -284,18 +259,11 @@ public class RMQMonitor extends Monitor {
             previousIn = pubCount;
             previousOut = dlvCount;
             previousCount = ippsCount;
-
-            if (serialNumber == 1) { // initial reset
-                inMsgs = 0;
-                outMsgs = 0;
-                qStatus = "OK";
-            }
-            else if (curDepth > 0 && previousDepth > 0 && outMsgs <= 0)
-                qStatus = (ippsCount == 0) ? "NOAPPS" : "STUCK";
-            else
-                qStatus = "OK";
 */
-            if (curDepth > 0 && previousDepth > 0 && deqRate <= 0.0)
+
+            if (serialNumber == 1) // initial reset
+                qStatus = "OK";
+            else if (curDepth > 0 && previousDepth > 0 && outMsgs <= 0)
                 qStatus = (ippsCount == 0) ? "NOAPPS" : "STUCK";
             else
                 qStatus = "OK";
@@ -560,13 +528,6 @@ public class RMQMonitor extends Monitor {
         if (chkpt == null || chkpt.size() == 0 || serialNumber > 0)
             return;
         if ((o = chkpt.get("Name")) == null || !name.equals((String) o))
-            return;
-        if ((o = chkpt.get("CheckpointTime")) != null) {
-            ct = Long.parseLong((String) o);
-            if (ct <= System.currentTimeMillis() - checkpointTimeout)
-                return;
-        }
-        else
             return;
 
         if ((o = chkpt.get("SerialNumber")) != null)

@@ -30,7 +30,8 @@ public class ShortJob extends DummyAction {
     private String script;
     private File checkpointFile;
     private MonitorAction job;
-    private int scriptTimeout, checkpointTimeout;
+    private int scriptTimeout;
+    private int checkpointExpiration;
 
     public ShortJob(Map props) {
         super(props);
@@ -77,9 +78,9 @@ public class ShortJob extends DummyAction {
             (scriptTimeout = 1000*Integer.parseInt((String) o)) < 0)
             scriptTimeout = 60000;
 
-        if ((o = props.get("CheckpointTimeout")) == null ||
-            (checkpointTimeout = 1000*Integer.parseInt((String) o)) < 0)
-            checkpointTimeout = 480000;
+        if ((o = props.get("CheckpointExpiration")) == null ||
+            (checkpointExpiration = 1000*Integer.parseInt((String) o)) <= 0)
+            checkpointExpiration = 480000;
 
         checkpointFile = null;
         if ((o = MonitorUtils.select(props.get("CheckpointFile"))) != null)
@@ -170,18 +171,18 @@ public class ShortJob extends DummyAction {
 
     public void restoreFromCheckpoint(Map<String, Object> chkpt) {
         Object o;
-        long ct;
+        long dt;
         int pStatus;
-        if (chkpt == null || chkpt.size() == 0)
+        if (chkpt == null || chkpt.size() == 0) // bad checkpoint
             return;
         if ((o = chkpt.get("Name")) == null || !name.equals((String) o))
             return;
         if ((o = chkpt.get("CheckpointTime")) != null) {
-            ct = Long.parseLong((String) o);
-            if (ct <= System.currentTimeMillis() - checkpointTimeout)
+            dt = System.currentTimeMillis() - Long.parseLong((String) o);
+            if (dt >= checkpointExpiration) // expired
                 return;
         }
-        else
+        else // bad checkpoint
             return;
 
         if ((o = chkpt.get("PreviousStatus")) != null)

@@ -21,6 +21,7 @@ import java.lang.reflect.InvocationTargetException;
 import org.qbroker.common.TimeWindows;
 import org.qbroker.common.Template;
 import org.qbroker.common.Browser;
+import org.qbroker.common.Base64Encoder;
 import org.qbroker.common.AssetList;
 import org.qbroker.common.Utils;
 import org.qbroker.common.Service;
@@ -50,11 +51,12 @@ public class MonitorGroup {
     private String description;
     private String checkpointDir = null;
     private long mtime;
+    private int checkpointExpiration = 900000;
     private int debug = 0;
     private int maxRetry = -1;
     private int heartbeat = 0;
     private int timeout = 0;
-    private boolean isDynamic = false;
+    private boolean isDynamic = false, withBase64 = false;
     private AssetList monitorList;
     private AssetList templateList;
     private Map cachedProps = null;
@@ -117,8 +119,16 @@ public class MonitorGroup {
         else
             description = "a group of monitors for various monitors";
 
-        if ((o = props.get("CheckpointDir")) != null)
+        if ((o = props.get("CheckpointDir")) != null) {
             checkpointDir = (String) o;
+            if ((o = props.get("WithBase64")) != null &&
+                "true".equals((String) o))
+                withBase64 = true;
+            if ((o = props.get("CheckpointExpiration")) != null)
+                checkpointExpiration = 1000 * Integer.parseInt((String) o);
+            if (checkpointExpiration <= 0)
+                checkpointExpiration = 900000;
+        }
 
         monitorList = new AssetList(name, capacity);
         templateList = new AssetList(name, capacity);
@@ -1383,6 +1393,18 @@ public class MonitorGroup {
                     checkpointDir = null;
                 }
 
+                if ((o = master.get("CheckpointExpiration")) != null) {
+                    i = Integer.parseInt((String) o);
+                    if (i != checkpointExpiration && i > 0) {
+                        m += 32;
+                        checkpointExpiration = i;
+                    }
+                }
+                else if (checkpointExpiration != 900000) {
+                    m += 32;
+                    checkpointExpiration = 900000;
+                }
+
                 if (m > 0 && (debug & Service.DEBUG_DIFF) > 0)
                     new Event(Event.DEBUG, name + " base properties got " +
                         "updated with mask of " + m).send();
@@ -1512,13 +1534,19 @@ public class MonitorGroup {
         String key = action.getName();
         Map<String, Object> chkpt = action.checkpoint();
         if (chkpt != null && chkpt.size() > 0) try {
+            String str = (!withBase64) ? key :
+                new String(Base64Encoder.encode(key.getBytes()));
             File file = new File(checkpointDir);
             if (!file.exists())
                 file.mkdirs();
-            file = new File(checkpointDir + FILE_SEPARATOR + key + ".json");
+            file = new File(checkpointDir + FILE_SEPARATOR + str + ".json");
             PrintWriter fout = new PrintWriter(new FileOutputStream(file));
             fout.println(JSON2Map.toJSON(chkpt, "", "\n"));
             fout.close();
+            if ((debug & Service.DEBUG_LOAD) > 0)
+               new Event(Event.DEBUG, name + ": checkpoint for " + key +
+                   " has been completed with " + chkpt.size() +
+                   " items").send();
         }
         catch (Exception e) {
             new Event(Event.ERR, name + ": checkpoint failed for " + key +
@@ -1530,16 +1558,40 @@ public class MonitorGroup {
         if (action == null || checkpointDir == null)
             return;
         String key = action.getName();
-        File file = new File(checkpointDir + FILE_SEPARATOR + key + ".json");
-        if (!file.exists() || !file.canRead())
+        String str = (!withBase64) ? key :
+            new String(Base64Encoder.encode(key.getBytes()));
+        File file = new File(checkpointDir + FILE_SEPARATOR + str + ".json");
+        if (!file.exists() || !file.canRead()) // bad checkpoint
             return;
         try {
+            Object o;
             FileReader fr = new FileReader(file);
-            Map h = (Map) JSON2Map.parse(fr);
+            Map chkpt = (Map) JSON2Map.parse(fr);
             fr.close();
-            action.restoreFromCheckpoint(Utils.cloneProperties(h));
-            if (h != null)
-                h.clear();
+            if ((o = chkpt.get("CheckpointTime")) != null) {
+                long dt = System.currentTimeMillis()-Long.parseLong((String)o);
+                if (dt >= checkpointExpiration) {
+                    if ((debug & Service.DEBUG_LOAD) > 0)
+                        new Event(Event.DEBUG, name + ": checkpoint for " +
+                            key + " has expired at the age of " + dt).send();
+                    if (chkpt != null)
+                        chkpt.clear();
+                    return;
+                 }
+            }
+            else { // bad checkpoint
+                if (chkpt != null)
+                    chkpt.clear();
+                return;
+            }
+            action.restoreFromCheckpoint(Utils.cloneProperties(chkpt));
+            if (chkpt != null) {
+                if ((debug & Service.DEBUG_LOAD) > 0)
+                    new Event(Event.DEBUG, name + ": checkpoint for " + key +
+                        " has been restored with " + chkpt.size() +
+                        " items").send();
+                chkpt.clear();
+             }
         }
         catch (Exception e) {
             new Event(Event.ERR, name + ": failed to load checkpoint for " +

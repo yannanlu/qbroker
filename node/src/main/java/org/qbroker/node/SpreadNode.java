@@ -52,9 +52,9 @@ import org.qbroker.event.Event;
  * hitting any patterns.
  *<br/><br/>
  * SpreadNode also supports checkpointing of the internal data cache via the
- * container. In order to enable checkpointing, CheckpointTimeout must be defined
- * explicitly with a positive number in seconds for the node. On the container
- * level, CheckpointDir and SAXParser must be defined, too.
+ * container. In order to enable checkpointing, CheckpointExpiration in seconds
+ * must be defined explicitly with a positive number for the node. On the
+ * container level, CheckpointDir must be defined, too.
  *<br/><br/>
  * You are free to choose any names for the four fixed outlinks.  But
  * SpreadNode always assumes the first outlink for done, the second for bypass,
@@ -1091,7 +1091,7 @@ public class SpreadNode extends Node {
         String key;
         int i, j, rid, n;
         n = 0;
-        if (chkptTimeout <= 0) // checkpointing disabled
+        if (chkptExpiration <= 0) // checkpointing disabled
             return chkpt;
         Browser browser = ruleList.browser();
         while ((rid = browser.next()) >= 0) {
@@ -1159,14 +1159,14 @@ public class SpreadNode extends Node {
         String key;
         long tm;
         int i, j, rid, n;
-        if (chkpt == null || chkpt.size() <= 0 || chkptTimeout <= 0)
+        if (chkpt == null || chkpt.size() <= 0 || chkptExpiration <= 0)
             return;
         o = chkpt.get("CheckpointTime");
         if (o != null && o instanceof String)
             tm = Long.parseLong((String) o);
         else
             tm = 0;
-        if(System.currentTimeMillis() - tm >= chkptTimeout)//checkpoint timedout
+        if(System.currentTimeMillis() - tm >= chkptExpiration) // chkpt expired
             return;
         o = chkpt.get("Total");
         if (o != null && o instanceof String) { // check Total

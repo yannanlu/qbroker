@@ -51,7 +51,7 @@ public class EventEscalator implements EventEscalation {
     private boolean isJMSEvent = false;
     private int escalationOrder = ORDER_NONE;
     private int maxRetry, maxPage, tolerance, repeatPeriod, serialNumber;
-    private int previousStatus, escalationCount, checkpointTimeout;
+    private int previousStatus, escalationCount, checkpointExpiration;
     private int sessionSize, sessionTimeout = 0, statusOffset;
     private long sessionTime, trackedNumber;
     private String[] copiedProperty;
@@ -141,9 +141,9 @@ public class EventEscalator implements EventEscalation {
 
         repeatPeriod = maxRetry + maxPage + n;
 
-        if ((o = props.get("CheckpointTimeout")) == null ||
-            (checkpointTimeout = 1000*Integer.parseInt((String) o)) < 0)
-            checkpointTimeout = 480000;
+        if ((o = props.get("CheckpointExpiration")) == null ||
+            (checkpointExpiration = 1000*Integer.parseInt((String) o)) <= 0)
+            checkpointExpiration = 480000;
 
         serialNumber = 0;
         escalationCount = 0;
@@ -330,15 +330,15 @@ public class EventEscalator implements EventEscalation {
 
     public void restoreFromCheckpoint(Map<String, Object> chkpt) {
         Object o;
-        long ct, sTime, tNumber;
+        long dt, sTime, tNumber;
         int eCount, pStatus, sNumber, pPriority;
         if (chkpt == null || chkpt.size() == 0 || serialNumber > 0)
             return;
         if ((o = chkpt.get("Name")) == null || !name.equals((String) o))
             return;
         if ((o = chkpt.get("CheckpointTime")) != null) {
-            ct = Long.parseLong((String) o);
-            if (ct <= System.currentTimeMillis() - checkpointTimeout)
+            dt = System.currentTimeMillis() - Long.parseLong((String) o);
+            if (dt >= checkpointExpiration)
                 return;
         }
         else

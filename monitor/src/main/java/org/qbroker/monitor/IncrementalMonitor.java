@@ -1059,13 +1059,6 @@ public class IncrementalMonitor extends Monitor {
             return;
         if ((o = chkpt.get("Name")) == null || !name.equals((String) o))
             return;
-        if ((o = chkpt.get("CheckpointTime")) != null) {
-            ct = Long.parseLong((String) o);
-            if (ct <= System.currentTimeMillis() - checkpointTimeout)
-                return;
-        }
-        else
-            return;
 
         if ((o = chkpt.get("SerialNumber")) != null)
             sNumber = Integer.parseInt((String) o);
