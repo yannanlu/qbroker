@@ -37,6 +37,10 @@ public interface QueueConnector extends ExceptionListener {
      * to the JMS queue as requests and waits for responses from given queue.
      */
     public void request(XQueue xq, String rq) throws TimeoutException, JMSException;
+    /** continuously gets the JMS messages from the XQueue and sends them
+     * to their JMSReplyQ as the responses.
+     */
+    public void reply(XQueue xq) throws TimeoutException, JMSException;
     /** continuously gets the JMS messages from the InputStream and puts them
      * to the JMS queue.
      */

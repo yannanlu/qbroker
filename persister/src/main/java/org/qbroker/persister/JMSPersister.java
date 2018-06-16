@@ -107,7 +107,7 @@ public class JMSPersister extends Persister {
 
         operation = qConn.getOperation();
         if (!"put".equals(operation) && !"query".equals(operation) &&
-            !"request".equals(operation)) {
+            !"request".equals(operation) && !"reply".equals(operation)) {
             disconnect();
             throw(new IllegalArgumentException("unsupported operation: " +
                 operation));
@@ -260,6 +260,8 @@ public class JMSPersister extends Persister {
                 qConn.query(xq);
             else if ("request".equals(operation))
                 qConn.request(xq, responseQueue);
+            else if ("reply".equals(operation))
+                qConn.reply(xq);
             else
                 qConn.put(xq);
         }

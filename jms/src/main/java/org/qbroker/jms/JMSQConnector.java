@@ -54,11 +54,12 @@ import org.qbroker.event.Event;
  * creates a QueueConnectionFactory for all the operations. JMSQConnector has
  * implemented all the public methods of QueueConnector. But they can be
  * overriden if it is neccessary. Most important methods are connect(), get(),
- * put(), browse(), query(), request(). It supports repeated browse on a queue
- * with auto increment of JMSTimestamp.  But it requires Mode is set to daemon
- * and SequentialSearch is on.  The application is supposed to reset the
- * browser every time with null string as the only argument.  If ReferenceFile
- * is defined, the state info will be persisted to the file for restart.
+ * put(), browse(), query(), request(), and reply(). It supports repeated
+ * browsing on a queue with auto increment of JMSTimestamp.  But it requires
+ * Mode is set to daemon and SequentialSearch is on.  The application is
+ * supposed to reset the browser every time with null string as the only
+ * argument.  If ReferenceFile is defined, the state info will be persisted
+ * to the file for restart.
  *<br/><br/>
  * For put operations, Overwrite mask controls whether to reset the persistence,
  * the priority, and the expiration time on each incoming message. 0 means no
@@ -2311,6 +2312,13 @@ public abstract class JMSQConnector implements QueueConnector {
                 rq = qSession.createTemporaryQueue();
                 qReceiver = qSession.createReceiver(rq);
             }
+            catch (JMSException e) { // session may be expired
+                xq.putback(sid);
+                cleanupTemporaryQueue((TemporaryQueue) rq);
+                rq = null;
+                qReceiver = null;
+                throw(e);
+            }
             catch (Throwable t) {
                 xq.remove(sid);
                 new Event(Event.ERR, "failed to create TempQ: " + 
@@ -2572,6 +2580,150 @@ public abstract class JMSQConnector implements QueueConnector {
         }
         if (displayMask != 0)
             new Event(Event.INFO, "requested " + count + " msgs to " +
+                qName).send();
+    }
+
+    /**
+     * It gets JMS messages from the XQueue and sends them to their ReplyTo
+     * queues. If it fails to get the ReplyTo queue, just sents the message
+     * to the default destination. It supports the message acknowledgement
+     * at the source.
+     *<br/><br/>
+     * It catches JMSException in the operations regarding to the message
+     * itself, like get/set JMS properties or acknowlegement. In this case,
+     * it removes the message from the XQueue and logs the errors.
+     *<br/><br/>
+     * If the MaxIdleTime is set to none-zero, it will monitor the idle time
+     * and will throw TimeoutException once the idle time exceeds MaxIdleTime. 
+     * It is up to the caller to handle this exception.
+     */
+    public void reply(XQueue xq) throws TimeoutException, JMSException {
+        Message message;
+        Queue rq = null;
+        String dt = null, msgStr = null, rqName = null;
+        boolean ack = ((xq.getGlobalMask() & XQueue.EXTERNAL_XA) > 0);
+        boolean checkIdle = (maxIdleTime > 0);
+        boolean isSleepy = (sleepTime > 0);
+        long currentTime, idleTime, count = 0, stm = 0;
+        int mask;
+        int sid = -1;
+        int n;
+        int dmask = MessageUtils.SHOW_DATE;
+        byte[] buffer = new byte[bufferSize];
+        dmask ^= displayMask;
+        dmask &= displayMask;
+
+        if (qSender == null)
+            throw(new JMSException("qSender for "+qName+" is not initialized"));
+
+        if (isSleepy)
+            stm = (sleepTime > receiveTime) ? receiveTime : sleepTime;
+
+        n = 0;
+        currentTime = System.currentTimeMillis();
+        idleTime = currentTime;
+        while (((mask = xq.getGlobalMask()) & XQueue.KEEP_RUNNING) > 0) {
+            if ((mask & XQueue.STANDBY) > 0) { // standby temporarily
+                break;
+            }
+            if ((sid = xq.getNextCell(waitTime)) < 0) {
+                if (checkIdle) {
+                    if (n++ == 0) {
+                        currentTime = System.currentTimeMillis();
+                        idleTime = currentTime;
+                    }
+                    else if (n > 10) {
+                        n = 0;
+                        currentTime = System.currentTimeMillis();
+                        if (currentTime >= idleTime + maxIdleTime)
+                            throw(new TimeoutException("idled for too long"));
+                    }
+                }
+                continue;
+            }
+            n = 0;
+
+            message = (Message) xq.browse(sid);
+            if (message == null) { // msg is not supposed to be null
+                xq.remove(sid);
+                new Event(Event.WARNING, "dropped a null msg from " +
+                    xq.getName()).send();
+                continue;
+            }
+
+            dt = null;
+            try {
+                rq = (Queue) message.getJMSReplyTo();
+                if ((displayMask & MessageUtils.SHOW_DATE) > 0)
+                   dt = Event.dateFormat(new Date(message.getJMSTimestamp()));
+            }
+            catch (Exception e) {
+                rq = null;
+                new Event(Event.ERR, "failed to get ReplyTo from msg of "+
+                    xq.getName() + ": " + Event.traceStack(e)).send();
+            }
+
+            try {
+                if (rq != null) { // send msg to ReplyTo
+                    rqName = rq.getQueueName();
+                    qSender.send(rq, message);
+                }
+                else { // send msg to default destination
+                    rqName = qName;
+                    qSender.send(message);
+                }
+            }
+            catch (InvalidDestinationException e) {
+                new Event(Event.ERR, "Invalid JMS Destination for " +
+                    rqName + ": " + Event.traceStack(e)).send();
+            }
+            catch (JMSException e) { // session may be expired
+                xq.putback(sid);
+                throw(e);
+            }
+            catch (Exception e) {
+                xq.putback(sid);
+                throw(new RuntimeException(e.getMessage()));
+            }
+            catch (Error e) {
+                xq.putback(sid);
+                Event.flush(e);
+            }
+
+            if (ack)
+                ackMessage(sid, xq, message);
+            else
+                xq.remove(sid);
+
+            if (displayMask > 0) try { // display the message
+                String line = MessageUtils.display(message, null, dmask,
+                    propertyName);
+                new Event(Event.INFO, "replied a msg to " + rqName +
+                    " with (" + line + " )").send();
+            }
+            catch (Exception e) {
+                new Event(Event.INFO, "replied a msg to " + rqName).send();
+            }
+            count ++;
+            message = null;
+
+            if (isSleepy) { // slow down for a while
+                long tm = System.currentTimeMillis() + sleepTime;
+                do {
+                    mask = xq.getGlobalMask();
+                    if ((mask & XQueue.KEEP_RUNNING) > 0 &&
+                        (mask & XQueue.STANDBY) > 0) // temporarily disabled
+                        break;
+                    else try {
+                        Thread.sleep(stm);
+                    }
+                    catch (InterruptedException e) {
+                    }
+                } while (tm > System.currentTimeMillis());
+            }
+        }
+        if (displayMask != 0)
+            new Event(Event.INFO, "replied " + count + " msgs for " +
                 qName).send();
     }
 

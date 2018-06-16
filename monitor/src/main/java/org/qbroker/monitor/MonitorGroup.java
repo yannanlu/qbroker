@@ -323,8 +323,10 @@ public class MonitorGroup {
                 k = list.size();
                 for (j=0; j<k; j++) { // for private reports
                     str = temp.getKey(j);
-                    String item = temp.getItem(j);
                     Map task = (Map) monitorList.get(str);
+                    if (task == null)
+                        continue;
+                    String item = temp.getItem(j);
                     task.put("PrivateReport", temp.removePrivateReport(item));
                     if ((debug & Service.DEBUG_LOOP) > 0)
                         new Event(Event.DEBUG, name +
@@ -366,8 +368,11 @@ public class MonitorGroup {
                             str +" has no change for "+ key).send();
                     if (temp.withPrivateReport()) {
                         Map task = (Map) monitorList.get(id);
+                        if (task == null)
+                            continue;
                         String item = temp.getItem(j);
-                       task.put("PrivateReport",temp.removePrivateReport(item));
+                        task.put("PrivateReport",
+                            temp.removePrivateReport(item));
                         if ((debug & Service.DEBUG_LOOP) > 0)
                             new Event(Event.DEBUG, name +
                                 " added a private report for " + item).send();

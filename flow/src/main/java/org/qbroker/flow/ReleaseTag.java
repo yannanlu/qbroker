@@ -8,7 +8,9 @@ package org.qbroker.flow;
  * MonintorGroup and Node, changed CheckpointTimeout to CheckpointExpration for
  * MonintorGroup, added cache to checkpoint() and restore() of SonicMQMonitor,
  * removed CheckpointTimeout from all implementations of Monitor, added the
- * initial reset to all queue monitors
+ * initial reset to all queue monitors, added reply() to QueueConnector and
+ * JMSQueueConnector, added handling of JMSException for session expiration
+ * on creating a temporary queue in request() of JMSQConnector,
  *<br/>
  * V1.2.8 (2018/06/03): fixed a typo in the comments of ASE, added
  * createTemporaryQueue() to JMSQConnector, added ctx.close() to QConnector,
@@ -207,7 +209,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V1.2.9 2018/06/09 10:17:34";
+    private static String ReleaseTAG = "QBroker V1.2.9 2018/06/09 11:35:27";
 
     public ReleaseTag() {
     }
