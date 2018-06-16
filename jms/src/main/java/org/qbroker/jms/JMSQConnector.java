@@ -188,14 +188,17 @@ public abstract class JMSQConnector implements QueueConnector {
         if (qSession == null)
            throw(new JMSException("qSession for "+qName+" is not initialized"));
 
-        if (operation.equals("get")) {
+        if ("get".equals(operation)) {
             if (msgSelector != null)
                 qReceiver = qSession.createReceiver(queue, msgSelector);
             else
                 qReceiver = qSession.createReceiver(queue);
         }
-        else if (operation.equals("put") || operation.equals("request")) {
+        else if ("put".equals(operation) || "request".equals(operation)) {
             qSender = qSession.createSender(queue);
+        }
+        else if ("reply".equals(operation)) { // unidentitied qSender
+            qSender = qSession.createSender(null);
         }
         else {
             if (msgSelector != null) {
@@ -2663,15 +2666,12 @@ public abstract class JMSQConnector implements QueueConnector {
                     xq.getName() + ": " + Event.traceStack(e)).send();
             }
 
+            if (rq == null) // use default queue
+                rq = queue;
+            rqName = rq.getQueueName();
+
             try {
-                if (rq != null) { // send msg to ReplyTo
-                    rqName = rq.getQueueName();
-                    qSender.send(rq, message);
-                }
-                else { // send msg to default destination
-                    rqName = qName;
-                    qSender.send(message);
-                }
+                qSender.send(rq, message);
             }
             catch (InvalidDestinationException e) {
                 new Event(Event.ERR, "Invalid JMS Destination for " +
