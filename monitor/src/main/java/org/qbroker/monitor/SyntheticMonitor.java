@@ -530,7 +530,7 @@ public class SyntheticMonitor extends Monitor {
 
     public static void main(String args[]) {
         String filename = null;
-        MonitorReport report = null;
+        Monitor monitor = null;
 
         if (args.length == 0) {
             printUsage();
@@ -556,28 +556,36 @@ public class SyntheticMonitor extends Monitor {
         if (filename == null)
             printUsage();
         else try {
+            long tm = System.currentTimeMillis();
             java.io.FileReader fr = new java.io.FileReader(filename);
             Map ph = (Map) org.qbroker.json.JSON2Map.parse(fr);
             fr.close();
 
-            report = (MonitorReport) new SyntheticMonitor(ph);
-            Map r = report.generateReport(0L);
+            monitor = new SyntheticMonitor(ph);
+            Map r = monitor.generateReport(0L);
             String str = (String) r.get("ReturnCode");
-            if ("0".equals(str))
-                System.out.println("returnCode: " + str);
+            if (str != null) {
+                Event event = monitor.performAction(0, tm, r);
+                if (event != null)
+                    event.print(System.out);
+                else if ("0".equals(str))
+                    System.out.println("returnCode: " + str);
+                else
+                    System.out.println("error: " + r.get("Error"));
+                if (r.containsKey("Title"))
+                    System.out.println("title: " + r.get("Title"));
+                if (r.containsKey("PageSource"))
+                    System.out.println("source: " + r.get("PageSource"));
+            }
             else
-                System.out.println("error: " + r.get("Error"));
-            if (r.containsKey("Title"))
-                System.out.println("title: " + r.get("Title"));
-            if (r.containsKey("PageSource"))
-                System.out.println("source: " + r.get("PageSource"));
-            if (report != null)
-                report.destroy();
+                System.out.println("failed to test");
+            if (monitor != null)
+                monitor.destroy();
         }
         catch (Exception e) {
             e.printStackTrace();
-            if (report != null)
-                report.destroy();
+            if (monitor != null)
+                monitor.destroy();
         }
     }
 

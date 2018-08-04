@@ -638,7 +638,7 @@ public class JMXQMonitor extends Monitor {
 
     public static void main(String args[]) {
         String filename = null;
-        MonitorReport report = null;
+        Monitor monitor = null;
 
         if (args.length == 0) {
             printUsage();
@@ -664,25 +664,31 @@ public class JMXQMonitor extends Monitor {
         if (filename == null)
             printUsage();
         else try {
+            long tm = System.currentTimeMillis();
             java.io.FileReader fr = new java.io.FileReader(filename);
             Map ph = (Map) org.qbroker.json.JSON2Map.parse(fr);
             fr.close();
 
-            report = (MonitorReport) new JMXQMonitor(ph);
-            Map r = report.generateReport(0L);
+            monitor = new JMXQMonitor(ph);
+            Map r = monitor.generateReport(0L);
             String str = (String) r.get("StateLabel");
-            if (str != null)
-                System.out.println(str + ": " + r.get("CurrentDepth") + " " +
-                    r.get("InMessages") + " " + r.get("OutMessages"));
+            if (str != null) {
+                Event event = monitor.performAction(0, tm, r);
+                if (event != null)
+                    event.print(System.out);
+                else
+                    System.out.println(str + ": " + r.get("CurrentDepth") +
+                        " " + r.get("InMessages") + " " + r.get("OutMessages"));
+            }
             else
                 System.out.println("failed to get queue stats");
-            if (report != null)
-                report.destroy();
+            if (monitor != null)
+                monitor.destroy();
         }
         catch (Exception e) {
             e.printStackTrace();
-            if (report != null)
-                report.destroy();
+            if (monitor != null)
+                monitor.destroy();
         }
     }
 

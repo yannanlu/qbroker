@@ -369,7 +369,6 @@ public class ParserNode extends Node {
         int[] ruleMap;
         long currentTime, wt;
         Object o = null;
-        Iterator iter;
         long count = 0;
         int mask, ii, sz;
         int i = 0, ic = 0, n, previousRid;
@@ -569,16 +568,16 @@ public class ParserNode extends Node {
                     inMessage.setJMSPriority(9-event.getPriority());
                     event.removeAttribute("priority");
                     text = event.removeAttribute("text");
-                    iter = event.getAttributeNames();
-                    while (iter.hasNext()) {
-                        key = (String) iter.next();
-                        value = event.getAttribute(key);
+                    for (String ky : event.getAttributeNames()) {
+                        if (ky == null && ky.length() <= 0)
+                            continue;
+                        value = event.getAttribute(ky);
                         if (value == null)
                             continue;
-                        ic = MessageUtils.setProperty(key, value, inMessage);
+                        ic = MessageUtils.setProperty(ky, value, inMessage);
                         if (ic != 0) {
                             new Event(Event.WARNING,
-                                "failed to set property of: " + key +
+                                "failed to set property of: " + ky +
                                 " for " + name).send();
                             i = FAILURE_OUT;
                         }
@@ -589,7 +588,7 @@ public class ParserNode extends Node {
                     Map h = (Map) o;
                     i = RESULT_OUT;
                     text = (String) h.remove("body");
-                    iter = h.keySet().iterator();
+                    Iterator iter = h.keySet().iterator();
                     while (iter.hasNext()) {
                         key = (String) iter.next();
                         o = h.get(key);

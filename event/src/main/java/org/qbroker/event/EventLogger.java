@@ -3,7 +3,6 @@ package org.qbroker.event;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Properties;
-import java.util.Iterator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Date;
@@ -41,7 +40,7 @@ public class EventLogger {
     }
 
     public static StringBuffer format(Event event) {
-        String key, value = null;
+        String value = null;
         StringBuffer logEntry = new StringBuffer();
         logEntry.append((String) event.attribute.get("priority"));
         logEntry.append(" ");
@@ -58,12 +57,10 @@ public class EventLogger {
             value = (String) event.attribute.get("text");
             logEntry.append((String) event.attribute.get("text"));
         }
-        Iterator iter = (event.attribute.keySet()).iterator();
         switch (event.logMode) {
           case Event.LOG_JMS:
           case Event.LOG_CENTRAL:
-            while (iter.hasNext()) {
-                key = (String) iter.next();
+            for (String key : event.attribute.keySet()) {
                 if (key == null || key.length() <= 0)
                     continue;
                 if (key.equals("priority")) continue;
@@ -83,8 +80,7 @@ public class EventLogger {
             }
             break;
           case Event.LOG_COMPACT:
-            while (iter.hasNext()) {
-                key = (String) iter.next();
+            for (String key : event.attribute.keySet()) {
                 if (key == null || key.length() <= 0)
                     continue;
                 if (key.equals("priority")) continue;
@@ -106,8 +102,7 @@ public class EventLogger {
             }
             break;
           default:
-            while (iter.hasNext()) {
-                key = (String) iter.next();
+            for (String key : event.attribute.keySet()) {
                 if (key == null || key.length() <= 0)
                     continue;
                 if (key.equals("priority")) continue;

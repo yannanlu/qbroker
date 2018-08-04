@@ -524,8 +524,15 @@ public class IncrementalMonitor extends Monitor {
                 throw(new IOException("web test failed on " + uri));
             }
 
-            if (returnCode == 0)
-                Util.split(dataBlock,pm,patternLF,(String)r.remove("Response"));
+            if (returnCode == 0) { // get content of http response
+                String text = (String) r.remove("Response");
+                if (text != null && (n = text.indexOf("\r\n\r\n")) > 0)
+                    text = text.substring(n+4);
+                else
+                    text = "";
+
+                Util.split(dataBlock, pm, patternLF, text);
+            }
             r.clear();
             break;
           case OBJ_SCRIPT:
@@ -1126,7 +1133,7 @@ public class IncrementalMonitor extends Monitor {
 
     public static void main(String[] args) {
         String filename = null;
-        MonitorReport report = null;
+        Monitor monitor = null;
 
         if (args.length <= 1) {
             printUsage();
@@ -1153,28 +1160,34 @@ public class IncrementalMonitor extends Monitor {
         if (filename == null)
             printUsage();
         else try {
+            long tm = System.currentTimeMillis();
             Object o;
             java.io.FileReader fr = new java.io.FileReader(filename);
             Map ph = (Map) org.qbroker.json.JSON2Map.parse(fr);
             fr.close();
 
-            report = (MonitorReport) new IncrementalMonitor(ph);
-            Map r = report.generateReport(0L);
+            monitor = new IncrementalMonitor(ph);
+            Map r = monitor.generateReport(tm);
             if ((o = r.get("LeadingNumber")) != null && o instanceof String) {
-                String block = (String) r.get("LeadingBlock");
-                System.out.println((String) o);
-                if (block != null)
-                    System.out.println(block);
+                Event event = monitor.performAction(0, tm, r);
+                if (event != null)
+                    event.print(System.out);
+                else {
+                    String block = (String) r.get("LeadingBlock");
+                    System.out.println((String) o);
+                    if (block != null)
+                        System.out.println(block);
+                }
             }
             else
                 System.out.println("failed to get the number");
-            if (report != null)
-                report.destroy();
+            if (monitor != null)
+                monitor.destroy();
         }
         catch (Exception e) {
             e.printStackTrace();
-            if (report != null)
-                report.destroy();
+            if (monitor != null)
+                monitor.destroy();
         }
     }
 

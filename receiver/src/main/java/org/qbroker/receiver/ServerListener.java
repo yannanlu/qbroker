@@ -4,7 +4,6 @@ package org.qbroker.receiver;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Iterator;
 import java.util.Date;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -562,8 +561,7 @@ public class ServerListener extends Receiver {
             return;
         }
         try {
-            Iterator iter;
-            String key, value;
+            String value;
             int ic;
             if (jaasLogin == null) {
                 msgStr = MessageUtils.processBody(msg, new byte[0]);
@@ -574,9 +572,9 @@ public class ServerListener extends Receiver {
             msg.setJMSPriority(9-event.getPriority());
             event.removeAttribute("priority");
             event.removeAttribute("text");
-            iter = event.getAttributeNames();
-            while (iter.hasNext()) {
-                key = (String) iter.next();
+            for (String key : event.getAttributeNames()) {
+                if (key == null || key.length() <= 0)
+                    continue;
                 value = event.getAttribute(key);
                 if (value == null)
                     continue;

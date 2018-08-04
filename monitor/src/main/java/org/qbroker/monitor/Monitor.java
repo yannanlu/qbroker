@@ -81,7 +81,7 @@ public abstract class Monitor implements MonitorReport, MonitorAction {
         if ((o = props.get("Type")) != null)
             type = (String) o;
 
-        template = new Template("##hostname##, ##HOSTNAME##");
+        template = new Template("##hostname## ##HOSTNAME## ##host## ##HOST##");
 
         if ((o = props.get("Description")) != null)
             description = MonitorUtils.substitute((String) o, template);

@@ -53,7 +53,7 @@ public abstract class Report implements MonitorReport {
         if ((o = props.get("Type")) != null)
             type = (String) o;
 
-        template = new Template("##hostname##, ##HOSTNAME##");
+        template = new Template("##hostname## ##HOSTNAME## ##host## ##HOST##");
 
         if ((o = props.get("StaticDependencyGroup")) != null &&
             o instanceof List) {

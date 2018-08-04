@@ -1086,15 +1086,12 @@ public class MsgServlet extends HttpServlet {
                 }
                 else if (i > 0 && message != null) { // got result back
                     ph = new HashMap<String, Object>();
-                    Iterator iter = ((Event) message).getAttributeNames();
-                    while (iter.hasNext()) {
-                        o = iter.next();
-                        if (o == null || !(o instanceof String))
+                    for (String ky  : ((Event) message).getAttributeNames()) {
+                        if (ky == null || ky.length() <= 0)
                             continue;
-                        key = (String) o;
-                        if ("text".equals(key))
+                        if ("text".equals(ky))
                             continue;
-                        ph.put(key, ((Event) message).getAttribute(key));
+                        ph.put(ky, ((Event) message).getAttribute(ky));
                     }
 
                     key = null;

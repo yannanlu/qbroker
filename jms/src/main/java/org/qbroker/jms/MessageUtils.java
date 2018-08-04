@@ -1746,8 +1746,7 @@ public class MessageUtils {
     public static Throwable parse(java.lang.reflect.Method parse, Object parser,
         String msgStr, Message message) {
         Object o;
-        Iterator iter;
-        String key, value;
+        String value;
         boolean isText;
         int ic;
         if (parse == null || msgStr == null || message == null)
@@ -1761,9 +1760,7 @@ public class MessageUtils {
                 Event event = (Event) o;
                 message.setJMSTimestamp(event.getTimestamp());
                 message.setJMSPriority(9-event.getPriority());
-                iter = event.getAttributeNames();
-                while (iter.hasNext()) {
-                    key = (String) iter.next();
+                for (String key : event.getAttributeNames()) {
                     value = event.getAttribute(key);
                     if (value == null)
                         continue;
@@ -1786,8 +1783,9 @@ public class MessageUtils {
                 event.clearAttributes();
             }
             else if (o instanceof Map) {
+                String key;
                 Map h = (Map) o;
-                iter = h.keySet().iterator();
+                Iterator iter = h.keySet().iterator();
                 while (iter.hasNext()) {
                     key = (String) iter.next();
                     o = h.get(key);

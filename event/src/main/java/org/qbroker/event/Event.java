@@ -5,7 +5,7 @@ package org.qbroker.event;
 import java.io.*;
 import java.util.Properties;
 import java.util.HashMap;
-import java.util.Iterator;
+import java.util.Set;
 import java.util.Date;
 import java.net.InetAddress;
 import org.qbroker.event.EventLogger;
@@ -223,8 +223,8 @@ public class Event implements org.qbroker.common.Event {
             attribute.put(name, value);
     }
 
-    public Iterator getAttributeNames() {
-        return attribute.keySet().iterator();
+    public Set<String> getAttributeNames() {
+        return attribute.keySet();
     }
 
     public void clearAttributes() {
@@ -453,16 +453,11 @@ public class Event implements org.qbroker.common.Event {
         defaultType = type;
     }
 
-    public void print(PrintStream stream) {
-        String key, value;
-        Iterator iter = (attribute.keySet()).iterator();
-
-        stream.println("Event Priority: "+priorityName());
-
-        while ( iter.hasNext() ) {
-            key = (String) iter.next();
-            value = (String) attribute.get(key);
-            stream.println(key + ": " + value);
+    public void print(PrintStream stream) { // for debugging purpose
+        for (String key : attribute.keySet()) {
+            if ("text".equals(key))
+                continue;
+            stream.println("\t" + key + ": " + (String) attribute.get(key));
         }
     }
 

@@ -634,8 +634,15 @@ public class AgeMonitor extends Monitor {
                 throw(new IOException("web test failed on " + uri));
             }
 
-            if (returnCode == 0)
-                Util.split(dataBlock,pm,patternLF,(String)r.remove("Response"));
+            if (returnCode == 0) { // get content of http response
+                String text = (String) r.remove("Response");
+                if (text != null && (n = text.indexOf("\r\n\r\n")) > 0)
+                    text = text.substring(n+4);
+                else
+                    text = "";
+
+                Util.split(dataBlock, pm, patternLF, text);
+            }
             r.clear();
             break;
           case OBJ_SCRIPT:
@@ -1619,7 +1626,7 @@ public class AgeMonitor extends Monitor {
 
     public static void main(String[] args) {
         String filename = null;
-        MonitorReport report = null;
+        Monitor monitor = null;
 
         if (args.length <= 1) {
             printUsage();
@@ -1646,32 +1653,38 @@ public class AgeMonitor extends Monitor {
         if (filename == null)
             printUsage();
         else try {
-            long tm = -1L;
+            long tm = System.currentTimeMillis();
             Object o;
             java.io.FileReader fr = new java.io.FileReader(filename);
             Map ph = (Map) org.qbroker.json.JSON2Map.parse(fr);
             fr.close();
 
-            report = (MonitorReport) new AgeMonitor(ph);
-            Map r = report.generateReport(0L);
+            monitor = new AgeMonitor(ph);
+            Map r = monitor.generateReport(tm);
+            TimeWindows tw = new TimeWindows((Map) ph.get("ActiveTime"));
             if ((o = r.get("SampleTime")) != null && o instanceof long[] &&
-                ((long[]) o).length > 0)
-                tm = ((long[]) o)[0];
-            if (tm > 0) {
-                String block = (String) r.get("LeadingBlock");
-                System.out.println(Event.dateFormat(new Date(tm)));
-                if (block != null)
-                    System.out.println(block);
+                ((long[]) o).length > 0) {
+                long mt = ((long[]) o)[0];
+                int status = tw.check(tm, mt);
+                Event event = monitor.performAction(status, tm, r);
+                if (event != null)
+                    event.print(System.out);
+                else {
+                    String block = (String) r.get("LeadingBlock");
+                    System.out.println(Event.dateFormat(new Date(mt)));
+                    if (block != null)
+                        System.out.println(block);
+                }
             }
             else
                 System.out.println("failed to get the age");
-            if (report != null)
-                report.destroy();
+            if (monitor != null)
+                monitor.destroy();
         }
         catch (Exception e) {
             e.printStackTrace();
-            if (report != null)
-                report.destroy();
+            if (monitor != null)
+                monitor.destroy();
         }
     }
 

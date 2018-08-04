@@ -2875,19 +2875,17 @@ public class QFlow implements Service, Runnable {
                         new Event(Event.DEBUG, name + " got an escalation: " +
                             EventUtils.compact(event)).send();
                     StringBuffer strBuf = new StringBuffer();
-                    Iterator iter = event.getAttributeNames();
-                    while (iter.hasNext()) { // format into a text
-                        key = (String) iter.next();
-                        if (key == null || key.length() <= 0)
+                    for (String ky : event.getAttributeNames()) { // format
+                        if (ky == null || ky.length() <= 0)
                             continue;
-                        if ("name".equals(key))
+                        if ("name".equals(ky))
                             continue;
                         strBuf.append(Event.ITEM_SEPARATOR);
-                        strBuf.append(key);
+                        strBuf.append(ky);
                         strBuf.append(Event.ITEM_SEPARATOR);
                         key = Utils.doSearchReplace(Event.ITEM_SEPARATOR,
                             Event.ESCAPED_ITEM_SEPARATOR,
-                            event.getAttribute(key));
+                            event.getAttribute(ky));
                         strBuf.append(key);
                     }
                     key = "Event(" + Event.ITEM_SEPARATOR + "): name" +

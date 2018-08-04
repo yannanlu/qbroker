@@ -1,6 +1,5 @@
 package org.qbroker.jms;
 
-import java.util.Iterator;
 import javax.jms.Message;
 import javax.jms.BytesMessage;
 import javax.jms.TextMessage;
@@ -50,8 +49,7 @@ public class TextEvent extends JMSEvent implements javax.jms.TextMessage {
     /** returns a TextEvent for the event */
     public static TextEvent toTextEvent(Event event) throws JMSException {
         TextEvent msg = null;
-        String key, value;
-        Iterator iter;
+        String value;
         if (event == null)
             return null;
         value = event.getAttribute("text");
@@ -62,9 +60,10 @@ public class TextEvent extends JMSEvent implements javax.jms.TextMessage {
         msg.setJMSTimestamp(event.getTimestamp());
         // set logMode as a signature of toEvent
         msg.logMode = LOG_JMS;
-        iter = event.getAttributeNames();
-        while (iter.hasNext()) { // COMPACT mode with priority and text
-            key = (String) iter.next();
+        for (String key : event.getAttributeNames()) {
+            // COMPACT mode with priority and text
+            if (key == null || key.length() <= 0)
+                continue;
             value = event.getAttribute(key);
             if (value == null)
                 continue;

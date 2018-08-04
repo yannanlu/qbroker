@@ -62,6 +62,7 @@ public class GenericList extends Report {
     private TextSubstitution tsub = null;
     private int oid;
     private int resultType = Utils.RESULT_JSON;
+    private boolean isString = false;
     Pattern patternLF = null;
     private Pattern[][] aPatternGroup = null;
     private Pattern[][] xPatternGroup = null;
@@ -145,14 +146,11 @@ public class GenericList extends Report {
                 u.getScheme()));
 
         if ((o = props.get("KeyTemplate")) != null) {
-            if (oid == OBJ_PCF || oid == OBJ_SONIC || oid == OBJ_REQ) {
-                str = MonitorUtils.select(o);
-                str = MonitorUtils.substitute(str, template);
-                temp = new Template(str);
-            }
-            else
-                throw(new IllegalArgumentException("KeyTemplate is not " +
-                    "supported for " + uri));
+            str = MonitorUtils.select(o);
+            str = MonitorUtils.substitute(str, template);
+            temp = new Template(str);
+            if ("##body##".equals(str))
+                isString = true;
         }
         if ((o = props.get("KeySubstitution")) != null) {
             str = MonitorUtils.select(o);
@@ -478,11 +476,17 @@ public class GenericList extends Report {
             }
             else {
                 r.clear();
-                throw(new IOException("web test failed on " + uri));
+                throw(new IOException("web request failed on " + uri));
             }
 
-            if (returnCode == 0)
-                n = getResult(dataBlock, resultType, (String) r.get("Output"));
+            if (returnCode == 0) { // get content of http response
+                String text = (String) r.remove("Response");
+                if (text != null && (n = text.indexOf("\r\n\r\n")) > 0)
+                    text = text.substring(n+4);
+                else
+                    text = "";
+                n = getResult(dataBlock, resultType, text);
+            }
             r.clear();
             break;
           case OBJ_SCRIPT:
@@ -575,7 +579,7 @@ public class GenericList extends Report {
             break;
         }
 
-        if (temp != null)
+        if (temp != null) // save original result to Data for private report
             report.put("Data", dataBlock);
         else
             report.put("List", dataBlock);
@@ -595,6 +599,30 @@ public class GenericList extends Report {
                     else
                         dataBlock.remove(i);
                 }
+            }
+            else if (isString) { // list of strings
+                List<String> list = new ArrayList<String>();
+                report.put("List", list);
+                keys = new String[n];
+                int k = 0;
+                for (int i=n-1; i>=0; i--) {
+                    str = (String) dataBlock.get(i);
+                    if (str == null || str.length() <= 0) {
+                        dataBlock.remove(i);
+                        continue;
+                    }
+                    if (MonitorUtils.filter(str, aPatternGroup, pm, true) &&
+                        !MonitorUtils.filter(str, xPatternGroup, pm, false)) {
+                        if (tsub != null)
+                            keys[k++] = tsub.substitute(str);
+                        else
+                            keys[k++] = str;
+                    }
+                    else
+                        dataBlock.remove(i);
+                }
+                for (int i=k-1; i>=0; i--) // reverse the order
+                    list.add(keys[i]);
             }
             else { // list of maps
                 List<String> list = new ArrayList<String>();

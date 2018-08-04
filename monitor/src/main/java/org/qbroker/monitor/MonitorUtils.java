@@ -56,9 +56,10 @@ public class MonitorUtils {
     public final static String JAVA_VERSION =
         System.getProperty("java.specification.version");
     private final static String hostname = Event.getHostName().toLowerCase();
-    private final static Map defaultMap = new HashMap();
+    private final static Map<String, String> defaultMap =
+        new HashMap<String, String>();
     private final static Template defaultTemplate =
-        new Template("##hostname##, ##HOSTNAME##, ##owner##, ##pid##");
+        new Template("##hostname## ##HOSTNAME## ##host## ##HOST## ##owner## ##pid##");
     private final static int[] prime = {2, 3, 5, 7, 11, 13, 17, 19,
         23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67,
         71, 73, 79, 83, 89, 97, 101};
@@ -71,8 +72,12 @@ public class MonitorUtils {
     }
 
     static {
+        int i = hostname.indexOf('.');
+        String host = (i > 0) ? hostname.substring(0, i) : hostname;
         defaultMap.put("hostname", hostname);
         defaultMap.put("HOSTNAME", hostname.toUpperCase());
+        defaultMap.put("host", host);
+        defaultMap.put("HOST", host.toUpperCase());
         defaultMap.put("owner", USER_NAME);
         defaultMap.put("pid", String.valueOf(Event.getPID()));
     }

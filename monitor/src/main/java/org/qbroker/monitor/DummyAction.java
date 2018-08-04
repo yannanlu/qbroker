@@ -37,9 +37,12 @@ public class DummyAction implements MonitorAction {
 
     public DummyAction(Map props) {
         Object o;
+        Template template;
         int n;
+
         if ((o = props.get("Name")) == null)
             throw(new IllegalArgumentException("Name is not defined"));
+
         name = (String) o;
         site = MonitorUtils.select(props.get("Site"));
         category = MonitorUtils.select(props.get("Category"));
@@ -48,7 +51,7 @@ public class DummyAction implements MonitorAction {
         else
             type = "DummyAction";
 
-        Template template = new Template("##hostname##, ##HOSTNAME##");
+        template = new Template("##hostname## ##HOSTNAME## ##host## ##HOST##");
 
         if ((o = props.get("Description")) != null)
             description = MonitorUtils.substitute((String) o, template);

@@ -3,6 +3,17 @@ package org.qbroker.flow;
 /* ReleaseTag.java - release tag for all the packages of qbroker */
 
 /**
+ * V1.2.10 (2018/08/04): fixed the issue with HTTP data source for GenericList,
+ * AgeMonitor, NumberMonitor and IncrementalMonitor, updated comments on
+ * ConfigList and ConfigTemplate, added isString to GenericList to support
+ * private report on text content, added ServiceMonitor to monitor services
+ * by query the status page of monit, changed getAttributeNames() to return
+ * a Set of Strings instead of Iterator for Event, updated other classes due to
+ * this API change, added a call to performAction() for those monitors with
+ * the static method of main(), added ##host## and ##HOST## to default
+ * Template in MonitorUtils, Monitor and Report, added a map wrapper on string
+ * items for private reports in ConfigTemplate 
+ *<br/>
  * V1.2.9 (2018/06/09): removed the space between release version and "V" from
  * ReleaseTag, added the support of base64 encoded names for checkpointing to
  * MonintorGroup and Node, changed CheckpointTimeout to CheckpointExpration for
@@ -209,7 +220,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V1.2.9 2018/06/09 11:47:03";
+    private static String ReleaseTAG = "QBroker V1.2.10 2018/08/04 10:43:11";
 
     public ReleaseTag() {
     }

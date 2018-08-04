@@ -77,9 +77,8 @@ public class EventUtils {
      */
     public static String pretty(Event event, Map change) {
         Object o;
-        String key, value;
-        HashMap attribute;
-        Iterator iter;
+        String value;
+        HashMap<String, Object> attribute;
         StringBuffer strBuf;
         if (event == null || (attribute = event.attribute) == null)
             return null;
@@ -87,9 +86,7 @@ public class EventUtils {
             change = emptyMap;
 
         strBuf = new StringBuffer();
-        iter = (attribute.keySet()).iterator();
-        while (iter.hasNext()) {
-            key = (String) iter.next();
+        for (String key : attribute.keySet()) {
             if (key == null || key.length() <= 0)
                 continue;
             if (change.containsKey(key)) {
@@ -123,7 +120,8 @@ public class EventUtils {
             }
         }
         if (change.size() > 0) { // try to append new attributes
-            iter = (change.keySet()).iterator();
+            String key;
+            Iterator iter = (change.keySet()).iterator();
             while (iter.hasNext()) {
                 key = (String) iter.next();
                 if (key == null || key.length() <= 0)
@@ -165,9 +163,8 @@ public class EventUtils {
      */
     public static String compact(Event event, Map change) {
         Object o;
-        String key, value;
-        HashMap attribute;
-        Iterator iter;
+        String value;
+        HashMap<String, Object> attribute;
         StringBuffer strBuf;
         if (event == null || (attribute = event.attribute) == null)
             return null;
@@ -175,9 +172,7 @@ public class EventUtils {
             change = emptyMap;
 
         strBuf = new StringBuffer();
-        iter = (attribute.keySet()).iterator();
-        while (iter.hasNext()) {
-            key = (String) iter.next();
+        for (String key : attribute.keySet()) {
             if (key == null || key.length() <= 0 || "site".equals(key) ||
                 "category".equals(key) || "gid".equals(key))
                 continue;
@@ -212,7 +207,8 @@ public class EventUtils {
             }
         }
         if (change.size() > 0) { // try to append new attributes
-            iter = (change.keySet()).iterator();
+            String key;
+            Iterator iter = (change.keySet()).iterator();
             while (iter.hasNext()) {
                 key = (String) iter.next();
                 if (key == null || key.length() <= 0)
@@ -259,9 +255,8 @@ public class EventUtils {
      */
     public static String postable(Event event, Map change) {
         Object o;
-        String key, value;
-        HashMap attribute;
-        Iterator iter;
+        String value;
+        HashMap<String, Object> attribute;
         StringBuffer strBuf, content;
         boolean skip = false;
         if (event == null || (attribute = event.attribute) == null)
@@ -340,10 +335,8 @@ public class EventUtils {
         strBuf.append("&content=");
         int number = 0;
         content = new StringBuffer();
-        iter = (attribute.keySet()).iterator();
-        while (iter.hasNext()) {
+        for (String key : attribute.keySet()) {
             skip = false;
-            key = (String) iter.next();
             if (key == null || key.length() <= 0)
                 continue;
             switch (key.charAt(0)) {
@@ -416,7 +409,8 @@ public class EventUtils {
             number ++;
         }
         if (change.size() > 0) { // try to append new attributes
-            iter = (change.keySet()).iterator();
+            String key;
+            Iterator iter = (change.keySet()).iterator();
             while (iter.hasNext()) {
                 key = (String) iter.next();
                 if (key == null || key.length() <= 0)
@@ -477,9 +471,8 @@ public class EventUtils {
      */
     public static String collectible(Event event, Map change) {
         Object o;
-        String key, value;
-        HashMap attribute;
-        Iterator iter;
+        String value;
+        HashMap<String, Object> attribute;
         StringBuffer strBuf, content;
         boolean skip = false;
         if (event == null || (attribute = event.attribute) == null)
@@ -557,10 +550,8 @@ public class EventUtils {
         strBuf.append("): ");
         int number = 0;
         content = new StringBuffer();
-        iter = (attribute.keySet()).iterator();
-        while (iter.hasNext()) {
+        for (String key : attribute.keySet()) {
             skip = false;
-            key = (String) iter.next();
             if (key == null || key.length() <= 0)
                 continue;
             switch (key.charAt(0)) {
@@ -633,7 +624,8 @@ public class EventUtils {
             number ++;
         }
         if (change.size() > 0) { // try to append new attributes
-            iter = (change.keySet()).iterator();
+            String key;
+            Iterator iter = (change.keySet()).iterator();
             while (iter.hasNext()) {
                 key = (String) iter.next();
                 if (key == null || key.length() <= 0)

@@ -710,7 +710,7 @@ public class QueueMonitor extends Monitor {
 
     public static void main(String args[]) {
         String filename = null;
-        Monitor report = null;
+        Monitor monitor = null;
 
         if (args.length == 0) {
             printUsage();
@@ -736,25 +736,31 @@ public class QueueMonitor extends Monitor {
         if (filename == null)
             printUsage();
         else try {
+            long tm = System.currentTimeMillis();
             java.io.FileReader fr = new java.io.FileReader(filename);
             Map ph = (Map) org.qbroker.json.JSON2Map.parse(fr);
             fr.close();
 
-            report = new QueueMonitor(ph);
-            Map r = report.generateReport(0L);
+            monitor = new QueueMonitor(ph);
+            Map r = monitor.generateReport(tm);
             String str = (String) r.get("CurrentDepth");
-            if (str != null)
-                System.out.println(str + " " + r.get("IppsCount") + " " +
-                    r.get("OppsCount") + " " + r.get("MaxDepth"));
+            if (str != null) {
+                Event event = monitor.performAction(0, tm, r);
+                if (event != null)
+                    event.print(System.out);
+                else 
+                    System.out.println(str + " " + r.get("IppsCount") + " " +
+                        r.get("OppsCount") + " " + r.get("MaxDepth"));
+            }
             else
                 System.out.println("failed to get queue stats");
-            if (report != null)
-                report.destroy();
+            if (monitor != null)
+                monitor.destroy();
         }
         catch (Exception e) {
             e.printStackTrace();
-            if (report != null)
-                report.destroy();
+            if (monitor != null)
+                monitor.destroy();
         }
     }
 

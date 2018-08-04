@@ -4,9 +4,9 @@ package org.qbroker.node;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Iterator;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Iterator;
 import java.util.Date;
 import java.lang.reflect.InvocationTargetException;
 import javax.jms.Message;
@@ -317,7 +317,6 @@ public class EventMonitor extends Node {
     protected Map<String, Object> initRuleset(long tm, Map ph, long[] ruleInfo){
         Object o;
         Map<String, Object> rule;
-        Iterator iter;
         List list;
         String key, str, ruleName, preferredOutName;
         long[] outInfo;
@@ -478,7 +477,7 @@ public class EventMonitor extends Node {
 
         // for StringProperty
         if ((o = ph.get("StringProperty")) != null && o instanceof Map) {
-            iter = ((Map) o).keySet().iterator();
+            Iterator iter = ((Map) o).keySet().iterator();
             k = ((Map) o).size();
             String[] pn = new String[k];
             k = 0;
@@ -715,10 +714,7 @@ public class EventMonitor extends Node {
                             map.put(ky, event.getAttribute(ky));
                     }
                     else { // copy all attributes over
-                        String str;
-                        Iterator iter = event.getAttributeNames();
-                        while (iter.hasNext()) {
-                           str = (String) iter.next();
+                        for (String str : event.getAttributeNames()) {
                            if (str == null || str.length() <= 0 ||
                                "text".equals(str))
                                continue;

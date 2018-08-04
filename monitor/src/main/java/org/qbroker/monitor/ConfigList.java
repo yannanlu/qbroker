@@ -21,7 +21,10 @@ import org.qbroker.event.Event;
  * items of the list from a repository or a data source. Each downloaded
  * configuration has two identifiers, a unique id as the item in the list and
  * a unique name as the key for the object. ConfigList provides a set of
- * methods to maintain and manage these configurations.
+ * methods to maintain and manage these configurations loaded from a remote
+ * repository or a remote data source.
+ *<br/><br/>
+ * One of the use cases is the support of external rulesets for message nodes.
  *<br/>
  * @author yannanlu@yahoo.com
  */

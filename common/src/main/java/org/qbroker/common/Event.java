@@ -2,7 +2,7 @@ package org.qbroker.common;
 
 /* Event.java - an Interface for a generic event */
 
-import java.util.Iterator;
+import java.util.Set;
 
 /**
  * Event is the interfact for a generic event.
@@ -32,7 +32,7 @@ public interface Event {
     /** clears all attributes of the event */
     public void clearAttributes();
     /** returns the iterator for all the keys of attributes */
-    public Iterator getAttributeNames();
+    public Set<String> getAttributeNames();
     /** tests if the attribute exists on the key */
     public boolean attributeExists(String key);
 

@@ -1334,15 +1334,10 @@ public class QServlet extends HttpServlet {
                 }
                 else if (i > 0 && message != null) { // got result back
                     ph = new HashMap<String, Object>();
-                    Iterator iter = ((Event) message).getAttributeNames();
-                    while (iter.hasNext()) {
-                        o = iter.next();
-                        if (o == null || !(o instanceof String))
+                    for (String ky : ((Event) message).getAttributeNames()) {
+                        if ("text".equals(ky))
                             continue;
-                        key = (String) o;
-                        if ("text".equals(key))
-                            continue;
-                        ph.put(key, ((Event) message).getAttribute(key));
+                        ph.put(ky, ((Event) message).getAttribute(ky));
                     }
 
                     key = null;
