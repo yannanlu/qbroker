@@ -4,11 +4,15 @@ package org.qbroker.monitor;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.HashSet;
 import java.util.Date;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import org.apache.oro.text.regex.Perl5Compiler;
+import org.apache.oro.text.regex.Perl5Matcher;
 import org.qbroker.common.Evaluation;
 import org.qbroker.common.TimeWindows;
 import org.qbroker.common.Template;
@@ -35,8 +39,9 @@ import org.qbroker.monitor.MonitorReport;
 public class ServiceMonitor extends Monitor {
     private String uri, serviceName, serviceType;
     private int previousState;
-    private Template temp;
     private MonitorReport reporter = null;
+    private Perl5Matcher pm = null;
+    private List<Map> mapList = null;
     private Map<String, TextSubstitution> tSub;
     private boolean isScript = false;
     private String[] attrs = null;
@@ -64,8 +69,11 @@ public class ServiceMonitor extends Monitor {
         "monitor",
         "pid",
         "cpu_percent",
+        "cpu_percenttotal",
         "memory_percent",
+        "memory_percenttotal",
         "memory_kilobyte",
+        "memory_kilobytetotal",
         "children",
         "threads",
         "uid",
@@ -225,26 +233,63 @@ public class ServiceMonitor extends Monitor {
             attrs = systemAttrs;
         }
 
+        Perl5Matcher pm = new Perl5Matcher();
         if ((o = MonitorUtils.select(props.get("EvalTemplate"))) != null) {
+            Map<String, Object> map = new HashMap<String, Object>();
+            mapList = new ArrayList<Map>();
+            try {
+                Perl5Compiler pc = new Perl5Compiler();
+                map.put("Pattern", pc.compile(".")); 
+            }
+            catch (Exception e) {
+                throw(new IllegalArgumentException(
+                    "failed to compile patterns: " + e.toString()));
+            }
+            map.put("Template",
+                new Template(MonitorUtils.substitute((String) o, template)));
+            mapList.add(map); 
+        }
+        else if ((o = props.get("EvalMappingRule")) == null)
+            throw(new IllegalArgumentException(
+                "Neither EvalTemplate nor EvalMappingRule is defined"));
+        else if (!(o instanceof List))
+            throw(new IllegalArgumentException("EvalMappingRule is not List"));
+        else try {
+            Perl5Compiler pc = new Perl5Compiler();
+            mapList = MonitorUtils.getGenericMapList((List) o, pc, template);
+        }
+        catch (Exception e) {
+            throw(new IllegalArgumentException("failed to compile patterns: " +
+                e.toString()));
+        }
+
+        if (mapList == null || mapList.size() <= 0)
+            throw(new IllegalArgumentException("EvalMappingRule is empty"));
+        else { // check each rule
             HashSet<String> hset = new HashSet<String>();
+            Template temp;
+            int i = 0;
             for (String key : attrs)
                 hset.add(key);
-            temp = new Template(MonitorUtils.substitute((String) o, template));
-            if (temp.numberOfFields() <= 0)
-                throw(new IllegalArgumentException("EvalTemplate is empty"));
-            for (String key : temp.getAllFields()) { // verify each field
-                if ("state".equals(key) || "monit".equals(key))  
-                    continue;
-                if (!hset.contains(key)) {
-                    hset.clear();
-                    throw(new IllegalArgumentException("found illegal field, " +
-                        key + ", in EvalTemplate"));
+            for (Map map : mapList) { // check each template
+                i ++;
+                temp = (Template) map.get("Template");
+                if (temp == null || temp.numberOfFields() <= 0)
+                    throw(new IllegalArgumentException("EvalTemplate, " + i +
+                        ", is either null or empty"));
+                for (String key : temp.getAllFields()) { // verify each field
+                    if ("state".equals(key) || "monit".equals(key))  
+                        continue;
+                    if (!hset.contains(key)) {
+                        hset.clear();
+                        throw(new IllegalArgumentException(
+                            "found illegal field, "+ key +
+                            ", in EvalTemplate " + i));
+                    }
                 }
             }
             hset.clear();
         }
-        else
-            throw(new IllegalArgumentException("EvalTemplate is not defined"));
 
         tSub = new HashMap<String, TextSubstitution>();
         for (String key : attrs) {
@@ -362,6 +407,7 @@ public class ServiceMonitor extends Monitor {
                 if ("status".equals(key) || "monitor".equals(key))
                     continue;
                 if ((i = key.indexOf("_")) > 0) {
+                    String value;
                     str = key.substring(0, i);
                     j = text.indexOf("<"+str+">");
                     k = text.indexOf("</"+str+">");
@@ -370,11 +416,19 @@ public class ServiceMonitor extends Monitor {
                     else
                         throw(new IllegalArgumentException(name +
                             " failed to parse data for "+str+ ": " +j+ "/" +k));
-                    report.put(key,
-                        tSub.get(key.substring(i+1)).substitute(str)); 
+                    value = tSub.get(key.substring(i+1)).substitute(str);
+                    if (str.equals(value)) // no such attribute
+                        report.put(key, "-1");
+                    else
+                        report.put(key, value);
                 }
-                else
-                    report.put(key, tSub.get(key).substitute(text)); 
+                else {
+                    str = tSub.get(key).substitute(text);
+                    if (text.equals(str)) // no such attribute
+                        report.put(key, "-1");
+                    else
+                        report.put(key, str); 
+                }
             }
         }
         else
@@ -478,14 +532,25 @@ public class ServiceMonitor extends Monitor {
                     if (step > 0)
                         step = 0;
                 }
-                strBuf.append("service does not exist");
+                strBuf.append(serviceType + " of " + serviceName +
+                    " does not exist");
                 if (previousState != state)
                     actionCount = 1;
             }
             else { // with stats
-                expr = temp.substitute(temp.copyText(), latest);
-                o = Evaluation.evaluate(expr);
-                if (o == null || !(o instanceof Integer))  { // exception
+                Template temp = MonitorUtils.getMappedTemplate(serviceName,
+                    mapList, pm);
+                if (temp != null) {
+                    expr = temp.substitute(temp.copyText(), latest);
+                    o = Evaluation.evaluate(expr);
+                }
+                if (temp == null) { // no template found
+                    level = Event.NOTICE;
+                    strBuf.append("Exception! failed to find EvalTemplate");
+                    if (previousState != state)
+                        actionCount = 1;
+                }
+                else if (o == null || !(o instanceof Integer))  { // exception
                     level = Event.NOTICE;
                     strBuf.append("Exception! failed to evaluate data: "+expr);
                     if (previousState != state)
@@ -493,7 +558,8 @@ public class ServiceMonitor extends Monitor {
                 }
                 else if (((Integer) o).intValue() == 0) { // ok
                     if (previousState != state) {
-                        strBuf.append("service is OK");
+                        strBuf.append(serviceType + " of " + serviceName +
+                            " is OK");
                         actionCount = 1;
                         if (normalStep > 0)
                             step = normalStep;
@@ -505,7 +571,8 @@ public class ServiceMonitor extends Monitor {
                         if (step > 0)
                             step = 0;
                     }
-                    strBuf.append("service is in error condition");
+                    strBuf.append(serviceType + " of " + serviceName +
+                        " is in error condition");
                     if (previousState != state)
                         actionCount = 1;
                 }
@@ -694,6 +761,12 @@ public class ServiceMonitor extends Monitor {
 
     public void destroy() {
         super.destroy();
+        if (mapList != null) {
+            for (Map map : mapList)
+                map.clear();
+            mapList.clear();
+            mapList = null;
+        }
         if (reporter != null)
             reporter.destroy();
         tSub.clear();

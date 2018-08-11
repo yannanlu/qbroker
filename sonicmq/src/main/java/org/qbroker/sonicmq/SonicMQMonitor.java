@@ -11,7 +11,6 @@ import java.util.Date;
 import javax.management.ObjectName;
 import javax.management.MalformedObjectNameException;
 import javax.management.JMException;
-import org.apache.oro.text.regex.Pattern;
 import org.apache.oro.text.regex.Perl5Compiler;
 import org.apache.oro.text.regex.Perl5Matcher;
 import java.net.URI;
@@ -115,7 +114,7 @@ public class SonicMQMonitor extends Monitor {
 
         if((o = props.get("UserMappingRule")) != null && o instanceof List) try{
             Perl5Compiler pc = new Perl5Compiler();
-            mapList = MonitorUtils.getGenericMapList((List) o, pc);
+            mapList = MonitorUtils.getGenericMapList((List) o, pc, template);
         }
         catch (Exception e) {
             throw(new IllegalArgumentException("failed to compile patterns: " +
@@ -843,6 +842,8 @@ public class SonicMQMonitor extends Monitor {
             cache = null;
         }
         if (mapList != null) {
+            for (Map map : mapList) 
+                map.clear();
             mapList.clear();
             mapList = null;
         }

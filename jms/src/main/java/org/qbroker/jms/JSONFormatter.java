@@ -1120,8 +1120,8 @@ public class JSONFormatter {
     /**
      * It merges json data generated from the template on the message to the
      * the json data at the json path of the json payload. There are two
-     * options, 1 for merge and 0 for union. If the json payload has been
-     * changed, it returns a non-null object. Otherwise, it returns null for
+     * options, 1 for merge and 0 for union. Upon success, it returns number
+     * of objects changed. Otherwise, it returns -1 for failure or 0 for
      * no change.
      */
     private int merge(int option, int id, Object obj, Message msg)
@@ -1820,7 +1820,7 @@ public class JSONFormatter {
 
     public static void main(String args[]) {
         String filename = null, path = null, str, key = null;
-        Map params = new HashMap();
+        Map<String, String> params = new HashMap<String, String>();
         JSONFormatter ft;
         Message msg;
         int k;
@@ -1841,6 +1841,10 @@ public class JSONFormatter {
                 if (i+1 < args.length)
                     filename = args[++i];
                 break;
+              case 'k':
+                if (i+1 < args.length)
+                    key = args[++i];
+                break;
               case 'p':
                 if (i+1 < args.length) {
                     str = args[++i];
@@ -1848,8 +1852,6 @@ public class JSONFormatter {
                         params.put(str.substring(0, k),
                             str.substring(k+1).trim());
                     }
-                    else
-                        key = str;
                 }
                 break;
               default:
@@ -1868,12 +1870,10 @@ public class JSONFormatter {
             ph.put("name", path);
             ft = new JSONFormatter(ph);
             msg = new TextEvent();
-            Iterator iter = params.keySet().iterator();
-            while (iter.hasNext()) { // set parameters
-                str = (String) iter.next();
-                if (str == null || str.length() <= 0)
+            for (String ky : params.keySet()) { // set parameters
+                if (ky == null || ky.length() <= 0)
                     continue;
-                ((TextEvent) msg).setAttribute(str, (String) params.get(str));
+                ((TextEvent) msg).setAttribute(ky, params.get(ky));
             }
             in = new FileReader(filename);
             Object o = JSON2FmModel.parse(in);
@@ -1929,7 +1929,7 @@ public class JSONFormatter {
                 }
             }
             else
-                System.out.println("json is not a container");
+                System.out.println("json content is not a container");
         }
         catch (Exception e) {
             e.printStackTrace();
@@ -1941,8 +1941,9 @@ public class JSONFormatter {
         System.out.println("JSONFormatter: format JSON data via a ruleset");
         System.out.println("Usage: java org.qbroker.jms.JSONFormatter -f jsonfile -r rulefile");
         System.out.println("  -?: print this message");
-        System.out.println("  -f: json data file");
-        System.out.println("  -r: json rule file");
-        System.out.println("  -p: parameter of key:value or just a key");
+        System.out.println("  -f: path to the json data file");
+        System.out.println("  -r: path to the json rule file");
+        System.out.println("  -p: parameter of key:value for the msg");
+        System.out.println("  -k: key to display the attribute value");
     }
 }

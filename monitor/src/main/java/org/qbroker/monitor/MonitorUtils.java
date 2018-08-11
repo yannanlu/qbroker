@@ -1023,12 +1023,13 @@ public class MonitorUtils {
     }
 
     /**
-     * It returns a list of maps with each map contains two objects of
-     * Pattern and TextSubstitution. The list is for mapping a name into
-     * a new name with the hit pattern to select the substitution.
+     * It returns a list of maps with each map contains three objects of
+     * Pattern, TextSubstitution and Template. The list is for mapping a name
+     * into a new name with the hit pattern to select the substitution and/or
+     * the template.
      */
-    public static List<Map> getGenericMapList(List list,
-        Perl5Compiler pc) throws MalformedPatternException {
+    public static List<Map> getGenericMapList(List list, Perl5Compiler pc,
+        Template template) throws MalformedPatternException {
         String patternStr, expStr;
         Map<String, Object> ph;
         List<Map> mapList = new ArrayList<Map>();
@@ -1037,16 +1038,22 @@ public class MonitorUtils {
             if (!(obj instanceof Map))
                 continue;
             Map map = (Map) obj;
-            patternStr = (String) map.get("Pattern");
+            patternStr = select(map.get("Pattern"));
             if (patternStr == null || patternStr.length() <= 0)
                 continue;
-            expStr = (String) map.get("Substitution");
-            if (expStr == null || expStr.length() <= 0)
-                continue;
+            patternStr = substitute(patternStr, template);
             ph = new HashMap<String, Object>();
             ph.put("Pattern", pc.compile(patternStr));
-            ph.put("Substitution",
-                new TextSubstitution(patternStr, expStr));
+            expStr = select(map.get("Substitution"));
+            if (expStr != null && expStr.length() > 0) {
+                expStr = substitute(expStr, template);
+                ph.put("Substitution", new TextSubstitution(patternStr,expStr));
+            }
+            expStr = select(map.get("Template"));
+            if (expStr != null && expStr.length() > 0) {
+                expStr = substitute(expStr, template);
+                ph.put("Template", new Template(patternStr, expStr));
+            }
             mapList.add(ph);
         }
 
@@ -1060,8 +1067,8 @@ public class MonitorUtils {
      * The result will be returned as the new name. Otherwise, the original
      * name will be returned.
      */
-    public static String getMappedName(String name,
-        List<Map> mapList, Perl5Matcher pm) {
+    public static String getMappedName(String name, List<Map> mapList,
+        Perl5Matcher pm) {
         Pattern pattern;
         TextSubstitution tsub;
 
@@ -1073,14 +1080,40 @@ public class MonitorUtils {
             pattern = (Pattern) map.get("Pattern");
             if (pattern == null)
                 continue;
-            tsub = (TextSubstitution) map.get("Substitution");
-            if (tsub == null)
-                continue;
             if (!pm.contains(name, pattern))
                 continue;
-            return tsub.substitute(name);
+            tsub = (TextSubstitution) map.get("Substitution");
+            if (tsub == null)
+                return name;
+            else
+                return tsub.substitute(name);
         }
 
         return name;
+    }
+
+    /**
+     * Based on a list of generic name mapping rules, it trys to match the 
+     * given name with the pattern to select the template. Once it finds
+     * a match, the template will be returned. Otherwise, it returns null.
+     */
+    public static Template getMappedTemplate(String name, List<Map> mapList,
+        Perl5Matcher pm) {
+        Pattern pattern;
+
+        if (mapList == null || mapList.isEmpty() || name == null ||
+            name.length() <= 0)
+            return null;
+
+        for (Map map : mapList) {
+            pattern = (Pattern) map.get("Pattern");
+            if (pattern == null)
+                continue;
+            if (!pm.contains(name, pattern))
+                continue;
+            return (Template) map.get("Template");
+        }
+
+        return null;
     }
 }

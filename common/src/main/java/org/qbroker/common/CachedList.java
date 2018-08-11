@@ -288,7 +288,7 @@ public class CachedList extends AssetList {
     }
 
     /**
-     * returns an Iterator for all cached topics no matter whether they have
+     * returns a Set for all cached topics no matter whether they have
      * expired or not.
      */
     public Set<String> topicSet() {
