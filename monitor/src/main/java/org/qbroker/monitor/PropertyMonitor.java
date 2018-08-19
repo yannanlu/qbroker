@@ -28,7 +28,6 @@ import java.net.URISyntaxException;
 import org.apache.oro.text.regex.Pattern;
 import org.apache.oro.text.regex.MatchResult;
 import org.apache.oro.text.regex.Perl5Compiler;
-import org.apache.oro.text.regex.Perl5Matcher;
 import org.apache.oro.text.regex.MalformedPatternException;
 import org.qbroker.common.Service;
 import org.qbroker.common.Utils;
@@ -235,7 +234,6 @@ public class PropertyMonitor extends Monitor {
 
             try {
                 Perl5Compiler pc = new Perl5Compiler();
-                pm = new Perl5Matcher();
                 pattern = pc.compile((String) o);
             }
             catch (Exception e) {

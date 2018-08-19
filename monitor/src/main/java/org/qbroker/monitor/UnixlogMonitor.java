@@ -13,7 +13,6 @@ import java.net.URISyntaxException;
 import org.apache.oro.text.regex.Pattern;
 import org.apache.oro.text.regex.MatchResult;
 import org.apache.oro.text.regex.Perl5Compiler;
-import org.apache.oro.text.regex.Perl5Matcher;
 import org.apache.oro.text.regex.MalformedPatternException;
 import org.qbroker.common.TimeWindows;
 import org.qbroker.common.NewlogFetcher;
@@ -111,7 +110,6 @@ public class UnixlogMonitor extends Monitor {
 
         try {
             Perl5Compiler pc = new Perl5Compiler();
-            pm = new Perl5Matcher();
             aPatternGroup = MonitorUtils.getPatterns("PatternGroup",props,pc);
             xPatternGroup = MonitorUtils.getPatterns("XPatternGroup",props,pc);
         }

@@ -16,7 +16,6 @@ import java.net.URISyntaxException;
 import org.apache.oro.text.regex.Pattern;
 import org.apache.oro.text.regex.MatchResult;
 import org.apache.oro.text.regex.Perl5Compiler;
-import org.apache.oro.text.regex.Perl5Matcher;
 import org.apache.oro.text.regex.MalformedPatternException;
 import org.qbroker.net.ClientSocket;
 import org.qbroker.event.Event;
@@ -112,7 +111,6 @@ public class RedisTester extends Report {
 
         try {
             Perl5Compiler pc = new Perl5Compiler();
-            pm = new Perl5Matcher();
 
             pattern = pc.compile("\r\n\r\n");
         }

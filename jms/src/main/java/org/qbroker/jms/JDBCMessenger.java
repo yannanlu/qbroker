@@ -45,6 +45,7 @@ import org.qbroker.common.TimeoutException;
 import org.qbroker.json.JSON2Map;
 import org.qbroker.net.DBConnector;
 import org.qbroker.jms.MessageInputStream;
+import org.qbroker.jms.MessageFilter;
 import org.qbroker.jms.MessageUtils;
 import org.qbroker.jms.TextEvent;
 import org.qbroker.jms.BytesEvent;
@@ -84,6 +85,9 @@ import org.qbroker.event.Event;
  * the ExtraSQLField as a string for return.  In case of error, "ERROR: "
  * will be prefixed to the result string.
  *<br/><br/>
+ * In case of select, it supports the standard formatter on each of the
+ * selected messages.
+ *<br/><br/>
  * In case of charSet and encoding, you can overwrite the default encoding by
  * starting JVM with "-Dfile.encoding=ISO8859_1 your_class".
  *<br/>
@@ -108,6 +112,7 @@ public class JDBCMessenger extends DBConnector {
     private QuickCache cache; // pools for prepared statements
     private XQueue assetList; // queue for result sets
     private QList paramList;  // list of parameters for prepared statements
+    private MessageFilter filter = null;
     private java.lang.reflect.Method ackMethod = null;
 
     private int[] partition;
@@ -306,6 +311,15 @@ public class JDBCMessenger extends DBConnector {
 
             if ((o = props.get("BodyColumn")) != null)
                 bodyField = (String) o;
+
+            if ((o = props.get("FormatterArgument")) != null &&
+                o instanceof List) { // init formatter
+                HashMap<String, Object> hmap = new HashMap<String, Object>();
+                hmap.put("Name", uri);
+                hmap.put("FormatterArgument", o);
+                filter = new MessageFilter(hmap);
+                hmap.clear();
+            }
         }
         catch (Exception e) {
             throw(new IllegalArgumentException(uri +
@@ -333,6 +347,7 @@ public class JDBCMessenger extends DBConnector {
         int i, k, n, retry, kid = -1, id = -1, bid = -1;
         long currentTime, count = 0;
         boolean isText = (textMode == 1), isDate = false, checkSkip = false;
+        byte[] buffer = new byte[bufferSize];
         String sqlStr, str;
         int shift = partition[0];
         int len = partition[1];
@@ -672,6 +687,14 @@ public class JDBCMessenger extends DBConnector {
                 new Event(Event.WARNING, "failed to load msg with result " +
                     "selected from " + uri + ": " + Event.traceStack(e)).send();
                 return;
+            }
+
+            if (filter != null && filter.hasFormatter()) try {
+                filter.format(outMessage, buffer);
+            }
+            catch (Exception e) {
+                new Event(Event.ERR, "failed to format the msg: "+
+                    Event.traceStack(e)).send();
             }
 
             cid = xq.add(outMessage, sid);

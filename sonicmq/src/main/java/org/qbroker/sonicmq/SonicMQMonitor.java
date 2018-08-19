@@ -12,7 +12,6 @@ import javax.management.ObjectName;
 import javax.management.MalformedObjectNameException;
 import javax.management.JMException;
 import org.apache.oro.text.regex.Perl5Compiler;
-import org.apache.oro.text.regex.Perl5Matcher;
 import java.net.URI;
 import java.net.URISyntaxException;
 import org.qbroker.common.TimeWindows;
@@ -140,7 +139,6 @@ public class SonicMQMonitor extends Monitor {
         brokerName = objName.getKeyProperty("ID");
         qName = objName.getKeyProperty("name");
         if (qName != null && qName.length() > 0) { // for queue
-            Perl5Matcher pm = new Perl5Matcher();
             isQueue = true;
             targetConn = target;
             connUser = MonitorUtils.getMappedName(qName, mapList, pm);
@@ -158,7 +156,6 @@ public class SonicMQMonitor extends Monitor {
                 subID = objName.getKeyProperty("subscription_id");
                 connUser = objName.getKeyProperty("user");
                 if (connUser == null || connUser.length() <= 0) {
-                    Perl5Matcher pm = new Perl5Matcher();
                     connUser = MonitorUtils.getMappedName(qName, mapList, pm);
                 }
                 targetConn = target.replaceFirst(",category=.*$", "") +

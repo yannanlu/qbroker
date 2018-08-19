@@ -14,7 +14,6 @@ import java.io.IOException;
 import org.apache.oro.text.regex.Pattern;
 import org.apache.oro.text.regex.MatchResult;
 import org.apache.oro.text.regex.Perl5Compiler;
-import org.apache.oro.text.regex.Perl5Matcher;
 import org.apache.oro.text.regex.MalformedPatternException;
 import org.qbroker.common.TimeWindows;
 import org.qbroker.common.TextSubstitution;
@@ -64,7 +63,6 @@ public class JVMMonitor extends Monitor {
 
         try {
             Perl5Compiler pc = new Perl5Compiler();
-            pm = new Perl5Matcher();
             String ps = MonitorUtils.substitute((String) o, template);
             pattern = pc.compile(ps);
             if ((o = props.get("Substitution")) != null)

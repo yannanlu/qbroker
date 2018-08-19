@@ -16,7 +16,6 @@ import java.io.IOException;
 import org.apache.oro.text.regex.Pattern;
 import org.apache.oro.text.regex.MatchResult;
 import org.apache.oro.text.regex.Perl5Compiler;
-import org.apache.oro.text.regex.Perl5Matcher;
 import org.apache.oro.text.regex.Util;
 import org.apache.oro.text.regex.MalformedPatternException;
 import org.qbroker.common.RunCommand;
@@ -77,7 +76,6 @@ public class ProcessMonitor extends Monitor {
             Perl5Compiler pc = new Perl5Compiler();
             pattern = pc.compile("\\n");
             pidPattern = pc.compile(str);
-            pm = new Perl5Matcher();
             aPatternGroup = MonitorUtils.getPatterns("PatternGroup",props,pc);
             xPatternGroup = MonitorUtils.getPatterns("XPatternGroup",props,pc);
         }

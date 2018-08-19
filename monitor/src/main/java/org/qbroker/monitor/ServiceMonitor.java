@@ -40,7 +40,6 @@ public class ServiceMonitor extends Monitor {
     private String uri, serviceName, serviceType;
     private int previousState;
     private MonitorReport reporter = null;
-    private Perl5Matcher pm = null;
     private List<Map> mapList = null;
     private Map<String, TextSubstitution> tSub;
     private boolean isScript = false;
@@ -233,7 +232,6 @@ public class ServiceMonitor extends Monitor {
             attrs = systemAttrs;
         }
 
-        Perl5Matcher pm = new Perl5Matcher();
         if ((o = MonitorUtils.select(props.get("EvalTemplate"))) != null) {
             Map<String, Object> map = new HashMap<String, Object>();
             mapList = new ArrayList<Map>();

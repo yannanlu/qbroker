@@ -11,7 +11,6 @@ import java.io.IOException;
 import org.apache.oro.text.regex.Pattern;
 import org.apache.oro.text.regex.MatchResult;
 import org.apache.oro.text.regex.Perl5Compiler;
-import org.apache.oro.text.regex.Perl5Matcher;
 import org.apache.oro.text.regex.MalformedPatternException;
 import org.qbroker.common.TimeWindows;
 import org.qbroker.common.TimeoutException;
@@ -67,7 +66,6 @@ public class FileComparator extends Monitor {
             Perl5Compiler pc = null;
             if ((o = props.get("XPatternGroup")) != null && o instanceof List) {
                 pc = new Perl5Compiler();
-                pm = new Perl5Matcher();
                 xPatternGroup=MonitorUtils.getPatterns("XPatternGroup",
                     props, pc);
                 if ((o = props.get("StartBoundaryPattern")) != null)

@@ -10,7 +10,6 @@ import java.util.Date;
 import org.apache.oro.text.regex.Pattern;
 import org.apache.oro.text.regex.MatchResult;
 import org.apache.oro.text.regex.Perl5Compiler;
-import org.apache.oro.text.regex.Perl5Matcher;
 import org.apache.oro.text.regex.MalformedPatternException;
 import org.qbroker.common.TimeWindows;
 import org.qbroker.common.Utils;
@@ -65,7 +64,6 @@ public class ReportQuery extends Report {
 
         if (keyList != null && keyList.length > 0) try {
             Perl5Compiler pc = new Perl5Compiler();
-            pm = new Perl5Matcher();
             aPatternGroup = MonitorUtils.getPatterns("PatternGroup",props,pc);
             xPatternGroup = MonitorUtils.getPatterns("XPatternGroup",props,pc);
         }

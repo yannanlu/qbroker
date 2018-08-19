@@ -17,7 +17,9 @@ package org.qbroker.flow;
  * ServiceMonitor, added getMappedTemplate() to MonitorUtils and updated
  * getGenericMapList() of MonitorUtils to store Template in maps, added
  * cpu_percenttotal, memory_percenttotal and memory_kilototal to processAttrs
- * in ServiceMonitor
+ * in ServiceMonitor, cleaned up Perl5Matcher on most of the monitors and
+ * reports, added support to format the selected messages in select() of
+ * JDBSMessenger 
  *<br/>
  * V1.2.9 (2018/06/09): removed the space between release version and "V" from
  * ReleaseTag, added the support of base64 encoded names for checkpointing to
@@ -225,7 +227,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V1.2.10 2018/08/04 11:13:57";
+    private static String ReleaseTAG = "QBroker V1.2.10 2018/08/04 13:50:03";
 
     public ReleaseTag() {
     }

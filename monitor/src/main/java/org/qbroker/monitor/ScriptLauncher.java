@@ -12,7 +12,6 @@ import java.io.IOException;
 import org.apache.oro.text.regex.Pattern;
 import org.apache.oro.text.regex.MatchResult;
 import org.apache.oro.text.regex.Perl5Compiler;
-import org.apache.oro.text.regex.Perl5Matcher;
 import org.apache.oro.text.regex.Util;
 import org.apache.oro.text.regex.MalformedPatternException;
 import org.qbroker.common.TimeWindows;
@@ -59,7 +58,6 @@ public class ScriptLauncher extends Monitor {
         xPatternGroup = null;
         if ((o = props.get("XPatternGroup")) != null && o instanceof List) try {
             Perl5Compiler pc = new Perl5Compiler();
-            pm = new Perl5Matcher();
             xPatternGroup = MonitorUtils.getPatterns("XPatternGroup", props,pc);
             if (xPatternGroup.length > 0)
                 pattern = pc.compile("\\n");
