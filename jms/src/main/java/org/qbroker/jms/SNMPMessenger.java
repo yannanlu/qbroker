@@ -44,8 +44,8 @@ import org.qbroker.event.Event;
  * The method of listen() is NOT MT-Safe.  The method of talk() is for
  * asynchronous output whereas inquire() is for synchronous requests.
  *<br/><br/>
- * In case of charSet and encoding, you can overwrite the default encoding by
- * starting JVM with "-Dfile.encoding=ISO8859_1 your_class".
+ * For charSet and encoding, you can overwrite the default encoding by
+ * starting JVM with "-Dfile.encoding=UTF8 your_class".
  *<br/>
  * @author yannanlu@yahoo.com
  */

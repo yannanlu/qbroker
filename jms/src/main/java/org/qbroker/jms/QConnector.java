@@ -285,6 +285,12 @@ public class QConnector extends JMSQConnector {
             else
                 rcField = "ReturnCode";
 
+            if ((o = props.get("RequestTimeout")) != null) {
+                timeout = 1000 * Integer.parseInt((String) o);
+                if (timeout <= 0)
+                    timeout = 10000;
+            }
+
             if ((o = props.get("ResponseProperty")) != null &&
                 o instanceof List) {
                 String key;

@@ -3,6 +3,10 @@ package org.qbroker.flow;
 /* ReleaseTag.java - release tag for all the packages of qbroker */
 
 /**
+ * V1.2.11 (2018/09/30): added RequestTimeout in second to JMSQConnector and
+ * updated two QConnectors, updated comments about encoding of UTF8 in some of
+ * messengers
+ *<br/>
  * V1.2.10 (2018/08/04): fixed the issue with HTTP data source for GenericList,
  * AgeMonitor, NumberMonitor and IncrementalMonitor, updated comments on
  * ConfigList and ConfigTemplate, added isString to GenericList to support
@@ -227,7 +231,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V1.2.10 2018/08/04 13:50:03";
+    private static String ReleaseTAG = "QBroker V1.2.11 2018/09/30 17:28:27";
 
     public ReleaseTag() {
     }

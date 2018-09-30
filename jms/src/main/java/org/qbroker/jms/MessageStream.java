@@ -61,8 +61,8 @@ import org.qbroker.event.Event;
  * and continue to read.  If the value is set to daemon, read() will throw an
  * IOException whenever it reads an EOF to indicate end of stream unexpectedly.
  *<br/><br/>
- * In case of charSet and encoding, you can overwrite the default encoding by
- * starting JVM with "-Dfile.encoding=ISO8859_1 your_class".
+ * For charSet and encoding, you can overwrite the default encoding by
+ * starting JVM with "-Dfile.encoding=UTF8 your_class".
  *<br/>
  * @author yannanlu@yahoo.com
  */

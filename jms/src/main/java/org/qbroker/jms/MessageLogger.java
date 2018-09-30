@@ -63,8 +63,8 @@ import org.qbroker.event.Event;
  * entry. If SaveReference is set to false, otherwise, the state info will not
  * saved to the reference file.
  *<br/><br/>
- * In case of charSet and encoding, you can overwrite the default encoding by
- * starting JVM with "-Dfile.encoding=ISO8859_1 your_class".
+ * For charSet and encoding, you can overwrite the default encoding by
+ * starting JVM with "-Dfile.encoding=UTF8 your_class".
  *<br/>
  * @author yannanlu@yahoo.com
  */

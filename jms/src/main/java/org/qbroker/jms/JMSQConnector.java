@@ -116,6 +116,7 @@ public abstract class JMSQConnector implements QueueConnector {
     protected int maxMsgLength = 4194304;
     protected int sleepTime = 0;
     protected int receiveTime = 1000;
+    protected int timeout = 10000;
     protected int textMode = 1;
     protected int xaMode = XA_CLIENT;
     protected int batchSize = 1;
@@ -2477,19 +2478,34 @@ public abstract class JMSQConnector implements QueueConnector {
 
             if (msgStr == null) { // request sent out, wait for response
                 Message msg = null;
-                try {
-                    msg = (Message) qReceiver.receive(receiveTime);
+                mask = xq.getGlobalMask();
+                ttl = timeout + System.currentTimeMillis();
+                do {
+                    if ((mask & XQueue.STANDBY) > 0) // standby temporarily
+                        break;
+                    try {
+                        msg = (Message) qReceiver.receive(receiveTime);
+                    }
+                    catch (Exception e) {
+                        msg = null;
+                        msgStr = "failed to get response for request to "+
+                            qName + ": " + Event.traceStack(e);
+                    }
+                    if (msg != null) // got response back
+                        break;
+                    if (System.currentTimeMillis() > ttl) // timeout
+                        break;
                 }
-                catch (Exception e) {
-                    msg = null;
-                    msgStr = "failed to get response for request to "+
-                        qName + ": " + Event.traceStack(e);
-                }
+                while (((mask = xq.getGlobalMask()) & XQueue.KEEP_RUNNING) > 0);
 
                 if (msgStr != null) // exception
                     new Event(Event.ERR, msgStr).send();
-                else if (msg == null) { // timed out
-                    msgStr = "response timed out for request to "+ qName;
+                else if (msg == null) { // timed out or standby
+                    if ((mask & XQueue.STANDBY) > 0) // standby temporarily
+                        msgStr = "aborted waiting on response for request to " +
+                            qName;
+                    else
+                        msgStr = "response timed out for request to "+ qName;
                     new Event(Event.ERR, msgStr).send();
                     try {
                         MessageUtils.setProperty(rcField, expRC, message);
