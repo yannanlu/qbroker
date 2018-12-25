@@ -9,13 +9,13 @@
   <parent>
     <groupId>org.qbroker</groupId>
     <artifactId>qbroker</artifactId>
-    <version>1.2.2</version>
+    <version>1.2.3</version>
   </parent>
   <dependencies>
     <dependency>
       <groupId>org.qbroker</groupId>
       <artifactId>jms</artifactId>
-      <version>1.2.7</version>
+      <version>1.2.8</version>
     </dependency>
     <dependency>
       <groupId>com.progress.sonic.mq</groupId>

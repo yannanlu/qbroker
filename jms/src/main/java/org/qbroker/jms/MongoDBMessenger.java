@@ -382,11 +382,12 @@ public class MongoDBMessenger extends MongoDBConnector {
         DBObject o;
         DBCollection coll = null;
         long currentTime, tm, idleTime;
-        long count = 0;
+        long count = 0, stm = 10;
         int retry = 0, rc = 0, heartbeat = 600000, ttl = 7200000;
         int i, k, sid = -1, cid, rid, n, mask;
         boolean ack = ((xq.getGlobalMask() & XQueue.EXTERNAL_XA) > 0);
         boolean checkIdle = (maxIdleTime > 0);
+        boolean isSleepy = (sleepTime > 0);
         String dt = null, str = null, msgStr = null, collName = null;
         String okRC = String.valueOf(MessageUtils.RC_OK);
         String reqRC = String.valueOf(MessageUtils.RC_REQERROR);
@@ -394,6 +395,9 @@ public class MongoDBMessenger extends MongoDBConnector {
         String msgRC = String.valueOf(MessageUtils.RC_MSGERROR);
         String expRC = String.valueOf(MessageUtils.RC_EXPIRED);
         byte[] buffer = new byte[bufferSize];
+
+        if (isSleepy)
+            stm = (sleepTime > waitTime) ? waitTime : sleepTime;
 
         currentTime = System.currentTimeMillis();
         idleTime = currentTime;
@@ -898,7 +902,7 @@ public class MongoDBMessenger extends MongoDBConnector {
             if (maxNumberMsg > 0 && count >= maxNumberMsg)
                 break;
 
-            if (sleepTime > 0) { // slow down a while
+            if (isSleepy) { // slow down a while
                 long ts = System.currentTimeMillis() + sleepTime;
                 do {
                     mask = xq.getGlobalMask();
@@ -906,7 +910,7 @@ public class MongoDBMessenger extends MongoDBConnector {
                         (mask & XQueue.STANDBY) > 0) // temporarily disabled
                         break;
                     else try {
-                        Thread.sleep(receiveTime);
+                        Thread.sleep(stm);
                     }
                     catch (InterruptedException e) {
                     }
@@ -946,11 +950,12 @@ public class MongoDBMessenger extends MongoDBConnector {
         DBObject o, p = null, emptyDBObject = new BasicDBObject();
         DBCollection coll = null;
         long currentTime, tm, idleTime;
-        long count = 0;
+        long count = 0, stm = 10;
         int retry = 0, rc = 0, heartbeat = 600000, ttl = 7200000;
         int i, k, sid = -1, cid, rid, n, mask, skip = 0, limit = 0;
         boolean ack = ((xq.getGlobalMask() & XQueue.EXTERNAL_XA) > 0);
         boolean checkIdle = (maxIdleTime > 0);
+        boolean isSleepy = (sleepTime > 0);
         String dt = null, str = null, msgStr = null, collName = null;
         String okRC = String.valueOf(MessageUtils.RC_OK);
         String reqRC = String.valueOf(MessageUtils.RC_REQERROR);
@@ -958,6 +963,9 @@ public class MongoDBMessenger extends MongoDBConnector {
         String msgRC = String.valueOf(MessageUtils.RC_MSGERROR);
         String expRC = String.valueOf(MessageUtils.RC_EXPIRED);
         byte[] buffer = new byte[bufferSize];
+
+        if (isSleepy)
+            stm = (sleepTime > waitTime) ? waitTime : sleepTime;
 
         currentTime = System.currentTimeMillis();
         idleTime = currentTime;
@@ -1379,7 +1387,7 @@ public class MongoDBMessenger extends MongoDBConnector {
             if (maxNumberMsg > 0 && count >= maxNumberMsg)
                 break;
 
-            if (sleepTime > 0) { // slow down a while
+            if (isSleepy) { // slow down a while
                 long ts = System.currentTimeMillis() + sleepTime;
                 do {
                     mask = xq.getGlobalMask();
@@ -1387,7 +1395,7 @@ public class MongoDBMessenger extends MongoDBConnector {
                         (mask & XQueue.STANDBY) > 0) // temporarily disabled
                         break;
                     else try {
-                        Thread.sleep(receiveTime);
+                        Thread.sleep(stm);
                     }
                     catch (InterruptedException e) {
                     }
@@ -1424,7 +1432,8 @@ public class MongoDBMessenger extends MongoDBConnector {
         WriteResult r = null;
         boolean checkIdle = (maxIdleTime > 0);
         boolean ack = ((xq.getGlobalMask() & XQueue.EXTERNAL_XA) > 0);
-        long currentTime, idleTime, tm, count = 0;
+        boolean isSleepy = (sleepTime > 0);
+        long currentTime, idleTime, tm, count = 0, stm = 10;
         int retry = 0, mask, rc, cmd;
         int n, k, sid = -1;
         int dmask = MessageUtils.SHOW_DATE;
@@ -1435,6 +1444,9 @@ public class MongoDBMessenger extends MongoDBConnector {
         String uriRC = String.valueOf(MessageUtils.RC_NOTFOUND);
         String msgRC = String.valueOf(MessageUtils.RC_MSGERROR);
         String expRC = String.valueOf(MessageUtils.RC_EXPIRED);
+
+        if (isSleepy)
+            stm = (sleepTime > waitTime) ? waitTime : sleepTime;
 
         dmask ^= displayMask;
         dmask &= displayMask;
@@ -1740,7 +1752,7 @@ public class MongoDBMessenger extends MongoDBConnector {
             if (maxNumberMsg > 0 && count >= maxNumberMsg)
                 break;
 
-            if (sleepTime > 0) { // slow down a while
+            if (isSleepy) { // slow down a while
                 long ts = System.currentTimeMillis() + sleepTime;
                 do {
                     mask = xq.getGlobalMask();
@@ -1748,7 +1760,7 @@ public class MongoDBMessenger extends MongoDBConnector {
                         (mask & XQueue.STANDBY) > 0) // temporarily disabled
                         break;
                     else try {
-                        Thread.sleep(receiveTime);
+                        Thread.sleep(stm);
                     }
                     catch (InterruptedException e) {
                     }

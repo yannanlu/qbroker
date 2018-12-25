@@ -863,6 +863,20 @@ public class QClient {
         String iTopic = (String) sProps.get("TopicName");
         String oTopic = (String) tProps.get("TopicName");
         String operation = (String) props.get("Operation");
+
+        if ("-".equals(input)) { // stdin for a file
+            input = null;
+            sProps.remove("QueueName");
+            if (!sProps.containsKey("URI"))
+                sProps.put("URI", "file://-");
+        }
+        if ("-".equals(output)) { // stdout for a file
+            output = null;
+            tProps.remove("QueueName");
+            if (!tProps.containsKey("URI"))
+                tProps.put("URI", "file://-");
+        }
+
         if (iTopic != null && oTopic != null) { // repub
             props.put("Operation", "repub");
             sProps.put("Operation", "sub");
@@ -918,13 +932,27 @@ public class QClient {
                 list = (List) props.get("Source");
                 if (list.size() == 1) {
                     operation =  (String) sProps.get("Operation");
-                    if ("browse".equals(operation))
+                    if (operation == null || "browse".equals(operation))
                         sProps.put("Operation", "get");
                 }
                 else for (Object obj : list) { // more than one receivers
                     operation =  (String) ((Map) obj).get("Operation");
-                    if ("browse".equals(operation))
+                    if (operation == null || "browse".equals(operation))
                         ((Map) obj).put("Operation", "get");
+                }
+            }
+            else {
+                props.put("Operation", "qpub");
+                list = (List) props.get("Source");
+                if (list.size() == 1) {
+                    operation =  (String) sProps.get("Operation");
+                    if (operation == null || "get".equals(operation))
+                        sProps.put("Operation", "browse");
+                }
+                else for (Object obj : list) { // more than one receivers
+                    operation =  (String) ((Map) obj).get("Operation");
+                    if (operation == null || "get".equals(operation))
+                        ((Map) obj).put("Operation", "browse");
                 }
             }
             if (brokerVersion != null)
@@ -987,13 +1015,27 @@ public class QClient {
                 list = (List) props.get("Source");
                 if (list.size() == 1) {
                     operation =  (String) sProps.get("Operation");
-                    if ("browse".equals(operation))
+                    if (operation ==null || "browse".equals(operation))
                         sProps.put("Operation", "get");
                 }
                 else for (Object obj : list) { // more than one receivers
                     operation =  (String) ((Map) obj).get("Operation");
-                    if ("browse".equals(operation))
+                    if (operation ==null || "browse".equals(operation))
                         ((Map) obj).put("Operation", "get");
+                }
+            }
+            else {
+                props.put("Operation", "qcopy");
+                list = (List) props.get("Source");
+                if (list.size() == 1) {
+                    operation =  (String) sProps.get("Operation");
+                    if (operation ==null || "get".equals(operation))
+                        sProps.put("Operation", "browse");
+                }
+                else for (Object obj : list) { // more than one receivers
+                    operation =  (String) ((Map) obj).get("Operation");
+                    if (operation ==null || "get".equals(operation))
+                        ((Map) obj).put("Operation", "browse");
                 }
             }
         }
@@ -1004,37 +1046,28 @@ public class QClient {
                 list = (List) props.get("Source");
                 if (list.size() == 1) {
                     operation =  (String) sProps.get("Operation");
-                    if ("browse".equals(operation))
+                    if (operation == null || "browse".equals(operation))
                         sProps.put("Operation", "get");
                 }
                 else for (Object obj : list) { // more than one receivers
                     operation =  (String) ((Map) obj).get("Operation");
-                    if ("browse".equals(operation))
+                    if (operation == null || "browse".equals(operation))
                         ((Map) obj).put("Operation", "get");
                 }
             }
-        }
-        else if (input != null && "-".equals(input)) { // read to others
-            sProps.remove("TopicName");
-            sProps.remove("BrokerControlQueue");
-            sProps.remove("QueueName");
-            sProps.remove("ChannelName");
-            sProps.remove("TargetClient");
-            sProps.remove("Expiry");
-            sProps.remove("Priority");
-            tProps.remove("TopicName");
-            tProps.remove("BrokerControlQueue");
-            tProps.remove("QueueName");
-            tProps.remove("ChannelName");
-            tProps.remove("TargetClient");
-            tProps.remove("Expiry");
-            tProps.remove("Priority");
-            tProps.remove("Persistence");
-            if (operation != null) // -O overwrite target's operation
-                tProps.put("Operation", operation);
             else {
-                operation = (String) tProps.get("Operation");
-                props.put("Operation", operation);
+                props.put("Operation", "browse");
+                list = (List) props.get("Source");
+                if (list.size() == 1) {
+                    operation =  (String) sProps.get("Operation");
+                    if (operation == null || "get".equals(operation))
+                        sProps.put("Operation", "browse");
+                }
+                else for (Object obj : list) { // more than one receivers
+                    operation =  (String) ((Map) obj).get("Operation");
+                    if (operation == null || "get".equals(operation))
+                        ((Map) obj).put("Operation", "browse");
+                }
             }
         }
         else if (input != null) { // get or browse to others
@@ -1056,13 +1089,26 @@ public class QClient {
                 list = (List) props.get("Source");
                 if (list.size() == 1) {
                     operation =  (String) sProps.get("Operation");
-                    if ("browse".equals(operation))
+                    if (operation == null || "browse".equals(operation))
                         sProps.put("Operation", "get");
                 }
                 else for (Object obj : list) { // more than one receivers
                     operation =  (String) ((Map) obj).get("Operation");
-                    if ("browse".equals(operation))
+                    if (operation == null || "browse".equals(operation))
                         ((Map) obj).put("Operation", "get");
+                }
+            }
+            else {
+                list = (List) props.get("Source");
+                if (list.size() == 1) {
+                    operation =  (String) sProps.get("Operation");
+                    if (operation == null || "get".equals(operation))
+                        sProps.put("Operation", "browse");
+                }
+                else for (Object obj : list) { // more than one receivers
+                    operation =  (String) ((Map) obj).get("Operation");
+                    if (operation == null || "get".equals(operation))
+                        ((Map) obj).put("Operation", "browse");
                 }
             }
         }
@@ -1171,6 +1217,22 @@ public class QClient {
                 sProps.put("SecurityExit","org.qbroker.wmq.SimpleSecurityExit");
             }
         }
+        else if (uri != null && brokerVersion != null && input != null) {
+            sProps.remove("BrokerVersion");
+            list = (List) props.get("Source");
+            if (list.size() == 1) {
+                if ("1".equals(brokerVersion) || "3".equals(brokerVersion))
+                    sProps.put("IsPhysical", "true");
+                else if ("0".equals(brokerVersion) || "2".equals(brokerVersion))
+                    sProps.put("IsPhysical", "false");
+            }
+            else for (Object obj : list) { // more than one receivers
+                if ("1".equals(brokerVersion) || "3".equals(brokerVersion))
+                    ((Map) obj).put("IsPhysical", "true");
+                else if ("0".equals(brokerVersion) || "2".equals(brokerVersion))
+                    ((Map) obj).put("IsPhysical", "false");
+            }
+        }
         uri = (String) tProps.get("URI");
         if (uri != null && uri.startsWith("wmq://")) { // for wmq
             if (tProps.containsKey("Username") &&
@@ -1179,13 +1241,29 @@ public class QClient {
                 tProps.put("SecurityExit","org.qbroker.wmq.SimpleSecurityExit");
             }
         }
+        else if (uri != null && brokerVersion != null && output != null) {
+            tProps.remove("BrokerVersion");
+            list = (List) props.get("Target");
+            if (list.size() == 1) {
+                if ("2".equals(brokerVersion) || "3".equals(brokerVersion))
+                    tProps.put("IsPhysical", "true");
+                else if ("0".equals(brokerVersion) || "1".equals(brokerVersion))
+                    tProps.put("IsPhysical", "false");
+            }
+            else for (Object obj : list) { // more than one receivers
+                if ("2".equals(brokerVersion) || "3".equals(brokerVersion))
+                    ((Map) obj).put("IsPhysical", "true");
+                else if ("0".equals(brokerVersion) || "1".equals(brokerVersion))
+                    ((Map) obj).put("IsPhysical", "false");
+            }
+        }
 
         if (!props.containsKey("Mode"))
             props.put("Mode", "command");
 
         if (tProps.isEmpty())
             props.remove("Target");
-        else if (sProps.isEmpty())
+        if (sProps.isEmpty())
             props.remove("Source");
 
         if (props.containsKey("Source") && !props.containsKey("Target")) {
@@ -1243,6 +1321,7 @@ public class QClient {
         else if ((o = props.get("SleepTime")) != null) {
             sProps.put("SleepTime", o);
         }
+
         if ((o = props.get("Capacity")) != null) {
             if(sProps.get("Capacity") == null) 
                 sProps.put("Capacity", o);
@@ -1293,7 +1372,7 @@ System.out.println("QClient: pub/sub/browse/copy/get/move/put/read/write JMS mes
         System.out.println("  -P: Priority (0-9=priority; -1=QDEF; -2=APP)");
         System.out.println("  -J: Persistence (1=not persistent; 2=persistent; -1=QDEF; -2=APP)");
         System.out.println("  -K: TargetClient (0: JMS; 1: MQ)");
-        System.out.println("  -V: BrokerVersion (2: default; 0: workaround, for wmq only)");
+        System.out.println("  -V: Mask for Destination or BrokerVersion for wmq (0-3: mask for physical destinations or 2: default; 0: workaround for wmq only)");
         System.out.println("  -j: ClientID (string to id the apps)");
         System.out.println("  -k: SubscriptionID (required for durable sub, RegSub, DeregSub)");
         System.out.println("  -q: Principal of Source or BrokerControlQueue of Source for wmq (default: SYSTEM.BROKER.CONTROL.QUEUE)");

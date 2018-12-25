@@ -212,6 +212,7 @@ public class SonicMQRequester implements Requester, Comparator<IMetric> {
         return keys;
     }
 
+    @SuppressWarnings("unchecked")
     /** returns list of maps for MBeans */
     public List<Map> query(String target, String regex) throws JMException {
         List<Map> list = null;

@@ -262,12 +262,16 @@ public class SNMPMessenger extends SNMPConnector {
         String msgStr = null;
         StringBuffer strBuf;
         int sid = -1, cid, length, mask = 0;
-        long count = 0;
+        long count = 0, stm = 10;
         DatagramPacket packet;
         byte[] buffer = new byte[bufferSize];
         boolean isText;
+        boolean isSleepy = (sleepTime > 0);
         int shift = partition[0];
         int len = partition[1];
+
+        if (isSleepy)
+            stm = (sleepTime > waitTime) ? waitTime : sleepTime;
 
         switch (len) {
           case 0:
@@ -385,6 +389,23 @@ public class SNMPMessenger extends SNMPConnector {
                         content[0] + " into a msg").send();
                 }
                 count ++;
+                if (isSleepy) { // slow down a while
+                    long tm = System.currentTimeMillis() + sleepTime;
+                    do {
+                        mask = xq.getGlobalMask();
+                        if ((mask & XQueue.KEEP_RUNNING) > 0 &&
+                            (mask & XQueue.PAUSE) > 0) // temporarily disabled
+                            break;
+                        else try {
+                            Thread.sleep(stm);
+                        }
+                        catch (InterruptedException e) {
+                        }
+                    } while (tm > System.currentTimeMillis());
+                    if ((mask & XQueue.KEEP_RUNNING) > 0 &&
+                        (mask & XQueue.PAUSE) > 0) // temporarily disabled
+                        break;
+                }
             }
             else {
                 xq.cancel(sid);
@@ -692,11 +713,15 @@ public class SNMPMessenger extends SNMPConnector {
         int length, version;
         int sid = -1, mask;
         int dmask = MessageUtils.SHOW_DATE;
-        long count = 0;
+        long count = 0, stm = 10;
         boolean ack = ((xq.getGlobalMask() & XQueue.EXTERNAL_XA) > 0);
+        boolean isSleepy = (sleepTime > 0);
         String oid = null, toURI = null, msgStr = null, dt = null;
         String community;
         byte[] buffer = new byte[bufferSize];
+
+        if (isSleepy)
+            stm = (sleepTime > waitTime) ? waitTime : sleepTime;
 
         dmask ^= displayMask;
         dmask &= displayMask;
@@ -863,7 +888,7 @@ public class SNMPMessenger extends SNMPConnector {
             if (maxNumberMsg > 0 && count >= maxNumberMsg)
                 break;
 
-            if (sleepTime > 0) { // slow down a while
+            if (isSleepy) { // slow down a while
                 long tm = System.currentTimeMillis() + sleepTime;
                 do {
                     mask = xq.getGlobalMask();
@@ -871,7 +896,7 @@ public class SNMPMessenger extends SNMPConnector {
                         (mask & XQueue.STANDBY) > 0) // temporarily disabled
                         break;
                     else try {
-                        Thread.sleep(receiveTime);
+                        Thread.sleep(stm);
                     }
                     catch (InterruptedException e) {
                     }

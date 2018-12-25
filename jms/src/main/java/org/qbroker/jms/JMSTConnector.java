@@ -285,7 +285,7 @@ public abstract class JMSTConnector implements TopicConnector {
         boolean isSleepy = (sleepTime > 0);
         String msgStr = null;
         String line = null;
-        long count = 0, stm = 0;
+        long count = 0, stm = 10;
         int type = 0;
         int sid = -1, cid;
         byte[] buffer = new byte[bufferSize];
@@ -297,7 +297,7 @@ public abstract class JMSTConnector implements TopicConnector {
         throw(new JMSException("tSubscriber for "+tName+" is not initialized"));
 
         if (isSleepy)
-            stm = (sleepTime > receiveTime) ? receiveTime : sleepTime;
+            stm = (sleepTime > waitTime) ? waitTime : sleepTime;
 
         if (out == null) {
             type = 0;
@@ -1036,7 +1036,7 @@ public abstract class JMSTConnector implements TopicConnector {
         boolean xa = ((xaMode & XA_COMMIT) > 0);
         boolean checkIdle = (maxIdleTime > 0);
         boolean isSleepy = (sleepTime > 0);
-        long currentTime, idleTime, ttl, count = 0, stm = 0;
+        long currentTime, idleTime, ttl, count = 0, stm = 10;
         int mask;
         int sid = -1;
         int n, size = 0;
@@ -1051,7 +1051,7 @@ public abstract class JMSTConnector implements TopicConnector {
          throw(new JMSException("tPublisher for "+tName+" is not initialized"));
 
         if (isSleepy)
-            stm = (sleepTime > receiveTime) ? receiveTime : sleepTime;
+            stm = (sleepTime > waitTime) ? waitTime : sleepTime;
 
         n = 0;
         currentTime = System.currentTimeMillis();

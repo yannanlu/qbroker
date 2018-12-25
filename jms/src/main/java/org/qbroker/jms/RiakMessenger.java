@@ -224,10 +224,14 @@ public class RiakMessenger extends RiakConnector {
         Message inMessage;
         IRiakObject o;
         String msgStr, bName = defaultBucketName, keyName = defaultKeyName;
-        long count = 0;
+        long count = 0, stm = 10;
         int sid = -1, cid, mask = 0;
         int shift = partition[0];
         int len = partition[1];
+        boolean isSleepy = (sleepTime > 0);
+
+        if (isSleepy)
+            stm = (sleepTime > waitTime) ? waitTime : sleepTime;
 
         if (! isConnected) try {
             reconnect();
@@ -369,6 +373,20 @@ public class RiakMessenger extends RiakConnector {
             catch(Exception e) {
             }
             count ++;
+            if (isSleepy) { // slow down a while
+                long tm = System.currentTimeMillis() + sleepTime;
+                do {
+                    mask = xq.getGlobalMask();
+                    if ((mask & XQueue.KEEP_RUNNING) > 0 &&
+                        (mask & XQueue.PAUSE) > 0) // temporarily disabled
+                        break;
+                    else try {
+                        Thread.sleep(stm);
+                    }
+                    catch (InterruptedException e) {
+                    }
+                } while (tm > System.currentTimeMillis());
+            }
         }
         else {
             xq.cancel(sid);
@@ -397,7 +415,7 @@ public class RiakMessenger extends RiakConnector {
         boolean ack = ((xq.getGlobalMask() & XQueue.EXTERNAL_XA) > 0);
         boolean checkIdle = (maxIdleTime > 0);
         boolean isSleepy = (sleepTime > 0);
-        long currentTime, idleTime, count = 0;
+        long currentTime, idleTime, count = 0, stm = 10;
         int mask;
         int sid = -1;
         int n, size = 0;
@@ -405,6 +423,9 @@ public class RiakMessenger extends RiakConnector {
         byte[] buffer = new byte[bufferSize];
         dmask ^= displayMask;
         dmask &= displayMask;
+
+        if (isSleepy)
+            stm = (sleepTime > waitTime) ? waitTime : sleepTime;
 
         currentTime = System.currentTimeMillis();
         idleTime = currentTime;
@@ -573,7 +594,7 @@ public class RiakMessenger extends RiakConnector {
                         (mask & XQueue.STANDBY) > 0) // temporarily disabled
                         break;
                     else try {
-                        Thread.sleep(receiveTime);
+                        Thread.sleep(stm);
                     }
                     catch (InterruptedException e) {
                     }

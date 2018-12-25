@@ -3,6 +3,13 @@ package org.qbroker.flow;
 /* ReleaseTag.java - release tag for all the packages of qbroker */
 
 /**
+ * V1.2.12 (2018/12/22): added NetconfConnector for read-only operations on
+ * routers, fixed issues with QClient on the property maps, added isSleepy to
+ * most of the Messengers, added sleepTime block to read() of MessageStream
+ * for slowing down, added -V as mask of destinations to overwrite IsPhysical
+ * for QClient, added scheme of failover to mapURI() in ReceiverPool and
+ * PersisterPool, bumped up the release version to 1.2.3
+ *<br/>
  * V1.2.11 (2018/09/30): added RequestTimeout in second to JMSQConnector and
  * updated two QConnectors, updated comments about encoding of UTF8 in some of
  * messengers
@@ -231,7 +238,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V1.2.11 2018/09/30 17:28:27";
+    private static String ReleaseTAG = "QBroker V1.2.12 2018/12/22 11:30:24";
 
     public ReleaseTag() {
     }

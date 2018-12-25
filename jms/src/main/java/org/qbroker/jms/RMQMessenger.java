@@ -220,12 +220,15 @@ public class RMQMessenger extends RMQConnector {
         String line = null;
         byte[] buf = null;
         int  sid = -1, cid, mask = 0;
-        long count = 0, deliveryTag;
+        long count = 0, stm = 10, deliveryTag;
         boolean isText = (textMode == 1);
         boolean isSleepy = (sleepTime > 0);
         boolean ack = ((xaMode & MessageUtils.XA_CLIENT) > 0);
         int shift = partition[0];
         int len = partition[1];
+
+        if (isSleepy)
+            stm = (sleepTime > waitTime) ? waitTime : sleepTime;
 
         consumer = getConsumer(!ack);
 
@@ -385,7 +388,7 @@ public class RMQMessenger extends RMQConnector {
                         (mask & XQueue.PAUSE) > 0) // temporarily disabled
                         break;
                     else try {
-                        Thread.sleep(receiveTime);
+                        Thread.sleep(stm);
                     }
                     catch (InterruptedException e) {
                     }
@@ -412,7 +415,7 @@ public class RMQMessenger extends RMQConnector {
         boolean checkIdle = (maxIdleTime > 0);
         boolean isSleepy = (sleepTime > 0);
         boolean hasTemplate = (template != null);
-        long currentTime, idleTime, ttl, count = 0;
+        long currentTime, idleTime, ttl, count = 0, stm = 10;
         byte[] buffer = new byte[4096];
         int mask;
         int sid = -1;
@@ -420,6 +423,8 @@ public class RMQMessenger extends RMQConnector {
         int dmask = MessageUtils.SHOW_DATE;
         dmask ^= displayMask;
         dmask &= displayMask;
+        if (isSleepy)
+            stm = (sleepTime > waitTime) ? waitTime : sleepTime;
 
         dest = getDestination();
         n = 0;
@@ -582,7 +587,7 @@ public class RMQMessenger extends RMQConnector {
                         (mask & XQueue.STANDBY) > 0) // temporarily disabled
                         break;
                     else try {
-                        Thread.sleep(receiveTime);
+                        Thread.sleep(stm);
                     }
                     catch (InterruptedException e) {
                     }

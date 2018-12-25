@@ -298,14 +298,18 @@ public class NNTPMessenger extends NNTPConnector {
         StringBuffer strBuf = new StringBuffer();
         Article[] articles;
         Article article = null;
-        long t = 0, tm, count = 0;
+        long t = 0, tm, count = 0, stm = 10;
         int i, k, n, sid = -1, cid, anumber, mask = 0;
         boolean isText;
+        boolean isSleepy = (sleepTime > 0);
         int shift = partition[0];
         int len = partition[1];
 
         if (path == null)
             throw(new IOException("path is null: " + uri));
+
+        if (isSleepy)
+            stm = (sleepTime > waitTime) ? waitTime : sleepTime;
 
         switch (len) {
           case 0:
@@ -385,7 +389,8 @@ public class NNTPMessenger extends NNTPConnector {
         n = articles.length;
         for (k=0; k<n; k++) { // loop thru all new articles
             article = articles[k];
-            if ((xq.getGlobalMask() & XQueue.KEEP_RUNNING) == 0)
+            mask = xq.getGlobalMask();
+            if ((mask & XQueue.KEEP_RUNNING) == 0 || (mask &  XQueue.PAUSE) > 0)
                 break;
             if (article == null)
                 continue;
@@ -497,6 +502,24 @@ public class NNTPMessenger extends NNTPConnector {
                 }
                 count ++;
 
+                if (isSleepy) { // slow down a while
+                    long ts = System.currentTimeMillis() + sleepTime;
+                    do {
+                        mask = xq.getGlobalMask();
+                        if ((mask & XQueue.KEEP_RUNNING) > 0 &&
+                            (mask & XQueue.PAUSE) > 0) // temporarily disabled
+                            break;
+                        else try {
+                            Thread.sleep(stm);
+                        }
+                        catch (InterruptedException e) {
+                        }
+                    } while (ts > System.currentTimeMillis());
+                    if ((mask & XQueue.KEEP_RUNNING) > 0 &&
+                        (mask & XQueue.PAUSE) > 0) // temporarily disabled
+                        break;
+                }
+
                 sid = -1;
                 mask = xq.getGlobalMask();
                 if ((mask & XQueue.KEEP_RUNNING) > 0 &&
@@ -597,10 +620,14 @@ public class NNTPMessenger extends NNTPConnector {
         String msgRC = String.valueOf(MessageUtils.RC_MSGERROR);
         boolean checkIdle = (maxIdleTime > 0);
         boolean ack = ((xq.getGlobalMask() & XQueue.EXTERNAL_XA) > 0);
+        boolean isSleepy = (sleepTime > 0);
         long currentTime, sessionTime, idleTime, size;
-        long count = 0;
+        long count = 0, stm = 10;
         int sid = -1;
         int i, m, n, mask;
+
+        if (isSleepy)
+            stm = (sleepTime > waitTime) ? waitTime : sleepTime;
 
         currentTime = System.currentTimeMillis();
         sessionTime = currentTime;
@@ -893,7 +920,7 @@ public class NNTPMessenger extends NNTPConnector {
             if (maxNumberMsg > 0 && count >= maxNumberMsg)
                 break;
 
-            if (sleepTime > 0) { // slow down a while
+            if (isSleepy) { // slow down a while
                 long tm = System.currentTimeMillis() + sleepTime;
                 do {
                     mask = xq.getGlobalMask();
@@ -901,7 +928,7 @@ public class NNTPMessenger extends NNTPConnector {
                         (mask & XQueue.STANDBY) > 0) // temporarily disabled
                         break;
                     else try {
-                        Thread.sleep(receiveTime);
+                        Thread.sleep(stm);
                     }
                     catch (InterruptedException e) {
                     }
@@ -945,10 +972,14 @@ public class NNTPMessenger extends NNTPConnector {
         String msgRC = String.valueOf(MessageUtils.RC_MSGERROR);
         boolean checkIdle = (maxIdleTime > 0);
         boolean ack = ((xq.getGlobalMask() & XQueue.EXTERNAL_XA) > 0);
+        boolean isSleepy = (sleepTime > 0);
         long currentTime, sessionTime, idleTime, size;
-        long count = 0;
+        long count = 0, stm = 10;
         int sid = -1;
         int i, k, m, n, mask;
+
+        if (isSleepy)
+            stm = (sleepTime > waitTime) ? waitTime : sleepTime;
 
         currentTime = System.currentTimeMillis();
         sessionTime = currentTime;
@@ -1206,7 +1237,7 @@ public class NNTPMessenger extends NNTPConnector {
             if (maxNumberMsg > 0 && count >= maxNumberMsg)
                 break;
 
-            if (sleepTime > 0) { // slow down a while
+            if (isSleepy) { // slow down a while
                 long tm = System.currentTimeMillis() + sleepTime;
                 do {
                     mask = xq.getGlobalMask();
@@ -1214,7 +1245,7 @@ public class NNTPMessenger extends NNTPConnector {
                         (mask & XQueue.STANDBY) > 0) // temporarily disabled
                         break;
                     else try {
-                        Thread.sleep(receiveTime);
+                        Thread.sleep(stm);
                     }
                     catch (InterruptedException e) {
                     }
@@ -1259,16 +1290,20 @@ public class NNTPMessenger extends NNTPConnector {
         int sid = -1;
         int totalCount = 0;
         int dmask = MessageUtils.SHOW_DATE;
-        long currentTime, sessionTime, idleTime, size = 0, count = 0;
+        long currentTime, sessionTime, idleTime, size = 0, count = 0, stm = 10;
         boolean checkIdle = (maxIdleTime > 0);
         boolean isDirectory = false;
         boolean isWriteable = ((xaMode & MessageUtils.XA_CLIENT) > 0);
         boolean acked = ((xq.getGlobalMask() & XQueue.EXTERNAL_XA) > 0);
+        boolean isSleepy = (sleepTime > 0);
         String dt = null, msgStr = null, subject, reply, groupname;
         String okRC = String.valueOf(MessageUtils.RC_OK);
         String jmsRC = String.valueOf(MessageUtils.RC_JMSERROR);
         String uriRC = String.valueOf(MessageUtils.RC_NOTFOUND);
         byte[] buffer = new byte[bufferSize];
+
+        if (isSleepy)
+            stm = (sleepTime > waitTime) ? waitTime : sleepTime;
 
         dmask ^= displayMask;
         dmask &= displayMask;
@@ -1533,7 +1568,7 @@ public class NNTPMessenger extends NNTPConnector {
             if (maxNumberMsg > 0 && count >= maxNumberMsg)
                 break;
 
-            if (sleepTime > 0) { // slow down a while
+            if (isSleepy) { // slow down a while
                 long tm = System.currentTimeMillis() + sleepTime;
                 do {
                     mask = xq.getGlobalMask();
@@ -1541,7 +1576,7 @@ public class NNTPMessenger extends NNTPConnector {
                         (mask & XQueue.STANDBY) > 0) // temporarily disabled
                         break;
                     else try {
-                        Thread.sleep(receiveTime);
+                        Thread.sleep(stm);
                     }
                     catch (InterruptedException e) {
                     }

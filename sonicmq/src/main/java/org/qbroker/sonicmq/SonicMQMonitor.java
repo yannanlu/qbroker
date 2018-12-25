@@ -884,7 +884,7 @@ public class SonicMQMonitor extends Monitor {
             fr.close();
 
             monitor = new SonicMQMonitor(ph);
-            Map r = monitor.generateReport(tm);
+            Map<String, Object> r = monitor.generateReport(tm);
             String str = (String) r.get("StateLabel");
             if (str != null) {
                 Event event = monitor.performAction(0, tm, r);

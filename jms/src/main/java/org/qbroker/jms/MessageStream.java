@@ -315,11 +315,12 @@ public class MessageStream {
         int totalBytes = 0;
         int retry = 0, len = 0, rawLen = 0, skip;
         int dmask = MessageUtils.SHOW_BODY | MessageUtils.SHOW_SIZE;
-        long count = 0;
+        long count = 0, stm = 10;
         DelimitedBuffer sBuf = null;
         byte[] buffer;
         byte[] rawBuf;
         StringBuffer textBuffer = null;
+        boolean isSleepy = (sleepTime > 0);
         boolean isNewMsg = false;
         boolean isText;
         boolean ignoreEOF = false;
@@ -343,6 +344,8 @@ public class MessageStream {
         }
 
         buffer = sBuf.getBuffer();
+        if (isSleepy)
+            stm = (sleepTime > waitTime) ? waitTime : sleepTime;
 
         // hack for RXTX driver and Rocketport comm port on Linux
         if (mode < 0) // for Linux comm port to ignore EOF
@@ -540,6 +543,24 @@ public class MessageStream {
                                 count ++;
                                 if (maxNumberMsg > 0 && count>=maxNumberMsg)
                                     return count;
+                                if (isSleepy) { // slow down a while
+                                    long tm = System.currentTimeMillis() +
+                                        sleepTime;
+                                    do {
+                                        mask = xq.getGlobalMask();
+                                        if ((mask & XQueue.KEEP_RUNNING) > 0 &&
+                                            (mask & XQueue.PAUSE) > 0) // paused
+                                            break;
+                                        else try {
+                                            Thread.sleep(stm);
+                                        }
+                                        catch (InterruptedException e) {
+                                        }
+                                    } while (tm > System.currentTimeMillis());
+                                    if ((mask & XQueue.KEEP_RUNNING) > 0 &&
+                                        (mask & XQueue.PAUSE) > 0) // paused
+                                        break;
+                                }
                             }
                             else {
                                 xq.cancel(sid);
@@ -726,6 +747,23 @@ public class MessageStream {
                             count ++;
                             if (maxNumberMsg > 0 && count >= maxNumberMsg)
                                 return count;
+                            if (isSleepy) { // slow down a while
+                                long tm = System.currentTimeMillis()+sleepTime;
+                                do {
+                                    mask = xq.getGlobalMask();
+                                    if ((mask & XQueue.KEEP_RUNNING) > 0 &&
+                                        (mask & XQueue.PAUSE) > 0) // paused
+                                        break;
+                                    else try {
+                                        Thread.sleep(stm);
+                                    }
+                                    catch (InterruptedException e) {
+                                    }
+                                } while (tm > System.currentTimeMillis());
+                                if ((mask & XQueue.KEEP_RUNNING) > 0 &&
+                                    (mask & XQueue.PAUSE) > 0) // paused
+                                    break;
+                            }
                         }
                         else {
                             xq.cancel(sid);
@@ -3264,11 +3302,14 @@ public class MessageStream {
         boolean checkIdle = (maxIdleTime > 0);
         boolean isSleepy = (sleepTime > 0);
         boolean ack = ((xq.getGlobalMask() & XQueue.EXTERNAL_XA) > 0);
-        long currentTime, idleTime, count = 0;
+        long currentTime, idleTime, count = 0, stm = 10;
         int n, sid = -1, mask;
         int dmask = MessageUtils.SHOW_DATE;
         String dt = null, msgStr = null;
         byte[] buffer = new byte[bufferSize];
+
+        if (isSleepy)
+            stm = (sleepTime > waitTime) ? waitTime : sleepTime;
 
         dmask ^= displayMask;
         dmask &= displayMask;
@@ -3410,7 +3451,7 @@ public class MessageStream {
                         (mask & XQueue.STANDBY) > 0) // temporarily disabled
                         break;
                     else try {
-                        Thread.sleep(waitTime);
+                        Thread.sleep(stm);
                     }
                     catch (InterruptedException e) {
                     }

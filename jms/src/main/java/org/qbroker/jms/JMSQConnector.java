@@ -371,7 +371,7 @@ public abstract class JMSQConnector implements QueueConnector {
         String msgStr = null;
         String line = null;
         Enumeration msgQ;
-        long count = 0, stm = 0;
+        long count = 0, stm = 10;
         int type = 0;
         int sid = -1;
         boolean isSleepy = (sleepTime > 0), hasFilter = false, ckBody = false;
@@ -381,7 +381,7 @@ public abstract class JMSQConnector implements QueueConnector {
            throw(new JMSException("qBrowser for "+qName+" is not initialized"));
 
         if (isSleepy)
-            stm = (sleepTime > receiveTime) ? receiveTime : sleepTime;
+            stm = (sleepTime > waitTime) ? waitTime : sleepTime;
 
         if (msgFilters != null && msgFilters.length > 0) {
             hasFilter = true;
@@ -1172,7 +1172,7 @@ public abstract class JMSQConnector implements QueueConnector {
         boolean isSleepy = (sleepTime > 0);
         boolean showBody = ((displayMask & MessageUtils.SHOW_BODY) > 0 ||
             (displayMask & MessageUtils.SHOW_SIZE) > 0);
-        long count = 0, stm = 0;
+        long count = 0, stm = 10;
         int type = 0;
         int sid = -1, cid;
         byte[] buffer = new byte[bufferSize];
@@ -1184,7 +1184,7 @@ public abstract class JMSQConnector implements QueueConnector {
           throw(new JMSException("qReceiver for "+qName+" is not initialized"));
 
         if (isSleepy)
-            stm = (sleepTime > receiveTime) ? receiveTime : sleepTime;
+            stm = (sleepTime > waitTime) ? waitTime : sleepTime;
 
         if (out == null) {
             type = 0;
@@ -1919,7 +1919,7 @@ public abstract class JMSQConnector implements QueueConnector {
         boolean ack = ((xq.getGlobalMask() & XQueue.EXTERNAL_XA) > 0);
         boolean checkIdle = (maxIdleTime > 0);
         boolean isSleepy = (sleepTime > 0);
-        long currentTime, idleTime, ttl, count = 0, stm = 0;
+        long currentTime, idleTime, ttl, count = 0, stm = 10;
         int mask;
         int sid = -1;
         int n, size = 0;
@@ -1934,7 +1934,7 @@ public abstract class JMSQConnector implements QueueConnector {
             throw(new JMSException("qSender for "+qName+" is not initialized"));
 
         if (isSleepy)
-            stm = (sleepTime > receiveTime) ? receiveTime : sleepTime;
+            stm = (sleepTime > waitTime) ? waitTime : sleepTime;
 
         n = 0;
         currentTime = System.currentTimeMillis();
@@ -2229,7 +2229,7 @@ public abstract class JMSQConnector implements QueueConnector {
         boolean isSleepy = (sleepTime > 0);
         boolean isTempQ = (responseQueueName == null);
         boolean withResp = (respPropertyName != null);
-        long currentTime, idleTime, ttl, count = 0, stm = 0;
+        long currentTime, idleTime, ttl, count = 0, stm = 10;
         int mask;
         int sid = -1;
         int n;
@@ -2247,7 +2247,7 @@ public abstract class JMSQConnector implements QueueConnector {
         }
 
         if (isSleepy)
-            stm = (sleepTime > receiveTime) ? receiveTime : sleepTime;
+            stm = (sleepTime > waitTime) ? waitTime : sleepTime;
 
         n = 0;
         currentTime = System.currentTimeMillis();
@@ -2623,7 +2623,7 @@ public abstract class JMSQConnector implements QueueConnector {
         boolean ack = ((xq.getGlobalMask() & XQueue.EXTERNAL_XA) > 0);
         boolean checkIdle = (maxIdleTime > 0);
         boolean isSleepy = (sleepTime > 0);
-        long currentTime, idleTime, count = 0, stm = 0;
+        long currentTime, idleTime, count = 0, stm = 10;
         int mask;
         int sid = -1;
         int n;
@@ -2636,7 +2636,7 @@ public abstract class JMSQConnector implements QueueConnector {
             throw(new JMSException("qSender for "+qName+" is not initialized"));
 
         if (isSleepy)
-            stm = (sleepTime > receiveTime) ? receiveTime : sleepTime;
+            stm = (sleepTime > waitTime) ? waitTime : sleepTime;
 
         n = 0;
         currentTime = System.currentTimeMillis();

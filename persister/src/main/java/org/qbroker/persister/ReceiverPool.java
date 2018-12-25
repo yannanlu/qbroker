@@ -1123,13 +1123,12 @@ public class ReceiverPool extends Persister implements Runnable {
                     props.put("Operation", "read");
             }
         }
-        else if ("tcp".equals(scheme) && connectionFactoryName != null) {
-            String str;
-            if (props.get("ContextFactory") == null)
-                props.put("ContextFactory",
-                    "org.apache.activemq.jndi.ActiveMQInitialContextFactory");
-            str = "org.apache.activemq.jndi.ActiveMQInitialContextFactory";
-            if (str.equals((String) props.get("ContextFactory"))) {
+        else if (("tcp".equals(scheme) || "failover".equals(scheme)) &&
+            connectionFactoryName != null) {
+            String str = "org.apache.activemq.jndi.ActiveMQInitialContextFactory";
+            if (props.get("ContextFactory") == null) // default to ActiveMQ
+                props.put("ContextFactory", str);
+            if (str.equals((String) props.get("ContextFactory"))) { // for ActiveMQ
                 if (!props.containsKey("IsPhysical"))
                     props.put("IsPhysical", "true");
             }

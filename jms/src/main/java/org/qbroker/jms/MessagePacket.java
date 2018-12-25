@@ -1246,7 +1246,7 @@ public class MessagePacket {
         JMSException {
         Message inMessage;
         DatagramPacket packet = null;
-        long count = 0;
+        long count = 0, stm = 10;
         int aPort, length, mask;
         int sid = -1;
         int dmask = MessageUtils.SHOW_DATE;
@@ -1254,6 +1254,9 @@ public class MessagePacket {
         boolean isSleepy = (sleepTime > 0);
         boolean ack = ((xq.getGlobalMask() & XQueue.EXTERNAL_XA) > 0);
         byte[] buffer = new byte[bufferSize];
+
+        if (isSleepy)
+            stm = (sleepTime > waitTime) ? waitTime : sleepTime;
 
         dmask ^= displayMask;
         dmask &= displayMask;
@@ -1412,7 +1415,7 @@ public class MessagePacket {
                         (mask & XQueue.STANDBY) > 0) // temporarily disabled
                         break;
                     else try {
-                        Thread.sleep(receiveTime);
+                        Thread.sleep(stm);
                     }
                     catch (InterruptedException e) {
                     }

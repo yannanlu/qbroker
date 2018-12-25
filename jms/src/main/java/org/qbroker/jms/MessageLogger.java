@@ -314,14 +314,18 @@ public class MessageLogger {
         Message outMessage;
         int sid = -1, cid, mask = 0;
         int i, k = 0, l, n = 0, sessionCount = 0;
-        long t, st = 0, pos, length, count = 0;
+        long t, st = 0, pos, length, count = 0, stm = 10;
         String line, msgStr;
         StringBuffer strBuf;
+        boolean isSleepy = (sleepTime > 0);
         boolean xa = ((xaMode & MessageUtils.XA_CLIENT) > 0);
         boolean xb = ((xaMode & MessageUtils.XA_COMMIT) > 0);
         boolean isText;
         int shift = partition[0];
         int len = partition[1];
+
+        if (isSleepy)
+            stm = (sleepTime > waitTime) ? waitTime : sleepTime;
 
         switch (len) {
           case 0:
@@ -531,6 +535,24 @@ public class MessageLogger {
                                   new Event(Event.INFO,"fetched an entry from "+
                                         newlog.getPath() +" into a msg").send();
                                 }
+                                if (isSleepy) { // slow down a while
+                                    long tm = System.currentTimeMillis() +
+                                        sleepTime;
+                                    do {
+                                        mask = xq.getGlobalMask();
+                                        if ((mask & XQueue.KEEP_RUNNING) > 0 &&
+                                            (mask & XQueue.PAUSE) > 0) // paused
+                                            break;
+                                        else try {
+                                            Thread.sleep(stm);
+                                        }
+                                        catch (InterruptedException e) {
+                                        }
+                                    } while (tm > System.currentTimeMillis());
+                                    if ((mask & XQueue.KEEP_RUNNING) > 0 &&
+                                        (mask & XQueue.PAUSE) > 0) // paused
+                                        break;
+                                }
                             }
                             else {
                                 xq.cancel(sid);
@@ -711,6 +733,23 @@ public class MessageLogger {
                             new Event(Event.INFO, "fetched an entry from " +
                                 newlog.getPath() + " into a msg").send();
                         }
+                        if (isSleepy) { // slow down a while
+                            long tm = System.currentTimeMillis() + sleepTime;
+                            do {
+                                mask = xq.getGlobalMask();
+                                if ((mask & XQueue.KEEP_RUNNING) > 0 &&
+                                    (mask & XQueue.PAUSE) > 0) // paused
+                                    break;
+                                else try {
+                                    Thread.sleep(stm);
+                                }
+                                catch (InterruptedException e) {
+                                }
+                            } while (tm > System.currentTimeMillis());
+                            if ((mask & XQueue.KEEP_RUNNING) > 0 &&
+                                (mask & XQueue.PAUSE) > 0) // paused
+                                break;
+                        }
                     }
                     else {
                         xq.cancel(sid);
@@ -855,7 +894,7 @@ public class MessageLogger {
     public void download(XQueue xq) throws IOException, JMSException {
         Message outMessage;
         int i, sid = -1, mask;
-        long count = 0;
+        long count = 0, stm = 10;
         String okRC = String.valueOf(MessageUtils.RC_OK);
         String jmsRC = String.valueOf(MessageUtils.RC_JMSERROR);
         String uriRC = String.valueOf(MessageUtils.RC_NOTFOUND);
@@ -864,6 +903,9 @@ public class MessageLogger {
         boolean isSleepy = (sleepTime > 0);
         boolean ack = ((xq.getGlobalMask() & XQueue.EXTERNAL_XA) > 0);
         StringBuffer strBuf = null;
+
+        if (isSleepy)
+            stm = (sleepTime > waitTime) ? waitTime : sleepTime;
 
         while (((mask = xq.getGlobalMask()) & XQueue.KEEP_RUNNING) > 0) {
             if ((mask & XQueue.STANDBY) > 0) // standby temporarily
@@ -1060,7 +1102,7 @@ public class MessageLogger {
                         (mask & XQueue.STANDBY) > 0) // temporarily disabled
                         break;
                     else try {
-                        Thread.sleep(receiveTime);
+                        Thread.sleep(stm);
                     }
                     catch (InterruptedException e) {
                     }
@@ -1132,7 +1174,7 @@ public class MessageLogger {
      */
     public void append(XQueue xq) throws IOException, JMSException {
         Message inMessage;
-        long count = 0;
+        long count = 0, stm = 10;
         int sid = -1, mask;
         int dmask = MessageUtils.SHOW_DATE;
         String filename, msgStr = null, opStr = ((append)?"appended":"stored");
@@ -1144,6 +1186,9 @@ public class MessageLogger {
         boolean isWriteable = ((xaMode & MessageUtils.XA_CLIENT) > 0);
         boolean acked = ((xq.getGlobalMask() & XQueue.EXTERNAL_XA) > 0);
         boolean isSleepy = (sleepTime > 0);
+
+        if (isSleepy)
+            stm = (sleepTime > waitTime) ? waitTime : sleepTime;
 
         dmask ^= displayMask;
         dmask &= displayMask;
@@ -1354,7 +1399,7 @@ public class MessageLogger {
                         (mask & XQueue.STANDBY) > 0) // temporarily disabled
                         break;
                     else try {
-                        Thread.sleep(receiveTime);
+                        Thread.sleep(stm);
                     }
                     catch (InterruptedException e) {
                     }

@@ -226,7 +226,7 @@ public class RedisMessenger implements Connector {
     public void get(XQueue xq) throws IOException {
         Message inMessage;
         String msgStr;
-        long count = 0;
+        long count = 0, stm = 10;
         int k, n, sid = -1, cid, mask = 0;
         boolean isText = (textMode > 0);
         boolean isSleepy = (sleepTime > 0);
@@ -235,6 +235,9 @@ public class RedisMessenger implements Connector {
 
         if (qName == null)
             throw(new IOException("qName is null for " + uri));
+
+        if (isSleepy)
+            stm = (sleepTime > waitTime) ? waitTime : sleepTime;
 
         while (((mask = xq.getGlobalMask()) & XQueue.KEEP_RUNNING) > 0) {
             if ((mask & XQueue.PAUSE) > 0) // paused temporarily
@@ -331,7 +334,7 @@ public class RedisMessenger implements Connector {
                             (mask & XQueue.PAUSE) > 0) // temporarily disabled
                             break;
                         else try {
-                            Thread.sleep(receiveTime);
+                            Thread.sleep(stm);
                         }
                         catch (InterruptedException e) {
                         }
@@ -353,7 +356,7 @@ public class RedisMessenger implements Connector {
         String msgStr, str;
         BytesBuffer msgBuf = new BytesBuffer();
         OutputStream out = null;
-        long count = 0;
+        long count = 0, stm = 10;
         int k, n, sid = -1, cid, mask = 0;
         boolean isText = (textMode > 0);
         boolean isSleepy = (sleepTime > 0);
@@ -362,6 +365,9 @@ public class RedisMessenger implements Connector {
 
         if (qName == null)
             throw(new IOException("qName is null for " + uri));
+
+        if (isSleepy)
+            stm = (sleepTime > waitTime) ? waitTime : sleepTime;
 
         while (((mask = xq.getGlobalMask()) & XQueue.KEEP_RUNNING) > 0) {
             if ((mask & XQueue.PAUSE) > 0) // paused temporarily
@@ -460,7 +466,7 @@ public class RedisMessenger implements Connector {
                             (mask & XQueue.PAUSE) > 0) // temporarily disabled
                             break;
                         else try {
-                            Thread.sleep(receiveTime);
+                            Thread.sleep(stm);
                         }
                         catch (InterruptedException e) {
                         }
@@ -480,7 +486,7 @@ public class RedisMessenger implements Connector {
         boolean ack = ((xq.getGlobalMask() & XQueue.EXTERNAL_XA) > 0);
         boolean checkIdle = (maxIdleTime > 0);
         boolean isSleepy = (sleepTime > 0);
-        long currentTime, idleTime, l, count = 0;
+        long currentTime, idleTime, l, count = 0, stm = 10;
         int mask;
         int sid = -1;
         int n, size = 0;
@@ -488,6 +494,9 @@ public class RedisMessenger implements Connector {
         byte[] buffer = new byte[bufferSize];
         dmask ^= displayMask;
         dmask &= displayMask;
+
+        if (isSleepy)
+            stm = (sleepTime > waitTime) ? waitTime : sleepTime;
 
         currentTime = System.currentTimeMillis();
         idleTime = currentTime;
@@ -614,7 +623,7 @@ public class RedisMessenger implements Connector {
                         (mask & XQueue.STANDBY) > 0) // temporarily disabled
                         break;
                     else try {
-                        Thread.sleep(receiveTime);
+                        Thread.sleep(stm);
                     }
                     catch (InterruptedException e) {
                     }
@@ -632,7 +641,7 @@ public class RedisMessenger implements Connector {
         boolean ack = ((xq.getGlobalMask() & XQueue.EXTERNAL_XA) > 0);
         boolean checkIdle = (maxIdleTime > 0);
         boolean isSleepy = (sleepTime > 0);
-        long currentTime, idleTime, l, count = 0;
+        long currentTime, idleTime, l, count = 0, stm = 10;
         int mask;
         int sid = -1;
         int n, size = 0;
@@ -640,6 +649,9 @@ public class RedisMessenger implements Connector {
         byte[] buffer = new byte[bufferSize];
         dmask ^= displayMask;
         dmask &= displayMask;
+
+        if (isSleepy)
+            stm = (sleepTime > waitTime) ? waitTime : sleepTime;
 
         currentTime = System.currentTimeMillis();
         idleTime = currentTime;
@@ -766,7 +778,7 @@ public class RedisMessenger implements Connector {
                         (mask & XQueue.STANDBY) > 0) // temporarily disabled
                         break;
                     else try {
-                        Thread.sleep(receiveTime);
+                        Thread.sleep(stm);
                     }
                     catch (InterruptedException e) {
                     }

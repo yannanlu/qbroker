@@ -345,14 +345,18 @@ public class JDBCMessenger extends DBConnector {
         ResultSet rset = null;
         int sid = -1, cid, rid, mask = 0;
         int i, k, n, retry, kid = -1, id = -1, bid = -1;
-        long currentTime, count = 0;
+        long currentTime, count = 0, stm = 10;
         boolean isText = (textMode == 1), isDate = false, checkSkip = false;
+        boolean isSleepy = (sleepTime > 0);
         byte[] buffer = new byte[bufferSize];
         String sqlStr, str;
         int shift = partition[0];
         int len = partition[1];
         String[] keys = null;
         int[] dataType = null;
+
+        if (isSleepy)
+            stm = (sleepTime > waitTime) ? waitTime : sleepTime;
 
         k = 0;
         sqlStr = sqlQuery;
@@ -720,6 +724,21 @@ public class JDBCMessenger extends DBConnector {
                 }
                 if (maxNumberMsg > 0 && count >= maxNumberMsg)
                     break;
+
+                if (isSleepy) { // slow down a while
+                    long tm = System.currentTimeMillis() + sleepTime;
+                    do {
+                        mask = xq.getGlobalMask();
+                        if ((mask & XQueue.KEEP_RUNNING) > 0 &&
+                            (mask & XQueue.PAUSE) > 0) // temporarily disabled
+                            break;
+                        else try {
+                            Thread.sleep(stm);
+                        }
+                        catch (InterruptedException e) {
+                        }
+                    } while (tm > System.currentTimeMillis());
+                }
             }
             else {
                 xq.cancel(sid);
@@ -825,10 +844,11 @@ public class JDBCMessenger extends DBConnector {
         GenericPool pool = null;
         Object o;
         Object[] asset;
-        long currentTime, tm, idleTime, ttl = 0L, count = 0;
+        long currentTime, tm, idleTime, ttl = 0L, count = 0, stm = 10;
         boolean isSelect = true, checkIdle = (maxIdleTime > 0);
         boolean isAutoCommit = ((xaMode & MessageUtils.XA_COMMIT) == 0);
         boolean ack = ((xq.getGlobalMask() & XQueue.EXTERNAL_XA) > 0);
+        boolean isSleepy = (sleepTime > 0);
         int retry = 0;
         int i, k, sid = -1, cid, rid, n, mask;
         int[] rc = new int[2];
@@ -839,6 +859,9 @@ public class JDBCMessenger extends DBConnector {
         String msgRC = String.valueOf(MessageUtils.RC_MSGERROR);
         String expRC = String.valueOf(MessageUtils.RC_EXPIRED);
         byte[] buffer = new byte[bufferSize];
+
+        if (isSleepy)
+            stm = (sleepTime > waitTime) ? waitTime : sleepTime;
 
         currentTime = System.currentTimeMillis();
         idleTime = currentTime;
@@ -1418,7 +1441,7 @@ public class JDBCMessenger extends DBConnector {
             if (maxNumberMsg > 0 && count >= maxNumberMsg)
                 break;
 
-            if (sleepTime > 0) { // slow down a while
+            if (isSleepy) { // slow down a while
                 long ts = System.currentTimeMillis() + sleepTime;
                 do {
                     mask = xq.getGlobalMask();
@@ -1426,7 +1449,7 @@ public class JDBCMessenger extends DBConnector {
                         (mask & XQueue.STANDBY) > 0) // temporarily disabled
                         break;
                     else try {
-                        Thread.sleep(receiveTime);
+                        Thread.sleep(stm);
                     }
                     catch (InterruptedException e) {
                     }
@@ -1545,12 +1568,16 @@ public class JDBCMessenger extends DBConnector {
         boolean isAutoCommit = ((xaMode & MessageUtils.XA_COMMIT) == 0);
         boolean isExecute = false, checkIdle = (maxIdleTime > 0);
         boolean ack = ((xq.getGlobalMask() & XQueue.EXTERNAL_XA) > 0);
-        long currentTime, idleTime, tm, count = 0;
+        boolean isSleepy = (sleepTime > 0);
+        long currentTime, idleTime, tm, count = 0, stm = 10;
         int retry = 0, rc = -1, mask;
         int n, k, sid = -1;
         int dmask = MessageUtils.SHOW_DATE;
         String dt = null, sqlStr = null, msgStr = null;
         byte[] buffer = new byte[bufferSize];
+
+        if (isSleepy)
+            stm = (sleepTime > waitTime) ? waitTime : sleepTime;
 
         dmask ^= displayMask;
         dmask &= displayMask;
@@ -1856,7 +1883,7 @@ public class JDBCMessenger extends DBConnector {
             if (maxNumberMsg > 0 && count >= maxNumberMsg)
                 break;
 
-            if (sleepTime > 0) { // slow down a while
+            if (isSleepy) { // slow down a while
                 long ts = System.currentTimeMillis() + sleepTime;
                 do {
                     mask = xq.getGlobalMask();
@@ -1864,7 +1891,7 @@ public class JDBCMessenger extends DBConnector {
                         (mask & XQueue.STANDBY) > 0) // temporarily disabled
                         break;
                     else try {
-                        Thread.sleep(receiveTime);
+                        Thread.sleep(stm);
                     }
                     catch (InterruptedException e) {
                     }

@@ -602,9 +602,13 @@ public class HTTPMessenger {
         boolean ack = ((xq.getGlobalMask() & XQueue.EXTERNAL_XA) > 0);
         boolean isLocal = false;
         boolean isBytes = false;
-        long count = 0, idleTime, currentTime;
+        boolean isSleepy = (sleepTime > 0);
+        long count = 0, stm = 10, idleTime, currentTime;
         int sid = -1;
         int i, mask, n = 0;
+
+        if (isSleepy)
+            stm = (sleepTime > waitTime) ? waitTime : sleepTime;
 
         currentTime = System.currentTimeMillis();
         idleTime = currentTime;
@@ -1174,7 +1178,7 @@ public class HTTPMessenger {
             if (maxNumberMsg > 0 && count >= maxNumberMsg)
                 break;
 
-            if (sleepTime > 0) { // slow down for a while
+            if (isSleepy) { // slow down for a while
                 long tm = System.currentTimeMillis() + sleepTime;
                 do {
                     mask = xq.getGlobalMask();
@@ -1182,7 +1186,7 @@ public class HTTPMessenger {
                         (mask & XQueue.STANDBY) > 0) // temporarily disabled
                         break;
                     else try {
-                        Thread.sleep(receiveTime);
+                        Thread.sleep(stm);
                     }
                     catch (InterruptedException e) {
                     }
@@ -1684,7 +1688,7 @@ public class HTTPMessenger {
         Message inMessage;
         Map<String, String> extraHeader = null;
         BytesBuffer msgBuf = null;
-        long count = 0, idleTime, currentTime;
+        long count = 0, stm = 10, idleTime, currentTime;
         int sid = -1, i, mask, n = 0;
         int retCode = HttpURLConnection.HTTP_INTERNAL_ERROR;
         int dmask = MessageUtils.SHOW_DATE;
@@ -1700,6 +1704,10 @@ public class HTTPMessenger {
         boolean acked = ((xq.getGlobalMask() & XQueue.EXTERNAL_XA) > 0);
         boolean hasTemplate = (msg2Text != null);
         boolean isBytes = false;
+        boolean isSleepy = (sleepTime > 0);
+
+        if (isSleepy)
+            stm = (sleepTime > waitTime) ? waitTime : sleepTime;
 
         dmask ^= displayMask;
         dmask &= displayMask;
@@ -1985,7 +1993,7 @@ public class HTTPMessenger {
             if (maxNumberMsg > 0 && count >= maxNumberMsg)
                 break;
 
-            if (sleepTime > 0) { // slow down for a while
+            if (isSleepy) { // slow down for a while
                 long tm = System.currentTimeMillis() + sleepTime;
                 do {
                     mask = xq.getGlobalMask();
@@ -1993,7 +2001,7 @@ public class HTTPMessenger {
                         (mask & XQueue.STANDBY) > 0) // temporarily disabled
                         break;
                     else try {
-                        Thread.sleep(receiveTime);
+                        Thread.sleep(stm);
                     }
                     catch (InterruptedException e) {
                     }
