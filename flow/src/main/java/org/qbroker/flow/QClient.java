@@ -351,7 +351,6 @@ public class QClient {
             catch (Exception e) {
             }
 
-            System.exit(0);
         } catch (JMSException e) {
             Exception ex = e.getLinkedException();
             if (ex != null)
@@ -364,6 +363,7 @@ public class QClient {
             if (flow != null)
                 flow.close();
         }
+        System.exit(0);
     }
 
     public static int processArgs(String args[], Map props) {

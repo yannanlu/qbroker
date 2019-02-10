@@ -8,7 +8,8 @@ package org.qbroker.flow;
  * most of the Messengers, added sleepTime block to read() of MessageStream
  * for slowing down, added -V as mask of destinations to overwrite IsPhysical
  * for QClient, added scheme of failover to mapURI() in ReceiverPool and
- * PersisterPool, bumped up the release version to 1.2.3
+ * PersisterPool, bumped up the release version to 1.2.3, moved System.exit()
+ * to end of main method of QClient
  *<br/>
  * V1.2.11 (2018/09/30): added RequestTimeout in second to JMSQConnector and
  * updated two QConnectors, updated comments about encoding of UTF8 in some of
@@ -238,7 +239,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V1.2.12 2018/12/22 11:30:24";
+    private static String ReleaseTAG = "QBroker V1.2.12 2018/12/22 13:07:46";
 
     public ReleaseTag() {
     }
