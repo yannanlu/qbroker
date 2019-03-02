@@ -64,6 +64,8 @@ public class DBConnector implements Connector {
                 dbDriver = "com.mysql.jdbc.Driver";
             else if (ssp.startsWith("postgresql"))
                 dbDriver = "org.postgresql.Driver";
+            else if (ssp.startsWith("sqlserver"))
+                dbDriver = "com.microsoft.sqlserver.jdbc.SQLServerDriver";
             else if (ssp.startsWith("microsoft"))
                 dbDriver = "com.microsoft.jdbc.sqlserver.SQLServerDriver";
             else if (ssp.startsWith("db2"))

@@ -120,7 +120,7 @@ public abstract class JMSTConnector implements TopicConnector {
         else
             tConnection = factory.createTopicConnection();
 
-        if (!operation.equals("pub"))
+        if (!operation.equals("pub") && clientID != null)
             tConnection.setClientID(clientID);
         if (enable_exlsnr) // register the exception listener on connection
             tConnection.setExceptionListener(this);

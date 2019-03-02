@@ -29,9 +29,10 @@ public class JMXQMonitor extends Monitor {
     private ObjectName mbName;
     private JMXRequester jmxReq = null;
     private int vendorId = 0, watermark = 0;
-    private long previousDepth, previousIn, previousOut;
+    private long previousDepth, previousIn, previousOut, previousCount;
     private String previousQStatus;
     private boolean isIMQ = false;
+    private boolean isConsumer = false, isDestination = true;
     private String[] attrs = null;
     private final static int JMX_NONE = 0;
     private final static int JMX_IMQ = 1;
@@ -57,7 +58,8 @@ public class JMXQMonitor extends Monitor {
         "ConsumerCount",
         "ProducerCount",
         "InFlightCount",
-        "DispatchCount"
+        "DispatchCount",
+        "ForwardCount"
     };
     public final static String[] qpidAttrs = { // for Apache Qpid
         "Name",
@@ -66,6 +68,16 @@ public class JMXQMonitor extends Monitor {
         "ConsumerCount",
         "ActiveConsumerCount",
         "QueueDepth"
+    };
+    public final static String[] amqConsumerAttrs = { // for Apache ActiveMQ
+        "DestinationName",
+        "SubscriptionName",
+        "Active",
+        "EnqueueCounter",
+        "DequeueCounter",
+        "PendingQueueSize",
+        "DispatchedQueueSize",
+        "DispatchedCounter"
     };
 
     public JMXQMonitor(Map props) {
@@ -142,11 +154,18 @@ public class JMXQMonitor extends Monitor {
             vendorId = JMX_IMQ;
         }
         else if ("org.apache.activemq".equals(key)) { // for ActiveMQ
-            o = mbName.getKeyProperty("Destination");
+            o = mbName.getKeyProperty("destinationName");
             qName = (String) o;
             if (qName != null && qName.indexOf("\"") >= 0)
                 qName = ObjectName.unquote((String) o);
-            attrs = amqAttrs;
+            o = mbName.getKeyProperty("endpoint");
+            if (o == null) // for destination
+                attrs = amqAttrs;
+            else { // for consumer or producer
+                isDestination = false;
+                isConsumer = "Consumer".equals((String) o);
+                attrs = amqConsumerAttrs;
+            }
             vendorId = JMX_AMQ;
         }
         else if ("org.apache.qpid".equals(key)) { // for ActiveMQ
@@ -171,12 +190,13 @@ public class JMXQMonitor extends Monitor {
         previousIn = 0;
         previousOut = 0;
         previousDepth = 0;
+        previousCount = 0;
         previousQStatus = "UNKNOWN";
     }
 
     public Map<String, Object> generateReport(long currentTime)
         throws IOException {
-        long curDepth = 0, totalMsgs = 0, inMsgs = 0, outMsgs = 0;
+        long curDepth = 0, totalMsgs = 0, inMsgs = 0, outMsgs = 0, fwdMsgs = 0;
         int oppsCount = 0, ippsCount = 0;
         String qStatus;
         Object o;
@@ -270,26 +290,77 @@ public class JMXQMonitor extends Monitor {
                 oppsCount = ((Integer) o).intValue();
             }
             else if (vendorId == JMX_AMQ) {
-                o = map.get("EnqueueCount");
-                totalMsgs = ((Long) o).longValue();
-                if (previousStatus < TimeWindows.EXCEPTION) // initial reset
+                if (isDestination) { // for destination
+                    o = map.get("EnqueueCount");
+                    totalMsgs = ((Long) o).longValue();
+                    if (previousStatus < TimeWindows.EXCEPTION) // initial reset
+                        previousIn = totalMsgs;
+                    inMsgs =(totalMsgs >= previousIn) ? totalMsgs - previousIn :
+                        totalMsgs;
                     previousIn = totalMsgs;
-                inMsgs = (totalMsgs >= previousIn) ? totalMsgs - previousIn :
-                    totalMsgs;
-                previousIn = totalMsgs;
-                o = map.get("DequeueCount");
-                totalMsgs = ((Long) o).longValue();
-                if (previousStatus < TimeWindows.EXCEPTION) // initial reset
+                    o = map.get("DequeueCount");
+                    totalMsgs = ((Long) o).longValue();
+                    if (previousStatus < TimeWindows.EXCEPTION) // initial reset
+                        previousOut = totalMsgs;
+                    outMsgs = (totalMsgs >= previousOut) ?
+                        totalMsgs - previousOut : totalMsgs;
                     previousOut = totalMsgs;
-                outMsgs = (totalMsgs >= previousOut) ? totalMsgs - previousOut:
-                    totalMsgs;
-                previousOut = totalMsgs;
-                o = map.get("QueueSize");
-                curDepth = ((Long) o).longValue();
-                o = map.get("ConsumerCount");
-                ippsCount = (int) ((Long) o).longValue();
-                o = map.get("ProducerCount");
-                oppsCount = (int) ((Long) o).longValue();
+                    o = map.get("QueueSize");
+                    curDepth = ((Long) o).longValue();
+                    o = map.get("ConsumerCount");
+                    ippsCount = (int) ((Long) o).longValue();
+                    o = map.get("ProducerCount");
+                    oppsCount = (int) ((Long) o).longValue();
+                    o = map.get("ForwardCount");
+                    totalMsgs = ((Long) o).longValue();
+                    if (previousStatus < TimeWindows.EXCEPTION) // initial reset
+                        previousCount = totalMsgs;
+                    fwdMsgs = (totalMsgs >= previousCount) ?
+                        totalMsgs - previousCount : totalMsgs;
+                    previousCount = totalMsgs;
+                }
+                else if (isConsumer) { // for consumer
+                    o = map.get("EnqueueCounter");
+                    totalMsgs = ((Long) o).longValue();
+                    if (previousStatus < TimeWindows.EXCEPTION) // initial reset
+                        previousIn = totalMsgs;
+                    inMsgs =(totalMsgs >= previousIn) ? totalMsgs - previousIn :
+                        totalMsgs;
+                    previousIn = totalMsgs;
+                    o = map.get("DequeueCounter");
+                    totalMsgs = ((Long) o).longValue();
+                    if (previousStatus < TimeWindows.EXCEPTION) // initial reset
+                        previousOut = totalMsgs;
+                    outMsgs = (totalMsgs >= previousOut) ?
+                        totalMsgs - previousOut : totalMsgs;
+                    previousOut = totalMsgs;
+                    o = map.get("PendingQueueSize");
+                    curDepth = ((Integer) o).longValue();
+                    o = map.get("Active");
+                    ippsCount = ((Boolean) o).booleanValue() ? 1 : 0;
+                    oppsCount = 0;
+                }
+                else { // for producer
+                    o = map.get("EnqueueCounter");
+                    totalMsgs = ((Long) o).longValue();
+                    if (previousStatus < TimeWindows.EXCEPTION) // initial reset
+                        previousIn = totalMsgs;
+                    inMsgs =(totalMsgs >= previousIn) ? totalMsgs - previousIn :
+                        totalMsgs;
+                    previousIn = totalMsgs;
+                    o = map.get("DequeueCounter");
+                    totalMsgs = ((Long) o).longValue();
+                    if (previousStatus < TimeWindows.EXCEPTION) // initial reset
+                        previousOut = totalMsgs;
+                    outMsgs = (totalMsgs >= previousOut) ?
+                        totalMsgs - previousOut : totalMsgs;
+                    previousOut = totalMsgs;
+                    o = map.get("PendingQueueSize");
+                    curDepth = ((Integer) o).longValue();
+                    ippsCount = 0;
+                    o = map.get("Active");
+                    oppsCount = ((Boolean) o).booleanValue() ? 1 : 0;
+                }
             }
             else if (vendorId == JMX_QPID) {
                 o = map.get("ReceivedMessageCount");
@@ -313,6 +384,12 @@ public class JMXQMonitor extends Monitor {
                     vendorId));
             if (serialNumber == 1)
                 qStatus = "OK";
+            else if (!isDestination) { // for consumer or producer
+                if (isConsumer)
+                    qStatus = (ippsCount == 0) ? "NOAPPS" : "OK";
+                else
+                    qStatus = "OK";
+            }
             else if (curDepth > 0 && previousDepth > 0 && outMsgs <= 0)
                 qStatus = (ippsCount == 0) ? "NOAPPS" : "STUCK";
             else
@@ -332,7 +409,8 @@ public class JMXQMonitor extends Monitor {
             strBuf.append(outMsgs + " ");
             strBuf.append(curDepth + " ");
             strBuf.append(ippsCount + " ");
-            strBuf.append(oppsCount);
+            strBuf.append(oppsCount + " ");
+            strBuf.append(fwdMsgs);
             report.put("Stats", strBuf.toString());
             try {
                 statsLogger.log(strBuf.toString());
@@ -342,6 +420,7 @@ public class JMXQMonitor extends Monitor {
         }
         report.put("OutMessages", String.valueOf(outMsgs));
         report.put("InMessages", String.valueOf(inMsgs));
+        report.put("FwdMessages", String.valueOf(fwdMsgs));
         report.put("CurrentDepth", String.valueOf(curDepth));
         report.put("PreviousDepth", String.valueOf(previousDepth));
         if ((disableMode > 0 && curDepth <= 0 && previousDepth <= 0) ||
@@ -355,7 +434,7 @@ public class JMXQMonitor extends Monitor {
     public Event performAction(int status, long currentTime,
         Map<String, Object> latest) {
         int level = 0;
-        long inMsgs = 0, outMsgs = 0, preDepth = 0, curDepth = 0;
+        long inMsgs = 0, outMsgs = 0, fwdMsgs = 0, preDepth = 0, curDepth = 0;
         String qStatus = "UNKNOWN";
         StringBuffer strBuf = new StringBuffer();
         Object o;
@@ -367,6 +446,8 @@ public class JMXQMonitor extends Monitor {
             inMsgs = Long.parseLong((String) o);
         if ((o = latest.get("OutMessages")) != null && o instanceof String)
             outMsgs = Long.parseLong((String) o);
+        if ((o = latest.get("FwdMessages")) != null && o instanceof String)
+            fwdMsgs = Long.parseLong((String) o);
         if ((o = latest.get("StateLabel")) != null && o instanceof String)
             qStatus = (String) o;
 
@@ -506,12 +587,14 @@ public class JMXQMonitor extends Monitor {
             event.setAttribute("currentDepth", "N/A");
             event.setAttribute("inMessages", "N/A");
             event.setAttribute("outMessages", "N/A");
+            event.setAttribute("fwdMessages", "N/A");
         }
         else {
             count = actionCount;
             event.setAttribute("currentDepth", String.valueOf(curDepth));
             event.setAttribute("inMessages", String.valueOf(inMsgs));
             event.setAttribute("outMessages", String.valueOf(outMsgs));
+            event.setAttribute("fwdMessages", String.valueOf(fwdMsgs));
         }
 
         event.setAttribute("name", name);
@@ -563,6 +646,7 @@ public class JMXQMonitor extends Monitor {
         Map<String, Object> chkpt = super.checkpoint();
         chkpt.put("PreviousQStatus", String.valueOf(previousQStatus));
         chkpt.put("PreviousDepth", String.valueOf(previousDepth));
+        chkpt.put("PreviousCount", String.valueOf(previousCount));
         chkpt.put("PreviousIn", String.valueOf(previousIn));
         chkpt.put("PreviousOut", String.valueOf(previousOut));
         return chkpt;
@@ -570,7 +654,7 @@ public class JMXQMonitor extends Monitor {
 
     public void restoreFromCheckpoint(Map<String, Object> chkpt) {
         Object o;
-        long ct, pDepth, pIn, pOut;
+        long ct, pDepth, pIn, pOut, pCount;
         int aCount, eCount, pStatus, sNumber;
         String pQStatus;
 
@@ -608,6 +692,10 @@ public class JMXQMonitor extends Monitor {
             pDepth = Long.parseLong((String) o);
         else
             return;
+        if ((o = chkpt.get("PreviousCount")) != null)
+            pCount = Long.parseLong((String) o);
+        else
+            return;
         if ((o = chkpt.get("PreviousQStatus")) != null)
             pQStatus = (String) o;
         else
@@ -619,6 +707,7 @@ public class JMXQMonitor extends Monitor {
         previousStatus = pStatus;
         serialNumber = sNumber;
         previousDepth = pDepth;
+        previousCount = pCount;
         previousQStatus = pQStatus;
         previousIn = pIn;
         previousOut = pOut;

@@ -27,7 +27,7 @@ public class QMFQMonitor extends Monitor {
     private String qName = null, uri;
     private QMFRequester qmfReq = null;
     private int vendorId = 0, watermark = 0;
-    private long previousDepth, previousIn, previousOut;
+    private long previousDepth, previousIn, previousOut, previousCount;
     private String previousQStatus;
     private String[] attrs = null;
     public final static String[] qpidAttrs = { // for Apache Qpid
@@ -101,13 +101,14 @@ public class QMFQMonitor extends Monitor {
         previousIn = 0;
         previousOut = 0;
         previousDepth = 0;
+        previousCount = 0;
         previousQStatus = "UNKNOWN";
     }
 
     public Map<String, Object> generateReport(long currentTime)
         throws IOException {
         long curDepth = 0, totalMsgs = 0, inMsgs = 0, outMsgs = 0;
-        long oppsCount = 0, ippsCount = 0;
+        long oppsCount = 0, ippsCount = 0, fwdMsgs = 0;
         String qStatus;
         Object o;
         Map map;
@@ -213,7 +214,8 @@ public class QMFQMonitor extends Monitor {
             strBuf.append(outMsgs + " ");
             strBuf.append(curDepth + " ");
             strBuf.append(ippsCount + " ");
-            strBuf.append(oppsCount);
+            strBuf.append(oppsCount + " ");
+            strBuf.append(fwdMsgs);
             report.put("Stats", strBuf.toString());
             try {
                 statsLogger.log(strBuf.toString());
@@ -223,6 +225,7 @@ public class QMFQMonitor extends Monitor {
         }
         report.put("OutMessages", String.valueOf(outMsgs));
         report.put("InMessages", String.valueOf(inMsgs));
+        report.put("FwdMessages", String.valueOf(fwdMsgs));
         report.put("CurrentDepth", String.valueOf(curDepth));
         report.put("PreviousDepth", String.valueOf(previousDepth));
         if ((disableMode > 0 && curDepth <= 0 && previousDepth <= 0) ||
@@ -236,7 +239,7 @@ public class QMFQMonitor extends Monitor {
     public Event performAction(int status, long currentTime,
         Map<String, Object> latest) {
         int level = 0;
-        long inMsgs = 0, outMsgs = 0, preDepth = 0, curDepth = 0;
+        long inMsgs = 0, outMsgs = 0, fwdMsgs = 0, preDepth = 0, curDepth = 0;
         String qStatus = "UNKNOWN";
         StringBuffer strBuf = new StringBuffer();
         Object o;
@@ -248,6 +251,8 @@ public class QMFQMonitor extends Monitor {
             inMsgs = Long.parseLong((String) o);
         if ((o = latest.get("OutMessages")) != null && o instanceof String)
             outMsgs = Long.parseLong((String) o);
+        if ((o = latest.get("FwdMessages")) != null && o instanceof String)
+            fwdMsgs = Long.parseLong((String) o);
         if ((o = latest.get("StateLabel")) != null && o instanceof String)
             qStatus = (String) o;
 
@@ -387,12 +392,14 @@ public class QMFQMonitor extends Monitor {
             event.setAttribute("currentDepth", "N/A");
             event.setAttribute("inMessages", "N/A");
             event.setAttribute("outMessages", "N/A");
+            event.setAttribute("fwdMessages", "N/A");
         }
         else {
             count = actionCount;
             event.setAttribute("currentDepth", String.valueOf(curDepth));
             event.setAttribute("inMessages", String.valueOf(inMsgs));
             event.setAttribute("outMessages", String.valueOf(outMsgs));
+            event.setAttribute("fwdMessages", String.valueOf(fwdMsgs));
         }
 
         event.setAttribute("name", name);
@@ -444,6 +451,7 @@ public class QMFQMonitor extends Monitor {
         Map<String, Object> chkpt = super.checkpoint();
         chkpt.put("PreviousQStatus", String.valueOf(previousQStatus));
         chkpt.put("PreviousDepth", String.valueOf(previousDepth));
+        chkpt.put("PreviousCount", String.valueOf(previousCount));
         chkpt.put("PreviousIn", String.valueOf(previousIn));
         chkpt.put("PreviousOut", String.valueOf(previousOut));
         return chkpt;
@@ -451,7 +459,7 @@ public class QMFQMonitor extends Monitor {
 
     public void restoreFromCheckpoint(Map<String, Object> chkpt) {
         Object o;
-        long ct, pDepth, pIn, pOut;
+        long ct, pDepth, pIn, pOut, pCount;
         int aCount, eCount, pStatus, sNumber;
         String pQStatus;
 
@@ -489,6 +497,10 @@ public class QMFQMonitor extends Monitor {
             pDepth = Long.parseLong((String) o);
         else
             return;
+        if ((o = chkpt.get("PreviousCount")) != null)
+            pCount = Long.parseLong((String) o);
+        else
+            return;
         if ((o = chkpt.get("PreviousQStatus")) != null)
             pQStatus = (String) o;
         else
@@ -500,6 +512,7 @@ public class QMFQMonitor extends Monitor {
         previousStatus = pStatus;
         serialNumber = sNumber;
         previousDepth = pDepth;
+        previousCount = pCount;
         previousQStatus = pQStatus;
         previousIn = pIn;
         previousOut = pOut;

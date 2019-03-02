@@ -282,7 +282,7 @@ public class RMQMonitor extends Monitor {
             strBuf.append(deqRate + " ");
             strBuf.append(curDepth + " ");
             strBuf.append(ippsCount + " ");
-            strBuf.append(oppsCount);
+            strBuf.append(oppsCount + " 0");
             report.put("Stats", strBuf.toString());
             try {
                 statsLogger.log(strBuf.toString());
@@ -291,6 +291,7 @@ public class RMQMonitor extends Monitor {
             }
         }
         report.put("OutMessages", String.valueOf(deqRate));
+        report.put("FwdMessages", "0");
         report.put("InMessages", String.valueOf(enqRate));
         report.put("CurrentDepth", String.valueOf(curDepth));
         report.put("PreviousDepth", String.valueOf(previousDepth));
@@ -302,7 +303,7 @@ public class RMQMonitor extends Monitor {
     public Event performAction(int status, long currentTime,
         Map<String, Object> latest) {
         int level = 0;
-        long inMsgs = 0, outMsgs = 0, preDepth = 0, curDepth = 0;
+        long inMsgs = 0, outMsgs = 0, fwdMsgs = 0, preDepth = 0, curDepth = 0;
         double enqRate = 0, deqRate = 0;
         String qStatus = "UNKNOWN";
         StringBuffer strBuf = new StringBuffer();
@@ -317,6 +318,8 @@ public class RMQMonitor extends Monitor {
         if ((o = latest.get("OutMessages")) != null && o instanceof String)
             deqRate = Double.parseDouble((String) o);
 //            outMsgs = Long.parseLong((String) o);
+        if ((o = latest.get("FwdMessages")) != null && o instanceof String)
+            fwdMsgs = Long.parseLong((String) o);
         if ((o = latest.get("StateLabel")) != null && o instanceof String)
             qStatus = (String) o;
 
@@ -456,12 +459,14 @@ public class RMQMonitor extends Monitor {
             event.setAttribute("currentDepth", "N/A");
             event.setAttribute("inMessages", "N/A");
             event.setAttribute("outMessages", "N/A");
+            event.setAttribute("fwdMessages", "N/A");
         }
         else {
             count = actionCount;
             event.setAttribute("currentDepth", String.valueOf(curDepth));
             event.setAttribute("inMessages", String.valueOf(enqRate));
             event.setAttribute("outMessages", String.valueOf(deqRate));
+            event.setAttribute("fwdMessages", String.valueOf(fwdMsgs));
         }
 
         event.setAttribute("name", name);

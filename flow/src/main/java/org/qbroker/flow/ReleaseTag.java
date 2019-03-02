@@ -3,6 +3,14 @@ package org.qbroker.flow;
 /* ReleaseTag.java - release tag for all the packages of qbroker */
 
 /**
+ * V1.2.13 (2019/03/02): add a test on clientID to skip setClientID() if it is
+ * null in JMSTConnector, changed Destination to destinationName for ActiveMQ
+ * in JMXQMonitor, added sqlserver as ssp for MSSQL in DBConnector, added
+ * missing part of configRepository for Properties to queryInfo() in QFlow,
+ * added amqConsumerAttr to JMXQMonitor to monitor metrics on Consumers,
+ * added the sixth column for fwdMsgs to Stats_log of JMXQMonitor, QMFQMonitor
+ * and RMQMonitor, but only ActiveMQ has ForwardCount for stats of destinations
+ *<br/>
  * V1.2.12 (2018/12/22): added NetconfConnector for read-only operations on
  * routers, fixed issues with QClient on the property maps, added isSleepy to
  * most of the Messengers, added sleepTime block to read() of MessageStream
@@ -239,7 +247,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V1.2.12 2018/12/22 13:07:46";
+    private static String ReleaseTAG = "QBroker V1.2.13 2019/03/02 11:24:19";
 
     public ReleaseTag() {
     }

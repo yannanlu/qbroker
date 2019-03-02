@@ -3189,6 +3189,25 @@ public class QFlow implements Service, Runnable {
                     strBuf.append("\"LinkName\":\"N/A\",");
                     strBuf.append("\"Description\":\"master configuration\"");
                     strBuf.append("}");
+
+                    if (configRepository != null)
+                        g = (HashMap) configRepository.get("Properties");
+                    if (g != null && g.size() > 0) {
+                        if (strBuf.length() > 0)
+                            strBuf.append(",");
+                        strBuf.append("{");
+                        strBuf.append("\"Name\":\"" + (String) g.get("Name") +
+                            "\",");
+                        strBuf.append("\"Type\":\"" +
+                            Utils.escapeJSON((String) g.get("Type")) + "\",");
+                        strBuf.append("\"Heartbeat\":\"" +
+                            (String) cachedProps.get("Heartbeat") + "\",");
+                        strBuf.append("\"LinkName\":\"N/A\",");
+                        strBuf.append("\"Description\":\"" +
+                            Utils.escapeJSON((String) g.get("Description")) +
+                            "\"");
+                        strBuf.append("}");
+                    }
                 }
                 else {
                     o = cachedProps.get("Type");
