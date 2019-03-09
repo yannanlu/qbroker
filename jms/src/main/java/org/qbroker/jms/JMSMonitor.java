@@ -673,7 +673,7 @@ public class JMSMonitor extends Monitor {
             strBuf.append(outMsgs + " ");
             strBuf.append(curDepth + " ");
             strBuf.append(ippsCount + " ");
-            strBuf.append(oppsCount);
+            strBuf.append(oppsCount + " 0");
             report.put("Stats", strBuf.toString());
             try {
                 statsLogger.log(strBuf.toString());
@@ -748,17 +748,21 @@ public class JMSMonitor extends Monitor {
             }
           case TimeWindows.EXCEPTION: // exception
             actionCount = 0;
+            o = latest.get("Exception");
             if (status == TimeWindows.EXCEPTION) {
                 level = Event.WARNING;
                 if (previousStatus != status) { // reset count and adjust step
                     exceptionCount = 0;
                     if (step > 0)
                         step = 0;
+                    new Event(Event.WARNING, name +
+                        " failed to generate report on " + qName + ": " +
+                        Event.traceStack((Exception) o)).send();
                 }
             }
             exceptionCount ++;
             strBuf.append("Exception: ");
-            strBuf.append(((Exception) latest.get("Exception")).toString());
+            strBuf.append(((Exception) o).toString());
             qStatus = Q_UNKNOWN;
             break;
           case TimeWindows.BLACKOUT: // blackout

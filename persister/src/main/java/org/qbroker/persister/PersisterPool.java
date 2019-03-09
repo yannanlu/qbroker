@@ -1137,12 +1137,12 @@ public class PersisterPool extends Persister implements Runnable {
                     props.put("Operation", "write");
             }
         }
-        else if (("tcp".equals(scheme) || "failover".equals(scheme)) &&
-            connectionFactoryName != null) {
-            String str = "org.apache.activemq.jndi.ActiveMQInitialContextFactory";
+        else if (("tcp".equals(scheme) || "failover".equals(scheme) ||
+            "ssl".equals(scheme)) && connectionFactoryName != null) {
+            String str="org.apache.activemq.jndi.ActiveMQInitialContextFactory";
             if (props.get("ContextFactory") == null) // default to ActiveMQ
                 props.put("ContextFactory", str);
-            if (str.equals((String) props.get("ContextFactory"))) { // for ActiveMQ
+            if (str.equals((String) props.get("ContextFactory"))){//for ActiveMQ
                 if (!props.containsKey("IsPhysical"))
                     props.put("IsPhysical", "true");
             }

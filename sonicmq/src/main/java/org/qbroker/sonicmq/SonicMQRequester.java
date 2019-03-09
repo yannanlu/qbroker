@@ -71,7 +71,7 @@ public class SonicMQRequester implements Requester, Comparator<IMetric> {
     private boolean isConnected = false;
     private String username = null;
     private String password = null;
-    private long timeout = 10000L;
+    private long timeout = 30000L;
     private JMSConnectorClient jmxc = null;
     private Map<NotificationListener, IBrokerProxy> cache; // for listener
     private Msg2Text msg2Text = null;
@@ -102,7 +102,7 @@ public class SonicMQRequester implements Requester, Comparator<IMetric> {
         if ((o = props.get("Timeout")) != null)
             timeout = Long.parseLong((String) o);
         if (timeout <= 0)
-            timeout = 10000L;
+            timeout = 30000L;
 
         if ((o = props.get("ConnectOnInit")) == null || // check ConnectOnInit
             !"false".equalsIgnoreCase((String) o)) try {

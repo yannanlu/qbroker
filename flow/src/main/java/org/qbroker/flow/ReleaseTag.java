@@ -3,13 +3,30 @@ package org.qbroker.flow;
 /* ReleaseTag.java - release tag for all the packages of qbroker */
 
 /**
+ * V1.2.14 (2019/03/09): added the sixth column for fwdMsgs to Stats_log of
+ * JMSMonitor, SonicMQMonitor, QueueMonitor and ChannelMonitor, added to log
+ * stack trace on Exceptions of generateReport() in all queue monitors,
+ * changed the default timeout from 10000 to 30000 in SonicMQRequester,
+ * added support to gracefully shutdown a flow without XA in MessageFlow, added
+ * logging of number of messages lost at stop stage in MessageFlow, added
+ * hostPatternMap to SonicMQMonitor, added statsUser, etc, to MonitorAgent,
+ * added runonce() to HeartbeatGenerator and added the support of templates
+ * for building message body with shared properties defined on the container
+ * level
+ *<br/>
  * V1.2.13 (2019/03/02): add a test on clientID to skip setClientID() if it is
  * null in JMSTConnector, changed Destination to destinationName for ActiveMQ
  * in JMXQMonitor, added sqlserver as ssp for MSSQL in DBConnector, added
  * missing part of configRepository for Properties to queryInfo() in QFlow,
  * added amqConsumerAttr to JMXQMonitor to monitor metrics on Consumers,
  * added the sixth column for fwdMsgs to Stats_log of JMXQMonitor, QMFQMonitor
- * and RMQMonitor, but only ActiveMQ has ForwardCount for stats of destinations
+ * RMQMonitor, JMSMonitor, SonicMQMonitor, QueueMonitor and ChannelMonitor,
+ * but only ActiveMQ has ForwardCount for stats of destinations, added to log
+ * stack trace on Exceptions of generateReport() in all queue monitors,
+ * changed the default timeout from 10000 to 30000 in SonicMQRequester,
+ * added support to gracefully shutdown a flow without XA in MessageFlow, added
+ * logging of number of messages lost at stop stage in MessageFlow, added
+ * hostPatternMap to SonicMQMonitor, added statsUser, etc, to MonitorAgent
  *<br/>
  * V1.2.12 (2018/12/22): added NetconfConnector for read-only operations on
  * routers, fixed issues with QClient on the property maps, added isSleepy to
@@ -247,7 +264,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V1.2.13 2019/03/02 11:24:19";
+    private static String ReleaseTAG = "QBroker V1.2.13 2019/03/09 16:08:19";
 
     public ReleaseTag() {
     }

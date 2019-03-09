@@ -139,6 +139,7 @@ public class MonitorAgent implements Service, Runnable {
     private String category;
     private String description, restartScript = null, statsURL = null;
     private String homeDir, rcField = "ReturnCode";
+    private String statsUser = null, statsPass = null, statsSecret = null;
     private File completedFile;
     private int currentStatus, previousStatus, statusOffset, debug = 0;
     private int maxNumberThread, defaultHeartbeat, defaultTimeout, retry;
@@ -266,8 +267,15 @@ public class MonitorAgent implements Service, Runnable {
             return;
         }
 
-        if ((o = props.get("StatsURL")) != null && o instanceof String)
+        if ((o = props.get("StatsURL")) != null && o instanceof String) {
             statsURL = (String) o;
+            if ((o = props.get("Username")) != null)
+                statsUser = (String) o;
+            if ((o = props.get("Password")) != null)
+                statsPass = (String) o;
+            else if ((o = props.get("EncryptedPassword")) != null)
+                statsSecret = (String) o;
+        }
 
         if ((o = props.get("MaxNumberThread")) != null)
             maxNumberThread = Integer.parseInt((String) o);
@@ -706,6 +714,13 @@ public class MonitorAgent implements Service, Runnable {
                 h.put("URI", statsURL);
                 h.put("IsPost", "true");
                 h.put("SOTimeout", "30");
+                if (statsUser != null) {
+                    h.put("Username", statsUser);
+                    if (statsPass != null)
+                        h.put("Password", statsPass);
+                    else
+                        h.put("EncryptedPassword", statsSecret);
+                }
                 httpConn = new HTTPConnector(h);
             }
         }
@@ -2940,11 +2955,20 @@ public class MonitorAgent implements Service, Runnable {
             if (statsURL == null || !statsURL.equals((String) o)) {
                 m += 32;
                 statsURL = (String) o;
+                if ((o = props.get("Username")) != null)
+                    statsUser = (String) o;
+                if ((o = props.get("Password")) != null)
+                    statsPass = (String) o;
+                else if ((o = props.get("EncryptedPassword")) != null)
+                    statsSecret = (String) o;
             }
         }
         else if (statsURL != null) {
             m += 32;
             statsURL = null;
+            statsUser = null;
+            statsPass = null;
+            statsSecret = null;
         }
 
         if ((o = props.get("CompletedFile")) != null) {

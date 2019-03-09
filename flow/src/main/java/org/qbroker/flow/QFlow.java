@@ -1264,6 +1264,8 @@ public class QFlow implements Service, Runnable {
             if (change == null || change.size() <= 0) // with no change
                 flowList.rotate(id);
             else if (flow.hasMajorChange(change)) { // replace the flow
+                new Event(Event.NOTICE, name + ": replacing flow " + key +
+                    " due to major changes of reload").send();
                 if ((flow.getDebugMode() & DEBUG_DIFF) > 0)
                     flow.showChange("flow "+ key, "FLOW", change,
                         ((flow.getDebugMode() & DEBUG_TRAN) > 0));
@@ -1316,7 +1318,7 @@ public class QFlow implements Service, Runnable {
                     new Event(Event.ERR, name + " failed to recreate flow "+
                         key + ": " + k + "/" + id).send();
             }
-            else { // reload the flow without major changed
+            else { // reload the flow without major changes
                 if ((flow.getDebugMode() & DEBUG_DIFF) > 0)
                     flow.showChange("flow "+ key, "FLOW", change,
                         ((flow.getDebugMode() & DEBUG_TRAN) > 0));

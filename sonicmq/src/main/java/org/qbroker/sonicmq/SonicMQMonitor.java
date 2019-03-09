@@ -33,13 +33,14 @@ import org.qbroker.event.Event;
  * SonicMQMonitor is able to use the combinations of the user and the hostnames
  * to associate non-topic connections with a specific queue.
  *<br/></br>
- * HostPattern is a Perl5Pattern expression to select hostnames for the
- * consumer applications. UserMappingRule is a list of maps with two items of
- * Pattern and Substitution. On a given name of the destination, SonicMQMonitor 
- * loops through the list to apply patterns matching the name one by one until
- * it finds a match. Then its substitution part is applied on the name to map
- * the destination name to the username. One example is to cut off the ending
- * "Queue" to convert a queue name to a user name.
+ * HostPattern is a map contains Pattern expression to select hostnames for the
+ * consumer applications with a specific destination name. UserMappingRule is
+ * a list of maps with two items of Pattern and Substitution. On a given name
+ * of the destination, SonicMQMonitor loops through the list to apply patterns
+ * matching the name one by one until it finds a match. Then its substitution
+ * part is applied on the name to map the destination name to the username.
+ * One example is to cut off the ending "Queue" to convert a queue name to
+ * a user name.
  *<br/></br>
  * In order for SonicMQMonitor to work, the metrics on connections, queues and
  * brokers must be enabled. Please check the source code to figure out the list
@@ -52,11 +53,12 @@ public class SonicMQMonitor extends Monitor {
     private String qName = null, uri, target = null;
     private SonicMQRequester jmxc = null;
     private Map<String, String> cache = null;
+    private Map<String, String> hostPatternMap = new HashMap<String, String>();
     private List<Map> mapList = null;
     private int watermark = 0;
     private long previousDepth, previousMsgs;
     private String previousQStatus, brokerName, subID = null;
-    private String targetConn = null, connUser = null, hostPattern = null;
+    private String targetConn = null, connUser = null;
     private boolean isTopic = false;
     private boolean isQueue = false;
     private boolean withPrivateReport = false;
@@ -108,8 +110,16 @@ public class SonicMQMonitor extends Monitor {
             throw(new IllegalArgumentException("URI is not defined"));
         }
 
-        if ((o = props.get("HostPattern")) != null)
-            hostPattern = (String) o;
+        if ((o = props.get("HostPatternMap")) != null) {
+            Map map = (Map) o;
+            hostPatternMap = new HashMap<String, String>();
+            for (Object obj : map.keySet()) {
+                o = map.get(obj);
+                if (o == null || !(o instanceof String))
+                    continue;
+                hostPatternMap.put((String) obj, (String) o);
+            }
+        }
 
         if((o = props.get("UserMappingRule")) != null && o instanceof List) try{
             Perl5Compiler pc = new Perl5Compiler();
@@ -281,7 +291,10 @@ public class SonicMQMonitor extends Monitor {
             }
             str = (String) map.get("lastconnectedtime");
             if ("-1".equals(str)) try { // subscription is active
-                list = jmxc.query(targetConn, hostPattern);
+                if (hostPatternMap.containsKey(qName))
+                    list = jmxc.query(targetConn, hostPatternMap.get(qName));
+                else
+                    list = jmxc.query(targetConn,hostPatternMap.get("Default"));
                 ippsCount = list.size();
             }
             catch (Exception e) {
@@ -346,7 +359,10 @@ public class SonicMQMonitor extends Monitor {
                         str).send();
             }
             try {
-                list = jmxc.query(targetConn, hostPattern);
+                if (hostPatternMap.containsKey(qName))
+                    list = jmxc.query(targetConn, hostPatternMap.get(qName));
+                else
+                    list = jmxc.query(targetConn,hostPatternMap.get("Default"));
                 ippsCount = list.size();
             }
             catch (Exception e) {
@@ -458,9 +474,9 @@ public class SonicMQMonitor extends Monitor {
             strBuf.append(curDepth + " ");
             strBuf.append(ippsCount + " ");
             if (isQueue || isTopic)
-                strBuf.append(oppsCount);
+                strBuf.append(oppsCount + " 0");
             else
-                strBuf.append(oppsCount + "." + totalMsgs);
+                strBuf.append(oppsCount + " " + totalMsgs);
             report.put("Stats", strBuf.toString());
             try {
                 statsLogger.log(strBuf.toString());
@@ -543,17 +559,21 @@ public class SonicMQMonitor extends Monitor {
             }
           case TimeWindows.EXCEPTION: // exception
             actionCount = 0;
+            o = latest.get("Exception");
             if (status == TimeWindows.EXCEPTION) {
                 level = Event.WARNING;
                 if (previousStatus != status) { // reset count and adjust step
                     exceptionCount = 0;
                     if (step > 0)
                         step = 0;
+                    new Event(Event.WARNING, name +
+                        " failed to generate report on " + qName + ": " +
+                        Event.traceStack((Exception) o)).send();
                 }
             }
             exceptionCount ++;
             strBuf.append("Exception: ");
-            strBuf.append(((Exception) latest.get("Exception")).toString());
+            strBuf.append(((Exception) o).toString());
             break;
           case TimeWindows.BLACKOUT: // blackout
             level = Event.INFO;

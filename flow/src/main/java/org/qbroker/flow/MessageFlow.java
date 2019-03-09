@@ -1644,6 +1644,27 @@ public class MessageFlow implements Runnable {
         }
     }
 
+    /** returns number of outstaning messages in all xqs of receivers */
+    private int getLeftover() {
+        MessageReceiver rcvr;
+        String linkName;
+        XQueue xq;
+        HashSet<String> hSet = new HashSet<String>();
+        Browser browser = receiverList.browser();
+        int i, n = 0;
+        while((i = browser.next()) >= 0) {
+            rcvr = (MessageReceiver) receiverList.get(i);
+            linkName = rcvr.getLinkName();
+            xq = (XQueue) linkList.get(linkName);
+            if (xq == null || hSet.contains(linkName))
+                continue;
+            n += xq.size();
+            hSet.add(linkName);
+        }
+        hSet.clear();
+        return n;
+    }
+
     public void run() {
         String threadName = null;
         String linkName, str;
@@ -2093,18 +2114,46 @@ public class MessageFlow implements Runnable {
             display(Service.DEBUG_INIT);
         }
         else if (flowStatus < FLOW_STOPPED) { // stop the flow
-            setNodeStatus(MessagePersister.PSTR_STOPPED,MF_PSTR,persisterList);
-            resetXQueues(MessagePersister.PSTR_PAUSE, MF_PSTR);
-            interruptThreads(persisterList);
+            int n;
+            if ((root.getGlobalMask() & XQueue.EXTERNAL_XA) > 0) { // with XA
+                setNodeStatus(MessagePersister.PSTR_STOPPED, MF_PSTR,
+                    persisterList);
+                resetXQueues(MessagePersister.PSTR_PAUSE, MF_PSTR);
+                interruptThreads(persisterList);
 
-            setNodeStatus(MessageNode.NODE_STOPPED, MF_NODE, nodeList);
-            setNodeStatus(MessageReceiver.RCVR_STOPPED, MF_RCVR, receiverList);
-            resetXQueues(MessageNode.NODE_PAUSE, MF_NODE);
-            interruptThreads(nodeList);
-            interruptThreads(receiverList);
+                setNodeStatus(MessageNode.NODE_STOPPED, MF_NODE, nodeList);
+                setNodeStatus(MessageReceiver.RCVR_STOPPED, MF_RCVR,
+                    receiverList);
+                resetXQueues(MessageNode.NODE_PAUSE, MF_NODE);
+                interruptThreads(nodeList);
+                interruptThreads(receiverList);
+            }
+            else { // without XA
+                setNodeStatus(MessageReceiver.RCVR_STOPPED, MF_RCVR,
+                    receiverList);
+                resetXQueues(MessageReceiver.RCVR_DISABLED, MF_RCVR);
+                interruptThreads(receiverList);
+                try { // wait for receiver threads disabled 
+                    Thread.sleep(1000);
+                }
+                catch (Exception e) {
+                }
+
+                setNodeStatus(MessageNode.NODE_STOPPED, MF_NODE, nodeList);
+                setNodeStatus(MessagePersister.PSTR_STOPPED, MF_PSTR,
+                    persisterList);
+                resetXQueues(MessageNode.NODE_PAUSE, MF_NODE);
+                resetXQueues(MessagePersister.PSTR_PAUSE, MF_PSTR);
+                interruptThreads(receiverList);
+                interruptThreads(nodeList);
+                interruptThreads(persisterList);
+            }
             joinThreads(persisterList);
             joinThreads(nodeList);
             joinThreads(receiverList);
+            if ((n = getLeftover()) > 0)
+                new Event(Event.WARNING, name + ": there are " + n +
+                    " outstanding msgs lost in " + root.getName()).send();
             cleanupXQueues(MF_PSTR);
             cleanupXQueues(MF_NODE);
             previousStatus = flowStatus;
@@ -4961,8 +5010,8 @@ public class MessageFlow implements Runnable {
     }
 
     /**
-     * It takes the Map returned from diff() and analizes what to be
-     * changed.  If the Map contains major changes that requires to stop
+     * It takes the Map returned from diff() and analizes what have been
+     * changed.  If the Map contains major changes that require to stop
      * or disable the flow, it returns true.  Otherwise, it returns false to
      * indicate the reload of the flow is good enough.
      */

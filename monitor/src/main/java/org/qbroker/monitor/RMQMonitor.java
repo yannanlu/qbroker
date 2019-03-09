@@ -350,17 +350,21 @@ public class RMQMonitor extends Monitor {
             }
           case TimeWindows.EXCEPTION: // exception
             actionCount = 0;
+            o = latest.get("Exception");
             if (status == TimeWindows.EXCEPTION) {
                 level = Event.WARNING;
                 if (previousStatus != status) { // reset count and adjust step
                     exceptionCount = 0;
                     if (step > 0)
                         step = 0;
+                    new Event(Event.WARNING, name +
+                        " failed to generate report on " + qName + ": " +
+                        Event.traceStack((Exception) o)).send();
                 }
             }
             exceptionCount ++;
             strBuf.append("Exception: ");
-            strBuf.append(((Exception) latest.get("Exception")).toString());
+            strBuf.append(((Exception) o).toString());
             break;
           case TimeWindows.BLACKOUT: // blackout
             level = Event.INFO;
