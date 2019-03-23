@@ -136,6 +136,10 @@ public class GenericLogger {
         }
     }
 
+    public String getLoggerName() {
+        return loggerName;
+    }
+
     private synchronized static void initEventConstructor() {
         if (con != null)
             return;

@@ -476,6 +476,17 @@ public class PropertyMonitor extends Monitor {
                 }
                 else if ((o = props.get(key)) != null && o instanceof List)
                     group = Utils.cloneProperties((List) o);
+                else if (o instanceof String) { // single item to include
+                    item = (String) o;
+                    File f = new File(dir+FILE_SEPARATOR+item+".json");
+                    if (!f.exists() || !f.isFile() || !f.canRead())
+                        throw(new IOException("failed to open " + f.getPath()));
+                    fr = new FileReader(f);
+                    o = (Map) JSON2Map.parse(fr);
+                    fr.close();
+                    props.put(item, o);
+                    continue;
+                }
                 else
                     continue;
 

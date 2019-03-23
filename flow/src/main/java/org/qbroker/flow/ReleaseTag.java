@@ -3,6 +3,11 @@ package org.qbroker.flow;
 /* ReleaseTag.java - release tag for all the packages of qbroker */
 
 /**
+ * V1.2.15 (2019/03/23): added MaxNumberMessage to HeartbeatGenerator to
+ * overwrite Limit, added statsLog to PipeNode and getLoggerName() to
+ * GenericLogger, fixed the missing cfg_repo issue on local repo in
+ * PropertyMonitor, changed to exit 0 for queries for QFlow and MonitorAgent
+ *<br/>
  * V1.2.14 (2019/03/09): added the sixth column for fwdMsgs to Stats_log of
  * JMSMonitor, SonicMQMonitor, QueueMonitor and ChannelMonitor, added to log
  * stack trace on Exceptions of generateReport() in all queue monitors,
@@ -264,7 +269,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V1.2.13 2019/03/09 16:08:19";
+    private static String ReleaseTAG = "QBroker V1.2.15 2019/03/23 08:35:28";
 
     public ReleaseTag() {
     }

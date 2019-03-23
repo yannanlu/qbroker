@@ -77,7 +77,7 @@ public class HeartbeatGenerator extends Receiver {
         List group = null;
         URI u;
         String key, scheme, filename;
-        int i, n, id;
+        int i, n, id, maxNo = 0;
         byte[] buffer = new byte[4096];
 
         if (uri == null || uri.length() <= 0)
@@ -120,6 +120,12 @@ public class HeartbeatGenerator extends Receiver {
             receiveTime = Integer.parseInt((String) o);
             if (receiveTime <= 0)
                 receiveTime = 1000;
+        }
+
+        if ((o = props.get("MaxNumberMessage")) != null) {
+            maxNo = Integer.parseInt((String) o);
+            if (maxNo <= 0)
+                maxNo = 0;
         }
 
         if ((o = props.get("Operation")) != null)
@@ -188,7 +194,9 @@ public class HeartbeatGenerator extends Receiver {
                 meta[OCC_OPTION] = OF_HOLDON;
             if ((o = h.get("Limit")) != null) {
                 meta[OCC_LIMIT] = Integer.parseInt((String) o);
-                if (meta[OCC_LIMIT] <= 0)
+                if (meta[OCC_LIMIT] == 0 && mode == 0 && maxNo > 0) // runonce
+                    meta[OCC_LIMIT] = maxNo;
+                else if (meta[OCC_LIMIT] < 0)
                     meta[OCC_LIMIT] = 0;
             }
 

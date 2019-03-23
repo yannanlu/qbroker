@@ -4534,7 +4534,7 @@ public class QFlow implements Service, Runnable {
 
         if (configFile == null) {
             System.out.println("config file not specified");
-            System.exit(0);
+            System.exit(1);
         }
 
         try {
@@ -4544,11 +4544,11 @@ public class QFlow implements Service, Runnable {
         }
         catch (IOException e) {
             e.printStackTrace();
-            System.exit(0);
+            System.exit(1);
         }
         catch (Exception e) {
             e.printStackTrace();
-            System.exit(0);
+            System.exit(1);
         }
 
         if (action != null) {
@@ -4707,7 +4707,7 @@ public class QFlow implements Service, Runnable {
                 System.err.println(key);
             }
 
-            System.exit(1);
+            System.exit(0);
         }
 
         if (show == 0 && debugForReload == 0) {

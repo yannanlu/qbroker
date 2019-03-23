@@ -26,6 +26,7 @@ import org.qbroker.common.TimeWindows;
 import org.qbroker.common.Template;
 import org.qbroker.common.TextSubstitution;
 import org.qbroker.common.CollectibleCells;
+import org.qbroker.common.GenericLogger;
 import org.qbroker.common.Utils;
 import org.qbroker.jms.MessageUtils;
 import org.qbroker.jms.MessageFilter;
@@ -217,6 +218,9 @@ public class PipeNode extends Node implements Comparator<int[]> {
             rule = new HashMap<String, Object>();
             rule.put("Name", key);
             rule.put("PropertyName", displayPropertyName);
+            if ((o = props.get("StatsLog")) != null && o instanceof String)
+                rule.put("StatsLog", new GenericLogger((String) o));
+
             ruleList.add(key, ruleInfo, rule);
             outInfo = assetList.getMetaData(0);
             outInfo[OUT_NRULE] ++;
@@ -425,13 +429,14 @@ public class PipeNode extends Node implements Comparator<int[]> {
      */
     public void propagate(XQueue in, XQueue[] out) throws JMSException {
         Message inMessage = null;
-        String msgStr = null, ruleName = null;
+        String msgStr = null, ruleName = null, qName = null;
         long currentTime, sessionTime, st = 0;
         long[] ruleInfo = null;
         int[] ruleMap;
         int[][] sorted_rids;
         Browser browser;
         MessageFilter[] filters = null;
+        GenericLogger statsLog = null;
         Map rule = null;
         String[] propertyName = null;
         long count = 0;
@@ -482,8 +487,18 @@ public class PipeNode extends Node implements Comparator<int[]> {
             ruleMap[i++] = rid;
         }
         Arrays.sort(sorted_rids, this);
-        if (n == 1 && !cacheEnabled)
+        if (n == 1 && !cacheEnabled) {
             hasFlowControl = true;
+            rule = (Map) ruleList.get(0);
+            statsLog = (GenericLogger) rule.get("StatsLog");
+            if (statsLog != null) {
+                qName = statsLog.getLoggerName();
+                if ((i = qName.lastIndexOf("/")) > 0)
+                    qName = qName.substring(i+1);
+                if ((i = qName.indexOf(".")) > 0)
+                    qName = qName.substring(0, i);
+            }
+        }
         else if (hasFlowControl)
             hasFlowControl = false;
 
@@ -582,6 +597,12 @@ public class PipeNode extends Node implements Comparator<int[]> {
                 sessionTime = currentTime + heartbeat;
                 if (hasFlowControl) {
                     ruleInfo[RULE_PEND] = sessionCount;
+                    if (statsLog != null) try {
+                        statsLog.log(Event.dateFormat(new Date(currentTime)) +
+                            " " + qName + " " + sessionCount);
+                    }
+                    catch (Exception ex) {
+                    }
                     if (sessionCount > 0)
                         sessionCount = 0;
                 }
@@ -759,6 +780,12 @@ public class PipeNode extends Node implements Comparator<int[]> {
                     else if (currentTime >= sessionTime) { // time is up
                         sessionTime = currentTime + heartbeat;
                         ruleInfo[RULE_PEND] = sessionCount;
+                        if (statsLog != null) try {
+                           statsLog.log(Event.dateFormat(new Date(currentTime))+
+                                " " + qName + " " + sessionCount);
+                        }
+                        catch (Exception ex) {
+                        }
                         if (sessionCount > 0)
                             sessionCount = 0;
                     }

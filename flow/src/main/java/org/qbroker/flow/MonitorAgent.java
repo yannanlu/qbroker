@@ -5213,7 +5213,7 @@ public class MonitorAgent implements Service, Runnable {
                 System.err.println(key);
             }
 
-            System.exit(1);
+            System.exit(0);
         }
 
         if ((o = props.get("HomeDir")) != null)
