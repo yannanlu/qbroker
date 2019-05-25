@@ -95,6 +95,7 @@ public class NumberMonitor extends Monitor {
         Object o;
         Map<String, Object> h = new HashMap<String, Object>();
         URI u = null;
+        String str = null;
         int n;
         if (type == null)
             type = "NumberMonitor";
@@ -158,10 +159,17 @@ public class NumberMonitor extends Monitor {
         if ((o = MonitorUtils.select(props.get("Pattern"))) == null)
             throw(new IllegalArgumentException("Pattern is not well defined"));
 
+        if ((str = (String) props.get("PatternSubstitution")) != null) {
+            TextSubstitution tsub = new TextSubstitution(str);
+            str = MonitorUtils.substitute((String) o, template);
+            str = tsub.substitute(str);
+        }
+        else
+            str = MonitorUtils.substitute((String) o, template);
+
         try {
             Perl5Compiler pc = new Perl5Compiler();
-            String ps = MonitorUtils.substitute((String) o, template);
-            pattern = pc.compile(ps);
+            pattern = pc.compile(str);
             patternLF = pc.compile("\\n");
             if ((o = props.get("Substitution")) != null)
                 tSub = new TextSubstitution((String) o);

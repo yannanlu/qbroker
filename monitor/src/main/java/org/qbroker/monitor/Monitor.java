@@ -135,8 +135,8 @@ public abstract class Monitor implements MonitorReport, MonitorAction {
             Integer.parseInt((String) o) != 0) { // initialize disable report
             disableMode = Integer.parseInt((String) o);
             dependencyGroup = null;
-            if (reportMode == REPORT_SHARED)
-                keyList = null;
+//            if (reportMode == REPORT_SHARED)
+//                keyList = null;
         }
         else { // no dependency
             dependencyGroup = null;

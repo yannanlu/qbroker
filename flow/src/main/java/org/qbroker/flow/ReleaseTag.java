@@ -7,6 +7,8 @@ package org.qbroker.flow;
  * overwrite Limit, added statsLog to PipeNode and getLoggerName() to
  * GenericLogger, fixed the missing cfg_repo issue on local repo in
  * PropertyMonitor, changed to exit 0 for queries for QFlow and MonitorAgent
+ * added PatternSubstitution to NumberMonitor and AgeMonitor, commented out
+ * the reset of KeyList when DisableMode is 1
  *<br/>
  * V1.2.14 (2019/03/09): added the sixth column for fwdMsgs to Stats_log of
  * JMSMonitor, SonicMQMonitor, QueueMonitor and ChannelMonitor, added to log
@@ -269,7 +271,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V1.2.15 2019/03/23 08:35:28";
+    private static String ReleaseTAG = "QBroker V1.2.15 2019/03/23 09:41:07";
 
     public ReleaseTag() {
     }
