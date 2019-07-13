@@ -11,7 +11,9 @@ package org.qbroker.flow;
  * for XML parser and XPath, renamed the property of XPathExpression to XPath
  * on SelectNode, XPathNode and XSLTNode, added SimpleHttpServer to net package
  * as a wrapper of com.sun.net.httpserver.HttpServer for embedded http servers,
- * bumped up version of parent pom.xml to 1.2.4
+ * bumped up the dependency of commons-fileupload to 1.3.3, bumped up the
+ * dependency of jetty-server to 9.3.24.v20180605, bumped up the dependency of
+ * amqp-client to 4.8.0, bumped up version of parent pom.xml to 1.2.4
  *<br/>
  * V1.2.15 (2019/03/23): added MaxNumberMessage to HeartbeatGenerator to
  * overwrite Limit, added statsLog to PipeNode and getLoggerName() to

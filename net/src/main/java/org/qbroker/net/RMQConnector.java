@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.concurrent.TimeoutException;
 import java.text.SimpleDateFormat;
 import java.text.ParsePosition;
 import org.qbroker.common.TraceStackThread;
@@ -188,7 +189,7 @@ public class RMQConnector implements Connector {
         return factory;
     }
 
-    private void connect() throws IOException {
+    private void connect() throws IOException, TimeoutException {
         ConnectionFactory factory = initialize();
         conn = factory.newConnection();
         channel = conn.createChannel();
@@ -508,6 +509,9 @@ public class RMQConnector implements Connector {
             connect();
         }
         catch (IOException e) {
+            return TraceStackThread.traceStack(e);
+        }
+        catch (TimeoutException e) {
             return TraceStackThread.traceStack(e);
         }
         return null;
