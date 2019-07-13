@@ -23,7 +23,6 @@ import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.xpath.XPathFactory;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathExpression;
@@ -372,10 +371,7 @@ public class MapReduceNode extends Node {
                 ruleInfo[RULE_MODE] = aggr.getBodyType();
                 if (ruleInfo[RULE_MODE] == Utils.RESULT_XML) try { // for XML
                     if (xpath == null) {
-                        DocumentBuilderFactory factory =
-                            DocumentBuilderFactory.newInstance();
-                        factory.setNamespaceAware(true);
-                        builder = factory.newDocumentBuilder();
+                        builder = Utils.getDocBuilder();
                         xpath = XPathFactory.newInstance().newXPath();
                         TransformerFactory tFactory =
                             TransformerFactory.newInstance();

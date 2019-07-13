@@ -3,6 +3,16 @@ package org.qbroker.flow;
 /* ReleaseTag.java - release tag for all the packages of qbroker */
 
 /**
+ * V1.2.16 (2019/07/13): added RequestTimeout to SteamReceiver for collect(),
+ * added main(), text2JSON() and xml2JSON() to GenericRequester, added OBJ_JMS
+ * to NumberMonitor, AgeMonitor and IncrementalMonitor, added getDocBuilder()
+ * to Utils for XML parser, updated XPathNode, XSLTNode, MapReduceNode,
+ * AggregateNode, SelectNode, MessageEvaluator, GenericList and ConfigTemplate
+ * for XML parser and XPath, renamed the property of XPathExpression to XPath
+ * on SelectNode, XPathNode and XSLTNode, added SimpleHttpServer to net package
+ * as a wrapper of com.sun.net.httpserver.HttpServer for embedded http servers,
+ * bumped up version of parent pom.xml to 1.2.4
+ *<br/>
  * V1.2.15 (2019/03/23): added MaxNumberMessage to HeartbeatGenerator to
  * overwrite Limit, added statsLog to PipeNode and getLoggerName() to
  * GenericLogger, fixed the missing cfg_repo issue on local repo in
@@ -271,7 +281,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V1.2.15 2019/03/23 09:41:07";
+    private static String ReleaseTAG = "QBroker V1.2.16 2019/07/13 09:21:34";
 
     public ReleaseTag() {
     }

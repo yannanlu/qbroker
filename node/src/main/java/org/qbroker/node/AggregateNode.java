@@ -25,8 +25,6 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerConfigurationException;
 import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.XPathFactory;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathExpression;
@@ -506,10 +504,7 @@ public class AggregateNode extends Node {
                 }
                 if (aggr.getBodyType() == Utils.RESULT_XML) try {
                     if (xpath == null) {
-                        DocumentBuilderFactory factory =
-                            DocumentBuilderFactory.newInstance();
-                        factory.setNamespaceAware(true);
-                        builder = factory.newDocumentBuilder();
+                        builder = Utils.getDocBuilder();
                         xpath = XPathFactory.newInstance().newXPath();
                         TransformerFactory tFactory =
                             TransformerFactory.newInstance();

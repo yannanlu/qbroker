@@ -28,8 +28,6 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerConfigurationException;
 import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.XPathFactory;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathExpression;
@@ -47,6 +45,7 @@ import org.qbroker.common.Template;
 import org.qbroker.common.TextSubstitution;
 import org.qbroker.common.QuickCache;
 import org.qbroker.common.CollectibleCells;
+import org.qbroker.common.Utils;
 import org.qbroker.jms.MessageUtils;
 import org.qbroker.jms.MessageFilter;
 import org.qbroker.jms.JMSEvent;
@@ -73,10 +72,10 @@ import org.qbroker.event.Event;
  * will retrieve the data from incoming message and set the parameters before
  * the transformation.
  *<br/><br/>
- * If TargetXPathExpression is defined, XSLTNode expects another xml document
- * stored in the field specified by XMLField. It will extract the xml content
- * according to SourceXPathExpression and merges the result into the XML
- * payload of the message at the position specified by TargetXPathExpression.
+ * If TargetXPath is defined, XSLTNode expects another xml document stored in
+ * the field specified by XMLField. It will extract the xml content according
+ * to SourceXPath and merges the result into the XML payload of the message
+ * at the position specified by TargetXPath.
  *<br/>
  * @author yannanlu@yahoo.com
  */
@@ -85,8 +84,8 @@ public class XSLTNode extends org.qbroker.node.Node {
     private int sessionTimeout = 0;
     private TransformerFactory tFactory = null;
     private DocumentBuilder builder = null;
-    private Transformer defaultTransformer = null;
     private XPath xpath = null;
+    private Transformer defaultTransformer = null;
 
     private QuickCache cache = null;  // for storing XSLTs
     private int[] outLinkMap;
@@ -330,40 +329,38 @@ public class XSLTNode extends org.qbroker.node.Node {
             else if ((o = ph.get("FieldName")) != null && o instanceof String) {
                 rule.put("URITemplate", new Template("##" + (String) o + "##"));
             }
-            else if (!ph.containsKey("TargetXPathExpression")) // not XMerge
+            else if (!ph.containsKey("TargetXPath")) // not XMerge
                 throw(new IllegalArgumentException(name + " " + ruleName +
                     ": URITemplate or FieldName is not defined"));
 
-            if ((o = ph.get("TargetXPathExpression")) != null) { // for XMerge
+            if ((o = ph.get("TargetXPath")) != null) { // for XMerge
                 XPathExpression xpe;
                 str = (String) o;
 
-                if (xpath == null) try {
-                    DocumentBuilderFactory factory =
-                        DocumentBuilderFactory.newInstance();
-                    factory.setNamespaceAware(true);
-                    builder = factory.newDocumentBuilder();
-                    xpath = XPathFactory.newInstance().newXPath();
+                if (builder == null) try {
+                    builder = Utils.getDocBuilder();
                 }
                 catch (Exception ex) {
                     throw(new IllegalArgumentException(ruleName + " failed " +
-                         "to instantiate XPath: " + Event.traceStack(ex)));
+                         "to init builder: " + Event.traceStack(ex)));
                 }
                 catch (Error ex) {
                     throw(new IllegalArgumentException("failed to get " +
-                        "XPath for "+ ruleName +": "+ Event.traceStack(ex)));
+                        "builder for "+ ruleName +": "+ Event.traceStack(ex)));
                 }
 
                 try {
+                    if (xpath == null)
+                        xpath = XPathFactory.newInstance().newXPath();
                     xpe = xpath.compile(str);
                 }
                 catch (Exception ex) {
-                    throw(new IllegalArgumentException(name + ": failed to "+
-                        "compile XPath expression of '"+str+"' for "+ruleName));
+                    throw(new IllegalArgumentException(name + ": failed to " +
+                        "compile XPath of '" + str + "' for " + ruleName));
                 }
                 rule.put("Target", xpe);
 
-                if ((o = ph.get("SourceXPathExpression")) != null) {
+                if ((o = ph.get("SourceXPath")) != null) {
                     str = (String) o;
                 }
                 else
@@ -372,8 +369,8 @@ public class XSLTNode extends org.qbroker.node.Node {
                     xpe = xpath.compile(str);
                 }
                 catch (Exception ex) {
-                    throw(new IllegalArgumentException(name + ": failed to "+
-                        "compile XPath expression of '"+str+"' for "+ruleName));
+                    throw(new IllegalArgumentException(name + ": failed to " +
+                        "compile XPath of '" + str + "' for " + ruleName));
                 }
                 rule.put("Source", xpe);
 
@@ -577,8 +574,8 @@ public class XSLTNode extends org.qbroker.node.Node {
         String str = null, value;
         int i, n;
 
-        if (xml == null || xml.length() <= 0 || xpath == null ||
-            builder == null || transformer == null)
+        if (xml == null || xml.length() <= 0 || builder == null ||
+            transformer == null)
             return FAILURE_OUT;
 
         if (key != null) try {
@@ -690,8 +687,8 @@ public class XSLTNode extends org.qbroker.node.Node {
         Object o;
         int i, n;
 
-        if (xml == null || xml.length() <= 0 || xpath == null ||
-            builder == null || transformer == null || xpe == null)
+        if (xml == null || xml.length() <= 0 || builder == null ||
+            transformer == null || xpe == null)
             return FAILURE_OUT;
 
 

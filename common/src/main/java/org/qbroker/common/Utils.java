@@ -18,6 +18,9 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.text.ParsePosition;
 import java.lang.reflect.InvocationTargetException;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import org.w3c.dom.NodeList;
 import org.w3c.dom.Node;
 import org.w3c.dom.NamedNodeMap;
@@ -1049,6 +1052,17 @@ public class Utils {
         for (int i=0; i<n; i++)
             b[i] = (byte) Integer.parseInt(hexStr.substring(i+i+2, i+i+4), 16);
         return b;
+    }
+
+    public static DocumentBuilder getDocBuilder() throws ParserConfigurationException {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        factory.setValidating(false);
+        factory.setNamespaceAware(true);
+        factory.setFeature("http://xml.org/sax/features/namespaces", false);
+        factory.setFeature("http://xml.org/sax/features/validation", false);
+        factory.setFeature("http://apache.org/xml/features/nonvalidating/load-dtd-grammar", false);
+        factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+        return factory.newDocumentBuilder();
     }
 
     /**

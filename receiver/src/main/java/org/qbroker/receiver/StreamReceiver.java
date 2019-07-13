@@ -86,6 +86,7 @@ public class StreamReceiver extends Receiver {
     private int retryCount, receiveTime, port;
     private int type, bufferSize = 0;
     private int soTimeout = 60000;
+    private int reqTimeout = 60000;
     private long sessionTime;
     private boolean keepAlive = false, isConnected = false;
     private boolean doResponse = false, withGreeting = false;
@@ -219,6 +220,11 @@ public class StreamReceiver extends Receiver {
                 MonitorUtils.checkDependencies(System.currentTimeMillis(),
                     dependencyGroup, uri);
             }
+            if ((o = props.get("RequestTimeout")) != null) {
+                reqTimeout = 1000 * Integer.parseInt((String) o);
+                if (reqTimeout < 0)
+                    reqTimeout = 60000;
+            }
 
             type = STREAM_FILE;
         }
@@ -231,10 +237,11 @@ public class StreamReceiver extends Receiver {
                 receiveTime = Integer.parseInt((String) o);
             else
                 receiveTime = 1000;
-            if ((o = props.get("SOTimeout")) != null)
+            if ((o = props.get("SOTimeout")) != null) {
                 soTimeout = 1000 * Integer.parseInt((String) o);
-            if (soTimeout < 0)
-                soTimeout = 60000;
+                if (soTimeout < 0)
+                    soTimeout = 60000;
+            }
             if ((o = props.get("KeepAlive")) != null &&
                 "true".equals((String) o))
                 keepAlive = true;
@@ -268,7 +275,7 @@ public class StreamReceiver extends Receiver {
                             Utils.decrypt((String) o));
                     }
                     catch (Exception e) {
-                        throw(new IllegalArgumentException("failed to decrypt " +
+                        throw(new IllegalArgumentException("failed to decrypt "+
                             "EncryptedPassword: " + e.toString()));
                     }
                 }
@@ -306,7 +313,7 @@ public class StreamReceiver extends Receiver {
                             Utils.decrypt((String) o));
                     }
                     catch (Exception e) {
-                        throw(new IllegalArgumentException("failed to decrypt " +
+                        throw(new IllegalArgumentException("failed to decrypt "+
                             "EncryptedPassword: " + e.toString()));
                     }
                 }
@@ -702,7 +709,7 @@ public class StreamReceiver extends Receiver {
                 return 0;
             }
             else if ("collect".equals(operation)) { // for collect
-                ms.collect(in, xq, soTimeout);
+                ms.collect(in, xq, reqTimeout);
                 return 0;
             }
             ms.read(in, xq);

@@ -28,8 +28,6 @@ import org.apache.oro.text.regex.PatternMatcherInput;
 import org.apache.oro.text.regex.Perl5Compiler;
 import org.apache.oro.text.regex.Perl5Matcher;
 import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.XPathFactory;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathExpression;
@@ -441,7 +439,7 @@ public class SelectNode extends Node {
                     map.put(str, pc.compile("(" + (String) o + ")"));
                 }
                 if (map.size() == ruleInfo[RULE_EXTRA])
-                    rule.put("XPathExpression", map);
+                    rule.put("XPath", map);
                 else
                     throw(new IllegalArgumentException(name + ": " + ruleName +
                         " lost components for pattern: " + map.size()));
@@ -457,23 +455,20 @@ public class SelectNode extends Node {
             ruleInfo[RULE_OID] = outLinkMap[BYPASS_OUT];
             ruleInfo[RULE_PID] = TYPE_PARSER;
         }
-        else if ((o = ph.get("XPathExpression")) != null && // for xpath list
+        else if ((o = ph.get("XPath")) != null && // for xpath list
             o instanceof String && ((String) o).length() > 0) {
             try { // compile the expression 
                 if (xpath == null) {
-                    DocumentBuilderFactory factory =
-                        DocumentBuilderFactory.newInstance();
-                    factory.setNamespaceAware(true);
-                    builder = factory.newDocumentBuilder();
+                    builder = Utils.getDocBuilder();
                     xpath = XPathFactory.newInstance().newXPath();
                 }
                 temp = new Template((String) o);
                 if (temp != null && temp.numberOfFields() > 0) { //dynamic xpath
-                    rule.put("XPathExpression", temp);
+                    rule.put("XPath", temp);
                     ruleInfo[RULE_EXTRA] = -1;
                 }
                 else // static xpath
-                    rule.put("XPathExpression", xpath.compile((String) o));
+                    rule.put("XPath", xpath.compile((String) o));
             }
             catch (Exception e) {
                 throw(new IllegalArgumentException(name + ": " + ruleName +
@@ -485,16 +480,13 @@ public class SelectNode extends Node {
             ruleInfo[RULE_OID] = outLinkMap[BYPASS_OUT];
             ruleInfo[RULE_PID] = TYPE_XPATH;
         }
-        else if ((o = ph.get("XPathExpression")) != null && // for xpath map
+        else if ((o = ph.get("XPath")) != null && // for xpath map
             o instanceof Map && ((Map) o).size() > 0) {
             Map<String, Object> map = Utils.cloneProperties((Map) o);
             ruleInfo[RULE_EXTRA] = map.size();
             try { // compile the expression 
                 if (xpath == null) {
-                    DocumentBuilderFactory factory =
-                        DocumentBuilderFactory.newInstance();
-                    factory.setNamespaceAware(true);
-                    builder = factory.newDocumentBuilder();
+                    builder = Utils.getDocBuilder();
                     xpath = XPathFactory.newInstance().newXPath();
                 }
                 Iterator iter = map.keySet().iterator();
@@ -509,7 +501,7 @@ public class SelectNode extends Node {
                     map.put(str, xpath.compile((String) o));
                 }
                 if (map.size() == ruleInfo[RULE_EXTRA])
-                    rule.put("XPathExpression", map);
+                    rule.put("XPath", map);
                 else
                     throw(new IllegalArgumentException(name + ": " + ruleName +
                         " lost components for xpath: " + map.size()));
@@ -713,9 +705,9 @@ public class SelectNode extends Node {
                     }
                     else if (ruleInfo[RULE_PID] == TYPE_XPATH) {
                         if (ruleInfo[RULE_EXTRA] == 0) // static xpath
-                            xpe = (XPathExpression) rule.get("XPathExpression");
+                            xpe = (XPathExpression) rule.get("XPath");
                         else if (ruleInfo[RULE_EXTRA] > 0) { // xpath map
-                            map = (Map) rule.get("XPathExpression");
+                            map = (Map) rule.get("XPath");
                             tagField = (String) rule.get("TagField");
                         }
                     }
@@ -865,7 +857,7 @@ public class SelectNode extends Node {
                     Reader rin;
                     Document doc;
                     if (ruleInfo[RULE_EXTRA] < 0) { // dynamic xpath 
-                        Template temp = (Template) rule.get("XPathExpression");
+                        Template temp = (Template) rule.get("XPath");
                         msgStr = MessageUtils.format(inMessage, buffer, temp);
                         xpe = xpath.compile(msgStr);
                     }

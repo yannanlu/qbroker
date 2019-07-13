@@ -13,7 +13,6 @@ import org.apache.oro.text.regex.PatternMatcherInput;
 import org.apache.oro.text.regex.Perl5Compiler;
 import org.apache.oro.text.regex.Perl5Matcher;
 import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.xpath.XPathFactory;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathExpression;
@@ -223,15 +222,11 @@ public class ConfigTemplate {
         }
         else if ((o = rep.get("XPath")) != null && // for xpath
             o instanceof String && ((String) o).length() > 0) {
-            XPath xpath;
-            DocumentBuilderFactory factory;
+            resultType = Utils.RESULT_XML;
             try { // compile the expression
-                factory = DocumentBuilderFactory.newInstance();
-                factory.setNamespaceAware(true);
-                builder = factory.newDocumentBuilder();
-                xpath = XPathFactory.newInstance().newXPath();
+                XPath xpath = XPathFactory.newInstance().newXPath();
                 xpe = xpath.compile((String) o);
-                resultType = Utils.RESULT_XML;
+                builder = Utils.getDocBuilder();
             }
             catch (Exception e) {
                 throw(new IllegalArgumentException(name +

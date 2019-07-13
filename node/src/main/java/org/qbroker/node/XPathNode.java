@@ -18,7 +18,6 @@ import javax.jms.TextMessage;
 import javax.jms.MapMessage;
 import javax.jms.JMSException;
 import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.XPathFactory;
 import javax.xml.xpath.XPath;
@@ -151,9 +150,7 @@ public class XPathNode extends Node {
             throw(new IllegalArgumentException(name+": missing some OutLinks"));
 
         try {
-            DocumentBuilderFactory fa = DocumentBuilderFactory.newInstance();
-            fa.setNamespaceAware(true);
-            builder = fa.newDocumentBuilder();
+            builder = Utils.getDocBuilder();
         }
         catch(ParserConfigurationException e) {
             throw(new IllegalArgumentException(name+": DOM builder failed"));
@@ -287,7 +284,7 @@ public class XPathNode extends Node {
             ruleInfo[RULE_OID] = assetList.getID(preferredOutName);
             ruleInfo[RULE_PID] = TYPE_BYPASS;
         }
-        else if ((o = ph.get("XPathExpression")) == null ||
+        else if ((o = ph.get("XPath")) == null ||
             !(o instanceof Map)) { // default to bypass
             ruleInfo[RULE_OID] = outLinkMap[RESULT_OUT];
             ruleInfo[RULE_PID] = TYPE_BYPASS;
@@ -310,7 +307,7 @@ public class XPathNode extends Node {
                 else
                     expr.put(key, temp);
             }
-            rule.put("XPathExpression", expr);
+            rule.put("XPath", expr);
             if ((o = ph.get("ListKey")) != null && expr.containsKey(o)) {
                 // XPath for ListKey expects a NodeList
                 rule.put("ListKey", (String) o);
@@ -592,7 +589,7 @@ public class XPathNode extends Node {
                 rule = (Map) ruleList.get(rid);
                 propertyName = (String[]) rule.get("PropertyName");
                 if (ruleInfo[RULE_PID] == TYPE_XPATH) {
-                    expression = (Map) rule.get("XPathExpression");
+                    expression = (Map) rule.get("XPath");
                     if (ruleInfo[RULE_MODE] == 1) {
                         d = (String) rule.get("Delimiter");
                         lky = (String) rule.get("ListKey");

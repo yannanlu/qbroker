@@ -21,11 +21,11 @@ import org.qbroker.common.Utils;
  * text according to the result type.  It has two methods, format(Message) and
  * formmat(int, Message). The former is used by FormatNode to format messages.
  * It loads the formatted text into the message body. The latter will not
- * change the message. Instead, it returns the fomatted text. By default,
+ * change the message. Instead, it returns the formatted text. By default,
  * Msg2Text formats the message into an Event in terms of either postable or
  * collectible.
  *<br/><br/>
- * In case of no Template defined, the default formatter will be used. The
+ * In case that no Template is defined, the default formatter will be used. The
  * default formatter will process all properties for both JMS and user.
  * If the Template is an empty text, the simple formatter will be used. The
  * simple formatter will process all the user properties only.

@@ -14,7 +14,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.lang.reflect.InvocationTargetException;
 import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.xpath.XPathFactory;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathExpression;
@@ -177,14 +176,10 @@ public class GenericList extends Report {
             if (str == null || str.length() <= 0)
                 throw(new IllegalArgumentException("XPath is not defined"));
 
-            DocumentBuilderFactory factory;
-            XPath xpath;
             try {
-                factory = DocumentBuilderFactory.newInstance();
-                factory.setNamespaceAware(true);
-                builder = factory.newDocumentBuilder();
-                xpath = XPathFactory.newInstance().newXPath();
+                XPath xpath = XPathFactory.newInstance().newXPath();
                 xpe = xpath.compile(str);
+                builder = Utils.getDocBuilder();
             }
             catch (Exception e) {
                 throw(new IllegalArgumentException(name +

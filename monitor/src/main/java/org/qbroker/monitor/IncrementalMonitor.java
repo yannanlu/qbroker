@@ -99,6 +99,7 @@ public class IncrementalMonitor extends Monitor {
         Object o;
         Map<String, Object> h = new HashMap<String, Object>();
         URI u = null;
+        String str = null;
         int n;
         if (type == null)
             type = "IncrementalMonitor";
@@ -235,10 +236,32 @@ public class IncrementalMonitor extends Monitor {
             reporter = new FileTester(h);
             break;
           case OBJ_TCP:
-            jsonPath = (String) MonitorUtils.select(props.get("JSONPath"));
-            jsonPath = MonitorUtils.substitute(jsonPath, template);
-            queryStr = (String)MonitorUtils.select(props.get("RequestCommand"));
-            queryStr = MonitorUtils.substitute(queryStr, template);
+            if ((o = props.get("JSONPath")) != null) {
+                jsonPath = (String) MonitorUtils.select(o);
+                jsonPath = MonitorUtils.substitute(jsonPath, template);
+            }
+            else
+                throw(new IllegalArgumentException("JSONPath not defined"));
+            if ((o = props.get("RequestCommand")) != null) {
+                queryStr = (String) MonitorUtils.select(o);
+                queryStr = MonitorUtils.substitute(queryStr, template);
+            }   
+            else
+                throw(new IllegalArgumentException("RequestCommand is null"));
+            h.put("RequestCommand", queryStr);
+            if ((o = props.get("XPath")) != null) {
+                str = (String) MonitorUtils.select(o);
+                h.put("XPath", MonitorUtils.substitute(str, template));
+            }
+            if ((o = props.get("ResultSubstitution")) != null) {
+                str = (String) MonitorUtils.select(o);
+                h.put("ResultSubstitution",
+                    MonitorUtils.substitute(str, template));
+            }
+            if ((o = props.get("PatternGroup")) != null)
+                h.put("PatternGroup", o);
+            if ((o = props.get("XPatternGroup")) != null)
+                h.put("XPatternGroup", o);
             h.put("Operation", "request");
             h.put("ClassName", "org.qbroker.persister.StreamPersister");
             h.put("Capacity", "2");
@@ -254,10 +277,32 @@ public class IncrementalMonitor extends Monitor {
                 "org.qbroker.flow.GenericRequester", name);
             break;
           case OBJ_UDP:
-            jsonPath = (String) MonitorUtils.select(props.get("JSONPath"));
-            jsonPath = MonitorUtils.substitute(jsonPath, template);
-            queryStr = (String)MonitorUtils.select(props.get("RequestCommand"));
-            queryStr = MonitorUtils.substitute(queryStr, template);
+            if ((o = props.get("JSONPath")) != null) {
+                jsonPath = (String) MonitorUtils.select(o);
+                jsonPath = MonitorUtils.substitute(jsonPath, template);
+            }
+            else
+                throw(new IllegalArgumentException("JSONPath not defined"));
+            if ((o = props.get("RequestCommand")) != null) {
+                queryStr = (String) MonitorUtils.select(o);
+                queryStr = MonitorUtils.substitute(queryStr, template);
+            }   
+            else
+                throw(new IllegalArgumentException("RequestCommand is null"));
+            h.put("RequestCommand", queryStr);
+            if ((o = props.get("XPath")) != null) {
+                str = (String) MonitorUtils.select(o);
+                h.put("XPath", MonitorUtils.substitute(str, template));
+            }
+            if ((o = props.get("ResultSubstitution")) != null) {
+                str = (String) MonitorUtils.select(o);
+                h.put("ResultSubstitution",
+                    MonitorUtils.substitute(str, template));
+            }
+            if ((o = props.get("PatternGroup")) != null)
+                h.put("PatternGroup", o);
+            if ((o = props.get("XPatternGroup")) != null)
+                h.put("XPatternGroup", o);
             h.put("Operation", "inquire");
             h.put("ClassName", "org.qbroker.persister.PacketPersister");
             h.put("URIField", "UDP");
@@ -399,19 +444,77 @@ public class IncrementalMonitor extends Monitor {
             jmxReq = new JMXRequester(h);
             reporter = null;
             break;
+          case OBJ_JMS:
+            if ((o = props.get("JSONPath")) != null) {
+                jsonPath = (String) MonitorUtils.select(o);
+                jsonPath = MonitorUtils.substitute(jsonPath, template);
+            }
+            else
+                throw(new IllegalArgumentException("JSONPath not defined"));
+            if ((o = props.get("RequestBody")) != null) {
+                queryStr = (String) MonitorUtils.select(o);
+                queryStr = MonitorUtils.substitute(queryStr, template);
+            }   
+            else
+                throw(new IllegalArgumentException("RequestBody not defined"));
+            if ((o = props.get("ContextFactory")) != null)
+                h.put("ContextFactory", o);
+            if ((o = props.get("ConnectionFactoryName")) != null)
+                h.put("ConnectionFactoryName", o);
+            if ((o = props.get("QueueName")) != null)
+                h.put("QueueName", o);
+            if ((o = props.get("Username")) != null) {
+                h.put("Username", o);
+                if ((o = props.get("Password")) != null)
+                    h.put("Password", o);
+                if ((o = props.get("EncryptedPassword")) != null)
+                    h.put("EncryptedPassword", o);
+            }
+            if ((o = props.get("Principal")) != null) {
+                h.put("Principal", o);
+                if ((o = props.get("Credentials")) != null)
+                    h.put("Credentials", o);
+                if ((o = props.get("EncryptedCredentials")) != null)
+                    h.put("EncryptedCredentials", o);
+            }
+            if ((o = props.get("StringProperty")) != null)
+                h.put("StringProperty", o);
+            if ((o = props.get("ReponseProperty")) != null)
+                h.put("ReponseProperty", o);
+            if ((o = props.get("RequestTimeout")) != null)
+                h.put("RequestTimeout", o);
+            if ((o = props.get("ReceiveTime")) != null)
+                h.put("ReceiveTime", o);
+            if ((o = props.get("ResultType")) != null)
+                h.put("ResultType", o);
+            if ((o = props.get("DataField")) != null)
+                h.put("DataField", o);
+            if ((o = props.get("RCField")) != null)
+                h.put("RCField", o);
+            if ((o = props.get("XPath")) != null) {
+                str = (String) MonitorUtils.select(o);
+                h.put("XPath", MonitorUtils.substitute(str, template));
+            }
+            if ((o = props.get("ResultSubstitution")) != null) {
+                str = (String) MonitorUtils.select(o);
+                h.put("ResultSubstitution",
+                    MonitorUtils.substitute(str, template));
+            }
+            if ((o = props.get("PatternGroup")) != null)
+                h.put("PatternGroup", o);
+            if ((o = props.get("XPatternGroup")) != null)
+                h.put("XPatternGroup", o);
+            h.put("Operation", "request");
+            h.put("ClassName", "org.qbroker.persister.JMSPersister");
+            h.put("Capacity", "2");
+            h.put("Partition", "0,0");
+            h.put("DisplayMask", "0");
+            h.put("TextMode", "1");
+            requester = GenericList.initRequester(h,
+                "org.qbroker.flow.GenericRequester", name);
+            break;
           default:
             break;
-        }
-
-        if (requester != null) { // for requester
-            Event ev = new Event(Event.INFO);
-            ev.setAttribute("type", "query");
-            o = props.get("AssetName");
-            ev.setAttribute("category", (String) o);
-            o = props.get("TargetName");
-            ev.setAttribute("name", (String) o);
-            ev.setAttribute("status", "Normal");
-            queryStr = Event.getIPAddress() + " " + EventUtils.collectible(ev);
         }
 
         previousNumber = (isDouble) ? String.valueOf(Double.MAX_VALUE) :
@@ -496,6 +599,7 @@ public class IncrementalMonitor extends Monitor {
             break;
           case OBJ_TCP:
           case OBJ_UDP:
+          case OBJ_JMS:
             strBuf = new StringBuffer();
             try {
                 n = requester.getResponse(queryStr, strBuf, true);
