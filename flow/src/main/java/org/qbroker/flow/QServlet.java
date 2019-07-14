@@ -51,7 +51,6 @@ import org.qbroker.jms.MapEvent;
 import org.qbroker.jms.ObjectEvent;
 import org.qbroker.node.NodeUtils;
 import org.qbroker.flow.QFlow;
-import org.qbroker.event.EventParser;
 import org.qbroker.event.EventUtils;
 import org.qbroker.event.Event;
 
@@ -120,7 +119,6 @@ public class QServlet extends HttpServlet {
     private Map props = new HashMap();
     private Thread manager = null;
     private SimpleDateFormat zonedDateFormat;
-    private EventParser parser;
     private DiskFileItemFactory factory = null;
     private String jaasLogin = null;
     private String restURI = null;
@@ -131,11 +129,6 @@ public class QServlet extends HttpServlet {
     private int restURILen = 0;
     private int baseURILen = 0;
 
-    protected final static String statusText[] = {"READY", "RUNNING",
-        "RETRYING", "PAUSE", "STANDBY", "DISABLED", "STOPPED", "CLOSED"};
-    protected final static String reportStatusText[] = {"Exception",
-        "ExceptionInBlackout", "Disabled", "Blackout", "Normal",
-        "Occurred", "Late", "VeryLate", "ExtremelyLate"};
     public final static String FILE_SEPARATOR =
         System.getProperty("file.separator");
 
@@ -331,7 +324,6 @@ public class QServlet extends HttpServlet {
         factory = new DiskFileItemFactory();
         new Event(Event.INFO, name + " inintialized").send();
 
-        parser = new EventParser(null);
         zonedDateFormat =new SimpleDateFormat("yyyy-MM-dd HH:mm:ss,SSS zz");
 
         manager = new Thread(qf, "Manager");
@@ -958,7 +950,7 @@ public class QServlet extends HttpServlet {
             }
         }
         else if (path.startsWith("/collectible") && (l == 12 ||
-            path.charAt(12) == '/')) { //JMS event for collectibles
+            path.charAt(12) == '/')) { // JMS event for collectibles
             if ((qf.getDebugMode() & QFlow.DEBUG_CTRL) > 0)
                 new Event(Event.DEBUG, name + " collectible: " + path).send();
             isCollectible = true;
@@ -1031,6 +1023,10 @@ public class QServlet extends HttpServlet {
             isCollectible = false;
             isStream = true;
             event = getEvent(props, true);
+            if (event == null) { // null event
+                response.sendError(response.SC_BAD_REQUEST);
+                return null;
+            }
             event.setAttribute("hostname", clientIP);
         }
         else if (restURILen > 0 && path.startsWith(restURI) && (l==restURILen ||
@@ -1131,6 +1127,8 @@ public class QServlet extends HttpServlet {
 
             if ((o = props.get("name")) != null)
                 key = ((String[]) o)[0];
+            else
+                key = null;
 
             if ((o = props.get("view")) != null)
                 str = ((String[]) o)[0];
@@ -1302,7 +1300,7 @@ public class QServlet extends HttpServlet {
                                 ph.put("Password", str);
                             else
                                 ph.put("EncryptedPassword",
-                             ((Event) message).getAttribute("EncryptedPassword"));
+                            ((Event)message).getAttribute("EncryptedPassword"));
                         }
                         conn = new DBConnector(ph);
                         str = ((TextEvent) message).getText();
@@ -1325,7 +1323,7 @@ public class QServlet extends HttpServlet {
                         key = event.getAttribute("name");
                         if (key == null)
                             key = path;
-                        new Event(Event.ERR, "failed to write " + len +
+                        new Event(Event.ERR, name + " failed to write " + len +
                             " bytes for " + key + ": " +
                             Event.traceStack(e)).send();
                         response.sendError(response.SC_INTERNAL_SERVER_ERROR);
@@ -1335,6 +1333,8 @@ public class QServlet extends HttpServlet {
                 else if (i > 0 && message != null) { // got result back
                     ph = new HashMap<String, Object>();
                     for (String ky : ((Event) message).getAttributeNames()) {
+                        if (ky == null || ky.length() <= 0)
+                            continue;
                         if ("text".equals(ky))
                             continue;
                         ph.put(ky, ((Event) message).getAttribute(ky));
@@ -1415,14 +1415,15 @@ public class QServlet extends HttpServlet {
             else if (isCollectible && "query".equals(action)) {
                 JSON2Map.flatten(ph);
                 if ((qf.getDebugMode() & QFlow.DEBUG_REPT) > 0)
-                    new Event(Event.DEBUG, "sent back to " + username + " with"+
-                        " requested content: "+ (String) ph.get("text")).send();
+                    new Event(Event.DEBUG, name + " sent back to " + username +
+                        " with requested content: " +
+                        (String) ph.get("text")).send();
             }
             else if ((qf.getDebugMode() & QFlow.DEBUG_REPT) > 0)
-                new Event(Event.DEBUG, "sent back to " + username +
+                new Event(Event.DEBUG, name + " sent back to " + username +
                     " requested content: " + (String) ph.get("text")).send();
 
-            if (ph != null) {// save the data map as an attribute at the context
+            if (ph != null) { // save the data map as the attribute of context
                 target = request.getContextPath();
                 request.setAttribute(target, ph);
             }

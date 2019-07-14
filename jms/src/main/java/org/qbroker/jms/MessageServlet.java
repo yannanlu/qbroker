@@ -1,6 +1,6 @@
-package org.qbroker.servlet;
+package org.qbroker.jms;
 
-/* MsgServlet.java - a generic Servlet for JMS */
+/* MessageServlet.java - a generic servlet for JMS messages */
 
 import java.util.Map;
 import java.util.HashMap;
@@ -38,7 +38,6 @@ import org.qbroker.common.Base64Encoder;
 import org.qbroker.json.JSON2Map;
 import org.qbroker.net.DBConnector;
 import org.qbroker.event.Event;
-import org.qbroker.event.EventParser;
 import org.qbroker.event.EventUtils;
 import org.qbroker.jms.MessageUtils;
 import org.qbroker.jms.JMSEvent;
@@ -48,66 +47,53 @@ import org.qbroker.jms.MapEvent;
 import org.qbroker.jms.ObjectEvent;
 
 /**
- * MsgServlet is a servlet for message flows.  It allows a message flow running
- * inside the servlet container as a web application.  As a web
- * application, the message flow can receive JMS messages directly from web
- * clients and send messages back on HTTP.  Therefore, MsgServlet is
- * the frontend and one of the reveiver of message flow.  It is responsible
- * for transformation between the HTTP requests/responses and JMS messages.
+ * MessageServlet is a servlet for generic message services. It allows a message
+ * service running inside the servlet container as a web application. As a web
+ * application, the message service can receive JMS messages directly from web
+ * clients and sends messages back on HTTP. Therefore, MessageServlet is the
+ * frontend and the gateway for message services.  It is responsible for
+ * transformation between the HTTP requests/responses and JMS messages.
  *<br/><br/>
- * MsgServlet has 5 rulesets represented by the URL path.  They are
- * /jms for non-collectible JMS TextEvents, /collectible for collectible
- * JMS TextEvents, /event for non-JMS events, RestURI for JMS TextEvents
- * of REST requests and other paths for ad hoc form requests.  When the
- * web request hits one of the URLs, the corresponding ruleset will be
- * invoked to process the incoming request.  MsgServlet supports
- * both POST, GET and PUT methods. In case of POST, it also supports file
- * upload and raw xml or json content. For POST or PUT, those headers matched
- * with HeaderRegex will be copied into the message. One of the examples of
- * HeaderRegex is "^[Xx]-.+$" that matches all HTTP headers of starting with
- * "X-".
+ * MessageServlet has 5 rulesets represented by the URL path.  They are /jms
+ * for non-collectible JMS TextEvents, /collectible for collectible JMS
+ * TextEvents, /event for non-JMS events, RestURI for JMS TextEvents of REST
+ * requests and other paths for ad hoc form requests. When a web request hits
+ * one of the URLs, the corresponding ruleset will be invoked to process the
+ * incoming request. MessageServlet supports GET, POST and PUT methods. In case
+ * of POST, it also supports file upload and raw json or xml content. For POST
+ * or PUT, those headers matched with HeaderRegex will be copied into the
+ * message. One of the examples of HeaderRegex is "^[Xx]-.+$" that matches all
+ * HTTP headers of starting with "X-".
  *<br/><br/>
- * A collectible TextEvent is a TextEvent with its message body set to
- * the collectible format of the original message.  It is meant to be sent
- * to remote destinations.  In order to get content of the original
- * message, the consumer will have to parse the message body with the
- * EventParser.
+ * A collectible TextEvent is a TextEvent with its message body set to the
+ * collectible format of the original message. It is meant to be sent to remote
+ * destinations. In order to get content of the original message, the remote 
+ * consumer will have to parse the message body with the EventParser.
  *<br/><br/>
- * For the ad hoc form requests, MsgServlet treats them in two
- * different ways.  If the attribute of view is defined in the request
- * and non-empty,  it will be converted into a TextEvent.  Otherwise,
- * if the attribute of name is defined and non-empty, the request will be
- * converted to an Event.  Further more, if the attribute of URI is
- * defined and non-empty, the request will be packed into collectible
- * format.  Otherwise, there is no transformation on the original message. 
+ * For ad hoc form requests, MessageServlet treats them in two different ways.
+ * If the attribute of view is defined in the request and it is not empty, the
+ * request will be converted into a TextEvent. In case that the attribute of
+ * name is defined and it is not empty, the request will be converted to an
+ * Event. Further more, if the attribute of URI is defined and it is not empty,
+ * the request will be packed into collectible format. Otherwise, there is no
+ * transformation on the original message. 
  *<br/><br/>
- * Once the incoming requests is transformed into messages, they will be
- * routed to the default receiver XQueue of the message flow.  After they are
- * processed, the messages will be retrieved as the response.  Those
- * messages will have the requested data.  Next, MsgServlet loads
- * the messages into the original request and forwards to the presentation
- * JSP.  The presentation JSP is either defined in the incoming request or
- * reset in the returned message.  It is used to retrieve data from the
- * request and render the web page for the client.  If there is no
- * presentation JSP defined, MsgServlet will just set the content type
- * according to the type attribute of the message and write the content
- * of the message body to the output stream.  The attribute of type can
- * be defined in the incoming request.  It also can be overwritten by
- * the workflow.  This is useful if the content is already a valid
- * web page and you do not want to modify it.
+ * Once an incoming request is transformed into message, MessageServlet will
+ * invoke doRequest() of the assigned service to process the message as the
+ * request. After the process is done, the message is supposed to have the
+ * response loaded. MessageServlet will convert it back to the HTTP response
+ * and sends the response back to the HTTP client.
  *<br/>
  * @author yannanlu@yahoo.com
  */
 
-public class MsgServlet extends HttpServlet {
+public class MessageServlet extends HttpServlet {
     private Service service = null;
     private String loginURL = "/login.jsp";
     private String welcomeURL = "/welcome.jsp";
     private int timeout = 10000;
     private Map props = new HashMap();
-    private Thread manager = null;
     private SimpleDateFormat zonedDateFormat;
-    private EventParser parser;
     private DiskFileItemFactory factory = null;
     private String jaasLogin = null;
     private String restURI = null;
@@ -117,15 +103,7 @@ public class MsgServlet extends HttpServlet {
     private MessageDigest md = null;
     private int restURILen = 0;
 
-    protected final static String statusText[] = {"READY", "RUNNING",
-        "RETRYING", "PAUSE", "STANDBY", "DISABLED", "STOPPED", "CLOSED"};
-    protected final static String reportStatusText[] = {"Exception",
-        "ExceptionInBlackout", "Disabled", "Blackout", "Normal",
-        "Occurred", "Late", "VeryLate", "ExtremelyLate"};
-    public final static String FILE_SEPARATOR =
-        System.getProperty("file.separator");
-
-    public MsgServlet(Map props) {
+    public MessageServlet(Map props) {
         int i, n;
         Object o;
         String jaasConfig = null;
@@ -149,12 +127,17 @@ public class MsgServlet extends HttpServlet {
 
         propertyName = new String[0];
         propertyValue = new String[0];
-        parser = new EventParser(null);
         zonedDateFormat =new SimpleDateFormat("yyyy-MM-dd HH:mm:ss,SSS zz");
     }
 
-    public void doGet(HttpServletRequest request,
-        HttpServletResponse response) throws ServletException, IOException {
+    public void setService(Service service) {
+        if (service == null)
+            throw(new IllegalArgumentException("service is null"));
+        this.service = service;
+    }
+
+    public void doGet(HttpServletRequest request, HttpServletResponse response)
+        throws ServletException, IOException {
         String uri = null;
         Object o;
 
@@ -626,13 +609,14 @@ public class MsgServlet extends HttpServlet {
         String key = null, uri = null, msg = null, str = null, port = null;
         String target = null, action = null, category = null, jsp = null;
         String clientIP, path, sessionId, status, username = null, type=null;
-        int priority = Event.INFO;
+        int l, priority = Event.INFO;
         long tm = 0L;
         boolean isJMS = false;        // an event is a JMS event or not
         boolean isCollectible = true; // a non-JMS event is collectible or not
         boolean isFileUpload = false;
         boolean isStream = false;
         Map props = request.getParameterMap();
+        String name = getServletName();
         path = request.getPathInfo();
         clientIP = request.getRemoteAddr();
         if (jaasLogin != null) { // enforce JAAS Login
@@ -651,8 +635,8 @@ public class MsgServlet extends HttpServlet {
             else if ("/logout".equals(path)) try { // logging out
                 username = (String) session.getAttribute("username");
                 session.invalidate();
-                new Event(Event.INFO, getServletName() + ": " + username +
-                    " logged out from "+ clientIP).send();
+                new Event(Event.INFO, name +": "+ username +" logged out from "+
+                    clientIP).send();
                 response.setContentType("text/plain");
               response.getWriter().println("Thanks,your session is terminated");
                 return null;
@@ -684,11 +668,10 @@ public class MsgServlet extends HttpServlet {
                     md.update(sessionId.getBytes());
                     sessionId = new String(Base64Encoder.encode(md.digest()));
                 }
-                new Event(Event.INFO, getServletName() + ": " + username +
-                    " logged in from "+ clientIP + " with the session of " +
-                    sessionId).send();
+                new Event(Event.INFO, name +": "+ username +" logged in from "+
+                    clientIP + " with the session of " + sessionId).send();
                 message = new TextEvent();
-                message.setAttribute("name", getServletName());
+                message.setAttribute("name", name);
                 message.setAttribute("type", "auth");
                 message.setAttribute("view", "session");
                 message.setAttribute("category", "user");
@@ -718,7 +701,10 @@ public class MsgServlet extends HttpServlet {
 
         if (path == null)
             path = "";
+        l = path.length();
         if (event != null) { // JMS event for file upload or raw request
+            if ((service.getDebugMode() & Service.DEBUG_CTRL) > 0)
+                new Event(Event.DEBUG, name + " with event: " + path).send();
             isJMS = true;
             isCollectible = false;
             str = request.getContentType();
@@ -736,10 +722,17 @@ public class MsgServlet extends HttpServlet {
             catch (Exception e) {
             }
         }
-        else if (path.startsWith("/collectible")) { //JMS event for collectibles
+        else if (path.startsWith("/collectible") && (l == 12 ||
+            path.charAt(12) == '/')) { // JMS event for collectibles
+            if ((service.getDebugMode() & Service.DEBUG_CTRL) > 0)
+                new Event(Event.DEBUG, name + " collectible: " + path).send();
             isCollectible = true;
             isJMS = true;
             event = getEvent(props, true);
+            if (event == null) { // null event
+                response.sendError(response.SC_BAD_REQUEST);
+                return null;
+            }
             if (event.getAttribute("status") == null)
                 event.setAttribute("status", "Normal");
             event.setAttribute("hostname", clientIP);
@@ -752,10 +745,17 @@ public class MsgServlet extends HttpServlet {
             action = event.getAttribute("operation");
             port = event.getAttribute("port");
         }
-        else if (path.startsWith("/event")) { // non-JMS event only
+        else if (path.startsWith("/event") && (l == 6 ||
+            path.charAt(6) == '/')) { // non-JMS event only
+            if ((service.getDebugMode() & Service.DEBUG_CTRL) > 0)
+                new Event(Event.DEBUG, name + " event: " + path).send();
             isJMS = false;
             isCollectible = false;
             event = getEvent(props, false);
+            if (event == null) { // null event
+                response.sendError(response.SC_BAD_REQUEST);
+                return null;
+            }
             event.removeAttribute("text");
             if (event.getAttribute("status") == null)
                 event.setAttribute("status", "Normal");
@@ -773,24 +773,39 @@ public class MsgServlet extends HttpServlet {
             action = event.getAttribute("operation");
             category = event.getAttribute("category");
         }
-        else if (path.startsWith("/jms")) { // JMS event without collectibles
+        else if (path.startsWith("/jms") && (l == 4 ||
+            path.charAt(4) == '/')) { // JMS event without collectibles
+            if ((service.getDebugMode() & Service.DEBUG_CTRL) > 0)
+                new Event(Event.DEBUG, name + " jms: " + path).send();
             isJMS = true;
             isCollectible = false;
             event = getEvent(props, true);
-            if (event == null) // null event
+            if (event == null) { // null event
+                response.sendError(response.SC_BAD_REQUEST);
                 return null;
+            }
             event.setAttribute("hostname", clientIP);
             if (event.attributeExists("jsp"))
                 jsp = event.getAttribute("jsp");
         }
-        else if (path.startsWith("/stream")) { //JMS event for stream operations
+        else if (path.startsWith("/stream") && (l == 7 ||
+            path.charAt(7) == '/')) { //JMS event for stream operations
+            if ((service.getDebugMode() & Service.DEBUG_CTRL) > 0)
+                new Event(Event.DEBUG, name + " stream: " + path).send();
             isJMS = true;
             isCollectible = false;
             isStream = true;
             event = getEvent(props, true);
+            if (event == null) { // null event
+                response.sendError(response.SC_BAD_REQUEST);
+                return null;
+            }
             event.setAttribute("hostname", clientIP);
         }
-        else if (restURILen > 0 && path.startsWith(restURI)) { // REST requests
+        else if (restURILen > 0 && path.startsWith(restURI) && (l==restURILen ||
+            path.charAt(restURILen) == '/')) { // REST requests
+            if ((service.getDebugMode() & Service.DEBUG_CTRL) > 0)
+                new Event(Event.DEBUG, name + " rest: " + path).send();
             Iterator iter = props.keySet().iterator();
             isJMS = true;
             isCollectible = false;
@@ -824,6 +839,9 @@ public class MsgServlet extends HttpServlet {
         }
         else if ("POST".equals(request.getMethod()) && // xml or json form data
             ("/xml".equals(path) || "/json".equals(path))) {
+            if ((service.getDebugMode() & Service.DEBUG_CTRL) > 0)
+                new Event(Event.DEBUG, name + " raw data: " + path).send();
+            // retrieve content from the key of either xml or json
             if ((o = props.get(path.substring(1))) != null)
                 str = ((String[]) o)[0];
             else
@@ -837,6 +855,8 @@ public class MsgServlet extends HttpServlet {
             event.setAttribute("path", path);
         }
         else { // ad hoc form request
+            if ((service.getDebugMode() & Service.DEBUG_CTRL) > 0)
+                new Event(Event.DEBUG, name + " ad hoc: " + path).send();
             isJMS = false;
             isCollectible = false;
             if ((o = props.get("jsp")) != null)
@@ -1046,14 +1066,14 @@ public class MsgServlet extends HttpServlet {
                         ph = new HashMap<String, Object>();
                         ph.put("URI", uri);
                         str = ((Event) message).getAttribute("Username");
-                        if (str != null || str.length() > 0) {
+                        if (str != null && str.length() > 0) {
                             ph.put("Username", str);
                             str = ((Event) message).getAttribute("Password");
                             if (str != null && str.length() > 0)
                                 ph.put("Password", str);
                             else
                                 ph.put("EncryptedPassword",
-                             ((Event) message).getAttribute("EncryptedPassword"));
+                            ((Event)message).getAttribute("EncryptedPassword"));
                         }
                         conn = new DBConnector(ph);
                         str = ((TextEvent) message).getText();
@@ -1063,10 +1083,9 @@ public class MsgServlet extends HttpServlet {
                         }
                         catch (Exception ex) {
                         }
-                        if ((service.getDebugMode() & service.DEBUG_TRAN) > 0)
-                            new Event(Event.DEBUG, getServletName() +
-                                " queried " + len + " bytes from SQL: " +
-                                str).send();
+                        if ((service.getDebugMode() & service.DEBUG_UPDT) > 0)
+                            new Event(Event.DEBUG, name + " queried " + len +
+                                " bytes from SQL: " + str).send();
                     }
                     catch (Exception e) {
                         if (conn != null) try {
@@ -1077,16 +1096,16 @@ public class MsgServlet extends HttpServlet {
                         key = event.getAttribute("name");
                         if (key == null)
                             key = path;
-                        new Event(Event.ERR, getServletName() +
-                           " failed to write " + len + " bytes for " + key +
-                           ": " + Event.traceStack(e)).send();
+                        new Event(Event.ERR, name + " failed to write " + len +
+                            " bytes for " + key + ": " +
+                            Event.traceStack(e)).send();
                         response.sendError(response.SC_INTERNAL_SERVER_ERROR);
                     }
                     return null;
                 }
                 else if (i > 0 && message != null) { // got result back
                     ph = new HashMap<String, Object>();
-                    for (String ky  : ((Event) message).getAttributeNames()) {
+                    for (String ky : ((Event) message).getAttributeNames()) {
                         if (ky == null || ky.length() <= 0)
                             continue;
                         if ("text".equals(ky))
@@ -1143,7 +1162,7 @@ public class MsgServlet extends HttpServlet {
                     ph = null;
                 }
             }
-            else { // non-JMS event for the current QBroker
+            else { // non-JMS event for the assigned service
                 for (i=0; i<propertyName.length; i++)
                     event.setAttribute(propertyName[i], propertyValue[i]);
                 i = service.doRequest(event, timeout);
@@ -1168,14 +1187,14 @@ public class MsgServlet extends HttpServlet {
             }
             else if (isCollectible && "query".equals(action)) {
                 JSON2Map.flatten(ph);
-                if ((service.getDebugMode() & service.DEBUG_TRAN) > 0)
-                    new Event(Event.DEBUG, getServletName() + " sent back to " +
-                        username + " with requested content: "+
+                if ((service.getDebugMode() & service.DEBUG_REPT) > 0)
+                    new Event(Event.DEBUG, name + " sent back to " + username +
+                        " with requested content: " +
                         (String) ph.get("text")).send();
             }
-            else if ((service.getDebugMode() & service.DEBUG_TRAN) > 0)
-                new Event(Event.DEBUG, getServletName() + " sent back to " +
-                    username + " with requested content: " +
+            else if ((service.getDebugMode() & service.DEBUG_REPT) > 0)
+                new Event(Event.DEBUG, name + " sent back to " + username +
+                    " with requested content: " +
                     (String) ph.get("text")).send();
 
             if (ph != null) { // save the data map as the attribute of context
@@ -1190,12 +1209,6 @@ public class MsgServlet extends HttpServlet {
         }
 
         return (jsp != null) ? jsp : target;
-    }
-
-    public void setService(Service service) {
-        if (service != null) {
-            this.service = service;
-        }
     }
 
     private String getContent(String uri, HttpServletRequest request,
@@ -1476,11 +1489,5 @@ public class MsgServlet extends HttpServlet {
             }
         }
         return msg;
-    }
-
-    public void destroy() {
-        if (service != null)
-            service.close();
-        super.destroy();
     }
 }

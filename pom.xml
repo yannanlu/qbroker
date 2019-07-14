@@ -21,7 +21,6 @@
     <module>node</module>
     <module>cluster</module>
     <module>flow</module>
-    <module>servlet</module>
     <module>wmq</module>
     <module>sonicmq</module>
     <module>dist</module>

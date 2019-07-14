@@ -79,7 +79,10 @@ public class GenericRequester implements Requester {
         Object o;
         URI u = null;
 
-        name = (String) props.get("Name");
+        if ((o = props.get("Name")) == null)
+            throw(new IllegalArgumentException("Name is not defined"));
+        name = (String) o;
+
         if ((o = MonitorUtils.select(props.get("URI"))) == null)
             throw(new IllegalArgumentException(name + ": URI is not defined"));
         uri = (String) o;

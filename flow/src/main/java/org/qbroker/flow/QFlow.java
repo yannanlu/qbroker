@@ -30,7 +30,7 @@ import org.qbroker.common.TimeWindows;
 import org.qbroker.common.Service;
 import org.qbroker.common.RunCommand;
 import org.qbroker.json.JSON2Map;
-import org.qbroker.net.HTTPServer;
+import org.qbroker.net.JettyServer;
 import org.qbroker.net.MessageMailer;
 import org.qbroker.monitor.MonitorReport;
 import org.qbroker.monitor.MonitorGroup;
@@ -39,6 +39,7 @@ import org.qbroker.monitor.PropertyMonitor;
 import org.qbroker.jms.MessageUtils;
 import org.qbroker.jms.TextEvent;
 import org.qbroker.jms.JMSEvent;
+import org.qbroker.jms.MessageServlet;
 import org.qbroker.receiver.MessageReceiver;
 import org.qbroker.persister.MessagePersister;
 import org.qbroker.persister.StreamPersister;
@@ -117,7 +118,7 @@ public class QFlow implements Service, Runnable {
     private MessageFlow defaultFlow = null;
     private ClusterNode clusterNode = null;
     private MessageReceiver adminServer = null;
-    private HTTPServer httpServer = null;
+    private JettyServer httpServer = null;
     private java.lang.reflect.Method ackMethod = null;
     private MonitorGroup group;
     private AssetList flowList;
@@ -349,8 +350,8 @@ public class QFlow implements Service, Runnable {
                     o = con.newInstance(new Object[]{ph});
                     if (o instanceof MessageReceiver)
                         adminServer = (MessageReceiver) o;
-                    else if (o instanceof HTTPServer)
-                        httpServer = (HTTPServer) o;
+                    else if (o instanceof JettyServer)
+                        httpServer = (JettyServer) o;
                 }
                 catch (InvocationTargetException e) {
                     Throwable ex = e.getTargetException();
@@ -373,8 +374,12 @@ public class QFlow implements Service, Runnable {
                 else if (httpServer == null)
                     throw(new IllegalArgumentException(name +
                         ": ClassName is not supported: " + className));
-                else try { // http server
-                    httpServer.start(this);
+                else try { // jetty server
+                    MessageServlet servlet = new MessageServlet(ph);
+                    servlet.setService(this);
+                    str = httpServer.getName();
+                    httpServer.addServlet(servlet, "/" + str + "/*");
+                    httpServer.start();
                     idList = new ReservableCells("idList", aPartition[0] +
                         aPartition[1]);
                 }
@@ -1800,7 +1805,8 @@ public class QFlow implements Service, Runnable {
             shutdown();
         }
         else if ("Manager".equals(threadName)) { // for manager thread
-             start();
+            // start the flow when it is instantiated by external container
+            start();
         }
         else if ("AdminServer".equals(threadName)) { // for admin server
             if (adminServer != null) {

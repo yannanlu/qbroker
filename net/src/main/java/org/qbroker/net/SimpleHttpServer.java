@@ -1,6 +1,6 @@
 package org.qbroker.net;
   
-/* SimpleHttpServer.java - a wrapper of com.sun.net.httpserver.HttpServer */
+/* SimpleHttpServer.java - a wrapper of HttpServer for embedded HTTP servers */
 
 import java.net.URI;
 import java.util.HashMap;
@@ -325,7 +325,7 @@ public class SimpleHttpServer implements HttpHandler {
     private static void printUsage() {
         System.out.println("SimpleHttpServer Version 1.0 (written by Yannan Lu)");
         System.out.println("SimpleHttpServer: a simple http server");
-        System.out.println("Usage: java org.qbroker.net.SimpleHttpServer -p port-c context");
+        System.out.println("Usage: java org.qbroker.net.SimpleHttpServer -p port -c context");
         System.out.println("  -?: print this message");
         System.out.println("  -s: https mode");
         System.out.println("  -c: context (default: '/')");
