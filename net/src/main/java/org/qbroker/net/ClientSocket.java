@@ -259,7 +259,6 @@ public class ClientSocket {
         if (response.lastIndexOf("200 OK", i) > 0)
             return HttpURLConnection.HTTP_OK;
 
-System.out.print(response);
         return HttpURLConnection.HTTP_BAD_GATEWAY;
     }
 }

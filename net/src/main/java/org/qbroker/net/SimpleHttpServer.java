@@ -57,6 +57,7 @@ public class SimpleHttpServer implements HttpHandler, HTTPServer {
     public SimpleHttpServer(Map props) {
         Object o;
         URI u;
+        String ksPath = null, ksPassword = null;
 
         if ((o = props.get("Name")) == null)
             throw(new IllegalArgumentException("Name is not defined"));
@@ -110,27 +111,49 @@ public class SimpleHttpServer implements HttpHandler, HTTPServer {
                     ": Password not defined for " + username));
         }
 
+        if (isHTTPS) {
+            if ((o = props.get("KeyStoreFile")) != null)
+                ksPath = (String) o;
+            else
+                throw(new IllegalArgumentException(name +
+                    " KeyStoreFile is not defined"));
+
+            if ((o = props.get("KeyStorePassword")) != null)
+                ksPassword = (String) o;
+            else if ((o = props.get("EncryptedKeyStorePassword")) != null) try {
+                ksPassword = Utils.decrypt((String) o);
+            }
+            catch (Exception e) {
+                throw(new IllegalArgumentException(name + " failed to decrypt "+
+                    "EncryptedKeyStorePassword: " + e.toString()));
+            }
+            if (ksPassword == null || ksPassword.length() <= 0)
+                throw(new IllegalArgumentException(name +
+                    " KeySTorePassword is not defined"));
+            File ks = new File(ksPath);
+            if (!ks.exists() && !ks.canRead())
+                throw(new IllegalArgumentException(name +
+                    " can not open KeyStoreFile to read: " + ksPath));
+        }
+
         if (!isHTTPS) {
             try {
                 server = HttpServer.create(new InetSocketAddress(port),backlog);
             }
             catch (Exception e) {
                 throw(new IllegalArgumentException(name +
-                    " failed to create the http server: " + e.toString()));
+                    " failed to create http server: " + e.toString()));
             }
         }
         else try {
-            HttpsConfigurator cfg;
-//            SSLContext sc = SSLContext.getDefault();
-            SSLContext sc = SSLContext.getInstance("SSL");
-            sc.init(null, new TrustManager[]{new TrustAllManager()}, null);
+            SSLContext sc = getSSLContext(ksPath, ksPassword);
+            HttpsConfigurator cfg = new HttpsConfigurator(sc);
             server = HttpsServer.create(new InetSocketAddress(port), backlog);
-            cfg = new HttpsConfigurator(sc);
             ((HttpsServer) server).setHttpsConfigurator(cfg);
         }
         catch (Exception e) {
             throw(new IllegalArgumentException(name +
-                " failed to create the https server: " + e.toString()));
+                " failed to create https server: " + e.toString()));
         }
 
         if (username != null && password != null) { // default Authenticator
@@ -143,37 +166,17 @@ public class SimpleHttpServer implements HttpHandler, HTTPServer {
         }
     }
 
-    /** returns SSLContext with given keyStore, trustStore and the password */
-    private static SSLContext getSSLContext(byte[] tsSample1, byte[] ksSample1,
-        String passwd) throws Exception {
-        byte[] sampleTruststore1 = Base64Encoder.decode(tsSample1);
-        byte[] sampleKeystore1 = Base64Encoder.decode(ksSample1);
-        File keystore = File.createTempFile("AcceptAllGetTest", ".keystore");
-        File truststore = File.createTempFile("AcceptAllGetTest",".truststore");
-        FileOutputStream keystoreFileOut = new FileOutputStream(keystore);
-        try { // write bytes of keystore
-            keystoreFileOut.write(sampleKeystore1);
-        } finally {
-            keystoreFileOut.close();
-        }
-        FileOutputStream truststoreFileOut = new FileOutputStream(truststore);
-        try { // write bytes of truststore
-            truststoreFileOut.write(sampleTruststore1);
-        } finally {
-            truststoreFileOut.close();
-        }
+    /** returns SSLContext with given path to keyStore, the password for it */
+    public static SSLContext getSSLContext(String ksPath, String ksPassword)
+        throws Exception {
         KeyStore ks = KeyStore.getInstance("JKS");
-        ks.load(new FileInputStream(keystore), passwd.toCharArray());
+        ks.load(new FileInputStream(ksPath), ksPassword.toCharArray());
         KeyManagerFactory kmf =
          KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-        kmf.init(ks, passwd.toCharArray());
-        KeyStore ts = KeyStore.getInstance("JKS");
-        ts.load(new FileInputStream(truststore), passwd.toCharArray());
-        TrustManagerFactory tmf =
-     TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-        tmf.init(ts);
+        kmf.init(ks, ksPassword.toCharArray());
         SSLContext sc = SSLContext.getInstance("TLS");
-        sc.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
+        sc.init(kmf.getKeyManagers(), new TrustManager[]{new TrustAllManager()},
+            null);
 
         return sc;
     }
