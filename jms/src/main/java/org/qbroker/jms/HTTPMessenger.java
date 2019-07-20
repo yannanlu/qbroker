@@ -192,6 +192,8 @@ public class HTTPMessenger {
         if ((o = props.get("ExcludedProperty")) != null)
             ph.put("ExcludedProperty", o);
         if (ph.size() > 0) {
+            if ((o = props.get("ResultType")) != null)
+                ph.put("ResultType", o);
             msg2Text = new Msg2Text(ph);
             ph.clear();
         }

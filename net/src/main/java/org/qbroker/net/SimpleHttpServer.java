@@ -17,6 +17,7 @@ import java.io.InterruptedIOException;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.security.KeyStore;
+import java.lang.reflect.InvocationTargetException;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
@@ -32,11 +33,13 @@ import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.BasicAuthenticator;
 import com.sun.net.httpserver.HttpsServer;
 import com.sun.net.httpserver.HttpsConfigurator;
+import org.qbroker.net.HTTPServer;
 import org.qbroker.common.Base64Encoder;
+import org.qbroker.common.Service;
 import org.qbroker.common.Utils;
 import org.qbroker.common.TraceStackThread;
 
-public class SimpleHttpServer implements HttpHandler {
+public class SimpleHttpServer implements HttpHandler, HTTPServer {
     private String name = null;
     private String uri = null;
     private String username = null;
@@ -208,12 +211,79 @@ public class SimpleHttpServer implements HttpHandler {
         os.close();
     }
 
-    public String getName() {
-        return name;
+    /**
+     * It creates the handler with the given property map and sets the service
+     * on the handler. Then it adds the given handler at the given path to
+     * the context
+     */
+    public void setService(String path, Map props, Service service) {
+        HttpHandler handler = null;
+        java.lang.reflect.Method method = null;
+        String className, str = null;
+        Object o;
+
+        if (props == null || props.size() <= 0)
+            throw(new IllegalArgumentException(name + ": props is empty"));
+        else if (service == null)
+            throw(new IllegalArgumentException(name + ": service is null"));
+        else if ((o = props.get("ClassName")) == null)
+            throw(new IllegalArgumentException(name + ": ClassName is null"));
+        else try { // instantiate the handler
+            className = (String) o;
+            java.lang.reflect.Constructor con;
+            str = name + " failed to instantiate servlet of " + className + ":";
+            Class<?> cls = Class.forName(className);
+            con = cls.getConstructor(new Class[]{Map.class});
+            o = con.newInstance(new Object[]{props});
+            if (o instanceof HttpHandler) { // handler has instantiated
+                handler = (HttpHandler) o;
+                addContext(path, handler);
+                method = cls.getMethod("setService",new Class[]{Service.class});
+            }
+        }
+        catch (InvocationTargetException e) {
+            Throwable ex = e.getTargetException();
+            str += e.toString() + " with Target exception: " + "\n";
+            throw(new IllegalArgumentException(str +
+                TraceStackThread.traceStack(ex)));
+        }
+        catch (Exception e) {
+            throw(new IllegalArgumentException(str +
+                TraceStackThread.traceStack(e)));
+        }
+
+        if (handler == null)
+            throw(new IllegalArgumentException(str + " not an Httphandler"));
+        else if (method == null)
+            throw(new IllegalArgumentException(str+" no method of setService"));
+        else try { // set the service on the handler
+            str = name + " failed to set service of " + service.getName() + ":";
+            method.invoke(handler, new Object[]{service});
+        }
+        catch (InvocationTargetException e) {
+            Throwable ex = e.getTargetException();
+            str += e.toString() + " with Target exception: " + "\n";
+            throw(new IllegalArgumentException(str +
+                TraceStackThread.traceStack(ex)));
+        }
+        catch (Exception e) {
+            throw(new IllegalArgumentException(str +
+                TraceStackThread.traceStack(e)));
+        }
     }
 
-    /** adds a context on the given path and returns number of contexts */
-    public int addContext(String path, HttpHandler handler) {
+    /** adds the given servlet at the given path to the context */
+    public void addContext(Object obj, String path) {
+        if (path == null || path.length() <= 0)
+            throw(new IllegalArgumentException(name + ": path is empty"));
+        else if (obj == null || !(obj instanceof HttpHandler))
+            throw(new IllegalArgumentException(name + ": not a handler"));
+        else
+            addContext(path, (HttpHandler) obj);
+    }
+
+    /** adds a context on the given path and returns number of contexts added */
+    private int addContext(String path, HttpHandler handler) {
         if (path == null || path.length() <= 0 || handler == null)
             return -1;
         if (server != null) {
@@ -238,6 +308,10 @@ public class SimpleHttpServer implements HttpHandler {
             return -2;
     }
 
+    public String getName() {
+        return name;
+    }
+
     /** starts the server without blocking */
     public void start() {
         if (server != null) {
@@ -249,6 +323,14 @@ public class SimpleHttpServer implements HttpHandler {
     public void stop() {
         if (server != null) {
             server.stop(1);
+        }
+    }
+
+    public void join() {
+        try {
+            Thread.currentThread().join();
+        }
+        catch (Exception ex) {
         }
     }
 
@@ -295,6 +377,14 @@ public class SimpleHttpServer implements HttpHandler {
                 if (i+1 < args.length)
                     props.put("Password", args[++i]);
                 break;
+              case 'f':
+                if (i+1 < args.length)
+                    props.put("KeyStoreFile", args[++i]);
+                break;
+              case 'k':
+                if (i+1 < args.length)
+                    props.put("KeyStorePassword", args[++i]);
+                break;
               default:
                 break;
             }
@@ -311,11 +401,12 @@ public class SimpleHttpServer implements HttpHandler {
 
         try {
             server = new SimpleHttpServer(props);
-            server.addContext(path, server);
+            server.addContext(server, path);
             server.start();
             System.out.println("Server started. Please run the following command to test:");
             System.out.println("curl " + uri + path);
             System.out.println("Enter Ctrl+C to stop the server");
+            server.join();
         }
         catch (Exception e) {
             e.printStackTrace();
@@ -332,5 +423,7 @@ public class SimpleHttpServer implements HttpHandler {
         System.out.println("  -p: port (default: 80 or 443)");
         System.out.println("  -n: username");
         System.out.println("  -w: password");
+        System.out.println("  -f: path to keystore file");
+        System.out.println("  -k: password for keystore");
     }
 }

@@ -42,11 +42,10 @@ import org.qbroker.common.Browser;
 import org.qbroker.common.AssetList;
 import org.qbroker.json.JSON2Map;
 import org.qbroker.net.HTTPConnector;
-import org.qbroker.net.JettyServer;
+import org.qbroker.net.HTTPServer;
 import org.qbroker.net.MessageMailer;
 import org.qbroker.jms.MessageUtils;
 import org.qbroker.jms.TextEvent;
-import org.qbroker.jms.MessageServlet;
 import org.qbroker.receiver.MessageReceiver;
 import org.qbroker.persister.MessagePersister;
 import org.qbroker.persister.StreamPersister;
@@ -159,7 +158,7 @@ public class MonitorAgent implements Service, Runnable {
     private ReservableCells idList;   // for protecting all escalations
     private MessageFlow defaultFlow = null;
     private MessageReceiver adminServer = null;
-    private JettyServer httpServer = null;
+    private HTTPServer httpServer = null;
     private String[] displayPropertyName = null;
     private Map cachedProps;
     private Map<String, Object> includeMap, configRepository = null;
@@ -379,7 +378,7 @@ public class MonitorAgent implements Service, Runnable {
                     throw(new IllegalArgumentException(name +
                         ": ClassName is empty"));
 
-                String str = "failed to instantiate " + className + ":";
+                String str = "failed to instantiate " + className + ": ";
                 try {
                     java.lang.reflect.Constructor con;
                     Class<?> cls = Class.forName(className);
@@ -387,12 +386,12 @@ public class MonitorAgent implements Service, Runnable {
                     o = con.newInstance(new Object[]{ph});
                     if (o instanceof MessageReceiver)
                         adminServer = (MessageReceiver) o;
-                    else if (o instanceof JettyServer)
-                        httpServer = (JettyServer) o;
+                    else if (o instanceof HTTPServer)
+                        httpServer = (HTTPServer) o;
                 }
                 catch (InvocationTargetException e) {
                     Throwable ex = e.getTargetException();
-                    str += e.toString() + " with Target exception: " + "\n";
+                    str += e.toString() + "with Target exception: " + "\n";
                     throw(new IllegalArgumentException(str +
                         Event.traceStack(ex)));
                 }
@@ -401,10 +400,6 @@ public class MonitorAgent implements Service, Runnable {
                         Event.traceStack(e)));
                 }
 
-                if ((o = ph.get("RestartScript")) != null)
-                    restartScript = (String) o;
-                else
-                    restartScript = null;
                 if (adminServer != null) {
                     admin = new Thread(this, "AdminServer");
                     admin.setPriority(Thread.NORM_PRIORITY);
@@ -415,20 +410,31 @@ public class MonitorAgent implements Service, Runnable {
                 else if (httpServer == null)
                     throw(new IllegalArgumentException(name +
                         ": ClassName is not supported: " + className));
-                else try { // jetty server
-                    MessageServlet servlet = new MessageServlet(ph);
-                    servlet.setService(this);
-                    str = httpServer.getName();
-                    httpServer.addServlet(servlet, "/" + str + "/*");
+                else if (httpServer != null) try { // http server
+                    if (className.endsWith("HttpServer")) {// for MessageHandler
+                        ph.put("ClassName", "org.qbroker.jms.MessageHandler");
+                        str = "/" + httpServer.getName();
+                    }
+                    else { // reset the className to MessageServlet
+                        ph.put("ClassName", "org.qbroker.jms.MessageServlet");
+                        str = "/" + httpServer.getName() + "/*";
+                    }
+                    httpServer.setService(str, ph, this);
                     httpServer.start();
+                    new Event(Event.INFO, "httpServer started at /" +
+                        httpServer.getName()).send();
                     idList = new ReservableCells("idList", aPartition[0] +
                         aPartition[1]);
                 }
                 catch (Exception e) {
                     throw(new IllegalArgumentException(name + 
-                        " failed to start httpServer: " + Event.traceStack(e)));
+                        " failed to start httpServer: " +Event.traceStack(e)));
                 }
             }
+            if ((o = ph.get("RestartScript")) != null)
+                restartScript = (String) o;
+            else
+                restartScript = null;
         }
         else { // for external requests
             aPartition[0] = 0;
@@ -1327,15 +1333,14 @@ public class MonitorAgent implements Service, Runnable {
      * change and status update, etc.  INFO is for queries of state and
      * escalations of event, report and data, etc.
      *<br/><br/>
-     * The following attributes are required in the incoming event:
+     * The following attributes are expected in the incoming event:
      *<br/>
      * priority     INFO for query, NOTICE for update and WARNING for admin<br/>
      * operation    action of the request: query,update,stop,disable,enable<br/>
      * category     category of the target<br/>
-     * group        group of the target<br/>
      * name         name the target<br/>
      * type         type of response: json, xml or text<br/>
-     * status       status
+     * status       statu such as disabled or normal with NOTICE
      */
     private int invokeAction(long currentTime, long sessionTime, Event event) {
         String key, target, str, text;
@@ -1351,14 +1356,12 @@ public class MonitorAgent implements Service, Runnable {
             return currentStatus;
 
         isExternal = (event instanceof TextEvent);
-        if ((str = event.getAttribute("reqID")) != null) {
-            try {
-                id = Integer.parseInt(str);
-                if (id >= 0)
-                    isExternal = true;
-            }
-            catch (Exception e) {
-            }
+        if (!isExternal && (str = event.getAttribute("reqID")) != null) try {
+            id = Integer.parseInt(str);
+            if (id >= 0) // non-JMS event as a remote request with a tracking id
+                isExternal = true;
+        }
+        catch (Exception e) {
         }
 
         key = event.getAttribute("name");
@@ -1437,10 +1440,10 @@ public class MonitorAgent implements Service, Runnable {
             action = -1;
 
         if ((str = event.getAttribute("type")) != null) {
-            if ("xml".equalsIgnoreCase(str)) // expecting XML as response
-                type = Utils.RESULT_XML;
-            else if ("json".equalsIgnoreCase(str)) // expecting JSON as response
+            if ("json".equalsIgnoreCase(str)) // expecting JSON as response
                 type = Utils.RESULT_JSON;
+            else if ("xml".equalsIgnoreCase(str)) // expecting XML as response
+                type = Utils.RESULT_XML;
         }
 
         tm = event.getTimestamp();
@@ -1451,8 +1454,8 @@ public class MonitorAgent implements Service, Runnable {
                     EventUtils.compact(event)).send();
             if (isFlow) // for FLOW
                 id = flowList.getID(key);
-            else if (name.equals(key)) // for Agent
-                id = -1;
+            else if (name.equals(key)) // for container
+                id = -2;
             else // for GROUP
                 id = groupList.getID(key);
             switch (action) {
@@ -1505,6 +1508,20 @@ public class MonitorAgent implements Service, Runnable {
                     }
                     break;
                 }
+                else if (id == -1) { // no such group
+                    status = currentStatus;
+                    text = "no such group for " + key;
+                    if (isExternal) { // external event
+                        ev = new Event(Event.INFO, target + ": " + text);
+                        ev.setAttribute("rc", "0");
+                    }
+                    else {
+                        event.setPriority(Event.INFO);
+                        event.setAttribute("text", target + ": " + text);
+                        event.setAttribute("rc", "0");
+                    }
+                    break;
+                }
                 // for container
                 if (restartScript == null) {
                     text = "restart script is not defined";
@@ -1537,7 +1554,7 @@ public class MonitorAgent implements Service, Runnable {
                     }
                     break;
                 }
-                // should not reach here if restart script works
+                // should never reach here if restart script works
                 if (isExternal) { // external event
                     ev = new Event(Event.WARNING, target+" restarted: "+text);
                     ev.setAttribute("rc", "-1");
@@ -1572,6 +1589,10 @@ public class MonitorAgent implements Service, Runnable {
                 }
                 else if (id >= 0) { // for group
                     text = "stop on group is not supported";
+                    status = currentStatus;
+                }
+                else if (id == -1) { // no such group
+                    text = "no such group for " + key;
                     status = currentStatus;
                 }
                 else { // for container
@@ -1631,6 +1652,10 @@ public class MonitorAgent implements Service, Runnable {
                     else {
                         text = key + " stopped or closed";
                     }
+                    status = currentStatus;
+                }
+                else if (id == -1) { // no such group
+                    text = "no such group for " + key;
                     status = currentStatus;
                 }
                 else if (currentStatus >= SERVICE_READY &&
@@ -1713,8 +1738,12 @@ public class MonitorAgent implements Service, Runnable {
                     }
                     status = currentStatus;
                 }
+                else if (id == -1) { // no such group
+                    text = "no such group for " + key;
+                    status = currentStatus;
+                }
                 else if (currentStatus >= SERVICE_READY &&
-                    currentStatus < SERVICE_DISABLED) {
+                    currentStatus < SERVICE_DISABLED) { // for container
                     text = "manually disabled";
                     status = SERVICE_DISABLED;
                     previousStatus = currentStatus;
@@ -1783,8 +1812,8 @@ public class MonitorAgent implements Service, Runnable {
 
             if (isFlow) // for FLOW
                 id = flowList.getID(key);
-            else if (name.equals(key)) // for Agent
-                id = -1;
+            else if (name.equals(key)) // for container
+                id = -2;
             else if ("default".equals(key)) { // no action on the default group
                 status = currentStatus;
                 break;
@@ -1817,6 +1846,9 @@ public class MonitorAgent implements Service, Runnable {
                         groupInfo[GROUP_STATUS] = SERVICE_READY;
                         groupInfo[GROUP_TIME] = currentTime;
                     }
+                    status = currentStatus;
+                }
+                else if (id == -1) { // no such group
                     status = currentStatus;
                 }
                 else if (currentStatus > SERVICE_RETRYING &&
@@ -1865,6 +1897,9 @@ public class MonitorAgent implements Service, Runnable {
                         groupInfo[GROUP_STATUS] = SERVICE_STANDBY;
                         groupInfo[GROUP_TIME] = currentTime;
                     }
+                    status = currentStatus;
+                }
+                else if (id == -1) { // no such group
                     status = currentStatus;
                 }
                 else if (currentStatus >= SERVICE_READY &&
@@ -1979,7 +2014,7 @@ public class MonitorAgent implements Service, Runnable {
             else {
                 h = queryInfo(currentTime, sessionTime, target, key, type);
             }
-            if (h != null) {
+            if (h != null) { // query with result
                 if ((type & Utils.RESULT_JSON) > 0) { // for json
                     if ("XQUEUE".equals(target)) // for XQ of a flow
                         text = (h.size() != 1) ? JSON2Map.toJSON(h) :
@@ -2002,7 +2037,7 @@ public class MonitorAgent implements Service, Runnable {
                     ev = new Event(Event.INFO, "<Result>" + text + "</Result>");
                     h.clear();
                 }
-                else if (isExternal) { // external event
+                else if (isExternal) { // convert to text for external event
                     ev = new Event(Event.INFO, target + ": query OK");
                     ev.setAttribute("rc", "0");
                     Iterator iter = h.keySet().iterator();
@@ -2015,7 +2050,7 @@ public class MonitorAgent implements Service, Runnable {
                     }
                     h.clear();
                 }
-                else {
+                else { // set query result map as an object for internal event
                     event.setPriority(Event.INFO);
                     event.setAttribute("text", target + ": query OK");
                     event.setAttribute("rc", "0");
@@ -2025,7 +2060,7 @@ public class MonitorAgent implements Service, Runnable {
             else if (text != null) { // for list
                 ev = new Event(Event.INFO, text);
             }
-            else if (isExternal) { // external event
+            else if (isExternal) { // query failed on external event
                 if ((type & Utils.RESULT_JSON) > 0) {
                     ev = new Event(Event.ERR, "{\"Error\":\"" + target +
                         ": not found " + key + "\",\"RC\":-1}");
@@ -2039,7 +2074,7 @@ public class MonitorAgent implements Service, Runnable {
                     ev.setAttribute("rc", "-1");
                 }
             }
-            else {
+            else { // query failed on internal event
                 event.setPriority(Event.ERR);
                 event.setAttribute("text",target+": not found "+key);
                 event.setAttribute("rc", "-1");
@@ -4590,10 +4625,16 @@ public class MonitorAgent implements Service, Runnable {
             if (admin.isAlive())
                 admin.interrupt();
         }
-        else if (httpServer != null) try {
-            httpServer.stop();
-        }
-        catch (Exception e) {
+        else if (httpServer != null) {
+            try {
+                httpServer.stop();
+                new Event(Event.INFO, "httpServer stopped at /" +
+                    httpServer.getName()).send();
+            }
+            catch (Exception ex) {
+                new Event(Event.WARNING, "httpServer failed to stop at /" +
+                    httpServer.getName() + ": " + ex.toString()).send();
+            }
         }
 
         browser = flowList.browser();
@@ -4611,11 +4652,6 @@ public class MonitorAgent implements Service, Runnable {
             catch (Exception e) {
             }
         }
-        else if (httpServer != null) try {
-            httpServer.join();
-        }
-        catch (Exception e) {
-        }
 
         for (i=0; i<pool.length; i++) {
             if (pool[i].isAlive()) try {
@@ -4624,6 +4660,12 @@ public class MonitorAgent implements Service, Runnable {
             catch (Exception e) {
             }
         }
+
+        if (httpServer != null) try {
+            httpServer.join();
+        }
+        catch (Exception e) {
+        }
     }
 
     /**
@@ -4631,10 +4673,10 @@ public class MonitorAgent implements Service, Runnable {
      * If timeout < 0, there is no wait.  If timeout > 0, it will wait for
      * the processed event until timeout.  If timeout = 0, it blocks until
      * the processed event is done.  It returns 1 for success, 0 for timed
-     * out and -1 for failure.  The method is MT-Safe.
+     * out and -1 for failure. All the requests will be routed to adminServer
+     * via the outlink of escalation. The method is MT-Safe.
      *<br/><br/>
-     * N.B., The input request will be modified for the response.  It is
-     * mutual-exclusive with the adminServer.
+     * N.B., The input request will be modified for the response.
      */
     public int doRequest(org.qbroker.common.Event req, int timeout) {
         int i, n, sid = -1, m = 1;
@@ -5006,7 +5048,7 @@ public class MonitorAgent implements Service, Runnable {
         int i, n, show = 0, size = 0, debugForReload = 0;
         Map<String, Object> props = new HashMap<String, Object>();
         String cfgDir, homeDir, configFile = null;
-        String action = null, category = null, name = null, groupName="default";
+        String action = null, category = null, name = null;
         List list = null, group = null;
         MonitorAgent agent = null;
         Object o;
@@ -5044,11 +5086,6 @@ public class MonitorAgent implements Service, Runnable {
               case 'C':
                 if (i+1 < args.length) {
                     category = args[i+1];
-                }
-                break;
-              case 'G':
-                if (i+1 < args.length) {
-                    groupName = args[i+1];
                 }
                 break;
               case 'N':
@@ -5126,14 +5163,15 @@ public class MonitorAgent implements Service, Runnable {
 
             Map<String, Object> ph = Utils.cloneProperties((Map) o);
             String key = (String) ph.get("Operation");
-            if ("react".equals(key)) {
+            if ("handle".equals(key)) {
                 uri = null;
                 ph.put("Operation", "download");
                 ph.put("ClassName", "org.qbroker.persister.FilePersister");
                 ph.put("Capacity", "2");
                 ph.put("Partition", "0,0");
                 ph.put("IsPost", "true");
-                ph.put("EventPostable", "true");
+                ph.put("Template", "");
+                ph.put("ResultType", "64");
                 ph.put("DisplayMask", "0");
                 ph.put("SOTimeout", "5");
                 pstr = new FilePersister(ph); 
@@ -5166,11 +5204,10 @@ public class MonitorAgent implements Service, Runnable {
             }
 
             TextEvent event = new TextEvent();
-            if ("react".equals(key)) {
+            if ("handle".equals(key)) {
                 event.setAttribute("operation", action);
                 event.setAttribute("name", name);
                 event.setAttribute("type", "json");
-                event.setAttribute("group", groupName);
                 event.setAttribute("category", category);
                 event.setAttribute("status", "Normal");
                 event.setAttribute("jsp", "/getJSON.jsp");
@@ -5183,7 +5220,6 @@ public class MonitorAgent implements Service, Runnable {
                 ev.setAttribute("operation", action);
                 ev.setAttribute("name", name);
                 ev.setAttribute("type", "json");
-                event.setAttribute("group", groupName);
                 ev.setAttribute("category", category);
                 ev.setAttribute("status", "Normal");
                 key = zonedDateFormat.format(new Date()) + " " +
@@ -5430,7 +5466,6 @@ public class MonitorAgent implements Service, Runnable {
         System.out.println("  -I: ConfigFile (default: /opt/qbroker/agent/Agent.json)");
         System.out.println("  -A: Action for query (default: none)");
         System.out.println("  -C: Category for query (default: AGENT)");
-        System.out.println("  -G: Group for query (default: default)");
         System.out.println("  -N: Name for query (default: value of categort)");
         System.out.println("  -W: Doing nothing (for stopping service on Win2K)");
 /*

@@ -18,7 +18,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.IOException;
 import javax.servlet.ServletConfig;
-import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -37,14 +36,14 @@ import org.qbroker.common.TimeWindows;
 import org.qbroker.common.Base64Encoder;
 import org.qbroker.json.JSON2Map;
 import org.qbroker.net.DBConnector;
+import org.qbroker.net.JettyServer;
 import org.qbroker.event.Event;
 import org.qbroker.event.EventUtils;
 import org.qbroker.jms.MessageUtils;
 import org.qbroker.jms.JMSEvent;
 import org.qbroker.jms.TextEvent;
 import org.qbroker.jms.BytesEvent;
-import org.qbroker.jms.MapEvent;
-import org.qbroker.jms.ObjectEvent;
+import org.qbroker.jms.EchoService;
 
 /**
  * MessageServlet is a servlet for generic message services. It allows a message
@@ -54,16 +53,21 @@ import org.qbroker.jms.ObjectEvent;
  * frontend and the gateway for message services.  It is responsible for
  * transformation between the HTTP requests/responses and JMS messages.
  *<br/><br/>
- * MessageServlet has 5 rulesets represented by the URL path.  They are /jms
- * for non-collectible JMS TextEvents, /collectible for collectible JMS
- * TextEvents, /event for non-JMS events, RestURI for JMS TextEvents of REST
- * requests and other paths for ad hoc form requests. When a web request hits
+ * MessageServlet has 6 rulesets referenced by the URL path. The first one is
+ * /jms for receiving event postables as the JMS TextEvents. The second is
+ * /collectible for receiving event postables from the client and transforming
+ * them to the collectible JMS TextEvents. The next is /event for receiving
+ * event postables as the non-JMS events. The pre-configured RestURI is for the
+ * ruleset to convert simple REST requests to JMS TextEvents. In this ruleset,
+ * the path of /json or /xml is for posted JSON or XML data from a client.
+ * The path of /stream is for downloading binary content from JDBC datasources, 
+ * The rest of paths are for ad hoc HTML form requests. When a web request hits
  * one of the URLs, the corresponding ruleset will be invoked to process the
- * incoming request. MessageServlet supports GET, POST and PUT methods. In case
- * of POST, it also supports file upload and raw json or xml content. For POST
- * or PUT, those headers matched with HeaderRegex will be copied into the
- * message. One of the examples of HeaderRegex is "^[Xx]-.+$" that matches all
- * HTTP headers of starting with "X-".
+ * incoming request. MessageServlet supports POST, GET and PUT methods. For
+ * POST or PUT, those headers matched with HeaderRegex will be copied into the
+ * message. One of examples with HeaderRegex is "^[Xx]-.+$" that matches all
+ * HTTP headers of starting with "X-". In case of POST, it also supports file
+ * upload or raw content such as xml or json.
  *<br/><br/>
  * A collectible TextEvent is a TextEvent with its message body set to the
  * collectible format of the original message. It is meant to be sent to remote
@@ -72,11 +76,11 @@ import org.qbroker.jms.ObjectEvent;
  *<br/><br/>
  * For ad hoc form requests, MessageServlet treats them in two different ways.
  * If the attribute of view is defined in the request and it is not empty, the
- * request will be converted into a TextEvent. In case that the attribute of
+ * request will be converted into a TextEvent. Otherwise, if the attribute of
  * name is defined and it is not empty, the request will be converted to an
- * Event. Further more, if the attribute of URI is defined and it is not empty,
- * the request will be packed into collectible format. Otherwise, there is no
- * transformation on the original message. 
+ * Event. If neither view nor name is defined, the ad hoc request will be
+ * dropped as a bad request. Further more, if the attribute of URI is defined
+ * and it is not empty, the request Event will be packed into collectible.
  *<br/><br/>
  * Once an incoming request is transformed into message, MessageServlet will
  * invoke doRequest() of the assigned service to process the message as the
@@ -89,24 +93,48 @@ import org.qbroker.jms.ObjectEvent;
 
 public class MessageServlet extends HttpServlet {
     private Service service = null;
-    private String loginURL = "/login.jsp";
-    private String welcomeURL = "/welcome.jsp";
-    private int timeout = 10000;
-    private Map props = new HashMap();
-    private SimpleDateFormat zonedDateFormat;
-    private DiskFileItemFactory factory = null;
-    private String jaasLogin = null;
-    private String restURI = null;
-    private String headerRegex = null;
-    private SimpleCallbackHandler jaasHandler = null;
-    private String[] propertyName, propertyValue;
-    private MessageDigest md = null;
-    private int restURILen = 0;
+    protected String name = null;
+    protected String loginURL = "/login.jsp";
+    protected String welcomeURL = "/welcome.jsp";
+    protected int timeout = 10000;
+    protected SimpleDateFormat zonedDateFormat;
+    protected DiskFileItemFactory factory = null;
+    protected String jaasLogin = null;
+    protected String restURI = null;
+    protected String headerRegex = null;
+    protected SimpleCallbackHandler jaasHandler = null;
+    protected String[] propertyName, propertyValue;
+    protected MessageDigest md = null;
+    protected int restURILen = 0;
+
+    public MessageServlet() { // for servlet container only
+    }
 
     public MessageServlet(Map props) {
+        this();
         int i, n;
         Object o;
         String jaasConfig = null;
+
+        if ((o = props.get("HeaderRegex")) != null)
+            headerRegex = (String) o;
+
+        if ((o = props.get("RestURI")) != null) {
+            restURI = (String) o;
+            restURILen = restURI.length();
+        }
+
+        if ((o = props.get("Timeout")) != null) {
+            timeout = 1000 * Integer.parseInt((String) o);
+            if (timeout <= 0)
+                timeout = 10000;
+        }
+
+        if ((o = props.get("JAASLogin")) != null) {
+            jaasLogin = (String) o;
+            if ((o = props.get("JAASConfig")) != null)
+                jaasConfig = (String) o;
+        }
 
         if (jaasLogin != null) { // initialize JAAS LoginContext
             if (jaasConfig != null)
@@ -125,11 +153,29 @@ public class MessageServlet extends HttpServlet {
 
         factory = new DiskFileItemFactory();
 
-        propertyName = new String[0];
-        propertyValue = new String[0];
-        zonedDateFormat =new SimpleDateFormat("yyyy-MM-dd HH:mm:ss,SSS zz");
+        if ((o = props.get("StringProperty")) != null && o instanceof Map) {
+            Iterator iter = ((Map) o).keySet().iterator();
+            n = ((Map) o).size();
+            propertyName = new String[n];
+            propertyValue = new String[n];
+            n = 0;
+            while (iter.hasNext()) {
+                String key = (String) iter.next();
+                if (key == null || key.length() <= 0)
+                    continue;
+                propertyName[n] = key;
+                propertyValue[n] = (String) ((Map) o).get(key);
+                n ++;
+            }
+        }
+        else {
+            propertyName = new String[0];
+            propertyValue = new String[0];
+        }
+        zonedDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss,SSS zz");
     }
 
+    /** sets the service to fulfill requests */
     public void setService(Service service) {
         if (service == null)
             throw(new IllegalArgumentException("service is null"));
@@ -143,11 +189,13 @@ public class MessageServlet extends HttpServlet {
 
         uri = processRequest(request, response, null);
 
-        if (uri != null && uri.lastIndexOf(".jsp") > 0) {
+        if (uri == null)
+            return;
+        else if (uri.endsWith(".jsp")) {
             String text = getContent(uri, request, response);
             response.getWriter().println(text);
         }
-        else if (uri != null && (o = request.getAttribute(uri)) != null) {
+        else if ((o = request.getAttribute(uri)) != null) {
             String text = (String) ((Map) o).get("text");
             request.removeAttribute(uri);
             response.getWriter().println(text);
@@ -345,7 +393,9 @@ public class MessageServlet extends HttpServlet {
             while (headerNames.hasMoreElements()) {
                 key = (String) headerNames.nextElement();
                 if (key == null || key.equals("null") ||
-                    key.equalsIgnoreCase("Content-Type"))
+                    key.equalsIgnoreCase("Cookie") ||
+                    key.equalsIgnoreCase("Content-Type") ||
+                    key.equalsIgnoreCase("Authorization"))
                     continue;
                 if (key.matches(headerRegex)) {
                     str = request.getHeader(key);
@@ -356,11 +406,13 @@ public class MessageServlet extends HttpServlet {
         }
         uri = processRequest(request, response, event);
 
-        if (uri != null && uri.lastIndexOf(".jsp") > 0) {
+        if (uri == null)
+            return;
+        else if (uri.endsWith(".jsp")) {
             String text = getContent(uri, request, response);
             response.getWriter().println(text);
         }
-        else if (uri != null && (o = request.getAttribute(uri)) != null) {
+        else if ((o = request.getAttribute(uri)) != null) {
             String text = (String) ((Map) o).get("text");
             request.removeAttribute(uri);
             response.getWriter().println(text);
@@ -431,7 +483,9 @@ public class MessageServlet extends HttpServlet {
             while (headerNames.hasMoreElements()) {
                 key = (String) headerNames.nextElement();
                 if (key == null || key.equals("null") ||
-                    key.equalsIgnoreCase("Content-Type"))
+                    key.equalsIgnoreCase("Cookie") ||
+                    key.equalsIgnoreCase("Content-Type") ||
+                    key.equalsIgnoreCase("Authorization"))
                     continue;
                 if (key.matches(headerRegex)) {
                     str = request.getHeader(key);
@@ -442,11 +496,13 @@ public class MessageServlet extends HttpServlet {
         }
         uri = processRequest(request, response, event);
 
-        if (uri != null && uri.lastIndexOf(".jsp") > 0) {
+        if (uri == null)
+            return;
+        else if (uri.endsWith(".jsp")) {
             String text = getContent(uri, request, response);
             response.getWriter().println(text);
         }
-        else if (uri != null && (o = request.getAttribute(uri)) != null) {
+        else if ((o = request.getAttribute(uri)) != null) {
             String text = (String) ((Map) o).get("text");
             request.removeAttribute(uri);
             response.getWriter().println(text);
@@ -465,11 +521,13 @@ public class MessageServlet extends HttpServlet {
 
         uri = processRequest(request, response, null);
 
-        if (uri != null && uri.lastIndexOf(".jsp") > 0) {
+        if (uri == null)
+            return;
+        else if (uri.endsWith(".jsp")) {
             String text = getContent(uri, request, response);
             response.getWriter().println(text);
         }
-        else if (uri != null && (o = request.getAttribute(uri)) != null) {
+        else if ((o = request.getAttribute(uri)) != null) {
             String text = (String) ((Map) o).get("text");
             request.removeAttribute(uri);
             response.getWriter().println(text);
@@ -496,7 +554,7 @@ public class MessageServlet extends HttpServlet {
         if ((o = props.get("date")) != null) try {
             timestamp = Long.parseLong(((String[]) o)[0]);
         }
-        catch (Exception e) {
+        catch (Exception e) { // bad timestamp for date
             return null;
         }
         if ((o = props.get("NAME")) != null)
@@ -507,8 +565,8 @@ public class MessageServlet extends HttpServlet {
             category = ((String[]) o)[0];
         if ((o = props.get("username")) != null)
             username = ((String[]) o)[0];
-        if (priority < 0 || text == null ||
-            !(key != null || site != null || category != null))
+        if (priority < 0 || text == null || !(key != null || site != null ||
+            category != null)) // not an event postable
             return null;
    
         if (text.length() > 0) {
@@ -532,7 +590,7 @@ public class MessageServlet extends HttpServlet {
             ((TextEvent) event).setJMSPriority(9-priority);
             event.setAttribute("text", text);
         }
-        catch (Exception e) {
+        catch (Exception e) { // failed to create a TextEvent
             return null;
         }
         event.setTimestamp(timestamp);
@@ -561,12 +619,9 @@ public class MessageServlet extends HttpServlet {
                 "\r", text);
             Utils.split(Event.ITEM_SEPARATOR, Event.ESCAPED_ITEM_SEPARATOR,
                 text, attr);
-            Iterator iter = attr.keySet().iterator();
-            while (iter.hasNext()) {
-                key = (String) iter.next();
-                if (key == null || key.length() <= 0)
-                    continue;
-                event.setAttribute(key, (String) attr.get(key));
+            for (String ky : attr.keySet()) {
+                if (ky != null && ky.length() > 0)
+                    event.setAttribute(ky, attr.get(ky));
             }
             if (isJMS) {
                 o = event.getAttribute("JMSExpiration");
@@ -595,28 +650,29 @@ public class MessageServlet extends HttpServlet {
      * according to the request path, the method sends it to the backend for
      * the response. Once response is back, it packs the response into a
      * data map and saves the map to the request as the attribute with the
-     * key of the context path.  Upon success, it returns either the JSP path
+     * key of the context path. Upon success, it returns either the JSP path
      * so that the data will be formatted for output with the given jsp, or
      * the context path for caller to retrieve the data for output. Otherwise,
      * it returns null to indicate failure so that the caller can retrieve
      * the error message.
      */
     @SuppressWarnings("unchecked")
-    private String processRequest(HttpServletRequest request,
+    protected String processRequest(HttpServletRequest request,
         HttpServletResponse response, Event event)
         throws ServletException, IOException {
         Object o;
         String key = null, uri = null, msg = null, str = null, port = null;
         String target = null, action = null, category = null, jsp = null;
-        String clientIP, path, sessionId, status, username = null, type=null;
+        String clientIP, path, sessionId, status, username = null, type = null;
         int l, priority = Event.INFO;
         long tm = 0L;
-        boolean isJMS = false;        // an event is a JMS event or not
-        boolean isCollectible = true; // a non-JMS event is collectible or not
+        boolean isJMS = true;          // an event is a JMS event or not
+        boolean isCollectible = false; // a non-JMS event is collectible or not
         boolean isFileUpload = false;
         boolean isStream = false;
         Map props = request.getParameterMap();
-        String name = getServletName();
+        if (name == null)
+            name = getServletName();
         path = request.getPathInfo();
         clientIP = request.getRemoteAddr();
         if (jaasLogin != null) { // enforce JAAS Login
@@ -704,9 +760,7 @@ public class MessageServlet extends HttpServlet {
         l = path.length();
         if (event != null) { // JMS event for file upload or raw request
             if ((service.getDebugMode() & Service.DEBUG_CTRL) > 0)
-                new Event(Event.DEBUG, name + " with event: " + path).send();
-            isJMS = true;
-            isCollectible = false;
+                new Event(Event.DEBUG, name + " raw data: " + path).send();
             str = request.getContentType();
             if ("POST".equals(request.getMethod()) &&
                 !"text/xml".equals(str) && !"application/json".equals(str)) {
@@ -715,7 +769,6 @@ public class MessageServlet extends HttpServlet {
                     jsp = event.getAttribute("jsp");
             }
             else try { // raw request from POST or PUT
-                isFileUpload = false;
                 event.setAttribute("_clientIP", clientIP);
                 ((JMSEvent) event).setJMSType(path);
             }
@@ -727,10 +780,10 @@ public class MessageServlet extends HttpServlet {
             if ((service.getDebugMode() & Service.DEBUG_CTRL) > 0)
                 new Event(Event.DEBUG, name + " collectible: " + path).send();
             isCollectible = true;
-            isJMS = true;
             event = getEvent(props, true);
-            if (event == null) { // null event
+            if (event == null) { // not an event postable
                 response.sendError(response.SC_BAD_REQUEST);
+                request.setAttribute("error", "not an event postable");
                 return null;
             }
             if (event.getAttribute("status") == null)
@@ -750,21 +803,19 @@ public class MessageServlet extends HttpServlet {
             if ((service.getDebugMode() & Service.DEBUG_CTRL) > 0)
                 new Event(Event.DEBUG, name + " event: " + path).send();
             isJMS = false;
-            isCollectible = false;
             event = getEvent(props, false);
-            if (event == null) { // null event
+            if (event == null) { // not an event postable
                 response.sendError(response.SC_BAD_REQUEST);
+                request.setAttribute("error", "not an event postable");
                 return null;
             }
             event.removeAttribute("text");
             if (event.getAttribute("status") == null)
                 event.setAttribute("status", "Normal");
-            if ((uri = event.getAttribute("URI")) == null || uri.length() <= 0)
-                isCollectible = false;
-            else {
+            if ((uri = event.getAttribute("URI")) != null && uri.length() > 0) {
                 isCollectible = true;
                 port = event.getAttribute("Port");
-                if (port == null || port.length() <= 0)
+                if (port != null && port.length() <= 0)
                     port = null;
             }
             if (event.attributeExists("jsp"))
@@ -777,11 +828,10 @@ public class MessageServlet extends HttpServlet {
             path.charAt(4) == '/')) { // JMS event without collectibles
             if ((service.getDebugMode() & Service.DEBUG_CTRL) > 0)
                 new Event(Event.DEBUG, name + " jms: " + path).send();
-            isJMS = true;
-            isCollectible = false;
             event = getEvent(props, true);
-            if (event == null) { // null event
+            if (event == null) { // not an event postable
                 response.sendError(response.SC_BAD_REQUEST);
+                request.setAttribute("error", "not an event postable");
                 return null;
             }
             event.setAttribute("hostname", clientIP);
@@ -789,15 +839,14 @@ public class MessageServlet extends HttpServlet {
                 jsp = event.getAttribute("jsp");
         }
         else if (path.startsWith("/stream") && (l == 7 ||
-            path.charAt(7) == '/')) { //JMS event for stream operations
+            path.charAt(7) == '/')) { // JMS event for download stream
             if ((service.getDebugMode() & Service.DEBUG_CTRL) > 0)
                 new Event(Event.DEBUG, name + " stream: " + path).send();
-            isJMS = true;
-            isCollectible = false;
             isStream = true;
             event = getEvent(props, true);
-            if (event == null) { // null event
+            if (event == null) { // not an event postable
                 response.sendError(response.SC_BAD_REQUEST);
+                request.setAttribute("error", "not an event postable");
                 return null;
             }
             event.setAttribute("hostname", clientIP);
@@ -806,9 +855,6 @@ public class MessageServlet extends HttpServlet {
             path.charAt(restURILen) == '/')) { // REST requests
             if ((service.getDebugMode() & Service.DEBUG_CTRL) > 0)
                 new Event(Event.DEBUG, name + " rest: " + path).send();
-            Iterator iter = props.keySet().iterator();
-            isJMS = true;
-            isCollectible = false;
             if ((o = props.get("text")) != null)
                 str = ((String[]) o)[0];
             else
@@ -819,6 +865,7 @@ public class MessageServlet extends HttpServlet {
                 event = new TextEvent();
             event.setAttribute("_clientIP", clientIP);
             // copy over properties
+            Iterator iter = props.keySet().iterator();
             while (iter.hasNext()) {
                 key = (String) iter.next();
                 if (key == null || key.length() <= 0 || "text".equals(key))
@@ -834,35 +881,32 @@ public class MessageServlet extends HttpServlet {
             }
             catch (Exception e) {
             }
-            if ("STREAM".equals(event.getAttribute("type"))) // for stream
+            if ("STREAM".equals(event.getAttribute("type"))) // download stream
                 isStream = true;
         }
         else if ("POST".equals(request.getMethod()) && // xml or json form data
             ("/xml".equals(path) || "/json".equals(path))) {
             if ((service.getDebugMode() & Service.DEBUG_CTRL) > 0)
-                new Event(Event.DEBUG, name + " raw data: " + path).send();
+                new Event(Event.DEBUG, name + " form data: " + path).send();
             // retrieve content from the key of either xml or json
             if ((o = props.get(path.substring(1))) != null)
                 str = ((String[]) o)[0];
             else
                 str = "";
-            isJMS = true;
-            isCollectible = false;
             event = new TextEvent(str);
             event.setAttribute("hostname", clientIP);
             event.setAttribute("type",
                 (("/xml".equals(path)) ? "text" : "application") + path);
             event.setAttribute("path", path);
         }
-        else { // ad hoc form request
+        else { // ad hoc form request for test only
             if ((service.getDebugMode() & Service.DEBUG_CTRL) > 0)
                 new Event(Event.DEBUG, name + " ad hoc: " + path).send();
-            isJMS = false;
-            isCollectible = false;
-            if ((o = props.get("jsp")) != null)
+            if ((o = props.get("jsp")) != null) {
                 jsp = ((String[]) o)[0];
-            if (jsp != null && jsp.length() <= 0)
-                jsp = null;
+                if (jsp != null && jsp.length() <= 0)
+                    jsp = null;
+            }
 
             if ((o = props.get("operation")) != null)
                 action = ((String[]) o)[0];
@@ -876,10 +920,11 @@ public class MessageServlet extends HttpServlet {
                 "start".equals(action) || "restart".equals(action))
                 priority = Event.WARNING;
 
-            if ((o = props.get("Port")) != null)
+            if ((o = props.get("Port")) != null) {
                 port = ((String[]) o)[0];
-            if (port == null || port.length() <= 0)
-                port = null;
+                if (port != null && port.length() <= 0)
+                    port = null;
+            }
 
             if ((o = props.get("category")) != null)
                 category = ((String[]) o)[0];
@@ -891,12 +936,11 @@ public class MessageServlet extends HttpServlet {
             if (type == null || type.length() <= 0)
                 type = "TEXT";
 
-            if ((o = props.get("URI")) != null)
+            if ((o = props.get("URI")) != null) {
                 uri = ((String[]) o)[0];
-            if (uri == null || uri.length() <= 0)
-                uri = null;
-            else
-                isCollectible = true;
+                if (uri != null && uri.length() <= 0)
+                    uri = null;
+            }
 
             if ((o = props.get("name")) != null)
                 key = ((String[]) o)[0];
@@ -905,8 +949,9 @@ public class MessageServlet extends HttpServlet {
 
             if ((o = props.get("view")) != null)
                 str = ((String[]) o)[0];
+            else
+                str = null;
             if (str != null && str.length() > 0) { // ad hoc jms event
-                isJMS = true;
                 event = new TextEvent();
                 event.setAttribute("name", key);
                 event.setAttribute("type", type);
@@ -953,6 +998,7 @@ public class MessageServlet extends HttpServlet {
                 }
             }
             else if (key != null && key.length() > 0) { // non-JMS event
+                isJMS = false;
                 event = new Event(priority);
                 event.setAttribute("name", key);
                 event.setAttribute("type", type);
@@ -961,6 +1007,7 @@ public class MessageServlet extends HttpServlet {
                 event.setAttribute("status", "Normal");
                 event.setAttribute("hostname", clientIP);
                 if (uri != null) {
+                    isCollectible = true;
                     event.setAttribute("URI", uri);
                     if (port != null)
                         event.setAttribute("Port", port);
@@ -987,232 +1034,259 @@ public class MessageServlet extends HttpServlet {
                 catch (Exception e) {
                 }
             }
+            else { // neither name nor view is defined
+                response.sendError(response.SC_PRECONDITION_FAILED);
+                request.setAttribute("error",
+                    "neither name nor view is defined");
+                return null;
+            }
         }
 
-        if (event != null) {
+        if (jaasLogin != null)
+            event.setAttribute("login", username);
+        else
+            username = clientIP;
+        if (isJMS || isCollectible) { // JMS or non-JMS collectible event
             int i;
-            Map<String, Object> ph = null;
-            if (jaasLogin != null)
-                event.setAttribute("login", username);
-            else
-                username = clientIP;
-            if (isJMS || isCollectible) { // JMS or non-JMS collectible event
-                JMSEvent message;
-                tm = 0L;
-                if (event instanceof JMSEvent) {
-                    message = (JMSEvent) event;
-                    tm = event.getExpiration();
-                    if (tm > 0L) // recover timeout
-                        tm -= System.currentTimeMillis();
-                    for (i=0; i<propertyName.length; i++)
-                        message.setAttribute(propertyName[i], propertyValue[i]);
+            Map<String, Object> ph;
+            JMSEvent message;
+            tm = 0L;
+            if (event instanceof JMSEvent) {
+                message = (JMSEvent) event;
+                tm = event.getExpiration();
+                if (tm > 0L) // recover timeout
+                    tm -= System.currentTimeMillis();
+                for (i=0; i<propertyName.length; i++)
+                    message.setAttribute(propertyName[i], propertyValue[i]);
+            }
+            else try { // ad hoc request
+                key = zonedDateFormat.format(new Date()) + " " +
+                    clientIP + " " + EventUtils.collectible(event);
+                message = new TextEvent();
+                message.setJMSPriority(9 - event.getPriority());
+                ((TextEvent) message).setText(key);
+                if ((key = event.getAttribute("short_name")) != null)
+                    message.setStringProperty("short_name", key);
+                if ((key = event.getAttribute("service")) != null)
+                    message.setStringProperty("service", key);
+                if ((key = event.getAttribute("operation")) != null)
+                    message.setStringProperty("operation", key);
+                message.setStringProperty("URI", uri);
+                if (port != null)
+                    message.setStringProperty("Port", port);
+                tm = event.getExpiration();
+                if (tm > 0L) {
+                    message.setJMSExpiration(tm);
+                    tm -= System.currentTimeMillis();
                 }
-                else try { // ad hoc request
-                    key = zonedDateFormat.format(new Date()) + " " +
-                        clientIP + " " + EventUtils.collectible(event);
-                    message = new TextEvent();
-                    message.setJMSPriority(9 - event.getPriority());
-                    ((TextEvent) message).setText(key);
-                    if ((key = event.getAttribute("short_name")) != null)
-                        message.setStringProperty("short_name", key);
-                    if ((key = event.getAttribute("service")) != null)
-                        message.setStringProperty("service", key);
-                    if ((key = event.getAttribute("operation")) != null)
-                        message.setStringProperty("operation", key);
-                    message.setStringProperty("URI", uri);
-                    if (port != null)
-                        message.setStringProperty("Port", port);
-                    tm = event.getExpiration();
-                    if (tm > 0L) {
-                        message.setJMSExpiration(tm);
-                        tm -= System.currentTimeMillis();
+                else // set default expiration
+                    message.setJMSExpiration(event.getTimestamp() + timeout);
+                for (i=0; i<propertyName.length; i++)
+                    message.setAttribute(propertyName[i], propertyValue[i]);
+            }
+            catch (Exception e) {
+                new Event(Event.ERR, name + " failed to load message: " +
+                    Event.traceStack(e)).send();
+                response.sendError(response.SC_INTERNAL_SERVER_ERROR);
+                request.setAttribute("error", "failed to load message");
+                return null;
+            }
+
+            if (tm <= timeout)
+                tm = timeout;
+
+            //send the request and wait until timeout
+            i = service.doRequest(message, (int) tm);
+
+            if (i > 0 && isStream) { // for stream on download
+                int len = -1;
+                DBConnector conn = null;
+                if (((Event) message).attributeExists("rc"))
+                    str = ((Event) message).getAttribute("rc");
+                else
+                    str = ((Event) message).getAttribute("ReturnCode");
+                if (str != null && !"0".equals(str)) { // failed
+                    response.setHeader("rc", str);
+                    response.sendError(response.SC_NOT_FOUND);
+                }
+                else try { // try to send payload back
+                    OutputStream out;
+                    type = ((Event) message).getAttribute("type");
+                    response.setContentType(type);
+                    out = response.getOutputStream();
+                    uri = ((Event) message).getAttribute("uri");
+                    ph = new HashMap<String, Object>();
+                    ph.put("URI", uri);
+                    str = ((Event) message).getAttribute("Username");
+                    if (str != null && str.length() > 0) {
+                        ph.put("Username", str);
+                        str = ((Event) message).getAttribute("Password");
+                        if (str != null && str.length() > 0)
+                            ph.put("Password", str);
+                        else
+                            ph.put("EncryptedPassword",
+                            ((Event)message).getAttribute("EncryptedPassword"));
                     }
-                    else // set default expiration
-                        message.setJMSExpiration(event.getTimestamp() +
-                            timeout);
-                    for (i=0; i<propertyName.length; i++)
-                        message.setAttribute(propertyName[i], propertyValue[i]);
+                    conn = new DBConnector(ph);
+                    str = ((TextEvent) message).getText();
+                    len = conn.copyStream(str, out);
+                    try {
+                        conn.close();
+                    }
+                    catch (Exception ex) {
+                    }
+                    if ((service.getDebugMode() & service.DEBUG_UPDT) > 0)
+                        new Event(Event.DEBUG, name + " queried " + len +
+                            " bytes from SQL: " + str).send();
                 }
                 catch (Exception e) {
-                    event.setAttribute("text", "failed to load message: "+
-                        Event.traceStack(e));
-                    message = null;
+                    if (conn != null) try {
+                        conn.close();
+                    }
+                    catch (Exception ex) {
+                    }
+                    key = event.getAttribute("name");
+                    if (key == null)
+                        key = path;
+                    new Event(Event.ERR, name + " failed to write " + len +
+                        " bytes for " + key + ": "+ Event.traceStack(e)).send();
+                    response.setHeader("rc", "-1");
+                    response.sendError(response.SC_INTERNAL_SERVER_ERROR);
                 }
-
-                if (tm <= timeout)
-                    tm = timeout;
-                i = -1;
-                if (message != null) { //send the request and wait until timeout
-                    i = service.doRequest(message, (int) tm);
-                }
-
-                // for Stream on download
-                if (i > 0 && message != null && isStream && !isFileUpload) {
-                    int len = -1;
-                    DBConnector conn = null;
-                    if (((Event) message).attributeExists("rc"))
-                        str = ((Event) message).getAttribute("rc");
-                    else
-                        str = ((Event) message).getAttribute("ReturnCode");
-                    if (str != null && !"0".equals(str)) { // failed
-                        response.sendError(response.SC_NOT_FOUND);
-                    }
-                    else try { // try to send payload back
-                        OutputStream out;
-                        type = ((Event) message).getAttribute("type");
-                        response.setContentType(type);
-                        out = response.getOutputStream();
-                        uri = ((Event) message).getAttribute("uri");
-                        ph = new HashMap<String, Object>();
-                        ph.put("URI", uri);
-                        str = ((Event) message).getAttribute("Username");
-                        if (str != null && str.length() > 0) {
-                            ph.put("Username", str);
-                            str = ((Event) message).getAttribute("Password");
-                            if (str != null && str.length() > 0)
-                                ph.put("Password", str);
-                            else
-                                ph.put("EncryptedPassword",
-                            ((Event)message).getAttribute("EncryptedPassword"));
-                        }
-                        conn = new DBConnector(ph);
-                        str = ((TextEvent) message).getText();
-                        len = conn.copyStream(str, out);
-                        try {
-                            conn.close();
-                        }
-                        catch (Exception ex) {
-                        }
-                        if ((service.getDebugMode() & service.DEBUG_UPDT) > 0)
-                            new Event(Event.DEBUG, name + " queried " + len +
-                                " bytes from SQL: " + str).send();
-                    }
-                    catch (Exception e) {
-                        if (conn != null) try {
-                            conn.close();
-                        }
-                        catch (Exception ex) {
-                        }
-                        key = event.getAttribute("name");
-                        if (key == null)
-                            key = path;
-                        new Event(Event.ERR, name + " failed to write " + len +
-                            " bytes for " + key + ": " +
-                            Event.traceStack(e)).send();
-                        response.sendError(response.SC_INTERNAL_SERVER_ERROR);
-                    }
-                    return null;
-                }
-                else if (i > 0 && message != null) { // got result back
-                    ph = new HashMap<String, Object>();
-                    for (String ky : ((Event) message).getAttributeNames()) {
-                        if (ky == null || ky.length() <= 0)
-                            continue;
-                        if ("text".equals(ky))
-                            continue;
-                        ph.put(ky, ((Event) message).getAttribute(ky));
-                    }
-
-                    key = null;
-                    if (isFileUpload) { // for upload
-                        key = event.getAttribute("name");
-                        if (key == null)
-                            key = path;
-                        key = key + " has been uploaded. " +
-                            "Please close the popup and refresh the page";
-                    }
-                    else if (message instanceof TextEvent) try { // for body
-                        key = ((TextEvent) message).getText();
-                    }
-                    catch (Exception e) {
-                    }
-                    if (key != null)
-                        ph.put("text", key);
-
-                    if (((Event) message).attributeExists("rc"))
-                        str = ((Event) message).getAttribute("rc");
-                    else
-                        str = ((Event) message).getAttribute("ReturnCode");
-                    if (str != null) // notify client
-                        response.setHeader("rc", str);
-
-                    str = ((Event) message).getAttribute("jsp");
-                    if (str != null) // overwrite the presentation jsp
-                        jsp = str;
-                    else if (jsp == null) { // no presentation
-                        str = ((Event) message).getAttribute("type");
-                        if (str != null) // overwrite content type
-                            type = str;
-                        if (type == null || "text".equals(type.toLowerCase()))
-                            response.setContentType("text/plain");
-                        else if ("json".equals(type.toLowerCase()))
-                            response.setContentType("application/json");
-                        else if ("xml".equals(type.toLowerCase()))
-                            response.setContentType("text/xml");
-                        else if ("html".equals(type.toLowerCase()))
-                            response.setContentType("text/html");
-                        else if (message instanceof TextEvent)
-                            response.setContentType("text/plain");
-                        else
-                            response.setContentType(type);
-                    }
-                }
-                else {
-                    event = new Event(Event.WARNING, "failed to copy message");
-                    ph = null;
-                }
+                return null;
             }
-            else { // non-JMS event for the assigned service
-                for (i=0; i<propertyName.length; i++)
-                    event.setAttribute(propertyName[i], propertyValue[i]);
-                i = service.doRequest(event, timeout);
-                if (i > 0) {
-                    ph = (Map) event.getBody();
-                    if (event.attributeExists("rc"))
-                        str = event.getAttribute("rc");
-                    else
-                        str = event.getAttribute("ReturnCode");
-                    if (str != null) // notify client
-                        response.setHeader("rc", str);
+            else if (i > 0) { // got result back
+                ph = new HashMap<String, Object>();
+                for (String ky : ((Event) message).getAttributeNames()) {
+                    if (ky == null || ky.length() <= 0)
+                        continue;
+                    if ("text".equals(ky))
+                        continue;
+                    ph.put(ky, ((Event) message).getAttribute(ky));
                 }
+
+                key = null;
+                if (isFileUpload) { // for upload
+                    key = event.getAttribute("name");
+                    if (key == null)
+                        key = path;
+                    key = key + " has been uploaded. " +
+                        "Please close the popup and refresh the page";
+                }
+                else if (message instanceof TextEvent) try { // for body
+                    key = ((TextEvent) message).getText();
+                }
+                catch (Exception e) {
+                }
+                if (key != null)
+                    ph.put("text", key);
+
+                if (((Event) message).attributeExists("rc"))
+                    str = ((Event) message).getAttribute("rc");
                 else
-                    ph = null;
-            }
+                    str = ((Event) message).getAttribute("ReturnCode");
+                if (str != null) // notify client
+                    response.setHeader("rc", str);
 
-            if (ph == null || ph.size() == 0) {
-                msg = "ph is empty due to " + i + ": " +
-                    event.getAttribute("text");
-                request.setAttribute("error", msg);
-                target = null;
-            }
-            else if (isCollectible && "query".equals(action)) {
-                JSON2Map.flatten(ph);
-                if ((service.getDebugMode() & service.DEBUG_REPT) > 0)
-                    new Event(Event.DEBUG, name + " sent back to " + username +
-                        " with requested content: " +
-                        (String) ph.get("text")).send();
-            }
-            else if ((service.getDebugMode() & service.DEBUG_REPT) > 0)
-                new Event(Event.DEBUG, name + " sent back to " + username +
-                    " with requested content: " +
-                    (String) ph.get("text")).send();
-
-            if (ph != null) { // save the data map as the attribute of context
+                str = ((Event) message).getAttribute("jsp");
+                if (str != null) // overwrite the presentation jsp
+                    jsp = str;
+                else if (jsp == null) { // no presentation
+                    str = ((Event) message).getAttribute("type");
+                    if (str != null) // overwrite content type
+                        type = str;
+                    if (type == null || "text".equalsIgnoreCase(type))
+                        response.setContentType("text/plain");
+                    else if ("json".equalsIgnoreCase(type))
+                        response.setContentType("application/json");
+                    else if ("xml".equalsIgnoreCase(type))
+                        response.setContentType("text/xml");
+                    else if ("html".equalsIgnoreCase(type))
+                        response.setContentType("text/html");
+                    else if (message instanceof TextEvent)
+                        response.setContentType("text/plain");
+                    else
+                        response.setContentType(type);
+                }
+                // save the data map as the attribute of context
                 target = request.getContextPath();
                 request.setAttribute(target, ph);
             }
+            else { // timed out or failed
+                response.sendError(response.SC_GATEWAY_TIMEOUT);
+                request.setAttribute("error", "failed to get response: " + i);
+                return null;
+            }
         }
-        else { // no event for the request
-            target = null;
-            msg = "empty target";
-            request.setAttribute("error", msg);
+        else { // non-JMS event for the assigned service
+            int i;
+            for (i=0; i<propertyName.length; i++)
+                event.setAttribute(propertyName[i], propertyValue[i]);
+            i = service.doRequest(event, timeout);
+            if (i > 0) { // got result back
+                Map ph;
+                if (event.attributeExists("rc"))
+                    str = event.getAttribute("rc");
+                else
+                    str = event.getAttribute("ReturnCode");
+                if (str != null) // notify client
+                    response.setHeader("rc", str);
+                str = event.getAttribute("operation");
+                type = event.getAttribute("type");
+                if (!"query".equals(str) || "json".equalsIgnoreCase(type) ||
+                    "xml".equalsIgnoreCase(type)) { // no result map to retrieve
+                    ph = new HashMap<String, Object>();
+                    for (String ky : event.getAttributeNames()) {
+                        if (ky == null || ky.length() <= 0)
+                            continue;
+                        ph.put(ky, event.getAttribute(ky));
+                    }
+                }
+                else if ((ph = (Map) event.getBody()) == null) { // query failed
+                    response.sendError(response.SC_NOT_FOUND);
+                    request.setAttribute("error", event.getAttribute("text"));
+                    return null;
+                }
+                str = event.getAttribute("jsp");
+                if (str != null) // overwrite the presentation jsp
+                    jsp = str;
+                else if (jsp == null) { // no presentation
+                    if (type == null || "text".equalsIgnoreCase(type))
+                        response.setContentType("text/plain");
+                    else if ("json".equalsIgnoreCase(type))
+                        response.setContentType("application/json");
+                    else if ("xml".equalsIgnoreCase(type))
+                        response.setContentType("text/xml");
+                }
+                // save the data map as the attribute of context
+                target = request.getContextPath();
+                request.setAttribute(target, ph);
+            }
+            else {
+                response.sendError(response.SC_GATEWAY_TIMEOUT);
+                request.setAttribute("error", "failed to get response: " + i);
+                return null;
+            }
+        }
+
+        if (isCollectible && "query".equals(action)) {
+            Map ph = (Map) request.getAttribute(target);
+            JSON2Map.flatten(ph);
+            if ((service.getDebugMode() & service.DEBUG_REPT) > 0)
+                new Event(Event.DEBUG, name + " sent back to " + username +
+                    " with requested content: "+ (String)ph.get("text")).send();
+        }
+        else if ((service.getDebugMode() & service.DEBUG_REPT) > 0) {
+            Map ph = (Map) request.getAttribute(target);
+            new Event(Event.DEBUG, name + " sent back to " + username +
+                " with requested content: " + (String) ph.get("text")).send();
         }
 
         return (jsp != null) ? jsp : target;
     }
 
     private String getContent(String uri, HttpServletRequest request,
-        HttpServletResponse response) {
+        HttpServletResponse response) throws IOException {
         if (uri.charAt(1) == 'g') { // for get
             if (uri.charAt(4) == 'C') { // for child
                 if ("/getChildJSON.jsp".equals(uri)) {
@@ -1269,11 +1343,20 @@ public class MessageServlet extends HttpServlet {
                 return toMsg(request, Utils.RESULT_TEXT);
             }
         }
+        else if (welcomeURL.equals(uri)) { // for welcome.jsp
+            response.sendError(response.SC_OK);
+            return null;
+        }
+        else if (loginURL.equals(uri)) { // for login.jsp
+            response.sendError(response.SC_OK);
+            return null;
+        }
+        response.sendError(response.SC_NOT_FOUND);
 
         return null;
     }
 
-    private synchronized boolean login(String username, String password) {
+    protected synchronized boolean login(String username, String password) {
         boolean ic = false;
         LoginContext loginCtx = null;
         // moved loginContext here due to Krb5LoginModule not reusable
@@ -1317,8 +1400,8 @@ public class MessageServlet extends HttpServlet {
         if (data == null || data.size() <= 0) {
             if ((type & Utils.RESULT_JSON) > 0) {
                 msg = "{\n  \"success\":false,\n  \"errors\":{\"title\":\"" +
-                    key+ "\"},\n  " + "\"errormsg\":\"" +
-                    (String) req.getAttribute("error") + "\"}";
+                    key+ "\"},\n  \"errormsg\":\"" +
+                    (String) req.getAttribute("error") + "\"\n}";
             }
             else if ((type & Utils.RESULT_XML) > 0) {
                 msg = "<msg><Name>" + key + "</Name><Error>" +
@@ -1341,12 +1424,12 @@ public class MessageServlet extends HttpServlet {
                     if (line == null)
                         line = "";
                     if (strBuf.length() <= 0)
-                        strBuf.append("\"" + key + "\":\"" + line + "\"");
+                        strBuf.append("    \"" + key + "\":\"" + line + "\"");
                     else
                         strBuf.append(",\n    \"" + key + "\":\"" + line +"\"");
                 }
                 msg = "{\n  \"success\":true,\n  \"data\":{\n" +
-                    strBuf.toString()+ "}\n}";
+                    strBuf.toString()+ "\n  }\n}";
             }
             else if ((type & Utils.RESULT_XML) > 0) {
                 while (iter.hasNext()) {
@@ -1489,5 +1572,99 @@ public class MessageServlet extends HttpServlet {
             }
         }
         return msg;
+    }
+
+    public static void main(String[] args) {
+        byte[] buffer = new byte[4096];
+        String path = null, context = "echo";
+        EchoService service = null;
+        MessageServlet servlet = null;
+        JettyServer jettyServer = null;
+        int debug = 0;
+
+        if (args.length <= 1) {
+            printUsage();
+            System.exit(0);
+        }
+
+        for (int i=0; i<args.length; i++) {
+            if (args[i].charAt(0) != '-' || args[i].length() != 2) {
+                continue;
+            }
+            switch (args[i].charAt(1)) {
+              case '?':
+                printUsage();
+                System.exit(0);
+                break;
+              case 'I':
+                if (i+1 < args.length)
+                    path = args[++i];
+                break;
+              case 'c':
+                if (i+1 < args.length)
+                    context = args[++i];
+                break;
+              case 'd':
+                if (i+1 < args.length)
+                    debug = Integer.parseInt(args[++i]);
+                break;
+              default:
+            }
+        }
+
+        if (path == null)
+            printUsage();
+        else try {
+            StringBuffer strBuf = new StringBuffer();
+            java.io.FileReader fr = new java.io.FileReader(path);
+            Map ph = (Map) org.qbroker.json.JSON2Map.parse(fr);
+            fr.close();
+
+            if (!context.startsWith("/"))
+                context = "/" + context;
+            if (!context.endsWith("/"))
+                context += "/";
+            service = new EchoService();
+            if (debug != 0)
+                service.setDebugMode(debug);
+            jettyServer = new JettyServer(ph);
+            servlet = new MessageServlet(ph);
+            servlet.setService(service);
+            jettyServer.addContext(servlet, context + "*");
+            service.start();
+            jettyServer.start();
+            System.out.println("Server started. Please run the following command to test:");
+            System.out.println("Enter Ctrl+C to stop the server");
+            jettyServer.join();
+            if (service != null)
+                service.stop();
+            if (servlet != null) try {
+                servlet.destroy();
+            }
+            catch (Exception ex) {
+            }
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            if (service != null)
+                service.stop();
+            if (jettyServer != null) try {
+                jettyServer.stop();
+            }
+            catch (Exception ex) {
+            }
+            if (servlet != null) try {
+                servlet.destroy();
+            }
+            catch (Exception ex) {
+            }
+        }
+        System.exit(0);
+    }
+
+    private static void printUsage() {
+        System.out.println("MessageServlet Version 1.0 (written by Yannan Lu)");
+        System.out.println("MessageServlet: A JettyServer embedded in EchoService for testing");
+        System.out.println("Usage: java org.qbroker.jms.MessageServlet -I cfg.json -c context -d debug");
     }
 }

@@ -4,7 +4,7 @@
   <modelVersion>4.0.0</modelVersion>
   <artifactId>net</artifactId>
   <packaging>jar</packaging>
-  <version>1.1.6</version>
+  <version>1.1.7</version>
   <url>http://maven.apache.org</url>
   <parent>
     <groupId>org.qbroker</groupId>
@@ -15,7 +15,7 @@
     <dependency>
       <groupId>org.qbroker</groupId>
       <artifactId>common</artifactId>
-      <version>1.2.4</version>
+      <version>1.2.5</version>
     </dependency>
     <dependency>
       <groupId>javax</groupId>
@@ -110,12 +110,22 @@
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-servlet</artifactId>
-      <version>9.3.24.v20180605</version>
+      <version>9.4.14.v20181114</version>
     </dependency>
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-server</artifactId>
-      <version>9.3.24.v20180605</version>
+      <version>9.4.14.v20181114</version>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-security</artifactId>
+      <version>9.4.14.v20181114</version>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-util</artifactId>
+      <version>9.4.14.v20181114</version>
     </dependency>
     <dependency>
       <groupId>ch.ethz.ganymed</groupId>

@@ -30,7 +30,7 @@ import org.qbroker.common.TimeWindows;
 import org.qbroker.common.Service;
 import org.qbroker.common.RunCommand;
 import org.qbroker.json.JSON2Map;
-import org.qbroker.net.JettyServer;
+import org.qbroker.net.HTTPServer;
 import org.qbroker.net.MessageMailer;
 import org.qbroker.monitor.MonitorReport;
 import org.qbroker.monitor.MonitorGroup;
@@ -39,7 +39,6 @@ import org.qbroker.monitor.PropertyMonitor;
 import org.qbroker.jms.MessageUtils;
 import org.qbroker.jms.TextEvent;
 import org.qbroker.jms.JMSEvent;
-import org.qbroker.jms.MessageServlet;
 import org.qbroker.receiver.MessageReceiver;
 import org.qbroker.persister.MessagePersister;
 import org.qbroker.persister.StreamPersister;
@@ -118,7 +117,7 @@ public class QFlow implements Service, Runnable {
     private MessageFlow defaultFlow = null;
     private ClusterNode clusterNode = null;
     private MessageReceiver adminServer = null;
-    private JettyServer httpServer = null;
+    private HTTPServer httpServer = null;
     private java.lang.reflect.Method ackMethod = null;
     private MonitorGroup group;
     private AssetList flowList;
@@ -342,7 +341,7 @@ public class QFlow implements Service, Runnable {
                     throw(new IllegalArgumentException(name +
                         ": ClassName is empty"));
 
-                String str = "failed to instantiate " + className + ":";
+                String str = "failed to instantiate " + className + ": ";
                 try {
                     java.lang.reflect.Constructor con;
                     Class<?> cls = Class.forName(className);
@@ -350,12 +349,12 @@ public class QFlow implements Service, Runnable {
                     o = con.newInstance(new Object[]{ph});
                     if (o instanceof MessageReceiver)
                         adminServer = (MessageReceiver) o;
-                    else if (o instanceof JettyServer)
-                        httpServer = (JettyServer) o;
+                    else if (o instanceof HTTPServer)
+                        httpServer = (HTTPServer) o;
                 }
                 catch (InvocationTargetException e) {
                     Throwable ex = e.getTargetException();
-                    str += e.toString() + " with Target exception: " + "\n";
+                    str += e.toString() + "with Target exception: " + "\n";
                     throw(new IllegalArgumentException(str +
                         Event.traceStack(ex)));
                 }
@@ -374,12 +373,19 @@ public class QFlow implements Service, Runnable {
                 else if (httpServer == null)
                     throw(new IllegalArgumentException(name +
                         ": ClassName is not supported: " + className));
-                else try { // jetty server
-                    MessageServlet servlet = new MessageServlet(ph);
-                    servlet.setService(this);
-                    str = httpServer.getName();
-                    httpServer.addServlet(servlet, "/" + str + "/*");
+                else if (httpServer != null) try { // http server
+                    if (className.endsWith("HttpServer")) {// for MessageHandler
+                        ph.put("ClassName", "org.qbroker.jms.MessageHandler");
+                        str = "/" + httpServer.getName();
+                    }
+                    else { // reset the className to MessageServlet
+                        ph.put("ClassName", "org.qbroker.jms.MessageServlet");
+                        str = "/" + httpServer.getName() + "/*";
+                    }
+                    httpServer.setService(str, ph, this);
                     httpServer.start();
+                    new Event(Event.INFO, "httpServer started at /"+
+                        httpServer.getName()).send();
                     idList = new ReservableCells("idList", aPartition[0] +
                         aPartition[1]);
                 }
@@ -1557,8 +1563,8 @@ public class QFlow implements Service, Runnable {
      * It processes requests according to the preconfigured rulesets.
      * If timeout < 0, there is no wait.  If timeout > 0, it will wait for
      * the processed event until timeout.  If timeout = 0, it blocks until
-     * the processed event is done.  It returns 1 for success, 0 for timed
-     * out and -1 for failure.  The method is MT-Safe.
+     * the event is processed.  It returns 1 for success, 0 for timed out and
+     * -1 for failure.  The method is MT-Safe.
      *<br/><br/>
      * A request is either a JMSEvent for remote queries and escalations or a
      * non-JMS Event for local queries and escalations.  In case of remote, the
@@ -1758,10 +1764,16 @@ public class QFlow implements Service, Runnable {
         if (adminServer != null) { // stop adminServer
             adminServer.close();
         }
-        else if (httpServer != null) try { // stop httpServer
-            httpServer.stop();
-        }
-        catch (Exception e) {
+        else if (httpServer != null) { // stop httpServer
+            try {
+                httpServer.stop();
+                new Event(Event.INFO, "httpServer stopped at /"+
+                    httpServer.getName()).send();
+            }
+            catch (Exception ex) {
+                new Event(Event.WARNING, "httpServer failed to stop at /" +
+                    httpServer.getName() + ": " + ex.toString()).send();
+            }
         }
 
         if (defaultXQ != null && !isStopped(defaultXQ))
@@ -2359,25 +2371,23 @@ public class QFlow implements Service, Runnable {
      * status       status
      */
     private int invokeAction(long currentTime, long sessionTime, Event event) {
-        String uri, data, target, key, str, text = null;
+        String uri, target, key, str, text = null;
         Event ev = null;
         long tm;
         Object o;
         MessageFlow flow = null;
-        int i, n, role = -1, size = -1, sid, id = -2, status = -1, action, type;
+        int i, n, role = -1, size = -1, id = -2, status = -1, action, type;
         boolean isExternal, isFlow;
         if (event == null)
             return brokerRole;
 
         isExternal = (event instanceof TextEvent);
-        if ((str = event.getAttribute("reqID")) != null) {
-            try {
-                sid = Integer.parseInt(str);
-                if (sid >= 0)
-                    isExternal = true;
-            }
-            catch (Exception e) {
-            }
+        if (!isExternal && (str = event.getAttribute("reqID")) != null) try {
+            id = Integer.parseInt(str);
+            if (id >= 0) // non-JMS event as a remote request with a tracking id
+                isExternal = true;
+        }
+        catch (Exception e) {
         }
 
         tm = event.getTimestamp();
@@ -2467,10 +2477,10 @@ public class QFlow implements Service, Runnable {
 
         type = Utils.RESULT_TEXT;
         if ((str = event.getAttribute("type")) != null) {
-            if ("xml".equalsIgnoreCase(str)) // expecting XML as response
-                type = Utils.RESULT_XML;
-            else if ("json".equalsIgnoreCase(str)) // expecting JSON as response
+            if ("json".equalsIgnoreCase(str)) // expecting JSON as response
                 type = Utils.RESULT_JSON;
+            else if ("xml".equalsIgnoreCase(str)) // expecting XML as response
+                type = Utils.RESULT_XML;
         }
 
         switch (event.getPriority()) {
@@ -2481,8 +2491,8 @@ public class QFlow implements Service, Runnable {
 
             if (isFlow) // for FLOW
                 id = flowList.getID(key);
-            else if (name.equals(key)) // for QB
-                id = -1;
+            else if (name.equals(key)) // for container
+                id = -2;
 
             if (isExternal) switch (action) { // external event
               case EventAction.ACTION_RESTART:
@@ -2595,7 +2605,7 @@ public class QFlow implements Service, Runnable {
                     ev.setAttribute("rc", "0");
                     status = ClusterNode.NODE_RUNNING;
                 }
-                else {
+                else { // for container
                     text = "not a cluster";
                     ev = new Event(Event.WARNING, target + ": " + text);
                     ev.setAttribute("rc", "-1");
@@ -3030,13 +3040,12 @@ public class QFlow implements Service, Runnable {
                     ev.setAttribute("rc", "-1");
                 }
             }
-            else { // for relayed report and event
+            else { // for relayed report and event from other cluster nodes
                 Map<String, String> report = new HashMap<String, String>();
-                data = event.getAttribute("text");
+                String data = event.getAttribute("text");
                 if (data == null || data.length() <= 0)
                     break;
-                if (data.charAt(0) != 'R') { // for relayed event
-                    Iterator iter;
+                if(data.charAt(0) != 'R'){//for event relayed from cluster nodes
                     TextEvent msg;
                     n = Utils.split(Event.ITEM_SEPARATOR,
                         Event.ESCAPED_ITEM_SEPARATOR,data.substring(12),report);
@@ -3062,7 +3071,7 @@ public class QFlow implements Service, Runnable {
                     return role;
                 }
 
-                // for relayed report
+                // consume the report relayed from other cluster nodes
                 if ((debug & DEBUG_REPT) > 0)
                     new Event(Event.DEBUG, name + " got an escalation: " +
                         EventUtils.compact(event)).send();
@@ -4481,7 +4490,7 @@ public class QFlow implements Service, Runnable {
         int show = 0, debugForReload = 0;
         Object o;
         Thread c = null;
-        String name = null, group = "default", category = null, action = null;
+        String name = null, category = null, action = null;
         QFlow qf = null;
         List list = null;
         File file;
@@ -4521,11 +4530,6 @@ public class QFlow implements Service, Runnable {
               case 'C':
                 if (i+1 < args.length) {
                     category = args[i+1];
-                }
-                break;
-              case 'G':
-                if (i+1 < args.length) {
-                    group = args[i+1];
                 }
                 break;
               case 'N':
@@ -4620,14 +4624,15 @@ public class QFlow implements Service, Runnable {
 
             Map<String, Object> ph = Utils.cloneProperties((Map) o);
             String key = (String) ph.get("Operation");
-            if ("react".equals(key)) {
+            if ("handle".equals(key)) {
                 uri = null;
                 ph.put("Operation", "download");
                 ph.put("ClassName", "org.qbroker.persister.FilePersister");
                 ph.put("Capacity", "2");
                 ph.put("Partition", "0,0");
                 ph.put("IsPost", "true");
-                ph.put("EventPostable", "true");
+                ph.put("Template", "");
+                ph.put("ResultType", "64");
                 ph.put("DisplayMask", "0");
                 ph.put("SOTimeout", "5");
                 pstr = new FilePersister(ph);
@@ -4660,11 +4665,10 @@ public class QFlow implements Service, Runnable {
             }
 
             TextEvent event = new TextEvent();
-            if ("react".equals(key)) {
+            if ("handle".equals(key)) {
                 event.setAttribute("operation", action);
                 event.setAttribute("name", name);
                 event.setAttribute("type", "json");
-                event.setAttribute("group", group);
                 event.setAttribute("category", category);
                 event.setAttribute("status", "Normal");
                 event.setAttribute("jsp", "/getJSON.jsp");
@@ -4677,7 +4681,6 @@ public class QFlow implements Service, Runnable {
                 ev.setAttribute("operation", action);
                 ev.setAttribute("name", name);
                 ev.setAttribute("type", "json");
-                event.setAttribute("group", group);
                 ev.setAttribute("category", category);
                 ev.setAttribute("status", "Normal");
                 key = zonedDateFormat.format(new Date()) + " " +
@@ -4879,7 +4882,6 @@ public class QFlow implements Service, Runnable {
         System.out.println("  -I: ConfigFile (default: ./Flow.json)");
         System.out.println("  -A: Action for query (default: none)");
         System.out.println("  -C: Category for query (default: USAGE)");
-        System.out.println("  -G: Group for query (default: default)");
         System.out.println("  -N: Name for query (default: value of category)");
         System.out.println("  -W: Doing nothing (for stopping service on Win2K)");
 /*

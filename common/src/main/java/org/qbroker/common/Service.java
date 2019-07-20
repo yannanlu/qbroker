@@ -13,8 +13,8 @@ import org.qbroker.common.Event;
 
 public interface Service {
     /**
-     * process a request in Event, load the response into the Event and
-     * return the status.
+     * process a request in Event, loads the response into the Event and
+     * returns 1 for success, 0 for timed out and -1 for failure
      */
     public int doRequest(Event request, int timeout);
     /** returns the string of the operation */

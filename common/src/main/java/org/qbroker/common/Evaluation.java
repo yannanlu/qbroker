@@ -79,6 +79,7 @@ public class Evaluation {
         Number[] number = new Number[SIZE];
         int[] operation = new int[SIZE];
 
+        expr = trim(expr);
         if (expr == null || (n = expr.length()) <= 0)
             return null;
 

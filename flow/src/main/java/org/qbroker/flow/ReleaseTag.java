@@ -3,6 +3,16 @@ package org.qbroker.flow;
 /* ReleaseTag.java - release tag for all the packages of qbroker */
 
 /**
+ * V1.2.17 (2019/07/20): added the interface of HTTPServer back with new method
+ * of setService(), had both JettyServer and SimpleHttpServer implemented this
+ * interface, updated QFlow and MonitorAgent for the interface of HTTPServer,
+ * added MessageHandler for SimpleHttpServer, added EchoServer for testing
+ * on either MessageHandler or MessageServlet, fixed a bug in Evaluation,
+ * modified MessageServlet with a bunch of protected methods and properties for
+ * reusability, updated QServlet to extend MessageServlet, updated the parent
+ * pom.xml for JUnit 4, added test cases for DataSet, Template, and Evaluation
+ * with support on JUnit 4,
+ *<br/>
  * V1.2.16 (2019/07/13): added RequestTimeout to SteamReceiver for collect(),
  * added main(), text2JSON() and xml2JSON() to GenericRequester, added OBJ_JMS
  * to NumberMonitor, AgeMonitor and IncrementalMonitor, added getDocBuilder()
@@ -288,7 +298,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V1.2.16 2019/07/13 09:21:34";
+    private static String ReleaseTAG = "QBroker V1.2.17 2019/07/20 10:33:46";
 
     public ReleaseTag() {
     }
