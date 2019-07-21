@@ -2,8 +2,8 @@ package org.qbroker.common;
 
 import java.util.List;
 import java.util.Arrays;
-import org.junit.Test;
 import static org.junit.Assert.*;
+import org.junit.*;
 
 /** Unit test for simple DataSet. */
 public class DataSetTest {

@@ -1,12 +1,12 @@
 package org.qbroker.common;
 
-import org.junit.Test;
 import static org.junit.Assert.*;
+import org.junit.*;
 
 /** Unit test for Template */
 public class TemplateTest {
-    private String text = "##hostname## is managed by ##owner##";
-    private Template temp = new Template(text);
+    private static String text = "##hostname## is managed by ##owner##";
+    private static Template temp = new Template(text);
 
     @Test
     public void testContainsField() {

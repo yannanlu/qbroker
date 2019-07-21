@@ -1,7 +1,7 @@
 package org.qbroker.common;
 
-import org.junit.Test;
 import static org.junit.Assert.*;
+import org.junit.*;
 
 /** Unit test for Evaluation */
 public class EvaluationTest {

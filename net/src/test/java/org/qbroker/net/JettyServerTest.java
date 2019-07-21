@@ -3,22 +3,19 @@ package org.qbroker.net;
 import java.util.Map;
 import java.util.HashMap;
 import org.qbroker.common.BytesBuffer;
-import org.junit.Test;
 import static org.junit.Assert.*;
+import org.junit.*;
 
 /** Unit test for JettyServer */
 public class JettyServerTest {
-    private Map<String, String> props = new HashMap<String, String>();
-    private JettyServer server = null;
-    private HTTPConnector conn = null;
-    private String path = "/test";
-    private String uri = "http://localhost:8088/test";
+    private static JettyServer server = null;
+    private static HTTPConnector conn = null;
+    private static String path = "/test";
+    private static String uri = "http://localhost:8088/test";
 
-    @Test
-    public void testHttpGet() {
-        int i;
-        StringBuffer strBuf = new StringBuffer();
-        BytesBuffer msgBuf = new BytesBuffer();
+    @BeforeClass
+    public static void init() {
+        Map<String, String> props = new HashMap<String, String>();
         props.put("Name", "test");
         props.put("URI", uri);
         props.put("Timeout", "10");
@@ -28,9 +25,18 @@ public class JettyServerTest {
             server.addContext(server, path + "/*");
             server.start();
             conn = new HTTPConnector(props);
+        }
+        catch (Exception e) {
+        }
+    }
+
+    @Test
+    public void testHttpGet() {
+        int i = -2;
+        StringBuffer strBuf = new StringBuffer();
+        BytesBuffer msgBuf = new BytesBuffer();
+        if (conn != null) try {
             i = conn.doGet(uri, strBuf, msgBuf);
-            server.stop();
-            conn.close();
         }
         catch (Exception e) {
             i = -1;
@@ -38,5 +44,19 @@ public class JettyServerTest {
         if (i != 200)
             System.out.println(i + ": " + strBuf.toString());
         assertTrue( i == 200 );
+    }
+
+    @AfterClass
+    public static void tearDown() {
+        if (server != null) try {
+            server.stop();
+        }
+        catch (Exception e) {
+        }
+        if (conn != null) try {
+            conn.close();
+        }
+        catch (Exception e) {
+        }
     }
 }
