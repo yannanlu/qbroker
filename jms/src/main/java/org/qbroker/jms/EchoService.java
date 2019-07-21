@@ -33,7 +33,8 @@ public class EchoService implements Service {
             return -1;
         else if (!(event instanceof Message) && event instanceof Event) {
             String line = EventLogger.format((Event) event).toString();
-            new Event(Event.INFO, name + " echoed an event: " + line).send();
+            if (debug != DEBUG_NONE)
+                new Event(Event.INFO, name + " echoed an event: "+ line).send();
         }
         else if (!(event instanceof Message)) { // neither an event nor a msg
             return -2;
@@ -42,7 +43,8 @@ public class EchoService implements Service {
             byte[] buffer = new byte[4096];
             String line = MessageUtils.processBody((Message) event, buffer);
             line = MessageUtils.display((Message) event, line, 20551, null);
-            new Event(Event.INFO, name + " echoed a msg (" + line + ")").send();
+            if (debug != DEBUG_NONE)
+                new Event(Event.INFO, name + " echoed a msg ("+line+")").send();
         }
         catch (Exception e) {
             return -3;

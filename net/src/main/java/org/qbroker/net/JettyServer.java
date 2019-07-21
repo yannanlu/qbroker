@@ -398,7 +398,7 @@ public class JettyServer extends HttpServlet implements HTTPServer {
 
         try {
             server = new JettyServer(props);
-            server.addContext(server, path);
+            server.addContext(server, path + "/*");
             server.start();
             System.out.println("Server started. Please run the following command to test:");
             System.out.println("curl " + uri + path);
