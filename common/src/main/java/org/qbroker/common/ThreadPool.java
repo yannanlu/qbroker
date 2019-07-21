@@ -15,10 +15,10 @@ import org.qbroker.common.Utils;
  * The number of active threads ranges from the minimum to its capacity.
  * The application is able to checkout an active thread from the pool.
  * As long as the active thread is checked out, the application is able to
- * assign a task to the thread.  The task will be picked up by the checed-out 
+ * assign a task to the thread.  The task will be picked up by the checked-out 
  * thread sooner or later.  Once the thread picks up the task, it will invoke
  * the given method with the task as the only argument. At this time, the thread
- * stays busy until the method exits. The thread will be checked in the pool.
+ * stays busy until the method exits. The thread will be checked in to the pool.
  * The application has control over the number of active threads by checking
  * out or checking in.
  *<br/><br/>

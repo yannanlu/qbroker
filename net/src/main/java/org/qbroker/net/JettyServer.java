@@ -33,6 +33,7 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.security.Constraint;
 import org.eclipse.jetty.util.security.Credential;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
+import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.qbroker.net.HTTPServer;
 import org.qbroker.common.Service;
 import org.qbroker.common.Utils;
@@ -44,7 +45,9 @@ public class JettyServer extends HttpServlet implements HTTPServer {
     private String password = null;
     private Server httpServer;
     private ServletContextHandler context;
+    private QueuedThreadPool thPool = null;
     private Map<String, HttpServlet> map = new HashMap<String, HttpServlet>();
+    private int maxThreads = 0;
     private boolean isHTTPS = false;
     private boolean trustAll = false;
 
@@ -82,6 +85,14 @@ public class JettyServer extends HttpServlet implements HTTPServer {
         port = u.getPort();
         if (port <= 0)
             port = (isHTTPS) ? 443 : 80;
+
+        if ((o = props.get("MaxNumberThread")) != null) {
+            maxThreads = Integer.parseInt((String) o);
+            if (maxThreads <= 0)
+                maxThreads = 0;
+            else // init thread pool
+                thPool = new QueuedThreadPool(maxThreads, 1);
+        }
 
         if ((o = props.get("Username")) != null) {
             username = (String) o;
@@ -127,20 +138,23 @@ public class JettyServer extends HttpServlet implements HTTPServer {
 
         context = new ServletContextHandler(ServletContextHandler.SESSIONS);
         context.setContextPath("/");
-        if (username == null || password == null) { // without security
-            try {
-                httpServer = new Server(port);
-                httpServer.setHandler(context);
-                httpServer.setDumpAfterStart(false);
-                httpServer.setDumpBeforeStop(false);
-            }
-            catch (Exception e) {
-                throw(new IllegalArgumentException(name +
-                    " failed to init Jetty server: "+
-                    TraceStackThread.traceStack(e)));
-            }
+        try {
+            if (thPool != null)
+                httpServer = new Server(thPool);
+            else
+                httpServer = new Server();
+            httpServer.setDumpAfterStart(false);
+            httpServer.setDumpBeforeStop(false);
         }
-        else try { // for secured loginService
+        catch (Exception e) {
+            throw(new IllegalArgumentException(name +
+                " failed to init Jetty server: "+
+                TraceStackThread.traceStack(e)));
+        }
+
+        if (username == null || password == null) // without security
+            httpServer.setHandler(context);
+        else try { // with login service
             LoginService loginService = new HashLoginService(name);
             ConstraintSecurityHandler security= new ConstraintSecurityHandler();
             Constraint constraint = new Constraint();
@@ -148,11 +162,8 @@ public class JettyServer extends HttpServlet implements HTTPServer {
             us.addUser(username, Credential.getCredential(password),
                  new String[]{"user", "admin"});
             ((HashLoginService) loginService).setUserStore(us);
-            httpServer = new Server(port);
             httpServer.addBean(loginService);
             httpServer.setHandler(security);
-            httpServer.setDumpAfterStart(false);
-            httpServer.setDumpBeforeStop(false);
             constraint.setName("auth");
             constraint.setAuthenticate(true);
             constraint.setRoles(new String[] { "admin" });
@@ -170,7 +181,24 @@ public class JettyServer extends HttpServlet implements HTTPServer {
                 TraceStackThread.traceStack(e)));
         }
 
-        if (isHTTPS) try {
+        if (!isHTTPS) { // for HTTP
+            try {
+                HttpConfiguration http_config = new HttpConfiguration();
+                http_config.setSecureScheme("http");
+                http_config.setSecurePort(port);
+                ServerConnector httpConnector = new ServerConnector(httpServer, 
+                    new HttpConnectionFactory(http_config));
+                httpConnector.setPort(port);
+                httpConnector.setIdleTimeout(50000);
+                httpServer.setConnectors(new Connector[]{httpConnector});
+            }
+            catch (Exception e) {
+                throw(new IllegalArgumentException(name +
+                    " failed to set up HTTP connector: "+
+                    TraceStackThread.traceStack(e)));
+            }
+        }
+        else try { // for HTTPS
             HttpConfiguration http_config = new HttpConfiguration();
             http_config.setSecureScheme("https");
             http_config.setSecurePort(port);
@@ -182,15 +210,15 @@ public class JettyServer extends HttpServlet implements HTTPServer {
             sslContextFactory.setKeyStorePassword(ksPassword);
 
             ServerConnector httpsConnector = new ServerConnector(httpServer, 
-		new SslConnectionFactory(sslContextFactory, "http/1.1"),
-		new HttpConnectionFactory(https_config));
+                new SslConnectionFactory(sslContextFactory, "http/1.1"),
+                new HttpConnectionFactory(https_config));
             httpsConnector.setPort(port);
             httpsConnector.setIdleTimeout(50000);
             httpServer.setConnectors(new Connector[]{httpsConnector});
         }
         catch (Exception e) {
             throw(new IllegalArgumentException(name +
-                " failed to init Jetty server with SSL: "+
+                " failed to set up HTTPS connector: "+
                 TraceStackThread.traceStack(e)));
         }
     }

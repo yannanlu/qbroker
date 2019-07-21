@@ -5,6 +5,8 @@ package org.qbroker.net;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileInputStream;
@@ -45,9 +47,11 @@ public class SimpleHttpServer implements HttpHandler, HTTPServer {
     private String username = null;
     private String password = null;
     private int port = 80;
-    private int backlog = 64;
+    private int backlog = 32;
+    private int maxThreads = 0;
     private int timeout = 60000;
     private HttpServer server = null;
+    private ExecutorService es = null;
     private BasicAuthenticator auth = null;
     private int bufferSize = 8192;
     private boolean isHTTPS = false;
@@ -91,7 +95,13 @@ public class SimpleHttpServer implements HttpHandler, HTTPServer {
         if ((o = props.get("Backlog")) != null) {
             backlog = Integer.parseInt((String) o);
             if (backlog < 0)
-                backlog = 64;
+                backlog = 32;
+        }
+
+        if ((o = props.get("MaxNumberThread")) != null) {
+            maxThreads = Integer.parseInt((String) o);
+            if (maxThreads < 0)
+                maxThreads = 0;
         }
 
         if ((o = props.get("Username")) != null) {
@@ -155,6 +165,13 @@ public class SimpleHttpServer implements HttpHandler, HTTPServer {
             throw(new IllegalArgumentException(name +
                 " failed to create https server: " + e.toString()));
         }
+
+        if (maxThreads > 0) {
+            es = Executors.newFixedThreadPool(maxThreads);
+            server.setExecutor(es);
+        }
+        else
+            server.setExecutor(null);
 
         if (username != null && password != null) { // default Authenticator
             auth = new BasicAuthenticator(name) {
@@ -327,6 +344,8 @@ public class SimpleHttpServer implements HttpHandler, HTTPServer {
         if (server != null) {
             server.stop(1);
         }
+        if (es != null)
+            es.shutdown();
     }
 
     public void join() {
@@ -341,6 +360,10 @@ public class SimpleHttpServer implements HttpHandler, HTTPServer {
         if (server != null) {
             server.stop(1);
             server = null;
+        }
+        if (es != null) {
+            es.shutdown();
+            es = null;
         }
     }
 

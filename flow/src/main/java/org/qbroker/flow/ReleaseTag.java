@@ -11,6 +11,7 @@ package org.qbroker.flow;
  * or MessageServlet, added ResultType to HTTPMessenger for formatter, fixed a
  * bug in Evaluation, modified MessageServlet with a bunch of protected methods
  * and properties for reusability, updated QServlet to extend MessageServlet,
+ * added MaxNumberThread to JettyServer and SimpleHttpServer for threadpool,
  * updated the parent pom.xml for JUnit 4, added test cases for DataSet,
  * Template, Evaluation, SimpleHttpServer, JettyServer, MessageHandler and
  * MessageServlet with support on JUnit 4,
@@ -300,7 +301,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V1.2.17 2019/07/20 13:23:44";
+    private static String ReleaseTAG = "QBroker V1.2.17 2019/07/20 14:02:57";
 
     public ReleaseTag() {
     }
