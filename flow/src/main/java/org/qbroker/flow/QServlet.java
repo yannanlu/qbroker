@@ -194,6 +194,12 @@ public class QServlet extends MessageServlet {
                 configFile + ": " + Event.traceStack(e)));
         }
 
+        if ((o = props.get("OpenSSLPlugin")) != null)
+            System.setProperty("OpenSSLPlugin", (String) o);
+
+        if ((o = props.get("PluginPasswordFile")) != null)
+            System.setProperty("PluginPasswordFile", (String) o);
+
         if ((o = props.get("Name")) == null) {
             new Event(Event.ERR, "Name is not defined in " + configFile).send();
             throw(new ServletException("Name is not defined in " +
@@ -262,12 +268,6 @@ public class QServlet extends MessageServlet {
         if (list == null)
             list = new ArrayList();
         n = MonitorAgent.loadListProperties(list, cfgDir, 0, props);
-
-        if ((o = props.get("OpenSSLPlugin")) != null)
-            System.setProperty("OpenSSLPlugin", (String) o);
-
-        if ((o = props.get("PluginPasswordFile")) != null)
-            System.setProperty("PluginPasswordFile", (String) o);
 
         try {
             qf = new QFlow(props);

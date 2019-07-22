@@ -414,26 +414,19 @@ public class SimpleHttpServer implements HttpHandler, HTTPServer {
 
     /** starts the server without blocking */
     public void start() {
-        if (server != null) {
+        if (server != null)
             server.start();
-        }
     }
 
     /** stops the server with delays */
     public void stop() {
-        if (server != null) {
+        if (server != null)
             server.stop(1);
-        }
         if (es != null)
             es.shutdown();
     }
 
     public void join() {
-        try {
-            Thread.currentThread().join();
-        }
-        catch (Exception ex) {
-        }
     }
 
     protected void finalize() {
