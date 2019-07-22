@@ -5169,11 +5169,14 @@ public class MonitorAgent implements Service, Runnable {
                 ph.put("ClassName", "org.qbroker.persister.FilePersister");
                 ph.put("Capacity", "2");
                 ph.put("Partition", "0,0");
+                ph.put("Retry", "0");
                 ph.put("IsPost", "true");
                 ph.put("Template", "");
                 ph.put("ResultType", "64");
                 ph.put("DisplayMask", "0");
                 ph.put("SOTimeout", "5");
+                if (!ph.containsKey("TrustAllCertificates"))
+                    ph.put("TrustAllCertificates", "true");
                 pstr = new FilePersister(ph); 
             }
             else if ("respond".equals(key)) {

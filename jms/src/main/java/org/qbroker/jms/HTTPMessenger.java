@@ -103,7 +103,7 @@ public class HTTPMessenger {
 
     private int textMode = 1;
     private int xaMode = 0;
-    private int retry = 3;
+    private int retry = 2;
     private int resultType = 8;
 
     private int offtail = 0;
@@ -199,8 +199,8 @@ public class HTTPMessenger {
         }
  
         if ((o = props.get("Retry")) == null ||
-            (retry = Integer.parseInt((String) o)) <= 0)
-            retry = 3;
+            (retry = Integer.parseInt((String) o)) < 0)
+            retry = 2;
         if ((o = props.get("IgnoreTimeout")) != null &&
             "true".equalsIgnoreCase((String) o))
             ignoreTimeout = true;

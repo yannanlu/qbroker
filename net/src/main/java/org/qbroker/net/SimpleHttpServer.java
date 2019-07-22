@@ -5,6 +5,8 @@ package org.qbroker.net;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 import java.io.File;
@@ -16,6 +18,8 @@ import java.io.OutputStream;
 import java.io.InputStream;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.security.KeyStore;
@@ -196,6 +200,82 @@ public class SimpleHttpServer implements HttpHandler, HTTPServer {
             null);
 
         return sc;
+    }
+
+    /** sends the http status code and the text back as the response */
+    public static void sendResponse(HttpExchange he, int rc, String text)
+        throws IOException {
+        Headers headers = he.getResponseHeaders();
+        headers.set("Content-Type", "application/json");
+        if (rc != 200) {
+            text = "{\n  \"success\":false,\n  \"errors\":{\"title\":\"" +
+                he.getRequestMethod()+"\"},\n  \"errormsg\":\""+text+"\"\n}\n";
+            he.sendResponseHeaders(rc, text.getBytes().length);
+            OutputStream os = he.getResponseBody();
+            os.write(text.getBytes());
+            os.close();
+        }
+        else if (text != null) {
+            he.sendResponseHeaders(rc, text.getBytes().length);
+            OutputStream os = he.getResponseBody();
+            os.write(text.getBytes());
+            os.close();
+        }
+        else {
+            he.sendResponseHeaders(rc, 0);
+            OutputStream os = he.getResponseBody();
+            os.close();
+        }
+    }
+
+    /** parses the GET parameters and returns the map loaded with parameters */
+    public static Map<String,List<String>> parseGetParameters(HttpExchange he) {
+        URI u = he.getRequestURI();
+        String query = u.getRawQuery();
+        return parseQuery(query, new HashMap<String, List<String>>());
+    }
+
+    /** parses the POST parameters and returns the map loaded with parameters */
+    public static int parsePostParameters(HttpExchange he,
+        Map<String,List<String>> params) throws IOException {
+        int n = params.size();
+        InputStream in = he.getRequestBody();
+        String query = Utils.read(in, new byte[8192]);
+        in.close();
+        return parseQuery(query, params).size() - n;
+    }
+
+    /** parses the query string and returns the map loaded with parameters */
+    private static Map<String, List<String>> parseQuery(String query,
+        Map<String, List<String>> params) {
+        if (query != null) try {
+            for (String pair : query.split("[&]")) {
+                final String param[] = pair.split("[=]");
+                String paramName = "";
+                String paramValue = "";
+                if (param.length > 0) {
+                    paramName = URLDecoder.decode(param[0], "UTF-8");
+                }
+
+                if (param.length > 1) {
+                    paramValue = URLDecoder.decode(param[1], "UTF-8");
+                }
+
+                if (params.containsKey(paramName)) {
+                    final List<String> values = params.get(paramName);
+                    values.add(paramValue);
+                }
+                else {
+                    final List<String> values = new ArrayList<String>();
+                    values.add(paramValue);
+                    params.put(paramName, values);
+                }
+            }
+        }
+        catch (UnsupportedEncodingException e) {
+            throw new RuntimeException(e);
+        }
+        return params;
     }
 
     /** default handler listing request details in json */

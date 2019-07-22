@@ -71,7 +71,7 @@ public class RMQMessenger extends RMQConnector {
 
     private int textMode = 1;
     private int xaMode = 0;
-    private int retry = 3;
+    private int retry = 2;
     private int overwrite = 0;
     private int persistence = 1;
     private int priority = 0;
@@ -100,8 +100,8 @@ public class RMQMessenger extends RMQConnector {
             rcField = "ReturnCode";
 
         if ((o = props.get("Retry")) == null ||
-            (retry = Integer.parseInt((String) o)) <= 0)
-            retry = 3;
+            (retry = Integer.parseInt((String) o)) < 0)
+            retry = 2;
 
         if ((o = props.get("Mode")) != null && "daemon".equals((String) o))
             isDaemon = true;

@@ -5,11 +5,9 @@ package org.qbroker.jms;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.List;
-import java.util.ArrayList;
 import java.util.Date;
 import java.text.SimpleDateFormat;
 import java.net.URI;
-import java.net.URLDecoder;
 import java.net.HttpURLConnection;
 import java.io.File;
 import java.io.FileReader;
@@ -17,7 +15,6 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpContext;
 import com.sun.net.httpserver.HttpExchange;
@@ -119,6 +116,15 @@ public class MessageHandler implements HttpHandler {
         String method = he.getRequestMethod();
         if (service == null)
             throw(new IOException(name + ": service is not available"));
+        if ((service.getDebugMode() & 4096) > 0 &&
+            "POST".equals(method)) try { // log posted request
+            InputStream in = he.getRequestBody();
+            String query = Utils.read(in, new byte[8192]);
+            in.close();
+            new Event(Event.DEBUG, name + " got posted data:\n" + query).send();
+        }
+        catch (Exception e) {
+        }
         if (method == null || method.length() <= 0)
             throw(new IOException(name + ": method is not well defined"));
         else switch (method.charAt(0)) {
@@ -157,16 +163,20 @@ public class MessageHandler implements HttpHandler {
         else if (uri.endsWith(".jsp")) {
             text = getContent(uri, response);
             if (text != null)
-                sendResponse(he, HttpURLConnection.HTTP_OK, text);
+                SimpleHttpServer.sendResponse(he,
+                    HttpURLConnection.HTTP_OK, text);
             else
-                sendResponse(he, HttpURLConnection.HTTP_NOT_FOUND, "bad jsp");
+                SimpleHttpServer.sendResponse(he,
+                    HttpURLConnection.HTTP_NOT_FOUND, "bad jsp");
         }
         else if ((text = response.get(uri)) != null)
-            sendResponse(he, HttpURLConnection.HTTP_OK, text);
+            SimpleHttpServer.sendResponse(he, HttpURLConnection.HTTP_OK, text);
         else if ((text = response.get("error")) != null)
-            sendResponse(he, HttpURLConnection.HTTP_INTERNAL_ERROR, text);
+            SimpleHttpServer.sendResponse(he,
+                HttpURLConnection.HTTP_INTERNAL_ERROR, text);
         else
-            sendResponse(he, HttpURLConnection.HTTP_NOT_FOUND, "no data");
+            SimpleHttpServer.sendResponse(he,
+                HttpURLConnection.HTTP_NOT_FOUND, "no data");
 
         return 0;
     }
@@ -210,11 +220,13 @@ public class MessageHandler implements HttpHandler {
                 String text;
                 text = "failed to read raw content: " + Event.traceStack(e);
                 new Event(Event.ERR, name + " " + text).send();
-                sendResponse(he, HttpURLConnection.HTTP_INTERNAL_ERROR,
+                SimpleHttpServer.sendResponse(he,
+                    HttpURLConnection.HTTP_INTERNAL_ERROR,
                     "failed to read raw content");
                 return;
             }
-            Map<String, List<String>> params = parseGetParameters(he);
+            Map<String, List<String>> params =
+                SimpleHttpServer.parseGetParameters(he);
             for (String key : params.keySet()) { // copy over parameters
                 if (key == null || key.length() <= 0 || "text".equals(key))
                     continue;
@@ -248,16 +260,20 @@ public class MessageHandler implements HttpHandler {
         else if (uri.endsWith(".jsp")) {
             str = getContent(uri, response);
             if (str != null)
-                sendResponse(he, HttpURLConnection.HTTP_OK, str);
+                SimpleHttpServer.sendResponse(he,
+                    HttpURLConnection.HTTP_OK, str);
             else
-                sendResponse(he, HttpURLConnection.HTTP_NOT_FOUND, "bad jsp");
+                SimpleHttpServer.sendResponse(he,
+                    HttpURLConnection.HTTP_NOT_FOUND, "bad jsp");
         }
         else if ((str = response.get(uri)) != null)
-            sendResponse(he, HttpURLConnection.HTTP_OK, str);
+            SimpleHttpServer.sendResponse(he, HttpURLConnection.HTTP_OK, str);
         else if ((str = response.get(uri)) != null)
-            sendResponse(he, HttpURLConnection.HTTP_INTERNAL_ERROR, str);
+            SimpleHttpServer.sendResponse(he,
+                HttpURLConnection.HTTP_INTERNAL_ERROR, str);
         else
-            sendResponse(he, HttpURLConnection.HTTP_NOT_FOUND, "no data");
+            SimpleHttpServer.sendResponse(he,
+                HttpURLConnection.HTTP_NOT_FOUND, "no data");
     }
 
     private int doPut(HttpExchange he) throws IOException {
@@ -299,10 +315,11 @@ public class MessageHandler implements HttpHandler {
             String text = "failed to read raw content: " +
                 Event.traceStack(e);
             new Event(Event.ERR, name + " " + text).send();
-            sendResponse(he, HttpURLConnection.HTTP_INTERNAL_ERROR, text);
+            SimpleHttpServer.sendResponse(he,
+                HttpURLConnection.HTTP_INTERNAL_ERROR, text);
             return -1;
         }
-        Map<String, List<String>> params = parseGetParameters(he);
+        Map<String,List<String>> params=SimpleHttpServer.parseGetParameters(he);
         for (String key : params.keySet()) { // copy over parameters
             if (key == null || key.length() <= 0 || "text".equals(key))
                 continue;
@@ -334,16 +351,20 @@ public class MessageHandler implements HttpHandler {
         else if (uri.endsWith(".jsp")) {
             str = getContent(uri, response);
             if (str != null)
-                sendResponse(he, HttpURLConnection.HTTP_OK, str);
+                SimpleHttpServer.sendResponse(he,
+                    HttpURLConnection.HTTP_OK, str);
             else
-                sendResponse(he, HttpURLConnection.HTTP_NOT_FOUND, "bad jsp");
+                SimpleHttpServer.sendResponse(he,
+                    HttpURLConnection.HTTP_NOT_FOUND, "bad jsp");
         }
         else if ((str = response.get(uri)) != null)
-            sendResponse(he, HttpURLConnection.HTTP_OK, str);
+            SimpleHttpServer.sendResponse(he, HttpURLConnection.HTTP_OK, str);
         else if ((str = response.get("error")) != null)
-            sendResponse(he, HttpURLConnection.HTTP_INTERNAL_ERROR, str);
+            SimpleHttpServer.sendResponse(he,
+                HttpURLConnection.HTTP_INTERNAL_ERROR, str);
         else
-            sendResponse(he, HttpURLConnection.HTTP_NOT_FOUND, "no data");
+            SimpleHttpServer.sendResponse(he,
+                HttpURLConnection.HTTP_NOT_FOUND, "no data");
 
         return 0;
     }
@@ -359,90 +380,22 @@ public class MessageHandler implements HttpHandler {
         else if (uri.endsWith(".jsp")) {
             text = getContent(uri, response);
             if (text != null)
-                sendResponse(he, HttpURLConnection.HTTP_OK, text);
+                SimpleHttpServer.sendResponse(he,
+                    HttpURLConnection.HTTP_OK, text);
             else
-                sendResponse(he, HttpURLConnection.HTTP_NOT_FOUND, "bad jsp");
+                SimpleHttpServer.sendResponse(he,
+                    HttpURLConnection.HTTP_NOT_FOUND, "bad jsp");
         }
         else if ((text = response.get(uri)) != null)
-            sendResponse(he, HttpURLConnection.HTTP_OK, text);
+            SimpleHttpServer.sendResponse(he, HttpURLConnection.HTTP_OK, text);
         else if ((text = response.get("error")) != null)
-            sendResponse(he, HttpURLConnection.HTTP_INTERNAL_ERROR, text);
+            SimpleHttpServer.sendResponse(he,
+                HttpURLConnection.HTTP_INTERNAL_ERROR, text);
         else
-            sendResponse(he, HttpURLConnection.HTTP_NOT_FOUND, "no data");
+            SimpleHttpServer.sendResponse(he,
+                HttpURLConnection.HTTP_NOT_FOUND, "no data");
 
         return 0;
-    }
-
-    private static void sendResponse(HttpExchange he, int rc, String text)
-        throws IOException {
-        Headers headers = he.getResponseHeaders();
-        headers.set("Content-Type", "application/json");
-        if (rc != 200) {
-            text = "{\n  \"success\":false,\n  \"errors\":{\"title\":\"" +
-                he.getRequestMethod()+"\"},\n  \"errormsg\":\""+text+"\"\n}\n";
-            he.sendResponseHeaders(rc, text.getBytes().length);
-            OutputStream os = he.getResponseBody();
-            os.write(text.getBytes());
-            os.close();
-        }
-        else if (text != null) {
-            he.sendResponseHeaders(rc, text.getBytes().length);
-            OutputStream os = he.getResponseBody();
-            os.write(text.getBytes());
-            os.close();
-        }
-        else {
-            he.sendResponseHeaders(rc, 0);
-            OutputStream os = he.getResponseBody();
-            os.close();
-        }
-    }
-
-    private static Map<String,List<String>> parseGetParameters(HttpExchange he){
-        URI u = he.getRequestURI();
-        String query = u.getRawQuery();
-        return parseQuery(query, new HashMap<String, List<String>>());
-    }
-
-    private static int parsePostParameters(HttpExchange he,
-        Map<String,List<String>> params) throws IOException {
-        int n = params.size();
-        InputStream in = he.getRequestBody();
-        String query = Utils.read(in, new byte[8192]);
-        in.close();
-        return parseQuery(query, params).size() - n;
-    }
-
-    protected static Map<String, List<String>> parseQuery(String query,
-        Map<String, List<String>> params) {
-        if (query != null) try {
-            for (String pair : query.split("[&]")) {
-                final String param[] = pair.split("[=]");
-                String paramName = "";
-                String paramValue = "";
-                if (param.length > 0) {
-                    paramName = URLDecoder.decode(param[0], "UTF-8");
-                }
-
-                if (param.length > 1) {
-                    paramValue = URLDecoder.decode(param[1], "UTF-8");
-                }
-
-                if (params.containsKey(paramName)) {
-                    final List<String> values = params.get(paramName);
-                    values.add(paramValue);
-                }
-                else {
-                    final List<String> values = new ArrayList<String>();
-                    values.add(paramValue);
-                    params.put(paramName, values);
-                }
-            }
-        }
-        catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e);
-        }
-        return params;
     }
 
     public static Event getEvent(Map<String,List<String>> params,boolean isJMS){
@@ -579,12 +532,12 @@ public class MessageHandler implements HttpHandler {
         boolean isCollectible = false; // a non-JMS event is collectible or not
         boolean isStream = false;
         List<String> list;
-        Map<String, List<String>> params = parseGetParameters(he);
+        Map<String,List<String>> params=SimpleHttpServer.parseGetParameters(he);
         clientIP = he.getRemoteAddress().getAddress().getHostAddress();
 
         method = he.getRequestMethod();
         if ("POST".equals(method))
-            i = parsePostParameters(he, params);
+            i = SimpleHttpServer.parsePostParameters(he, params);
         URI u = he.getRequestURI();
         path = u.getPath();
         if (path == null)
@@ -609,8 +562,8 @@ public class MessageHandler implements HttpHandler {
             isCollectible = true;
             event = getEvent(params, true);
             if (event == null) { // not an event postable
-                sendResponse(he, HttpURLConnection.HTTP_BAD_REQUEST,
-                    "not an event postable");
+                SimpleHttpServer.sendResponse(he,
+                    HttpURLConnection.HTTP_BAD_REQUEST,"not an event postable");
                 return null;
             }
             if (event.getAttribute("status") == null)
@@ -632,8 +585,8 @@ public class MessageHandler implements HttpHandler {
             isJMS = false;
             event = getEvent(params, false);
             if (event == null) { // not an event postable
-                sendResponse(he, HttpURLConnection.HTTP_BAD_REQUEST,
-                    "not an event postable");
+                SimpleHttpServer.sendResponse(he,
+                    HttpURLConnection.HTTP_BAD_REQUEST,"not an event postable");
                 return null;
             }
             event.removeAttribute("text");
@@ -657,8 +610,8 @@ public class MessageHandler implements HttpHandler {
                 new Event(Event.DEBUG, name + " jms: " + path).send();
             event = getEvent(params, true);
             if (event == null) { // not an event postable
-                sendResponse(he, HttpURLConnection.HTTP_BAD_REQUEST,
-                    "not an event postable");
+                SimpleHttpServer.sendResponse(he,
+                    HttpURLConnection.HTTP_BAD_REQUEST,"not an event postable");
                 return null;
             }
             event.setAttribute("hostname", clientIP);
@@ -672,8 +625,8 @@ public class MessageHandler implements HttpHandler {
             isStream = true;
             event = getEvent(params, true);
             if (event == null) { // not an event postable
-                sendResponse(he, HttpURLConnection.HTTP_BAD_REQUEST,
-                    "not an event postable");
+                SimpleHttpServer.sendResponse(he,
+                    HttpURLConnection.HTTP_BAD_REQUEST,"not an event postable");
                 return null;
             }
             event.setAttribute("hostname", clientIP);
@@ -860,7 +813,8 @@ public class MessageHandler implements HttpHandler {
                 }
             }
             else { // neither name nor view is defined
-                sendResponse(he, HttpURLConnection.HTTP_PRECON_FAILED,
+                SimpleHttpServer.sendResponse(he,
+                    HttpURLConnection.HTTP_PRECON_FAILED,
                     "neither name nor view is defined");
                 return null;
             }
@@ -906,7 +860,8 @@ public class MessageHandler implements HttpHandler {
             catch (Exception e) {
                 new Event(Event.ERR, name + " failed to load message: "+
                     Event.traceStack(e)).send();
-                sendResponse(he, HttpURLConnection.HTTP_INTERNAL_ERROR,
+                SimpleHttpServer.sendResponse(he,
+                    HttpURLConnection.HTTP_INTERNAL_ERROR,
                     "failed to load message");
                 return null;
             }
@@ -947,7 +902,8 @@ public class MessageHandler implements HttpHandler {
                     jsp = str;
             }
             else { // timed out
-                sendResponse(he, HttpURLConnection.HTTP_GATEWAY_TIMEOUT,
+                SimpleHttpServer.sendResponse(he,
+                    HttpURLConnection.HTTP_GATEWAY_TIMEOUT,
                     "request timed out: " + i);
                 return null;
             }
@@ -975,7 +931,8 @@ public class MessageHandler implements HttpHandler {
                     }   
                 }
                 else if ((ph = (Map) event.getBody()) == null) { // query failed
-                    sendResponse(he, HttpURLConnection.HTTP_NOT_FOUND,
+                    SimpleHttpServer.sendResponse(he,
+                        HttpURLConnection.HTTP_NOT_FOUND,
                         event.getAttribute("text"));
                     return null;
                 }
@@ -993,7 +950,8 @@ public class MessageHandler implements HttpHandler {
                     jsp = str;
             }
             else { // timed out
-                sendResponse(he, HttpURLConnection.HTTP_GATEWAY_TIMEOUT,
+                SimpleHttpServer.sendResponse(he,
+                    HttpURLConnection.HTTP_GATEWAY_TIMEOUT,
                     "request timed out: " + i);
                 return null;
             }

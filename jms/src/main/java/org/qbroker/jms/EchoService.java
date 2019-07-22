@@ -5,6 +5,7 @@ import org.qbroker.common.Service;
 import org.qbroker.event.Event;
 import org.qbroker.event.EventLogger;
 import org.qbroker.jms.MessageUtils;
+import org.qbroker.jms.TextEvent;
 
 /**
  * EchoService echos requests for test purpose.
@@ -28,6 +29,7 @@ public class EchoService implements Service {
             this.name = name;
     }
 
+    /** if the jms message body is empty, it will reset the boxy with warning */
     public int doRequest(org.qbroker.common.Event event, int timeout) {
         if (event == null)
             return -1;
@@ -42,6 +44,10 @@ public class EchoService implements Service {
         else try { // for JMS msg
             byte[] buffer = new byte[4096];
             String line = MessageUtils.processBody((Message) event, buffer);
+            if (line == null || line.length() <= 0) { // reset msg boxy
+                line = "empty msg body!";
+                ((TextEvent) event).setText(line);
+            }
             line = MessageUtils.display((Message) event, line, 20551, null);
             if (debug != DEBUG_NONE)
                 new Event(Event.INFO, name + " echoed a msg ("+line+")").send();

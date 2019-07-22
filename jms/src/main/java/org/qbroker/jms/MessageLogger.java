@@ -97,7 +97,7 @@ public class MessageLogger {
     private String operation = "append";
     private String uri;
     private int[] partition;
-    private int retry = 3;
+    private int retry = 2;
     private final static int LOG_POS = 0;
     private final static int LOG_TIME = 1;
     private final static int LOG_OFFSET = 2;
@@ -260,8 +260,8 @@ public class MessageLogger {
             partition[1] = 0;
         }
         if (props.get("Retry") == null ||
-            (retry = Integer.parseInt((String) props.get("Retry"))) <= 0)
-            retry = 3;
+            (retry = Integer.parseInt((String) props.get("Retry"))) < 0)
+            retry = 2;
 
         if (props.get("Mode") != null &&
             "daemon".equals((String) props.get("Mode"))) {

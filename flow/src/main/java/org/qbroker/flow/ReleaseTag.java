@@ -12,9 +12,13 @@ package org.qbroker.flow;
  * bug in Evaluation, modified MessageServlet with a bunch of protected methods
  * and properties for reusability, updated QServlet to extend MessageServlet,
  * added MaxNumberThread to JettyServer and SimpleHttpServer for threadpool,
+ * lowered the default retry from 3 to 2 and added 0 retry for all Messengers,
+ * added 0 Retry and TrustAllCertificates to MonitorAgent and QFlow for queries,
+ * moved most of static methods from MessageHandler to SimpleHttpServer, added
+ * logging on the property map in 3 stages to ReceiverPool and PersisterPool,
  * updated the parent pom.xml for JUnit 4, added test cases for DataSet,
  * Template, Evaluation, SimpleHttpServer, JettyServer, MessageHandler and
- * MessageServlet with support on JUnit 4,
+ * MessageServlet with support on JUnit 4
  *<br/>
  * V1.2.16 (2019/07/13): added RequestTimeout to SteamReceiver for collect(),
  * added main(), text2JSON() and xml2JSON() to GenericRequester, added OBJ_JMS
@@ -301,7 +305,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V1.2.17 2019/07/20 14:02:57";
+    private static String ReleaseTAG = "QBroker V1.2.17 2019/07/20 14:53:09";
 
     public ReleaseTag() {
     }

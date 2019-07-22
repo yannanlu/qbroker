@@ -401,12 +401,13 @@ public class ReceiverPool extends Persister implements Runnable {
             ph = (Map) req.get("Properties");
             if (ph == null)
                 props = new HashMap<String, Object>();
-            else { // with default properties
+            else // with new properties
                 props = Utils.cloneProperties(ph);
-                if ((displayMask & MessageUtils.SHOW_DST) > 0)
-                    new Event(Event.INFO, uri+": received a request from "+
-                    linkName + " with: "+ JSON2Map.toJSON(ph)).send();
-            }
+
+            if ((displayMask & MessageUtils.SHOW_DST) > 0 && props.size() > 0)
+                new Event(Event.INFO, uri+": received a request from "+
+                   linkName+" with properties: "+JSON2Map.toJSON(props)).send();
+            i = props.size();
 
             uriStr = null;
             try {
@@ -416,7 +417,7 @@ public class ReceiverPool extends Persister implements Runnable {
                         uriStr = MessageUtils.format(outMessage, buffer,
                             template);
                     else
-                        uriStr =MessageUtils.processBody(outMessage,buffer);
+                        uriStr = MessageUtils.processBody(outMessage, buffer);
                 }
                 MessageUtils.setProperty(rcField, reqRC, outMessage);
             }
@@ -431,14 +432,19 @@ public class ReceiverPool extends Persister implements Runnable {
                 continue;
             }
             else if ((className = lookup(uriStr, props)) != null) {
+                if ((displayMask & MessageUtils.SHOW_DMODE) > 0 &&
+                    props.size() > i) // merged wth inline properties
+                    new Event(Event.INFO,uri+" merged with inline properties: "+
+                        JSON2Map.toJSON(props)).send();
+                i = props.size();
                 if ((pid = poolList.getID(className)) >= 0) {
                     pool = (GenericPool) poolList.get(pid);
                     o = pool.getInitArg(0);
-                    if (o != null && o instanceof Map) { // copy defaults
+                    if (o != null && o instanceof Map) { // merge default props
                         String key;
                         ph = (Map) o;
                         Iterator iter = ph.keySet().iterator();
-                        while (iter.hasNext()) {
+                        while (iter.hasNext()) { // merge property map
                             key = (String) iter.next();
                             if (key == null || key.length() <= 0)
                                 continue;
@@ -465,6 +471,10 @@ public class ReceiverPool extends Persister implements Runnable {
                             pid + " of " + className + " with " +
                             (String)props.get("URI") + " for " + uriStr).send();
                 }
+                if ((displayMask & MessageUtils.SHOW_DCOUNT) > 0 &&
+                    props.size() > i) // merged with default properties
+                    new Event(Event.INFO, uri + " merged default properties: "+
+                        JSON2Map.toJSON(props)).send();
             }
             else {
                 xq.remove(cid);
