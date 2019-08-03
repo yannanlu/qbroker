@@ -58,7 +58,7 @@ import org.qbroker.event.Event;
 
 public class UnixlogMonitor extends Monitor {
     private String uri;
-    private int errorIgnored, maxNumberLogs;
+    private int errorIgnored, maxNumberLogs, maxSessionCount;
     private int previousNumber, logSize;
     private int numberDataFields, maxScannedLogs, debug;
     private long expirationTime = 0;
@@ -122,6 +122,11 @@ public class UnixlogMonitor extends Monitor {
         if ((o = props.get("NumberDataFields")) == null ||
             (numberDataFields = Integer.parseInt((String) o)) < 0)
             numberDataFields = 0;
+
+        if ((o = props.get("MaxSessionCount")) != null)
+            maxSessionCount = Integer.parseInt((String) o);
+        else
+            maxSessionCount = 0;
 
         if ((o = props.get("Debug")) != null)
             debug = Integer.parseInt((String) o);
@@ -423,6 +428,7 @@ public class UnixlogMonitor extends Monitor {
             else { // just disabled
                 level = Event.INFO;
                 actionCount = 0;
+                previousNumber = 0;
                 exceptionCount = 0;
                 if (normalStep > 0)
                     step = normalStep;
@@ -432,7 +438,6 @@ public class UnixlogMonitor extends Monitor {
             break;
           case TimeWindows.BLACKEXCEPTION: // exception in blackout
             level = Event.INFO;
-            actionCount = 0;
             if (previousStatus != status) { // reset count and adjust step
                exceptionCount = 0;
                if (normalStep > 0)
@@ -440,6 +445,7 @@ public class UnixlogMonitor extends Monitor {
             }
           case TimeWindows.EXCEPTION: // exception
             actionCount = 0;
+            previousNumber = 0;
             if (status == TimeWindows.EXCEPTION) {
                 level = Event.WARNING;
                 if (previousStatus != status) { // reset count and adjust step
@@ -458,14 +464,17 @@ public class UnixlogMonitor extends Monitor {
                 if (normalStep > 0)
                     step = normalStep;
                 actionCount = 0;
+                previousNumber = 0;
                 exceptionCount = 0;
             }
           default: // normal cases
             level = Event.INFO;
             exceptionCount = 0;
             if (status != TimeWindows.BLACKOUT &&
-                previousStatus == TimeWindows.BLACKOUT)
+                previousStatus == TimeWindows.BLACKOUT) { // reset actionCount
                 actionCount = 0;
+                previousNumber = 0;
+            }
             actionCount ++;
             if (numberLogs > 0) {
                 if (previousNumber == 0)
@@ -480,15 +489,21 @@ public class UnixlogMonitor extends Monitor {
                     else if (errorIgnored < 0 && numberLogs <= -errorIgnored)
                         level = Event.WARNING;
                 }
+                previousNumber = numberLogs;
             }
             else if (previousNumber > 0) {
-                actionCount = 1;
+                if ((maxSessionCount <= 0 || actionCount > maxSessionCount)) {
+                    actionCount = 0;
+                    previousNumber = 0;
+                }
                 if (normalStep > 0)
                     step = normalStep;
             }
+            else {
+                previousNumber = 0;
+            }
             break;
         }
-        previousNumber = numberLogs;
         previousStatus = status;
 
         int count = 0;
@@ -567,6 +582,10 @@ public class UnixlogMonitor extends Monitor {
             event.setAttribute("lastEntry",(String)logBuffer.get(numberLogs-1));
         else
             event.setAttribute("lastEntry", "");
+        if (numberLogs > 1)
+            event.setAttribute("firstEntry", (String) logBuffer.get(0));
+        else
+            event.setAttribute("firstEntry", "");
 
         String actionStatus;
         if (actionGroup != null && actionGroup.getNumberScripts() > 0) {
