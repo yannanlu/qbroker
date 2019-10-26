@@ -37,11 +37,12 @@ import org.qbroker.event.Event;
 
 /**
  * JMSMonitor monitors a JMS application by watching its log and its queue
- * depth. It supports 3 modes: Q_RESET, Q_BROWSE and Q_GET or Q_PUT. With
- * Q_RESET, it queries the EnqCount and DeqCount on a WMQ queue with reset
+ * depth. It supports 4 modes: Q_RESET, Q_BROWSE, Q_REMOVE and Q_GET or Q_PUT.
+ * With Q_RESET, it queries the EnqCount and DeqCount on a WMQ queue with reset
  * option. With Q_BROWSE, it tries to browse the first message and checks its
- * JMSTimestamp and JMSMessageID for the change. With Q_GET or Q_PUT, it
- * counts the messages logged into a log file while checking on the queue depth.
+ * JMSTimestamp and JMSMessageID for the change. With Q_REMOVE, it tries to get
+ * a message from the queue. With Q_GET or Q_PUT, it counts the messages logged
+ * into a log file while checking on the queue depth.
  *<br/>
  * @author yannanlu@yahoo.com
  */
@@ -66,8 +67,9 @@ public class JMSMonitor extends Monitor {
     public final static int Q_PUT = 2;
     public final static int Q_BROWSE = 3;
     public final static int Q_RESET = 4;
+    public final static int Q_REMOVE = 5;
     public final static String qStatusText[] = {"SLOW", "STUCK",
-        "NOAPPS", "UNKNOW", "OK", "GET", "PUT", "BROWSE", "RESET"};
+        "NOAPPS", "UNKNOW", "OK", "GET", "PUT", "BROWSE", "RESET", "REMOVE"};
 
     public JMSMonitor(Map props) {
         super(props);
@@ -148,6 +150,8 @@ public class JMSMonitor extends Monitor {
                 operation = Q_PUT;
             else if ("reset".equals(((String) o).toLowerCase()))
                 operation = Q_RESET;
+            else if ("remove".equals(((String) o).toLowerCase()))
+                operation = Q_REMOVE;
             else
                 operation = Q_BROWSE;
         }
@@ -167,7 +171,8 @@ public class JMSMonitor extends Monitor {
             else if ((o = props.get("EncryptedPassword")) != null)
                 h.put("EncryptedPassword", MonitorUtils.select(o));
         }
-        if (uri.startsWith("wmq://") && operation != Q_BROWSE) { // for wmq
+        if (uri.startsWith("wmq://") && operation != Q_BROWSE &&
+            operation != Q_REMOVE) { // for wmq
             if (operation == Q_RESET && (o = props.get("StatsLog")) != null) {
                 h.put("ResetQStats", "true");
                 h.put("StatsLog", MonitorUtils.select(o));
@@ -178,7 +183,10 @@ public class JMSMonitor extends Monitor {
                 h.put("ChannelName", connFactoryName);
             if ((o = props.get("SecurityExit")) != null) {
                 h.put("SecurityExit", o);
-                h.put("SecurityData", props.get("SecurityData"));
+                if ((o = props.get("SecurityData")) != null)
+                    h.put("SecurityData", MonitorUtils.select(o));
+                else if ((o = props.get("EncryptedSecurityData")) != null)
+                    h.put("EncryptedSecurityData", MonitorUtils.select(o));
             }
 
             try {
@@ -201,14 +209,8 @@ public class JMSMonitor extends Monitor {
                     "QueueMonitor: " + Event.traceStack(e)));
             }
         }
-        else if (uri.startsWith("tcp://") && operation != Q_BROWSE) { // sonicmq
-            if ((o = props.get("Username")) != null) {
-                h.put("Username", MonitorUtils.select(o));
-                if ((o = props.get("Password")) != null)
-                    h.put("Password", MonitorUtils.select(o));
-                else if ((o = props.get("EncryptedPassword")) != null)
-                    h.put("EncryptedPassword", MonitorUtils.select(o));
-            }
+        else if (uri.startsWith("tcp://") && operation != Q_BROWSE &&
+            operation != Q_REMOVE) { // sonicmq
             if ((o = props.get("Timeout")) != null)
                 h.put("Timeout", o);
             h.put("ObjectName", qName);
@@ -252,7 +254,8 @@ public class JMSMonitor extends Monitor {
                     "MonitorReport: " + Event.traceStack(e)));
             }
         }
-        else if (uri.startsWith("report://") && operation != Q_BROWSE){ //report
+        else if (uri.startsWith("report://") && operation != Q_BROWSE &&
+            operation != Q_REMOVE) { //report
             if ((o = props.get("ReportName")) != null)
                 h.put("ReportName", o);
             else
@@ -264,13 +267,6 @@ public class JMSMonitor extends Monitor {
         else if ((o = props.get("ClassNameForQueue")) != null) {
             h.put("ContextFactory",
                 MonitorUtils.select(props.get("ContextFactory")));
-            if ((o = props.get("Username")) != null) {
-                h.put("Username", MonitorUtils.select(o));
-                if ((o = props.get("Password")) != null)
-                    h.put("Password", MonitorUtils.select(o));
-                else if ((o = props.get("EncryptedPassword")) != null)
-                    h.put("EncryptedPassword", MonitorUtils.select(o));
-            }
             h.put("ConnectionFactoryName", connFactoryName);
 
             String className = (String) o;
@@ -319,7 +315,8 @@ public class JMSMonitor extends Monitor {
             jmsQ = null;
             requester = null;
         }
-        else if (uri.startsWith("wmq://") && operation == Q_BROWSE) { // wmq
+        else if (uri.startsWith("wmq://") && (operation == Q_BROWSE ||
+            operation == Q_REMOVE)) { // wmq
             if (hostName != null) {
                 h.put("HostName", hostName);
                 h.put("Port", String.valueOf(port));
@@ -329,18 +326,16 @@ public class JMSMonitor extends Monitor {
                 h.put("QueueManager", qmgrName);
             }
             h.put("QueueName", qName);
-            h.put("Operation", "browse");
-            if ((o = props.get("Username")) != null) {
-                h.put("Username", MonitorUtils.select(o));
-                if ((o = props.get("Password")) != null)
-                    h.put("Password", MonitorUtils.select(o));
-                else if ((o = props.get("EncryptedPassword")) != null)
-                    h.put("EncryptedPassword", MonitorUtils.select(o));
-            }
+            if (operation == Q_REMOVE)
+                h.put("Operation", "get");
+            else
+                h.put("Operation", "browse");
             if ((o = props.get("SecurityExit")) != null) {
                 h.put("SecurityExit", MonitorUtils.select(o));
-                o = props.get("SecurityData");
-                h.put("SecurityData", MonitorUtils.select(o));
+                if ((o = props.get("SecurityData")) != null)
+                    h.put("SecurityData", MonitorUtils.select(o));
+                else if ((o = props.get("EncryptedSecurityData")) != null)
+                    h.put("EncryptedSecurityData", MonitorUtils.select(o));
             }
             h.put("DisplayMask", "0");
             h.put("MaxNumberMessage", "1");
@@ -374,13 +369,6 @@ public class JMSMonitor extends Monitor {
             !props.containsKey("ContextFactory")) { //browse sonicmq durable sub
             query = "DISPLAY " + qName + " 1";
             h.put("URI", uri);
-            if ((o = props.get("Username")) != null) {
-                h.put("Username", MonitorUtils.select(o));
-                if ((o = props.get("Password")) != null)
-                    h.put("Password", MonitorUtils.select(o));
-                else if ((o = props.get("EncryptedPassword")) != null)
-                    h.put("EncryptedPassword", MonitorUtils.select(o));
-            }
             if ((o = props.get("Timeout")) != null)
                 h.put("Timeout", o);
 
@@ -411,27 +399,26 @@ public class JMSMonitor extends Monitor {
             log = null;
             jmsQ = null;
         }
-        else if (operation == Q_BROWSE) { // generic JMS browser
+        else if (operation == Q_BROWSE || // generic JMS browser
+            operation == Q_REMOVE) { // generic JMS receiver
             h.put("URI", uri);
             h.put("ContextFactory",
                 MonitorUtils.select(props.get("ContextFactory")));
             if ((o = props.get("IsPhysical")) != null)
                 h.put("IsPhysical",  MonitorUtils.select(o));
-            if ((o = props.get("Username")) != null) {
-                h.put("Username", MonitorUtils.select(o));
-                if ((o = props.get("Password")) != null)
-                    h.put("Password", MonitorUtils.select(o));
-                else if ((o = props.get("EncryptedPassword")) != null)
-                    h.put("EncryptedPassword", MonitorUtils.select(o));
-            }
             if ((o = props.get("Principal")) != null) {
                 h.put("Principal", MonitorUtils.select(o));
-                o = props.get("Credentials");
-                h.put("Credentials", MonitorUtils.select(o));
+                if ((o = props.get("Credentials")) != null)
+                    h.put("Credentials", MonitorUtils.select(o));
+                else if ((o = props.get("EncryptedCredentials")) != null)
+                    h.put("EncryptedCredentials", MonitorUtils.select(o));
             }
             h.put("ConnectionFactoryName", connFactoryName);
             h.put("QueueName", qName);
-            h.put("Operation", "browse");
+            if (operation == Q_REMOVE)
+                h.put("Operation", "get");
+            else
+                h.put("Operation", "browse");
             h.put("MaxNumberMessage", "1");
             h.put("MessageSelector",
                 MonitorUtils.select(props.get("MessageSelector")));
@@ -520,6 +507,41 @@ public class JMSMonitor extends Monitor {
                 catch (Exception ex) {
                     jmsQ.close();
                     throw(new IOException("failed to browse msg from " + qName +
+                        ": " + Event.traceStack(e)));
+                }
+            }
+            jmsQ.close();
+            if (msg != null) try {
+                msgString = msg.getJMSTimestamp() + " " + msg.getJMSMessageID();
+            }
+            catch (JMSException e) {
+                throw(new IOException("failed to get info from the msg for " +
+                    qName + ": " + Event.traceStack(e)));
+            }
+            totalMsgs = 0;
+        }
+        else if (operation == Q_REMOVE && jmsQ != null) {
+            Message msg = null;
+            String str = jmsQ.reconnect();
+            if (str != null)
+                throw(new IOException("failed to connect to " + qName +
+                    " on " + uri + ": " + str));
+            try {
+                msg = (Message) jmsQ.getQueueReceiver().receive(5000);
+            }
+            catch (Exception e) {
+                try {
+                    Thread.sleep(500L);
+                }
+                catch (Exception ex) {
+                }
+                jmsQ.reconnect();
+                try { // retry
+                    msg = (Message) jmsQ.getQueueReceiver().receive(5000);
+                }
+                catch (Exception ex) {
+                    jmsQ.close();
+                    throw(new IOException("failed to get msg from " + qName +
                         ": " + Event.traceStack(e)));
                 }
             }
@@ -657,6 +679,7 @@ public class JMSMonitor extends Monitor {
                 outMsgs = 0;
             break;
           case Q_BROWSE:
+          case Q_REMOVE:
           default:
             inMsgs = 0;
             outMsgs = 0;
@@ -685,7 +708,7 @@ public class JMSMonitor extends Monitor {
         report.put("InMessages", String.valueOf(inMsgs));
         report.put("PreviousDepth", String.valueOf(previousDepth));
         report.put("Operation", String.valueOf(operation));
-        if (operation == Q_BROWSE) {
+        if (operation == Q_BROWSE || operation == Q_REMOVE) {
             report.put("PreviousMsgString", previousMsgString);
             report.put("MsgString", msgString);
         }
@@ -718,7 +741,7 @@ public class JMSMonitor extends Monitor {
             inMsgs = Integer.parseInt((String) o);
         if ((o = latest.get("OutMessages")) != null && o instanceof String)
             outMsgs = Integer.parseInt((String) o);
-        if (operation == Q_BROWSE)
+        if (operation == Q_BROWSE || operation == Q_REMOVE)
             msgString = (String) latest.get("MsgString");
 
         // check the test status and exceptions, figure out the priority
@@ -802,6 +825,26 @@ public class JMSMonitor extends Monitor {
                         strBuf.append("Topic: application is OK");
                     else
                         strBuf.append("Queue: application is OK");
+                    actionCount = 1;
+                    if (normalStep > 0)
+                        step = normalStep;
+                }
+                previousMsgString = msgString;
+            }
+            else if (operation == Q_REMOVE) {
+                if (msgString.length() <= 0) { // no message got received
+                    if (status != TimeWindows.BLACKOUT) { // for normal case
+                        level = Event.ERR;
+                        if (step > 0)
+                            step = 0;
+                    }
+                    strBuf.append("no message received from " + qName);
+                    qStatus = Q_STUCK;
+                    if (previousQStatus != qStatus)
+                        actionCount = 1;
+                }
+                else if (previousQStatus != qStatus) {
+                    strBuf.append("Queue is OK");
                     actionCount = 1;
                     if (normalStep > 0)
                         step = normalStep;
@@ -901,7 +944,7 @@ public class JMSMonitor extends Monitor {
             count = exceptionCount;
             if (queue != null)
                 event.setAttribute("currentDepth", "N/A");
-            if (operation != Q_BROWSE) {
+            if (operation != Q_BROWSE && operation != Q_REMOVE) {
                 event.setAttribute("inMessages", "N/A");
                 event.setAttribute("outMessages", "N/A");
                 event.setAttribute("logFile", logFile);
@@ -915,7 +958,7 @@ public class JMSMonitor extends Monitor {
             count = actionCount;
             if (queue != null)
                 event.setAttribute("currentDepth", String.valueOf(curDepth));
-            if (operation != Q_BROWSE) {
+            if (operation != Q_BROWSE && operation != Q_REMOVE) {
                 event.setAttribute("inMessages", String.valueOf(inMsgs));
                 event.setAttribute("outMessages", String.valueOf(outMsgs));
                 event.setAttribute("logFile", logFile);

@@ -61,6 +61,7 @@ public class SonicMQMonitor extends Monitor {
     private String targetConn = null, connUser = null;
     private boolean isTopic = false;
     private boolean isQueue = false;
+    private boolean isBroker = false;
     private boolean withPrivateReport = false;
 
     public SonicMQMonitor(Map props) {
@@ -157,10 +158,12 @@ public class SonicMQMonitor extends Monitor {
                 ",queue=" + qName;
             cache = new HashMap<String, String>();
         }
-        else { // for topic or broker
+        else if ((qName = objName.getKeyProperty("queue")) == null) {
+            // for topic or broker
             qName = objName.getKeyProperty("topic");
             if (qName == null || qName.length() <= 0) { // default is broker
                 qName = brokerName;
+                isBroker = true;
             }
             else { // for topic and replace '.' with ':' due to the hack
                 subID = objName.getKeyProperty("subscription_id");
@@ -373,6 +376,20 @@ public class SonicMQMonitor extends Monitor {
             }
             jmxc.close();
             if (ippsCount > 0) {
+                String sr, sd;
+                int k = (int) ippsCount;
+                for (int i=k-1; i>=0; i--) { // cleanup idle connections
+                    Map mp = list.get(i);
+                    sd = (String) mp.get("messages_Delivered");
+                    sr = (String) mp.get("messages_Received");
+                    if ("0".equals(sd) && "0".equals(sr)) {
+                        str = (String) mp.get("host");
+                        str += "/" + (String) mp.get("name");
+                        if (cache.containsKey(str))
+                            cache.remove(str);
+                        list.remove(i);
+                    }
+                }
                 if (previousStatus < TimeWindows.EXCEPTION) { // initial reset
                     for (Map mp : list) {
                         str = (String) mp.get("host");
@@ -382,12 +399,13 @@ public class SonicMQMonitor extends Monitor {
                 }
                 else { // clean up cache
                     HashSet<String> hset = new HashSet<String>();
+                    k = cache.size();
                     for (Map mp : list) {
                         str = (String) mp.get("host");
                         str += "/" + (String) mp.get("name");
                         hset.add(str);
                     }
-                    for (String key : cache.keySet()) {
+                    for (String key : cache.keySet().toArray(new String[k])) {
                         if (!hset.contains(key))
                             cache.remove(key);
                     }
@@ -403,7 +421,7 @@ public class SonicMQMonitor extends Monitor {
                 curDepth = Long.parseLong(str);
                 previousMsgs = 0;
                 if (ippsCount > 0) for (Map mp : list) {
-                    map = mp;
+                    map = mp; // for exception dispaly
                     String key = (String) mp.get("host");
                     key += "/" + (String) mp.get("name");
                     if (cache.containsKey(key))
@@ -436,6 +454,26 @@ public class SonicMQMonitor extends Monitor {
                 previousIppsCount = 1;
             }
             else if (curDepth > 0 && previousDepth > 0 && outMsgs <= 0)
+                qStatus = "STUCK";
+            else
+                qStatus = "OK";
+        }
+        else if (!isBroker) { // for queue depth only
+            inMsgs = 0;
+            outMsgs = 0;
+            ippsCount = 0;
+            oppsCount = 0;
+            str = (String) map.get("messagecount");
+            try {
+                curDepth = Long.parseLong(str);
+            }
+            catch (Exception e) {
+                throw(new JMException(name + " failed to parse the metric for "+
+                    qName + " with " + JSON2Map.toJSON(map, null, null) + ": "+
+                    Event.traceStack(e)));
+            }
+            map.clear();
+            if (curDepth > 0)
                 qStatus = "STUCK";
             else
                 qStatus = "OK";
@@ -528,7 +566,7 @@ public class SonicMQMonitor extends Monitor {
             if ((o = latest.get("IppsCount")) != null && o instanceof String)
                 ipps = Long.parseLong((String) o);
         }
-        else if (!isQueue)
+        else if (isBroker)
             if ((o = latest.get("IppsCount")) != null && o instanceof String)
                 ipps = Long.parseLong((String) o);
 
@@ -626,7 +664,7 @@ public class SonicMQMonitor extends Monitor {
                 if (previousQStatus != qStatus)
                     actionCount = 1;
             }
-            else if (!isQueue && !isTopic && watermark>0 && curDepth>watermark){
+            else if (isBroker && watermark > 0 && curDepth > watermark) {
                 if (status != TimeWindows.BLACKOUT) { // for normal case
                     level = Event.ERR;
                     if (step > 0)
@@ -636,13 +674,26 @@ public class SonicMQMonitor extends Monitor {
                 if (previousQStatus != qStatus)
                     actionCount = 1;
             }
+            else if (!isQueue && !isTopic && !isBroker && watermark > 0 &&
+                curDepth >= watermark) { // for queue depth only
+                if (status != TimeWindows.BLACKOUT) { // for normal case
+                    level = Event.ERR;
+                    if (step > 0)
+                        step = 0;
+                }
+                strBuf.append("Queue: depth is too high for " + qName);
+                if (previousQStatus != qStatus)
+                    actionCount = 1;
+            }
             else if (!previousQStatus.equals(qStatus)) {
                 if (isTopic)
                     strBuf.append("Topic: application is OK");
                 else if (isQueue)
                     strBuf.append("Queue: application is OK");
-                else
+                else if (isBroker)
                     strBuf.append("Broker: " + qName + " is OK");
+                else
+                    strBuf.append("Queue: " + qName + " is OK");
                 actionCount = 1;
                 if (normalStep > 0)
                     step = normalStep;
@@ -702,14 +753,14 @@ public class SonicMQMonitor extends Monitor {
         Event event = new Event(level, strBuf.toString());
         if (status < TimeWindows.BLACKOUT) {
             count = exceptionCount;
-            if (isQueue || isTopic)
+            if (isQueue || isTopic || !isBroker)
                 event.setAttribute("currentDepth", "N/A");
             event.setAttribute("inMessages", "N/A");
             event.setAttribute("outMessages", "N/A");
         }
         else {
             count = actionCount;
-            if (isQueue || isTopic)
+            if (isQueue || isTopic || !isBroker)
                 event.setAttribute("currentDepth", String.valueOf(curDepth));
             event.setAttribute("inMessages", String.valueOf(inMsgs));
             event.setAttribute("outMessages", String.valueOf(outMsgs));
@@ -734,7 +785,7 @@ public class SonicMQMonitor extends Monitor {
             event.setAttribute("qStatus", qStatus);
             event.setAttribute("user", connUser);
         }
-        else {
+        else if (isBroker) {
             if (status < TimeWindows.BLACKOUT) {
                 event.setAttribute("connectionCount", "N/A");
                 event.setAttribute("flow2DiskSize", "N/A");
@@ -744,6 +795,10 @@ public class SonicMQMonitor extends Monitor {
                 event.setAttribute("connectionCount", String.valueOf(ipps));
             }
             event.setAttribute("bStatus", qStatus);
+        }
+        else {
+            event.setAttribute("queue", qName);
+            event.setAttribute("qStatus", qStatus);
         }
         event.setAttribute("actionCount", String.valueOf(count));
         event.setAttribute("status", statusText[status + statusOffset]);

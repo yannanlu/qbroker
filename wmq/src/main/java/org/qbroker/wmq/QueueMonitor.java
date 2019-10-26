@@ -95,10 +95,18 @@ public class QueueMonitor extends Monitor {
                 port = 1414;
             hostName = u.getHost();
             if (hostName != null) {
-                if ((o = props.get("SecurityExit")) != null)
+                if ((o = props.get("SecurityExit")) != null) {
                     securityExit = (String) o;
-                if ((o = props.get("SecurityData")) != null)
-                    securityData = (String) o;
+                    if ((o = props.get("SecurityData")) != null)
+                        securityData = (String) o;
+                    else if((o=props.get("EncryptedSecurityData")) != null) try{
+                        securityData = Utils.decrypt((String) o);
+                    }
+                    catch (Exception e) {
+                        throw(new IllegalArgumentException("failed to decrypt "+
+                            "EncryptedSecurityData: " + e.toString()));
+                    }
+                }
                 if ((o = props.get("Username")) != null) {
                     username = (String) o;
                     if ((o = props.get("Password")) != null)

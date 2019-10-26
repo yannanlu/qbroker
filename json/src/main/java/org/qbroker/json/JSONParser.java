@@ -127,7 +127,7 @@ public class JSONParser {
         }
         else {
             String key;
-            for (Object obj : ph.keySet()) { // normalize
+            for (Object obj : ph.keySet().toArray()) { // normalize
                 key = (String) obj;
                 if (key == null || key.length() <= 0) {
                     ph.remove(obj);

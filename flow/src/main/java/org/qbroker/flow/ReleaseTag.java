@@ -3,6 +3,13 @@ package org.qbroker.flow;
 /* ReleaseTag.java - release tag for all the packages of qbroker */
 
 /**
+ * V1.2.18 (2019/10/06): added Q_REMOVE to JMSMonitor to receive a healthcheck
+ * message from a queue, added Credentials to JMSHealthChecker, added the
+ * support of SecurityExit to QueueMonitor, ChannelMonitor for wmq, fixed a bug
+ * of concurrent update on a map in SonicMQMonitor, added cleanups on the idle
+ * connections for queue metrics in SonicMQMonitor, fixed the issue of
+ * concurrent update on a map for Utils, SelectNode and JSONParser
+ *<br/>
  * V1.2.17 (2019/07/20): added the interface of HTTPServer back with new method
  * of setService(), had both JettyServer and SimpleHttpServer implemented this
  * interface, updated QFlow and MonitorAgent for the interface of HTTPServer,
@@ -17,7 +24,8 @@ package org.qbroker.flow;
  * moved most of static methods from MessageHandler to SimpleHttpServer, added
  * logging on the property map in 3 stages to ReceiverPool and PersisterPool,
  * added MaxSessionCount to UnixlogMonitor for reseting the actionCount based
- * on the sessions, added firstEntry to UnixlogMonitor also, updated the parent
+ * on the sessions, added firstEntry to UnixlogMonitor also, added query
+ * support for queue depth only in SonicMQMonitor, updated the parent
  * pom.xml for JUnit 4, added test cases for DataSet, Template, Evaluation,
  * SimpleHttpServer, JettyServer, MessageHandler and MessageServlet with
  * support on JUnit 4
@@ -307,7 +315,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V1.2.17 2019/07/20 15:03:46";
+    private static String ReleaseTAG = "QBroker V1.2.18 2019/10/06 10:23:45";
 
     public ReleaseTag() {
     }

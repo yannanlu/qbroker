@@ -422,21 +422,20 @@ public class SelectNode extends Node {
             o instanceof Map && ((Map) o).size() > 0) {
             Map<String, Object> map = Utils.cloneProperties((Map) o);
             ruleInfo[RULE_EXTRA] = map.size();
+            String[] keys = map.keySet().toArray(new String[map.size()]);
             try { // compile the pattern
                 if (pc == null) {
                     pc = new Perl5Compiler();
                     pm = new Perl5Matcher();
                 }
-                Iterator iter = map.keySet().iterator();
-                while (iter.hasNext()) {
-                    str = (String) iter.next();
-                    if (str == null || str.length() <= 0)
+                for (String ky : keys) {
+                    if (ky == null || ky.length() <= 0)
                         continue;
-                    o = map.remove(str);
+                    o = map.remove(ky);
                     if (o == null || !(o instanceof String) ||
                         ((String) o).length() <= 0)
                         continue;
-                    map.put(str, pc.compile("(" + (String) o + ")"));
+                    map.put(ky, pc.compile("(" + (String) o + ")"));
                 }
                 if (map.size() == ruleInfo[RULE_EXTRA])
                     rule.put("XPath", map);
@@ -484,21 +483,20 @@ public class SelectNode extends Node {
             o instanceof Map && ((Map) o).size() > 0) {
             Map<String, Object> map = Utils.cloneProperties((Map) o);
             ruleInfo[RULE_EXTRA] = map.size();
+            String[] keys = map.keySet().toArray(new String[map.size()]);
             try { // compile the expression 
                 if (xpath == null) {
                     builder = Utils.getDocBuilder();
                     xpath = XPathFactory.newInstance().newXPath();
                 }
-                Iterator iter = map.keySet().iterator();
-                while (iter.hasNext()) {
-                    str = (String) iter.next();
-                    if (str == null || str.length() <= 0)
+                for (String ky : keys) {
+                    if (ky == null || ky.length() <= 0)
                         continue;
-                    o = map.remove(str);
+                    o = map.remove(ky);
                     if (o == null || !(o instanceof String) ||
                         ((String) o).length() <= 0)
                         continue;
-                    map.put(str, xpath.compile((String) o));
+                    map.put(ky, xpath.compile((String) o));
                 }
                 if (map.size() == ruleInfo[RULE_EXTRA])
                     rule.put("XPath", map);

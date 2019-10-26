@@ -827,7 +827,7 @@ public class Utils {
             if (o == null || !(o instanceof String))
                 continue;
             key = (String) o;
-            ph.put(key, props.remove(key));
+            ph.put(key, props.remove(o));
         }
         return ph;
     }
