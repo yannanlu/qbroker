@@ -8,7 +8,11 @@ package org.qbroker.flow;
  * support of SecurityExit to QueueMonitor, ChannelMonitor for wmq, fixed a bug
  * of concurrent update on a map in SonicMQMonitor, added cleanups on the idle
  * connections for queue metrics in SonicMQMonitor, fixed the issue of
- * concurrent update on a map for Utils, SelectNode and JSONParser
+ * concurrent update on a map for Utils, SelectNode and JSONParser, added
+ * select feature on ConnectionFactoryName for JMSMonitor and JMSHealthChecker,
+ * added IsPhysical to JMSHealthChecker, added StatsLog for Q_BROWSE and
+ * Q_REMOVE to JMSMonitor, added logging on reconnect() to JMSHealthChecker,
+ * updated comments on WebTester
  *<br/>
  * V1.2.17 (2019/07/20): added the interface of HTTPServer back with new method
  * of setService(), had both JettyServer and SimpleHttpServer implemented this
@@ -315,7 +319,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V1.2.18 2019/10/06 10:23:45";
+    private static String ReleaseTAG = "QBroker V1.2.18 2019/10/06 12:54:08";
 
     public ReleaseTag() {
     }

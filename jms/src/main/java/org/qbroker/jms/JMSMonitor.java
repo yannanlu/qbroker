@@ -102,14 +102,16 @@ public class JMSMonitor extends Monitor {
                 if ((port = u.getPort()) <= 0)
                     port = 1414;
                 hostName = u.getHost();
-                if ((o = MonitorUtils.select(
-                     props.get("ConnectionFactoryName"))) != null)
+                if ((o = props.get("ConnectionFactoryName")) != null) {
+                     o = MonitorUtils.select(o);
                      connFactoryName =
-                         MonitorUtils.substitute((String)o, template);
+                         MonitorUtils.substitute((String) o, template);
+                }
                 else
                      connFactoryName = "SYSTEM.DEF.SVRCONN";
             }
             else if ((o = props.get("ConnectionFactoryName")) != null) {
+                o = MonitorUtils.select(o);
                 connFactoryName = MonitorUtils.substitute((String) o, template);
             }
             else if ("report".equals(u.getScheme())) {
@@ -255,7 +257,7 @@ public class JMSMonitor extends Monitor {
             }
         }
         else if (uri.startsWith("report://") && operation != Q_BROWSE &&
-            operation != Q_REMOVE) { //report
+            operation != Q_REMOVE) { // report
             if ((o = props.get("ReportName")) != null)
                 h.put("ReportName", o);
             else
@@ -413,6 +415,13 @@ public class JMSMonitor extends Monitor {
                 else if ((o = props.get("EncryptedCredentials")) != null)
                     h.put("EncryptedCredentials", MonitorUtils.select(o));
             }
+            if ((o = props.get("Username")) != null) {
+                h.put("Username", MonitorUtils.select(o));
+                if ((o = props.get("Password")) != null)
+                    h.put("Password", MonitorUtils.select(o));
+                else if ((o = props.get("EncryptedPassword")) != null)
+                    h.put("EncryptedPassword", MonitorUtils.select(o));
+            }
             h.put("ConnectionFactoryName", connFactoryName);
             h.put("QueueName", qName);
             if (operation == Q_REMOVE)
@@ -445,6 +454,7 @@ public class JMSMonitor extends Monitor {
         throws IOException {
         int curDepth = 0, totalMsgs = 0, inMsgs = 0, outMsgs = 0;
         int oppsCount = 0, ippsCount = 0;
+        long dt = 0;
         String msgString = "";
         report.clear();
         if (step > 0) {
@@ -464,6 +474,18 @@ public class JMSMonitor extends Monitor {
         }
 
         if (dependencyGroup != null) { // check dependency
+            if (operation == Q_REMOVE && jmsQ != null) try {
+                Message msg = null;
+                jmsQ.reconnect();
+                for (int i=0; i<10; i++) { // clean up msgs first
+                    msg = (Message) jmsQ.getQueueReceiver().receive(500);
+                    if (msg == null)
+                        break;
+                }
+                jmsQ.close();
+            }
+            catch (Exception e) {
+            }
             skip = MonitorUtils.checkDependencies(currentTime, dependencyGroup,
                 name);
             if (skip != NOSKIP) {
@@ -512,7 +534,9 @@ public class JMSMonitor extends Monitor {
             }
             jmsQ.close();
             if (msg != null) try {
-                msgString = msg.getJMSTimestamp() + " " + msg.getJMSMessageID();
+                dt = msg.getJMSTimestamp();
+                msgString = dt + " " + msg.getJMSMessageID();
+                dt -= currentTime;
             }
             catch (JMSException e) {
                 throw(new IOException("failed to get info from the msg for " +
@@ -547,7 +571,9 @@ public class JMSMonitor extends Monitor {
             }
             jmsQ.close();
             if (msg != null) try {
-                msgString = msg.getJMSTimestamp() + " " + msg.getJMSMessageID();
+                dt = msg.getJMSTimestamp();
+                msgString = dt + " " + msg.getJMSMessageID();
+                dt -= currentTime;
             }
             catch (JMSException e) {
                 throw(new IOException("failed to get info from the msg for " +
@@ -686,19 +712,26 @@ public class JMSMonitor extends Monitor {
             break;
         }
 
-        if (statsLogger != null && queue != null) {
+        if (statsLogger != null) {
             StringBuffer strBuf = new StringBuffer();
-            strBuf.append(Event.dateFormat(new Date(currentTime)) + " ");
-            if (qmgrName != null && qmgrName.length() > 0)
-                strBuf.append(qmgrName + ":");
-            strBuf.append(qName + " ");
-            strBuf.append(inMsgs + " ");
-            strBuf.append(outMsgs + " ");
-            strBuf.append(curDepth + " ");
-            strBuf.append(ippsCount + " ");
-            strBuf.append(oppsCount + " 0");
-            report.put("Stats", strBuf.toString());
-            try {
+            if (queue != null) {
+                strBuf.append(Event.dateFormat(new Date(currentTime)) + " ");
+                if (qmgrName != null && qmgrName.length() > 0)
+                    strBuf.append(qmgrName + ":");
+                strBuf.append(qName + " ");
+                strBuf.append(inMsgs + " ");
+                strBuf.append(outMsgs + " ");
+                strBuf.append(curDepth + " ");
+                strBuf.append(ippsCount + " ");
+                strBuf.append(oppsCount + " 0");
+                report.put("Stats", strBuf.toString());
+            }
+            else if (jmsQ != null && msgString.length() > 0) {
+                strBuf.append(Event.dateFormat(new Date(currentTime)) + " ");
+                strBuf.append(qName + " 0 0 0 0 0 " + dt);
+                report.put("Stats", strBuf.toString());
+            }
+            if (strBuf.length() > 0) try {
                 statsLogger.log(strBuf.toString());
             }
             catch (Exception e) {

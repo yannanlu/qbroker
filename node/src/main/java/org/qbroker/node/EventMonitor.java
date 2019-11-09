@@ -72,7 +72,7 @@ import org.qbroker.event.Event;
  *<br/><br/>
  * In case of a ruleset for timeout escalations, KeyTemplate is required to be
  * defined so that EventMonitor is able cache the properties of the incoming
- * event with the unique key for an new state or update the timestamp of
+ * event with the unique key for a new state or update the timestamp of
  * an existing state with the incoming event. The ruleset expects certain
  * events kept coming to keep it up to date. If the expected event has not
  * shown up within a given interval, an escalation event will be generated as
@@ -692,9 +692,12 @@ public class EventMonitor extends Node {
                 if (p == (int) ruleInfo[RULE_GID]) { // reset the state
                     if (cache.containsKey(key)) {
                         int[] meta = cache.getMetaData(key);
-                        if (meta != null && meta.length > 0)
+                        if (meta != null && meta.length > 0) {
                             meta[0] = 0;
-                        i = (meta != null && meta.length > 0) ? meta[0] : -1;
+                            i = 0;
+                        }
+                        else
+                            i = -1;
                         if (i == 0)
                             ri[RULE_PEND] --;
                         if (!cache.isExpired(key, currentTime))

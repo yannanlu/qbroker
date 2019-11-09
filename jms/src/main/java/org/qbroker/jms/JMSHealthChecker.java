@@ -93,16 +93,17 @@ public class JMSHealthChecker extends Monitor {
                 if ((port = u.getPort()) <= 0)
                     port = 1414;
                 hostName = u.getHost();
-                if ((o = MonitorUtils.select(
-                    props.get("ConnectionFactoryName"))) != null)
+                if ((o = props.get("ConnectionFactoryName")) != null) {
+                    o = MonitorUtils.select(o);
                     connFactoryName =
                         MonitorUtils.substitute((String) o, template);
+                }
                 else
                     connFactoryName = "SYSTEM.DEF.SVRCONN";
             }
             else {
-                connFactoryName = MonitorUtils.substitute(
-                    (String)props.get("ConnectionFactoryName"),template);
+                o = MonitorUtils.select(props.get("ConnectionFactoryName"));
+                connFactoryName = MonitorUtils.substitute((String) o, template);
             }
         }
         else if ((o = MonitorUtils.select(props.get("QueueManager")))!=null){
@@ -129,7 +130,7 @@ public class JMSHealthChecker extends Monitor {
         if (operation != DST_PUT && operation != DST_PUB)
             throw(new IllegalArgumentException("Destination is not defined"));
 
-        if (uri.startsWith("wmq://")) {
+        if (uri.startsWith("wmq://")) { // for wmq
             if (hostName != null) {
                 h.put("HostName", hostName);
                 h.put("Port", String.valueOf(port));
@@ -188,6 +189,8 @@ public class JMSHealthChecker extends Monitor {
             else {
                 h.put("QueueName", qName);
                 h.put("Operation", "put");
+                if ((o = props.get("IsPhysical")) != null)
+                    h.put("IsPhysical", o);
                 try {
                     Class<?> cls = Class.forName("org.qbroker.wmq.QConnector");
                     java.lang.reflect.Constructor con =
@@ -215,10 +218,12 @@ public class JMSHealthChecker extends Monitor {
                 }
             }
         }
-        else {
+        else { // for generic JMS
             h.put("URI", uri);
             h.put("ContextFactory",
                 MonitorUtils.select(props.get("ContextFactory")));
+            if ((o = props.get("IsPhysical")) != null)
+                h.put("IsPhysical", o);
             if ((o = props.get("Username")) != null) {
                 h.put("Username", MonitorUtils.select(o));
                 if ((o = props.get("Password")) != null)
@@ -519,8 +524,13 @@ public class JMSHealthChecker extends Monitor {
             }
         }
         else {
-            try {
-                jmsQCon.reconnect();
+            String str = jmsQCon.reconnect();
+            if (str != null) {
+                dstStatus = DST_FAILED;
+                new Event(Event.ERR, "failed to reconnect to " + uri +
+                    " on " + qName + ": " + str).send();
+            }
+            else try {
                 QueueSender qSender = jmsQCon.getQueueSender();
                 qSender.send(outMessage);
                 jmsQCon.close();

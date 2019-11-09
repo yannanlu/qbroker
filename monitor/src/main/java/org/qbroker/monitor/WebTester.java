@@ -51,14 +51,13 @@ import org.qbroker.monitor.Report;
  *<br/><br/>
  * One of the client error is 401 error, Not authorized.  It will happen when
  * a password protected page is requested.  In order to get the page, the
- * 64Based encoded authentication string should be specified in the argument
+ * base64 encoded authentication string should be specified in the argument
  * hash.  For security reason, we do not use the original string.  To get the
  * auth string, try to use the following tool:
  *<br/><br/>
- * wget -d --http-user=UID --http-passwd=PASSWORD password_protected_page
+ * echo -n 'USERNAME:PASSWORD' | base64
  *<br/><br/>
- * In the output, search for the line with "Authorization:", and copy down
- * the encrypted auth string, i.e., the last string of the line.
+ * The output is the base64 encoded username and password, the auth string.
  *<br/><br/>
  * The other method, generateReport(long), returns a report in a Map
  * that contains the response as a String and status code defined above
