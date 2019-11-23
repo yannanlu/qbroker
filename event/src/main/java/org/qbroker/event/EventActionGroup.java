@@ -135,7 +135,8 @@ public class EventActionGroup implements EventAction {
                     ": failed to instantiate " + className));
             }
             if (action[i] instanceof EventScriptLauncher ||
-                action[i] instanceof EventSQLExecutor)
+                action[i] instanceof EventSQLExecutor ||
+                action[i] instanceof EventPoster)
                 m ++;
         }
 
@@ -146,6 +147,8 @@ public class EventActionGroup implements EventAction {
                 scriptIndex[m++] = i;
             else if (action[i] instanceof EventSQLExecutor)
                 scriptIndex[m++] = i;
+            else if (action[i] instanceof EventPoster)
+                scriptIndex[m++] = i;
         }
     }
 
@@ -155,7 +158,8 @@ public class EventActionGroup implements EventAction {
             for (i=0; i<action.length; i++) {
                 if (action[i] != null &&
                     !(action[i] instanceof EventScriptLauncher) &&
-                    !(action[i] instanceof EventSQLExecutor))
+                    !(action[i] instanceof EventSQLExecutor) &&
+                    !(action[i] instanceof EventPoster))
                     action[i].invokeAction(currentTime, event);
             }
         }
@@ -181,6 +185,9 @@ public class EventActionGroup implements EventAction {
                 return true;
             else if (action[j] instanceof EventSQLExecutor &&
                 ((EventSQLExecutor) action[j]).isActive(currentTime, event))
+                return true;
+            else if (action[j] instanceof EventPoster &&
+                ((EventPoster) action[j]).isActive(currentTime, event))
                 return true;
         }
         return false;

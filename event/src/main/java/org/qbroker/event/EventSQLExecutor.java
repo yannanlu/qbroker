@@ -310,7 +310,7 @@ public class EventSQLExecutor implements EventAction {
     }
 
     /**
-     * It applies the rules to the event and returns true if the script
+     * It applies the rules to the event and returns true if the action
      * is active and will be invoked upon the event, or false otherwise.
      */
     public boolean isActive(long currentTime, Event event) {

@@ -106,6 +106,19 @@ public class EventPoster implements EventAction {
             conn = new org.qbroker.net.HTTPConnector(ph);
         isPost = conn.isPost();
 
+        try {
+            Perl5Compiler pc = new Perl5Compiler();
+            pm = new Perl5Matcher();
+
+            if ((o = props.get("Priority")) != null)
+                pattern = pc.compile((String) o);
+            else
+                pattern = null;
+        }
+        catch (Exception e) {
+            throw(new IllegalArgumentException(e.toString()));
+        }
+
         if ((o = ph.get("QueryTemplate")) != null && o instanceof String) {
             value = EventUtils.substitute((String) o, template);
             map = new HashMap<String, Object>();
@@ -360,6 +373,39 @@ public class EventPoster implements EventAction {
         if (debug > 0 && str != null)
             new Event(Event.DEBUG, name + ": got response from " + uri +
                 ": " + str).send();
+    }
+
+    /**
+     * It applies the rules to the event and returns true if the action
+     * is active and will be invoked upon the event, or false otherwise.
+     */
+    public boolean isActive(long currentTime, Event event) {
+        HashMap attr;
+        Map map;
+        String eventType, priorityName;
+
+        if (pattern == null)
+            return true;
+
+        if (event == null)
+            return false;
+
+        priorityName = Event.priorityNames[event.getPriority()];
+        if (pattern != null && !pm.contains(priorityName, pattern))
+            return false;
+
+        attr = event.attribute;
+        eventType = (String) attr.get("type");
+        if (eventType == null || eventType.length() == 0)
+            eventType = "Default";
+
+        map = poster.get(eventType);
+        if (map == null)
+            map = poster.get("Default");
+        if (map == null || map.size() <= 0)
+            return false;
+
+        return true;
     }
 
     public String getName() {

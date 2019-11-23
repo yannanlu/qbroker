@@ -15,6 +15,7 @@ import org.apache.oro.text.regex.MalformedPatternException;
 import org.qbroker.common.TimeoutException;
 import org.qbroker.common.Template;
 import org.qbroker.common.TextSubstitution;
+import org.qbroker.common.Utils;
 import org.qbroker.event.Event;
 import org.qbroker.event.EventUtils;
 import org.qbroker.event.EventAction;
@@ -22,7 +23,7 @@ import org.qbroker.event.EventAction;
 /**
  * EventScriptLauncher runs a script outside JVM in response to an event.
  * The script may contains the template placeholders referecing the
- * attributes of the event.
+ * attributes of the event, as well as a secret.
  *<br/><br/>
  * NB. The action part is MT-Safe.
  *<br/>
@@ -38,17 +39,18 @@ public class EventScriptLauncher implements EventAction {
     private String category;
     private Map<String, Map> launcher;
     private String[] copiedProperty;
+    private Template template;
     private long serialNumber;
     private int timeout;
     private Pattern pattern = null;
     private Perl5Matcher pm = null;
-    private String program, hostname, pid;
+    private String program, hostname, pid, secret = null;
 
     public EventScriptLauncher(Map props) {
         Object o;
         Map map;
         String script, key, value;
-        Template template, temp;
+        Template temp;
         TextSubstitution[] msgSub = null;
         int n;
 
@@ -62,12 +64,22 @@ public class EventScriptLauncher implements EventAction {
         else
             type = "EventScriptLauncher";
 
-        template = new Template("__hostname__, __HOSTNAME__", "__[^_]+__");
+        template = new Template("__hostname__, __HOSTNAME__, __secret__",
+            "__[^_]+__");
 
         if ((o = props.get("Description")) != null)
             description = EventUtils.substitute((String) o, template);
         else
             description = "launch a script in response to an event";
+
+        if ((o = props.get("Secret")) != null)
+            secret = (String) o;
+        else if ((o = props.get("EncryptedSecret")) != null) try {
+            secret = Utils.decrypt((String) o);
+        }
+        catch (Exception e) {
+            throw(new IllegalArgumentException(e.toString()));
+        }
 
         launcher = new HashMap<String, Map>();
 
@@ -171,6 +183,7 @@ public class EventScriptLauncher implements EventAction {
 
     public synchronized void invokeAction(long currentTime, Event event) {
         Object o;
+        Event ev;
         HashMap attr;
         Map map;
         String key, value, priorityName, eventType, script = null;
@@ -199,10 +212,10 @@ public class EventScriptLauncher implements EventAction {
         if ((o = map.get("Template")) != null && o instanceof Template) {
             String[] allFields;
             Map change = null;
-            Template template;
+            Template temp;
             TextSubstitution[] msgSub;
 
-            template = (Template) o;
+            temp = (Template) o;
             msgSub = (TextSubstitution[]) map.get("MsgSub");
             if (msgSub != null) {
                 change = EventUtils.getChange(event, msgSub);
@@ -211,7 +224,7 @@ public class EventScriptLauncher implements EventAction {
             }
 
             allFields = (String[]) map.get("Fields");
-            script = template.copyText();
+            script = temp.copyText();
             n = allFields.length;
             for (i=0; i<n; i++) {
                 key = allFields[i];
@@ -224,14 +237,14 @@ public class EventScriptLauncher implements EventAction {
                         value = (String) attr.get(key);
                     if (value == null)
                         value = "";
-                    script = template.substitute(key, value, script);
+                    script = temp.substitute(key, value, script);
                 }
                 else if ("serialNumber".equals(key)) {
-                    script = template.substitute(key,
+                    script = temp.substitute(key,
                         String.valueOf(serialNumber), script);
                 }
                 else {
-                    script = template.substitute(key, "", script);
+                    script = temp.substitute(key, "", script);
                 }
             }
             if (change != null)
@@ -242,7 +255,13 @@ public class EventScriptLauncher implements EventAction {
         else
             return;
 
-        Event ev = EventUtils.runScript(script, timeout);
+        if (secret != null && script.indexOf("__secret__") > 0) {
+            // with secret defined in script
+            key = template.substitute("secret", secret, script);
+            ev = EventUtils.runScript(key, timeout);
+        }
+        else
+            ev = EventUtils.runScript(script, timeout);
 
         strBuf = new StringBuffer();
         strBuf.append((String) attr.get("date"));

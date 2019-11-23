@@ -3,6 +3,9 @@ package org.qbroker.flow;
 /* ReleaseTag.java - release tag for all the packages of qbroker */
 
 /**
+ * V1.2.19 (2019/11/23): added support of a single secret to ScriptLauncher and
+ * EventScriptLauncher, added priority pattern and isActive() to EventPoster
+ *<br/>
  * V1.2.18 (2019/10/06): added Q_REMOVE to JMSMonitor to receive a healthcheck
  * message from a queue, added Credentials to JMSHealthChecker, added the
  * support of SecurityExit to QueueMonitor, ChannelMonitor for wmq, fixed a bug
@@ -319,7 +322,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V1.2.18 2019/10/06 12:54:08";
+    private static String ReleaseTAG = "QBroker V1.2.19 2019/11/23 08:47:12";
 
     public ReleaseTag() {
     }

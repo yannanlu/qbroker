@@ -18,19 +18,21 @@ import org.qbroker.common.TimeWindows;
 import org.qbroker.common.TimeoutException;
 import org.qbroker.common.RunCommand;
 import org.qbroker.common.Template;
+import org.qbroker.common.Utils;
 import org.qbroker.event.Event;
 import org.qbroker.monitor.MonitorUtils;
 import org.qbroker.monitor.Monitor;
 
 /**
- * ScriptLauncher launches a script outside JVM and parses its stdout
- * for patterns. It supports time dependent command with __MM____dd__.
+ * ScriptLauncher launches a script outside JVM and parses its stdout for
+ * patterns. It supports time dependent command with __MM____dd__ and a single
+ * secret in the form of __secret__.
  *<br/>
  * @author yannanlu@yahoo.com
  */
 
 public class ScriptLauncher extends Monitor {
-    private String script;
+    private String script, secret = null;
     private int previousError;
     private int scriptTimeout;
     private Pattern pattern;
@@ -49,6 +51,15 @@ public class ScriptLauncher extends Monitor {
         if ((o = MonitorUtils.select(props.get("Script"))) == null)
             throw(new IllegalArgumentException("Script is not defined"));
         script = MonitorUtils.substitute((String) o, template);
+
+        if ((o = MonitorUtils.select(props.get("Secret"))) != null)
+            secret = (String) o;
+        else if((o=MonitorUtils.select(props.get("EncryptedSecret")))!=null)try{
+            secret = Utils.decrypt((String) o);
+        }
+        catch (Exception e) {
+            throw(new IllegalArgumentException(e.toString()));
+        }
 
         if ((o = props.get("ScriptTimeout")) == null ||
             (scriptTimeout = 1000*Integer.parseInt((String) o)) < 0)
@@ -121,7 +132,13 @@ public class ScriptLauncher extends Monitor {
 
         String output;
         try {
-            output = RunCommand.exec(script, scriptTimeout);
+            if (secret != null && script.indexOf("__secret__") > 0 &&
+                timeTemplate != null) { // with secret defined in script
+                String s = timeTemplate.substitute("secret", secret, script);
+                output = RunCommand.exec(s, scriptTimeout);
+            }
+            else
+                output = RunCommand.exec(script, scriptTimeout);
         }
         catch (Exception e) {
             throw(new TimeoutException("script failed"+Event.traceStack(e)));
