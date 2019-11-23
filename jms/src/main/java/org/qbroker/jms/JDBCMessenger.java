@@ -267,7 +267,7 @@ public class JDBCMessenger extends DBConnector {
         }
 
         cache = new QuickCache(uri, QuickCache.META_DEFAULT, 0, 0);
-        assetList = new IndexedXQueue(uri, maxStatement, true);
+        assetList = new IndexedXQueue(uri, maxStatement);
         paramList = new QList(uri, maxStatement);
 
         // date format for parameter settings

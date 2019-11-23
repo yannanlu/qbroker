@@ -200,7 +200,7 @@ public class SerialPortNode implements ClusterNode, Runnable {
                 maxRetry * sessionTimeout + ttl, 1024);
 
         // enable overwrite for set objects to null
-        root = new IndexedXQueue(32, true);
+        root = new IndexedXQueue(name, 32);
 
         nodeList = new AssetList(groupURI, maxGroupSize);
         myURI = Event.getHostName() + ":" + device; 

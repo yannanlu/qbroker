@@ -4,7 +4,10 @@ package org.qbroker.flow;
 
 /**
  * V1.2.19 (2019/11/23): added support of a single secret to ScriptLauncher and
- * EventScriptLauncher, added priority pattern and isActive() to EventPoster
+ * EventScriptLauncher, added priority pattern and isActive() to EventPoster,
+ * removed canOverwrite() from XQueue and IndexedXQueue, removed overwriteable
+ * from the constructor of IndexedXQueue, updated other classes due to the
+ * change on IndexedXQueue
  *<br/>
  * V1.2.18 (2019/10/06): added Q_REMOVE to JMSMonitor to receive a healthcheck
  * message from a queue, added Credentials to JMSHealthChecker, added the

@@ -56,15 +56,15 @@ import org.qbroker.event.EventActionGroup;
 import org.qbroker.event.Event;
 
 /**
- * QFlow is a light-weight JMS message flow container for various purposes.
+ * QFlow is a light-weight container of JMS message flows for generic purposes.
  * A message flow consists of a number of message nodes.  There are
  * three types of message nodes, MessageRecever, MessageNode and
  * MessagePersister.  The nodes of MessageReceiver and MessagePersister
  * are for JMSMessage I/O.  The nodes of MessageNode are for JMSMessage
  * processing.  With these three basic types of nodes, you can build various
  * message flows, just like you can build objects with Lego components.
- * Besides, QFlow also provides certain services to all the flows, like
- * clutser, load balance and monitor supports.
+ * Besides, QFlow also provides certain services to all the flows, like the
+ * supports for clutsering, load balancing and monitoring.
  *<br/><br/>
  * QFlow has a special internal queue called escalation.  It is the internal
  * escalation channel shared by all components.  Its name, escalation, is one

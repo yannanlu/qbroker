@@ -29,7 +29,7 @@ package org.qbroker.common;
  * Once the object is put into a cell, the association with the cell will
  * not change until the object is removed from the cell.  Therefore, the
  * unique cell IDs can be used to track or operate the objects in the queue.
- * The method reserve() is to have the empty cell ready to be occupied.  Th
+ * The method reserve() is to have the empty cell ready to be occupied.  The
  * method cancel() cancels the reservation on the reserved cell and makes
  * it empty again.  The method add() is to have the reserved cell occupied.
  * Before to add, the cell has to be reserved.  The method getCellStatus() is
@@ -90,15 +90,6 @@ public interface XQueue {
     public int getGlobalMask();
     /** sets the global mask of the queue */
     public void setGlobalMask(int mask);
-
-    /**
-     * returns true if the object can be overwritten in the operations of
-     * remove and putback, or false if it is not allowed to be overwritten.
-     *<br/><br/>
-     * This property can only be set at the instantiation.  The owner of the
-     * queue can protect or reuse the objects by have it disabled.
-     */
-    public boolean canOverwrite();
 
     /** returns true if any new objects in the queue or false otherwise */
     public boolean available();

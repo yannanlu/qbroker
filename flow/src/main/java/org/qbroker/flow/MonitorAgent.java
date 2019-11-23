@@ -68,7 +68,7 @@ import org.qbroker.event.Event;
  * periodically check if something have happened.  Whereas the MessageFlow
  * is to process messages for on-demand services.
  *<br/><br/>
- * An MonitorAgent periodically runs the registered monitors.
+ * MonitorAgent periodically runs the registered monitors.
  * Registered monitors are grouped according to their dependencies.
  * The monitors in a same group are guaranteed to be checked in the
  * same order as they are in the group.  However, the order of different

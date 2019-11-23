@@ -3,7 +3,7 @@ package org.qbroker.common;
 /* IndexedXQueue.java - an XQueue with indexed collectible cells */
 
 /**
- * IndexedXQueue implements XQueue as a FIFO storage with circular array
+ * IndexedXQueue implements XQueue as a FIFO storage with a circular array
  * for tracking and transaction support.
  *<br/><br/>
  * All cells in an XQueue line up in a circle implemented by an array.  The
@@ -15,28 +15,6 @@ package org.qbroker.common;
  * reserved cells and empty cells.  Cusp separates collected empty cells and
  * the rest empty cells.
  *<br/><br/>
- * Any object can be added to a cell of the XQueue.  Once the cell is occupied,
- * its overwriteability is determined by the instantiation parameter,
- * overwriteable.  By default, overwriteable is set to true so that the object
- * in a cell is replacible during the operation of remove or putback.  In this
- * case, the application will have control on if to keep or reset the object.
- * It is recommended to reset the object to null at the operation of remove and
- * no change at the operation of putback.  This way, the object will be
- * de-referenced from the XQueue after it is removed.  If overwriteable is set
- * to false at the instantiation, the object will be reset to null at the
- * operation of remove and no change at the operation of putback no matter
- * what application does.  This way, application has no way to replace the
- * object in a cell unless it adds a new object to the cell.
- *<br/><br/>
- * Sometimes, applications do need to use overwriteability to feedback new or
- * same objects upstream.  But this has a side effect. If the application has
- * not reset the object to null, the object will not be gabbage collectible.
- * It is OK if the capacity of the XQueue is small.  But if it is large, it
- * will cause object leek.  If this is the choice, please make sure to
- * de-reference the object once it is collected by the application.  To
- * de-reference the object, just add a null to the cell and remove it
- * immediately.
- *<br/><br/>
  * capacity -- maximum number of cells in the queue<br/>
  * size -- number of the new and taken objects in the queue<br/>
  * depth -- number of new objects in the queue<br/>
@@ -47,13 +25,12 @@ package org.qbroker.common;
  * status -- status of a cell or the object<br/>
  * id -- the id of a cell or the object<br/>
  *<br/><br/>
- * It is MT-Safe and has transaction control on retreiving.
+ * It is MT-Safe with transaction control on each object or cell.
  *<br/>
  * @author yannanlu@yahoo.com
  */
 
 public class IndexedXQueue implements XQueue {
-    private final boolean overwriteable;
     private final int capacity;
     private String name = "xq";
     private XQCallbackWrapper[] callbacks = null; // for callback wrappers
@@ -81,7 +58,7 @@ public class IndexedXQueue implements XQueue {
     /**
      * initialzes a queue with capacity of cells
      */
-    public IndexedXQueue(int capacity, boolean overwriteable) {
+    public IndexedXQueue(String name, int capacity) {
         if (capacity > 0)
             this.capacity = capacity;
         else
@@ -113,20 +90,7 @@ public class IndexedXQueue implements XQueue {
         mtime = System.currentTimeMillis();
         snumber = 0;
         offset = 0;
-        this.overwriteable = overwriteable;
-    }
-
-    public IndexedXQueue(int capacity) {
-        this(capacity, true);
-    }
-
-    public IndexedXQueue(String name, int capacity, boolean ow) {
-        this(capacity, ow);
         this.name = name;
-    }
-
-    public IndexedXQueue(String name, int capacity) {
-        this(name, capacity, true);
     }
 
     public String getName() {
@@ -179,10 +143,6 @@ public class IndexedXQueue implements XQueue {
 
     public void setGlobalMask(int mask) {
         this.mask = mask;
-    }
-
-    public boolean canOverwrite() {
-        return overwriteable;
     }
 
     /**

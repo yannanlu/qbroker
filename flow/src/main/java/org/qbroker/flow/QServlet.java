@@ -85,7 +85,7 @@ import org.qbroker.event.Event;
  * the original message, the consumer will have to parse the message body with
  * the EventParser.
  *<br/><br/>
- * For ad hoc form requests, MessageServlet treats them in two different ways.
+ * For ad hoc form requests, QServlet treats them in two different ways.
  * If the attribute of view is defined in the request and it is not empty, the
  * request will be converted into a TextEvent. Otherwise, if the attribute of
  * name is defined and it is not empty, the request will be converted to an

@@ -328,15 +328,15 @@ public class PacketNode implements ClusterNode, Runnable {
         if (rcvrType != RCVR_NONE) { // define root XQ with overwrite enabled
             hasExtra = true;
             if (16 * maxGroupSize <= 64)
-                root = new IndexedXQueue(64, false);
+                root = new IndexedXQueue(name, 64);
             else
-                root = new IndexedXQueue(16 * maxGroupSize, false);
+                root = new IndexedXQueue(name, 16 * maxGroupSize);
         }
         else { // enable overwrite for set objects to null
             if (8 * maxGroupSize <= 32)
-                root = new IndexedXQueue(32, false);
+                root = new IndexedXQueue(name, 32);
             else
-                root = new IndexedXQueue(8 * maxGroupSize, false);
+                root = new IndexedXQueue(name, 8 * maxGroupSize);
         }
 
         masterURI = null;

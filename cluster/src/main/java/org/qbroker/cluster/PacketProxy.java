@@ -134,7 +134,7 @@ public class PacketProxy implements Runnable {
 
         nodeList = new AssetList(myURI, maxGroupSize);
 
-        root = new IndexedXQueue(64, false);
+        root = new IndexedXQueue(name, 64);
 
         sessionTimeout = 3 * heartbeat;
     }
