@@ -7,7 +7,8 @@ package org.qbroker.flow;
  * EventScriptLauncher, added priority pattern and isActive() to EventPoster,
  * removed canOverwrite() from XQueue and IndexedXQueue, removed overwriteable
  * from the constructor of IndexedXQueue, updated other classes due to the
- * change on IndexedXQueue
+ * change on IndexedXQueue, added EPatternGroup to UnixlogMonitor to select
+ * fatal log entries for local escalations
  *<br/>
  * V1.2.18 (2019/10/06): added Q_REMOVE to JMSMonitor to receive a healthcheck
  * message from a queue, added Credentials to JMSHealthChecker, added the
@@ -325,7 +326,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V1.2.19 2019/11/23 08:47:12";
+    private static String ReleaseTAG = "QBroker V1.2.19 2019/11/23 09:21:36";
 
     public ReleaseTag() {
     }

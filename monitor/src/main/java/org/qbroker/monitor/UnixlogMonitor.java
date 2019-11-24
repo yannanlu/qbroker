@@ -48,6 +48,15 @@ import org.qbroker.event.Event;
  * stays the same for more than maxRetry in a row, it will be upgraded to the
  * next level, CRIT.
  *<br/><br/>
+ * Sometimes, certain log entries are fatal to the application and require
+ * special attentions. For example, OutOfMemoryError requires a restart since
+ * the working thread is dead. UnixlogMonitor supports escalation patterns to
+ * single out the fatal log entries from the matched log buffer. It allows the
+ * end user to set up certain actions in ActionGroup to react on it. In case
+ * there is a catch, the event priority will be escalated to ALERT temporarily
+ * so that it can trigger the actions on ALERT only. In this case, the value for
+ * the attribute of firstEntry will be the first fatal log entry.
+ *<br/><br/>
  * UnixlogMonitor supports ExpirationTime.  If it is defined and is larger
  * than zero in second, UnixlogMonitor will ignore any new log entry that
  * has a timestamp older than the difference of currentTime - expirationTime.
@@ -65,6 +74,7 @@ public class UnixlogMonitor extends Monitor {
     private NewlogFetcher newlog;
     private boolean advanceLog, verifyLastlog, isLastlog, oldLogFile;
     private Pattern pattern;
+    private Pattern[][] ePatternGroup;
     public final static int MAXNUMBERLOGS = 40960;
     public final static int MAXSCANNEDLOGS = 40960;
 
@@ -112,6 +122,7 @@ public class UnixlogMonitor extends Monitor {
             Perl5Compiler pc = new Perl5Compiler();
             aPatternGroup = MonitorUtils.getPatterns("PatternGroup",props,pc);
             xPatternGroup = MonitorUtils.getPatterns("XPatternGroup",props,pc);
+            ePatternGroup = MonitorUtils.getPatterns("EPatternGroup",props,pc);
         }
         catch (Exception e) {
          throw(new IllegalArgumentException("Pattern failed" + e.getMessage()));
@@ -606,25 +617,62 @@ public class UnixlogMonitor extends Monitor {
         else
             actionStatus = "not configured";
 
+        if (numberLogs > 0 && ePatternGroup.length > 0) { // check escalations
+            for (Object entry : logBuffer) {
+                if (MonitorUtils.filter((String) entry, ePatternGroup,pm,true)){
+                    event.setAttribute("firstEntry", (String) entry);
+                    if ("executed".equals(actionStatus))
+                        actionStatus = "escalated";
+                    else if ("skipped".equals(actionStatus))
+                        actionStatus = "matched";
+                    else
+                        actionStatus = "selected";
+                    break;
+                }
+            }
+            if ("escalated".equals(actionStatus)) {
+                event.setPriority(Event.ALERT);
+                if (!actionGroup.isActive(currentTime, event))
+                    actionStatus = "executed";
+                event.setPriority(level);
+            }
+            else if ("matched".equals(actionStatus)) {
+                event.setPriority(Event.ALERT);
+                if (actionGroup.isActive(currentTime, event))
+                    actionStatus = "escalated";
+                event.setPriority(level);
+            }
+        }
+
         event.setAttribute("actionScript", actionStatus);
         event.send();
 
         logBuffer.clear();
 
-        if ("skipped".equals(actionStatus)) {
+        if ("skipped".equals(actionStatus) || "matched".equals(actionStatus)) {
             actionGroup.disableActionScript();
             actionGroup.invokeAction(currentTime, event);
         }
-        else if ("executed".equals(actionStatus)) {
+        else if ("executed".equals(actionStatus)) { // execution
             actionGroup.enableActionScript();
             actionGroup.invokeAction(currentTime, event);
 
-            if (advanceLog) {
-                try {
-                    generateReport(currentTime);
-                }
-                catch (IOException ex) {
-                }
+            if (advanceLog) try {
+                generateReport(currentTime);
+            }
+            catch (IOException ex) {
+            }
+        }
+        else if ("secalated".equals(actionStatus)) { // escalation
+            actionGroup.enableActionScript();
+            event.setPriority(Event.ALERT);
+            actionGroup.invokeAction(currentTime, event);
+            event.setPriority(level);
+
+            if (advanceLog) try {
+                generateReport(currentTime);
+            }
+            catch (IOException ex) {
             }
         }
         else if (actionGroup != null) {
