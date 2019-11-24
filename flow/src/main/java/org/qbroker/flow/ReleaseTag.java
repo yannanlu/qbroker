@@ -9,7 +9,8 @@ package org.qbroker.flow;
  * from the constructor of IndexedXQueue, updated other classes due to the
  * change on IndexedXQueue, added EPatternGroup to UnixlogMonitor to select
  * fatal log entries for local escalations, moved AWSSignature from common to
- * aws, fixed the html errors on comments from javadoc
+ * aws, fixed the html errors on comments from javadoc, bumped up jetty-server
+ * from 9.4.14.v20181114 to 9.4.17.v20190418 in pom.xml for net
  *<br>
  * V1.2.18 (2019/10/06): added Q_REMOVE to JMSMonitor to receive a healthcheck
  * message from a queue, added Credentials to JMSHealthChecker, added the
@@ -327,7 +328,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V1.2.19 2019/11/23 09:45:19";
+    private static String ReleaseTAG = "QBroker V1.2.19 2019/11/23 10:25:47";
 
     public ReleaseTag() {
     }
