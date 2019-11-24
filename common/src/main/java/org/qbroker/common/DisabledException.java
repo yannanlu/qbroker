@@ -2,7 +2,7 @@ package org.qbroker.common;
 
 /**
  * DisabledException is a generic exception for a disabled object.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

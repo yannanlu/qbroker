@@ -2,7 +2,7 @@ package org.qbroker.monitor;
 
 /**
  * MonitorReport is an Interface to get a report on a monitored entity
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

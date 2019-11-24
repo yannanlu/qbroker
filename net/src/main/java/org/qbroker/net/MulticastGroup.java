@@ -22,9 +22,9 @@ import org.qbroker.common.Utils;
  * MulticastGroup connects to a multicast socket for publishing or receiving
  * Datagram packets.  It supports binding to a given network interface under
  * Java 1.4.
- *<br/><br/>
+ *<br><br>
  * This is NOT MT-Safe.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

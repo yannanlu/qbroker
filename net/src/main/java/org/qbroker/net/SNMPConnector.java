@@ -42,9 +42,9 @@ import org.qbroker.common.TraceStackThread;
  * SNMPConnector connects to an SNMP agent or manager and provides the
  * following methods of for SNMP operations: snmpGet(), snmpSet(), sendTrap(),
  * snmpNotify() and receive().
- *<br/><br/>
+ *<br><br>
  * This is NOT MT-Safe.  It requires Java 1.4 or above due to SNMP4J.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

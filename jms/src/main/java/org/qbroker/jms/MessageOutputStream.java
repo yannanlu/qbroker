@@ -8,7 +8,7 @@ import javax.jms.BytesMessage;
 
 /**
  * MessageOutputStream is an OutputStream on a given JMS BytesMessage.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

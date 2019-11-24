@@ -15,13 +15,13 @@ import org.qbroker.persister.Persister;
 import org.qbroker.event.Event;
 
 /**
- * FilePersister listens to an XQueue and receives JMS Messages
- * from it.  Either it stores the JMS Messages on a remote server as files,
- * or it downloads files from a remote server according to the content of
- * the messages and puts back the messages with the downloaded content in
- * their body.  FilePersister supports flow control and allows object control
- * from its owner.  It is fault tolerant with retry and idle options.
- *<br/>
+ * AWSRequester listens to an XQueue and receives JMS Messages from the XQueue
+ * as requests. It sends the requests to the given AWS service and waits for
+ * the responses. Then it loads the response to the incoming message and
+ * removes the message from XQueue so that the message is collectable by the
+ * nodes in upstream. AWSRequester supports flow control and allows object
+ * control from its owner.  It is fault tolerant with retry and idle options.
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

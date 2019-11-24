@@ -34,7 +34,7 @@ import org.qbroker.event.Event;
  * Based on the rulesets, it filters messages into three outlinks: done
  * for all the formatted messages, nohit for those messages do not belong
  * to any rulesets, failure for the messages failed in the formatting process.
- *<br/><br/>
+ *<br><br>
  * FormatNode contains a number of predefined rulesets.  These rulesets
  * categorize messages into non-overlapping groups.  Therefore, each rule
  * defines a unique message group.  The ruleset also defines the formatter and
@@ -44,7 +44,7 @@ import org.qbroker.event.Event;
  * readonly message.  You can specify ResetOption in a ruleset so that
  * the message header will be reset for modifications.  Its value is 0 for
  * no reset, 1 for optional reset and 2 for guaranteed reset.
- *<br/><br/>
+ *<br><br>
  * Each ruleset has an array of FormatterArgument. A FormatterArgument contains
  * a name specifying what to be formatted and two sets of format operations.
  * The first operation set lists format templates in the name of Template.
@@ -60,7 +60,7 @@ import org.qbroker.event.Event;
  * the same text in turns.  FormatNode will apply all the operations of
  * FormatterArguments on the incoming message in the order of the list.  If any
  * of the operations fails, the message will be routed to failure outlink.
- *<br/><br/> 
+ *<br><br> 
  * If ClassName is not defined in the rule, the rule is for the default
  * formatter. In this case, it accepts a template via URITemplate for the
  * path to a template file which will be used to format the message body.
@@ -70,7 +70,7 @@ import org.qbroker.event.Event;
  * rule will be stored to RULE_PEND. The cache count will be updated when the
  * session times out which is determined by SessionTimeout. A static template
  * file can also be specified via TemplateFile.
- *<br/><br/>
+ *<br><br>
  * FormatNode allows developers to plugin their own formatters by specifying
  * the ClassName for the plugin.  The requirement is minimum.  The class should
  * have a public method of format() that takes a JMS Message to be formatted as
@@ -83,7 +83,7 @@ import org.qbroker.event.Event;
  * In the normal operation, FormatNode will invoke the method to format the
  * incoming messages.  The method should never acknowledge any message in any
  * case.
- *<br/><br/>
+ *<br><br>
  * In case a plugin needs to connect to external resources for the dynamic
  * format process, it should define an extra method of close() to close all
  * the external resources gracefully.  Its format method should also be able
@@ -91,11 +91,11 @@ import org.qbroker.event.Event;
  * automatically.  If the container wants to stop the node, it will call the
  * resetMetaData() in which the methods of close() of all formatters will be
  * called in order to release all external resources.
- *<br/><br/>
+ *<br><br>
  * You are free to choose any names for the three fixed outlinks.  But
  * FormatNode always assumes the first outlink for done, the second for failure
  * and the last for nohit.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

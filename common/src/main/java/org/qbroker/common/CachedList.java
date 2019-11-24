@@ -20,7 +20,7 @@ import org.qbroker.common.QuickCache;
  * associate a topic to a number of assets if their patterns match the text.
  * In fact, CachedList is an AssetList of objects and a QuickCache of topics
  * plus Patterns for classifications.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

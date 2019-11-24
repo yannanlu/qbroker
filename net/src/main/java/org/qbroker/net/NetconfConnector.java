@@ -26,10 +26,10 @@ import org.qbroker.common.TraceStackThread;
 /**
  * NetconfConnector connects to a router via ssh and provides the following
  * methods for read-only operations: getXML() and getTunnelNames().
- *<br/><br/>
+ *<br><br>
  * This is NOT MT-Safe.  Therefore, you need to use multiple instances to
  * achieve your MT-Safty goal.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

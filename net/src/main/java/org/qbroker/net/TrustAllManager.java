@@ -8,7 +8,7 @@ import javax.net.ssl.X509TrustManager;
 
 /**
  * TrustAllManager implements X509TrustManager and trusts all certificates
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

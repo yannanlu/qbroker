@@ -20,7 +20,7 @@ import org.qbroker.net.IMQRequester;
 /**
  * JMXQMonitor monitors the message flow on a queue via JMX. It supports
  * generic JMX for Apache ActiveMQ and Sun OpenMQ dynamic JMX stub.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

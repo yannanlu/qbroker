@@ -28,17 +28,17 @@ import org.qbroker.monitor.FTPTester;
 
 /**
  * FileMonitor.java monitors a given file on its last modified time and/or size
- *<br/><br/>
+ *<br><br>
  * Use FileMonitor to get the last modified time and/or size of a given file.
  * It is assumed that the file exists and is readable all times.  FileMonitor
  * can monitor a remote file as long as the protocol is defined.  In case of
  * FTP protocol, FileMonitor supports two implementations.  One is the
  * traditional FTP with SetPassiveMode set to true or false, or without
  * any datalink via using two new cmd of MDTZ and SIZE.
- *<br/><br/>
+ *<br><br>
  * You can use FileMonitor to monitor when the file has been updated.  If not,
  * how late it is.  In case of very late, FileMonitor sends alerts.
- *<br/><br/>
+ *<br><br>
  * FileMonitor also supports mtime correlations and size correlations between
  * two files.  In this case, there are two files involved.  One is the
  * reference file.  The other is the target file to be monitored.  The
@@ -48,7 +48,7 @@ import org.qbroker.monitor.FTPTester;
  * accordingly, the FileMonitor treats it OK.  Otherwise, it will send alerts
  * according to the predefined tolerance on the lateness of the target file
  * being updated.
- *<br/><br/>
+ *<br><br>
  * In order to configure FileMonitor to do time correlations, you have to
  * specify a Map named as reference in its property hash.  The reference
  * hash table contains most of the properties required by a FileMonitor object,
@@ -56,7 +56,7 @@ import org.qbroker.monitor.FTPTester;
  * controlled by the threshold parameters.  In fact, FileMonitor will create
  * a separate instance for the reference file.  The method of performAction()
  * will actually do the time correlations between two files.
- *<br/><br/>
+ *<br><br>
  * In case of the size correlations, you must specify the triggerSize in the
  * property hashmap.  The triggerSize is zero or any positive number that
  * defines two different states.  One is the state that the file size is
@@ -66,7 +66,7 @@ import org.qbroker.monitor.FTPTester;
  * it OK.  Otherwise, FileMonitor will send alerts according to the
  * predefined tolerance on the lateness of the target file keeping its
  * state in sync.
- *<br/><br/>
+ *<br><br>
  * In case of monitoring timestamp on a remote box, there is an issue with
  * its Daylight Time on its TimeZone.  For example of EST, the timestamp of
  * Oct. 31 2004, 01:30:00 EST is 3600 seconds later than Oct. 31 2004,
@@ -77,7 +77,7 @@ import org.qbroker.monitor.FTPTester;
  * Therefore, if the difference between the remote time and the currentTime
  * is large than the half DST_OFFSET of the remote TimeZone, the remote time
  * will be adjusted with the DST_OFFSET.  Otherwise, no adjustment.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

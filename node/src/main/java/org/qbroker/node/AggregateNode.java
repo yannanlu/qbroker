@@ -64,7 +64,7 @@ import org.qbroker.event.Event;
  * the aggregation for each unique key in every session.  These new messages
  * will be flushed to the outlink of done when their sessions terminate. They
  * will be formatted right before the flush if the post formatter are defined.
- *<br/><br/>
+ *<br><br>
  * AggregateNode contains a number of predefined rulesets.  These rulesets
  * categorize messages into non-overlapping groups.  Therefore, each ruleset
  * defines a unique message group.  A ruleset also defines the unique keys
@@ -83,7 +83,7 @@ import org.qbroker.event.Event;
  * the keys in a ruleset will share the same session by default. In this case,
  * if the session is terminated, all the cached messages for that ruleset
  * will be flushed out at the same time.
- *<br/><br/>
+ *<br><br>
  * The aggregation on message body is defined separately in BodyAggregation. It
  * supports the first, last, append for text, and merge for JSON or XML payload.
  * In case of merge for JSON payload, JSONPath is required in the hash. JSONPath
@@ -93,7 +93,7 @@ import org.qbroker.event.Event;
  * required in the hash. XPath defines an XPath expression that is used to
  * select the data from the responses. The selected data will be merged as a
  * child node to the parent node in the aggregated XML.
- *<br/><br/>
+ *<br><br>
  * Currently, AggregateNode supports 4 different ways to terminate a session.
  * First, TimeToLive specifies the lifetime of any key in the cache for the
  * ruleset. If a key expires in the cache, its session is terminated. The
@@ -109,7 +109,7 @@ import org.qbroker.event.Event;
  * The aggregation session for the key will be terminated by the terminator.
  * In this case, if the DynamicSession is enabled and CopyOver is set to true,
  * AggregateNode will copy the aggregated result over to the terminate message.
- *<br/><br/>
+ *<br><br>
  * AggregateNode also supports plugins for customized aggregations.  In order
  * to support plugins, ClassName of the implementation should be defined in
  * the ruleset.  The class should have a public method of aggregate() that
@@ -117,24 +117,24 @@ import org.qbroker.event.Event;
  * one.  The second message is the cached message for aggregations.  The method
  * is supposed to return null for success or an error text for failures.  It
  * should not modify the incoming message by all means.
- *<br/><br/>
+ *<br><br>
  * Apart from user defined rulesets, AggregateNode always creates one extra
  * ruleset, nohit.  The ruleset of nohit is for those messages not hitting any
  * matches.  The number of aggregation messages is storded into the RULE_PEND
  * field.
- *<br/><br/>
+ *<br><br>
  * AggregateNode also supports single key sessions.  In order to enable the
  * single key session, SessionSize has to be set to 1.  In this case,
  * AggregateNode is assuming that all keys of input messages are already 
  * grouped in packs.  It means all messages with the same key stay together.
  * Any new key will terminate the previous aggregation session.
- *<br/><br/>
+ *<br><br>
  * You are free to choose any names for the four fixed outlinks.  But
  * AggregateNode always assumes the first outlink for done, the second for
  * bypass group, the third for failure and the last for nohit.  Any two or
  * more outlinks can share the same outlink name.  It means these outlinks
  * are sharing the same output channel.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

@@ -43,7 +43,7 @@ import org.qbroker.event.Event;
  * JMSTimestamp and JMSMessageID for the change. With Q_REMOVE, it tries to get
  * a message from the queue. With Q_GET or Q_PUT, it counts the messages logged
  * into a log file while checking on the queue depth.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

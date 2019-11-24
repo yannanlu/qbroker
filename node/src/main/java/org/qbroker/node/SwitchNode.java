@@ -36,7 +36,7 @@ import org.qbroker.event.Event;
  * group.  The ruleset also specifies the association between the groups and
  * the outlinks.  A ruleset can be also assosiated to a shared report.  So
  * that the routing rules may be changed on the fly.
- *<br/><br/>
+ *<br><br>
  * SwitchNode always adds an extra ruleset for the nohit messages.  It assumes
  * the last outlink is always for nohit, unless NohitOutLink is defined.
  * A ruleset is supposed to specify the type of the ruleset.  Currently,
@@ -45,7 +45,7 @@ import org.qbroker.event.Event;
  * is also a static routing rule which uses the hash value to decide which
  * outlink to route.  The type of weighted is for dynamic routing with plugin
  * support.
- *<br/><br/>
+ *<br><br>
  * SwitchNode also allows the developers to plug-in their own dynamic routing
  * rules.  In this case, the full ClassName of the router and its
  * RouterArguments must be well defined in the rulesets.  The requirement on
@@ -58,7 +58,7 @@ import org.qbroker.event.Event;
  * id for each incoming messages. You can define PreferredOutLink in the
  * Ruleset as the default outlink for failures.  Otherwise, the default
  * outlink will be set to NOHIT.
- *<br/><br/>
+ *<br><br>
  * In case a plugin needs to connect to external resources for dynamic
  * routing process, it should define an extra method of close() to close all
  * the external resources gracefully.  Its route method should also be able
@@ -66,7 +66,7 @@ import org.qbroker.event.Event;
  * automatically.  If the container wants to stop the node, it will invoke
  * resetMetaData() in which the method of close() of all dynamic routers will
  * be invoked in order to release all external resources.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

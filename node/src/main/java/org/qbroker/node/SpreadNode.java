@@ -39,7 +39,7 @@ import org.qbroker.event.Event;
  * operations for each spread message.  These new messages go to the outlink
  * of done.  Also all the new messages will be in TextMessage.  Any incoming
  * messages will go out via one of the three other outlinks.
- *<br/><br/>
+ *<br><br>
  * SpreadNode contains a number of predefined rulesets.  These rulesets
  * categorize messages into non-overlapping groups.  Therefore, each ruleset
  * defines a unique message group.  Ruleset also defines the MaxDuration and
@@ -50,18 +50,18 @@ import org.qbroker.event.Event;
  * The number of the data points in cache is tracked by RULE_PEND field.
  * SpreadNode always creates an extra ruleset, nohit, for all messages not
  * hitting any patterns.
- *<br/><br/>
+ *<br><br>
  * SpreadNode also supports checkpointing of the internal data cache via the
  * container. In order to enable checkpointing, CheckpointExpiration in seconds
  * must be defined explicitly with a positive number for the node. On the
  * container level, CheckpointDir must be defined, too.
- *<br/><br/>
+ *<br><br>
  * You are free to choose any names for the four fixed outlinks.  But
  * SpreadNode always assumes the first outlink for done, the second for bypass,
  * the third for failure and the last for nohit.  Any two or more outlinks can
  * share the same outlink name.  It means these outlinks are sharing the same
  * output channel.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -435,8 +435,8 @@ public class SpreadNode extends Node {
      * data into the given data array based on the interval.  Upon success,
      * it returns the incremental of count of cached data points.  Or it
      * returns -1 to indicate failure.
-     *<br/><br/>
-     * tail is latest data point<br/>
+     *<br><br>
+     * tail is latest data point<br>
      * head + 1 is oldest data point
      */
     private int spread(long tm, XQueue in, int oid, int rid, long[] metadata,

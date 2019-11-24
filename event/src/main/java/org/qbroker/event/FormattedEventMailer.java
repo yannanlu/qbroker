@@ -24,9 +24,9 @@ import org.qbroker.event.EventAction;
 /**
  * FormattedEventMailer implements EventAction and sends an email formatted
  * from the event to the specified recipients.
- *<br/><br/>
+ *<br><br>
  * The method of invokeAction() is MT-Safe.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

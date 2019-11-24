@@ -29,7 +29,7 @@ import org.qbroker.event.Event;
  * It converts each JMS Message into a JMX request and sends the request
  * to the specified JMX Service.  Once it gets the response back, the content
  * of the response will be put into the message body as the response.
- *<br/><br/>
+ *<br><br>
  * Currently, it only supports PCF, IMQ, QMF and JMX requests by default. 
  * It also supports customized plugins via PluginClassName and Operation.
  * The plugin is supposed to implement org.qbroker.common.Connector and the
@@ -40,7 +40,7 @@ import org.qbroker.event.Event;
  * datasource, such as network issue, service not available, etc. Therefore,
  * if JMException is caught, JMXPersister will keep retrying until either the
  * failure is resolved or the flow is paused.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

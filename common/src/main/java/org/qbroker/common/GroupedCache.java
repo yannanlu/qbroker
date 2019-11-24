@@ -15,11 +15,11 @@ import org.qbroker.common.QuickCache;
  * identified by its unique key.  The object also belongs to at least one
  * group.  Therefore, the objects in GroupedCache are related to each other
  * based on their groups.
- *<br/><br/>
+ *<br><br>
  * A group is identified by either its name or its id.  There is no limit on
  * the capacity of a group.  But there is a limit on maximum number of groups.
  * With group support, it is much easier to manage the cached objects.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

@@ -26,22 +26,22 @@ import org.qbroker.common.Utils;
  * placeholders or variables are delimited with certain character sequences.
  * The default sequence is '##' on both sides of the placeholder name.
  * For example, a template might look like
- *<br/>
- *   First Name: ##firstname##<br/>
- *    Last Name: ##lastname##<br/>
+ *<br>
+ *   First Name: ##firstname##<br>
+ *    Last Name: ##lastname##<br>
  * where ##firstname## and ##lastname## are two placeholders. The substitute
  * method will replace them with the given values. The name of the placeholder
  * is called field. It is OK for a field to contain certain Perl5 meta chars.
- *<br/><br/>
+ *<br><br>
  * When a Template object is instantiated, the text is scanned for any pattern
  * of ##[^#]+## as the placeholders it may contain.  In this case, a legal field
  * name is any sequence of characters that does not contain a hashsign.
  * In general, Template supports customized patterns for placeholders or
  * variables, such as \([^\(\)]+\) or \$\{[^\$\{\}]+\}, etc.
- *<br/><br/>
+ *<br><br>
  * Template also provides the methods for the actual substitutions.
  * They require either a key-value pair or a Map with all key-value pairs.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

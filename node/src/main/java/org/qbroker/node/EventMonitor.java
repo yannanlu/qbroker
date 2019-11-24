@@ -42,7 +42,7 @@ import org.qbroker.event.Event;
  * events, nohit for those events do not belong to any rulesets, failure for
  * the incoming events failed in the process. However, the outlink of done
  * can be shared with other outlinks.
- *<br/><br/>
+ *<br><br>
  * EventMonitor contains a number of predefined rulesets.  These rulesets
  * categorize incoming events into non-overlapping groups.  Therefore, each
  * ruleset defines a unique event group.  It contains the name of the rule,
@@ -51,7 +51,7 @@ import org.qbroker.event.Event;
  * it will be treated as an escalation ruleset that may generate extra messages.
  * For those escalation messages, they will get formatted if the post formatter
  * is defined in their rulesets.
- *<br/><br/>
+ *<br><br>
  * For each incomiong event, EventMonitor will match it against every
  * EventSelectors to single out a ruleset. There are two cases for escalation
  * rulesets. If ClassName is defined in a ruleset, it will be used to
@@ -69,7 +69,7 @@ import org.qbroker.event.Event;
  * specifies how long the escalation gets delayed. For the ruleset of "first",
  * the delay happens after the escalation. EscalationMask controls the display
  * mask on escalation messages.
- *<br/><br/>
+ *<br><br>
  * In case of a ruleset for timeout escalations, KeyTemplate is required to be
  * defined so that EventMonitor is able cache the properties of the incoming
  * event with the unique key for a new state or update the timestamp of
@@ -82,20 +82,20 @@ import org.qbroker.event.Event;
  * session for an existing state can be terminated or reset by an event whose
  * priority is same as the predefined ResetPriority of the ruleset. The timeout
  * escalation ruleset is good to track those alerts fired only once.
- *<br/><br/>
+ *<br><br>
  * EventMonitor always creates one extra ruleset, nohit. The ruleset of nohit
  * is for those events not hitting any patterns. Its RULE_PEND field is used to
  * store the total number of cached states for all timeout rulesets.
  * Please remember that there is no one-to-one relationship between the
  * candidate events and the esacaltion events. The total number of escalation
  * events for a ruleset is stored into its RULE_PEND field.
- *<br/><br/>
+ *<br><br>
  * You are free to choose any names for the four fixed outlinks.  But
  * EventMonitor always assumes the first outlink for done, the second for
  * bypass, the third for failure and the last for nohit.  Any two or more
  * outlinks can share the same outlink name. It means these outlinks are
  * sharing the same output channel.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -1016,14 +1016,15 @@ public class EventMonitor extends Node {
 
     /**
      * It passes the message from the input XQueue over to an output XQueue and
-     * returns 1 upon success or 0 otherwise. In case of cid < 0, the message
-     * has nothing to do with the input XQueue. Nothing will be added to
-     * msgList for tracking. No callbacks and no update on rule stats either.
-     * If tid < 0, msg will not be put back to uplink in case of failure.
-     * There is no update on rule stats and no callbacks either. In case of
-     * cid >= 0 and tid < 0, it will add msg stats to msgList for external
-     * tracking. But the user has to clean it up after the usage since it is
-     * not collectible by feedback() without the callback.
+     * returns 1 upon success or 0 otherwise. In case of cid is less than 0,
+     * the message has nothing to do with the input XQueue. Nothing will be
+     * added to msgList for tracking. No callbacks and no update on rule stats
+     * either. If tid is less than 0, msg will not be put back to uplink in
+     * case of failure. There is no update on rule stats and no callbacks
+     * either. In case of cid is larger than or equal to 0 and tid is less than
+     * 0, it will add msg stats to msgList for external tracking. But the end
+     * user has to clean it up after the usage since it is not collectible by
+     * feedback() without the callback.
      */
     protected int passthru(long currentTime, Message msg, XQueue in,
         int rid, int oid, int cid, int tid) {
@@ -1192,8 +1193,8 @@ public class EventMonitor extends Node {
 
     /**
      * It returns the number of done messages removed from the input XQueue.
-     * If milliSec < 0, there is no wait and it tries to collect all cells.
-     * Otherwise, it just tries to collect the first collectible cell.
+     * If milliSec is less than 0, there is no wait and it tries to collect all
+     * cells. Otherwise, it just tries to collect the first collectible cell.
      */
     protected int feedback(XQueue in, long milliSec) {
         Object o;

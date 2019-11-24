@@ -14,7 +14,7 @@ import org.qbroker.jms.MessageUtils;
 
 /**
  * TopicConnector is an Interface for JMS Topic and its connections
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

@@ -21,7 +21,7 @@ import org.qbroker.event.Event;
 /**
  * JMSLogMonitor monitors on a JMS queue implemented by a plain logfile via
  * MessageLogger.  It reports the deqCount, enqCount and curDepth, etc.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

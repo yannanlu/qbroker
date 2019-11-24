@@ -53,7 +53,7 @@ import org.qbroker.event.Event;
  * incoming message is a job query, JobNode will forward it to the worker
  * outlink. Once the response is collected, it will be routed to the bypass
  * outlink.
- *<br/><br/>
+ *<br><br>
  * JobNode contains multiple rulesets that categorize the incoming messages
  * into non-overlapped groups.  Each group has its own priority for scheduling
  * and threshold for the maximum number of active jobs. JobNode also supports
@@ -67,15 +67,15 @@ import org.qbroker.event.Event;
  * active jobs. DisplayMask determines whether to log the escalation messages.
  * Property names specify what properties to be copied over to the escalation
  * messages.
- *<br/><br/>
+ *<br><br>
  * JobNode always creates an extra ruleset, nohit, for those messages not
  * hitting any pre-defined rulesets. All the nohit messages will be routed to
  * the outlink of bypass.
- *<br/><br/>
+ *<br><br>
  * You are free to choose any names for the outlinks.  But JobNode always
  * assumes the first outlink for done, the second for bypass, and third for
  * notice and the rest for workers.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

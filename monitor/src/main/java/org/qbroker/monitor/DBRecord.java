@@ -26,7 +26,7 @@ import org.qbroker.monitor.DBQuery;
 /**
  * DBRecord queries a DB for records and scan all the records for
  * certain patterns
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

@@ -30,11 +30,11 @@ import org.qbroker.event.Event;
  * returns false. The method of format is to format the message with the
  * internal formatter. To skip loading the internal formatter, please make sure
  * ClassName defined.
- *<br/><br/>
+ *<br><br>
  * As to formatter, you can define TemplateMap and/or SubstitutionMap in the
  * property Map. It will update the maps and try to reuse the objects
  * already created.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -675,7 +675,7 @@ public class MessageFilter implements Filter<Message> {
      * a time. So the content of Map can be formatted to the header. This way,
      * they are able to participate format process on the message.  Currently,
      * there is only one key can be defined for each template for MapMessage.
-     *<br/><br/>
+     *<br><br>
      * Upon success, it returns the number of fields modified.  Otherwise, it
      * throws JMSException with detailed error.
      */

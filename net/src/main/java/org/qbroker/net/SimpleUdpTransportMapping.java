@@ -29,7 +29,7 @@ import org.snmp4j.transport.DefaultUdpTransportMapping;
  * the inbound socket.  It has a method of receive() which returns an array
  * of strings with first two members of type and address.  It should be used
  * only if the listener is not running.  It requires Java 1.4 or above.
- *<br/>
+ *<br>
  * @author Yannanlu@yahoo.com
  */
 

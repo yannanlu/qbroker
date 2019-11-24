@@ -57,12 +57,12 @@ import org.qbroker.jms.Msg2Text;
  * SonicMQRequester connects to a SonicMQ broker for JMX requests. Currently,
  * it supports the method of list, query, browse on durable subscriptions,
  * addListener and removeListener.
- *<br/></br>
+ *<br><br>
  * Since ObjectName does not allow any key containing the char of ':', the
  * replacement of ':' to '.' on subscription_id is assumed for queries as a
  * workaround. It means you have to replace ':' with '.' in the query if the
  * subscription_id is specified and it contains ':'.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -699,11 +699,11 @@ public class SonicMQRequester implements Requester, Comparator<IMetric> {
      * filled in the given string buffer. The content in the string buffer
      * is a JSON. If the disconnect flag is set to true, it disconnects right
      * before it returns. Otherwise, it will keep the connection.
-     *<br/></br/>
+     *<br><br>
      * The JMX command is supposed to be as follows:
-     *<br/>
+     *<br>
      * DISPLAY Target attr0:attr1:attr2
-     *<br/></br/>
+     *<br><br>
      * In case of a fatal failure, it disconnects first and then throws a
      * WrapperException with cause set to the vendor specific exception or IO
      * related exception. Therefore please make sure to get the cause exception

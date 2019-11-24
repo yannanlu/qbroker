@@ -23,12 +23,12 @@ import org.qbroker.event.Event;
  * on each of the selected JSON content. On the first match, the template of
  * the very filter will be applied to the selected content. The api method of
  * fulfill() will return the formatted JSON content.
- *<br/><br/>
+ *<br><br>
  * JSONSection supports nested children JSONSections. Therefore, its json path
  * is always applied to the root JSON data. In this case, a list of sections
  * and a parameter map must be provided for the api method. The parameter map
  * is supposed to contain the root JSON data at the key of "r:_JSON_".
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

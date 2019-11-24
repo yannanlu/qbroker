@@ -52,7 +52,7 @@ import org.qbroker.event.Event;
  * manager and resumes to work.  The monitor can leave the cluster anytime.
  * If the last node leaves the cluster, the cluster goes down. Due to the
  * feature of Unicast, it supports a cluster accros networks.
- *<br/><br/>
+ *<br><br>
  * UnicastNode also supports an extra path for communications between nodes
  * if ExtraReceiver is defined.  With ExtraReceiver, each outgoing packet will
  * be duplicated on its content.  Then it will be sent out via the extra
@@ -62,21 +62,21 @@ import org.qbroker.event.Event;
  * is required for both nodes to share and access.  In case of udp, it requires
  * a separate observer to forward packets for the secondary communication path.
  * The URI of ExtraReceiver specifies how to access the extra receiver.
- *<br/><br/>
+ *<br><br>
  * UnicastNode is supposed to run at backgroud.  It is designed to be a black
  * automaton box.  It will automatically maitain the state of the cluster.
  * But if the escalation outLink is specified at startup, it will also send
  * the state information and relay the data.  The application on the node can
  * intercept the events from the node and send data to any other nodes via
  * the API of relay().
- *<br/><br/>
- * A UnicastNode may be in one of the following states:<br/>
- * NODE_NEW:      just starting up, not joining the cluster yet<br/>
- * NODE_RUNNING:  joined in the cluster and running OK<br/>
- * NODE_STANDBY:  joined in the cluster but still in transient state<br/>
- * NODE_TIMEOUT:  missed a fixed number of heartbeats from the node<br/>
- * NODE_DOWN:     no longer active<br/>
- *<br/>
+ *<br><br>
+ * A UnicastNode may be in one of the following states:<br>
+ * NODE_NEW:      just starting up, not joining the cluster yet<br>
+ * NODE_RUNNING:  joined in the cluster and running OK<br>
+ * NODE_STANDBY:  joined in the cluster but still in transient state<br>
+ * NODE_TIMEOUT:  missed a fixed number of heartbeats from the node<br>
+ * NODE_DOWN:     no longer active<br>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -1596,10 +1596,10 @@ public class UnicastNode implements ClusterNode, Runnable {
     }
 
     /**
-     * It displays packets for troubleshooting and debugging.<br/>
-     * option: 0 - displaying incoming packets with tag of a space<br/>
-     * option: 1 - displaying outgoing packets with tag of a colon<br/>
-     * option: 2 - displaying discarded incoming packets with tag of a bam<br/>
+     * It displays packets for troubleshooting and debugging.<br>
+     * option: 0 - displaying incoming packets with tag of a space<br>
+     * option: 1 - displaying outgoing packets with tag of a colon<br>
+     * option: 2 - displaying discarded incoming packets with tag of a bam<br>
      * location: - debug mask for a specified section
      */
     private void display(int option, int location, DatagramPacket packet) {
@@ -1945,7 +1945,7 @@ public class UnicastNode implements ClusterNode, Runnable {
     /**
      * It initiates an election process for the new master and casts the vote,
      * or declares itself as the new master if it is the only one in the group.
-     *<br/><br/>
+     *<br><br>
      * NB. a node can only vote once in the same election
      */
     private DatagramPacket vote(long currentTime, String u) {

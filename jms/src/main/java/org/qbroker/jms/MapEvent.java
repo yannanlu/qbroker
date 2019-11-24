@@ -15,7 +15,7 @@ import org.qbroker.jms.JMSEvent;
 
 /**
  * MapEvent is an Event that implements JMS MapMessage
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

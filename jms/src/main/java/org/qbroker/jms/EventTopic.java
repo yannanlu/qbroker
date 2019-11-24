@@ -5,7 +5,7 @@ import javax.jms.JMSException;
 
 /**
  * EventTopic represents JMS Topic for event
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

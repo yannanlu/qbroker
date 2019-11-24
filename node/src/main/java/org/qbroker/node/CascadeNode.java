@@ -50,18 +50,18 @@ import org.qbroker.event.Event;
  * through the list and applies each filter on the message. If a ruleset gets a
  * hit, it will be used to evaluate the message. Therefore, the incoming
  * message may be evaluated by multiple rulesets in the natural order.
- *<br/><br/>
+ *<br><br>
  * There are three fixed outlinks, done, failure and nohit. All evaluated
  * message will be routed to the outlink of done. Any failure will cause
  * the incoming message routed to the outlink of failure.  If there is no
  * ruleset got hit, the incoming message will be routed to the outlink of nohit.
- *<br/><br/>
+ *<br><br>
  * CascadeNode contains a number of rulesets.  According to GroupKeyTemplate,
  * each ruleset defines its own group key with a set of property patterns. The
  * group key will be used to group rulesets. A ruleset may have an active time
  * window for blackout.  The number of the rulesets and their content may
  * change dynamically on demand.
- *<br/><br/>
+ *<br><br>
  * CascadeNode always creates two extra rulesets.  The first one is the nohit
  * ruleset for those messages whose group key has no hit.  The second is
  * the candidate ruleset for all messages whose group key has at least one hit.
@@ -73,18 +73,18 @@ import org.qbroker.event.Event;
  * The stats of the rules are stored in the fields of RULE_SIZE, RULE_COUNT
  * and RULE_PEND.  RULE_PEND is for number of cached rulesets, RULE_SIZE for
  * number of preliminary hits, whereas RULE_COUNT is for number of real hits.
- *<br/><br/>
+ *<br><br>
  * SessionTimeout determines how often to clean up expired group keys from the
  * cache.  If SessionTimeout is larger than zero, any cached group keys will be
  * expired if their idle time exceeds SessionTimeout.  Those expired group keys
  * will be removed from the cache in next session to save resources.
  * GroupKeyTemplate defines a template with multiple property names delimited
  * by a space char. It is required for extracting group key from a message.
- *<br/><br/>
+ *<br><br>
  * You are free to choose any names for all three outlinks.  But CascadeNode
  * always assumes the first outlink for done, the second for failure, the
  * last for nohit.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

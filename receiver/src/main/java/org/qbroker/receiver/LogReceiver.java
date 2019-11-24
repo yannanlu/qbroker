@@ -25,7 +25,7 @@ import org.qbroker.event.Event;
  * It appends the new log entries as JMS Messages to an XQueue.
  * LogReceiver supports flow control and allows object control from its owner.
  * It is fault tolerant with retry and idle options.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

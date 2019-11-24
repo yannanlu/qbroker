@@ -29,14 +29,14 @@ import org.qbroker.event.Event;
 /**
  * HealthCheck checks a JMS destination by putting or publishing a JMS
  * message to it
- *<br/><br/>
+ *<br><br>
  * It sends or publishes a predefined health-check message to the
  * destination to test its message acceptance.  The health-check
  * message should be harmless to the applications.  Otherwise, you have to
  * disable the auto-commit so that the message will not be committed.
  * If the destination is full or not defined, or not writeable or
  * not available, the health-check will fail.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

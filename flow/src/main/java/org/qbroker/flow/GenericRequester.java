@@ -49,7 +49,7 @@ import org.qbroker.event.Event;
 
 /**
  * GenericRequester implements the API of Requester for various Persisters.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 public class GenericRequester implements Requester {
@@ -187,13 +187,13 @@ public class GenericRequester implements Requester {
      * filled in the given string buffer. The content in the string buffer
      * is a JSON. If the disconnect flag is set to true, it disconnects right
      * before it returns. Otherwise, it will keep the connection alive.
-     *<br/></br/>
+     *<br><br>
      * By default, the request is not assumed to be a query command. If
      * RequestCommand is defined, the request is assumed as a query command.
      * A query command is supposed to be as follows:
-     *<br/>
+     *<br>
      * ACTION Target Attributes
-     *<br/></br/>
+     *<br><br>
      * In case of a fatal failure, it disconnects first and then throws a
      * WrapperException with cause set to the vendor specific exception or IO
      * related exception. Therefore please make sure to get the cause exception

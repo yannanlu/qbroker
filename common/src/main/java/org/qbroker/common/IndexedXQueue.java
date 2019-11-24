@@ -5,7 +5,7 @@ package org.qbroker.common;
 /**
  * IndexedXQueue implements XQueue as a FIFO storage with a circular array
  * for tracking and transaction support.
- *<br/><br/>
+ *<br><br>
  * All cells in an XQueue line up in a circle implemented by an array.  The
  * cells on the same status always stay together in a group.  Therefore the
  * circle is divided into five segments of arcs.  There are five marks
@@ -14,19 +14,19 @@ package org.qbroker.common;
  * reserved cells.  Lead divides taken cells and empty cells.  Mark separates
  * reserved cells and empty cells.  Cusp separates collected empty cells and
  * the rest empty cells.
- *<br/><br/>
- * capacity -- maximum number of cells in the queue<br/>
- * size -- number of the new and taken objects in the queue<br/>
- * depth -- number of new objects in the queue<br/>
- * watermark -- size + number of reserved cells<br/>
- * collectible -- number of empty cells that have not been collected yet<br/>
- * count -- number of objects taken out of the queue since last reset<br/>
- * mtime -- timestamp of the reset on the queue<br/>
- * status -- status of a cell or the object<br/>
- * id -- the id of a cell or the object<br/>
- *<br/><br/>
+ *<br><br>
+ * capacity -- maximum number of cells in the queue<br>
+ * size -- number of the new and taken objects in the queue<br>
+ * depth -- number of new objects in the queue<br>
+ * watermark -- size + number of reserved cells<br>
+ * collectible -- number of empty cells that have not been collected yet<br>
+ * count -- number of objects taken out of the queue since last reset<br>
+ * mtime -- timestamp of the reset on the queue<br>
+ * status -- status of a cell or the object<br>
+ * id -- the id of a cell or the object<br>
+ *<br><br>
  * It is MT-Safe with transaction control on each object or cell.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -168,7 +168,7 @@ public class IndexedXQueue implements XQueue {
 
     /**
      * collects the id-th cell so that it is ready to be reserved.
-     * If milliSec < 0, there is no wait.
+     * If milliSec is less than 0, there is no wait.
      */
     public synchronized int collect(long milliSec, int id) {
         int cid, k, current;
@@ -307,7 +307,7 @@ public class IndexedXQueue implements XQueue {
 
     /**
      * reserves the id-th cell so that it is ready to be occupied.
-     * If milliSec < 0, there is no wait.
+     * If milliSec is less than 0, there is no wait.
      */
     public synchronized int reserve(long milliSec, int id) {
         int cid, k, current;

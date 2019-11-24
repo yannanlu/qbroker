@@ -28,16 +28,16 @@ import org.qbroker.monitor.FTPTester;
 
 /**
  * MultiFileMonitor monitors a group of files on their mtime and/or size
- *<br/><br/>
+ *<br><br>
  * Use MultiFileMonitor to get the mtime and/or size of a group of files.
  * It is assumed that all the files exist and are readable all the time.
  * MultiFileMonitor can monitor files on a remote server as long as it runs
  * the new version of ftpd and accepts ftp requests.
- *<br/><br/>
+ *<br><br>
  * You can use MultiFileMonitor to monitor when the files have been updated.
  * If not, how late they are.  In case of very late, MultiFileMonitor sends
  * alerts or invokes the preconfigured script.
- *<br/><br/>
+ *<br><br>
  * MultiFileMonitor also supports mtime correlations and file size correlations
  * between two sets of files.  One is a single reference file, either locally
  * or remotely.  The other set contains the target files to be monitored.
@@ -47,7 +47,7 @@ import org.qbroker.monitor.FTPTester;
  * updated accordingly, MultiFileMonitor treats it OK.  Otherwise, it will send
  * alerts according to the predefined tolerance on the lateness of the target
  * files.
- *<br/><br/>
+ *<br><br>
  * In order to configure MultiFileMonitor to do time correlations, you have to
  * specify a Map named 'reference' in its property hash.  The reference
  * hash map contains most of the properties required by a FileMonitor object,
@@ -55,7 +55,7 @@ import org.qbroker.monitor.FTPTester;
  * controlled by the threshold parameters.  In fact, MultiFileMonitor will
  * create a separate instance for the reference file.  The method of
  * performAction() will actually do the time correlations between two files.
- *<br/><br/>
+ *<br><br>
  * In case of the size correlations, you must specify the triggerSize in the
  * property hash map.  The triggerSize is zero or any positive number that
  * defines two different states.  One is the state that the file size is less
@@ -65,7 +65,7 @@ import org.qbroker.monitor.FTPTester;
  * thinks it OK.  Otherwise, MultiFileMonitor will send alerts according
  * to the predefined tolerance on the lateness of the target file keeping
  * its state in sync.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

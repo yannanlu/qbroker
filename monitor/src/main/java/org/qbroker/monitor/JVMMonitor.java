@@ -31,7 +31,7 @@ import org.qbroker.monitor.ProcessMonitor;
  * number is always the second one defind in the Pattern.  JVMMonitor also
  * reports its free memory of JVM.  It can be used to trigger the garbage
  * collection on the JVM, etc.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

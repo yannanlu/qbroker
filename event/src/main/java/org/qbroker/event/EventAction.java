@@ -2,7 +2,7 @@ package org.qbroker.event;
 
 /**
  * EventAction is an Interface for an action upon an event
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

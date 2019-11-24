@@ -31,7 +31,7 @@ import org.qbroker.event.Event;
  * to an XQueue as the output.  PacketReceiver supports flow control
  * and allows object control from its owner.  It is fault tolerant with
  * retry and idle options.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

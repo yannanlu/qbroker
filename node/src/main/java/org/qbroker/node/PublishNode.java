@@ -43,7 +43,7 @@ import org.qbroker.event.Event;
  * A subscription contains a template to build the unique URI for delivery.
  * PublishNode will set the URIs to the subscribed messages before flushing
  * them downstream.
- *<br/><br/>
+ *<br><br>
  * There are four fixed outlinks, pool, bypass, failure and nohit. All
  * subscribed copies of incoming message will be routed to the outlink of pool.
  * Their original incoming message will be routed to bypass.  Any failure will
@@ -52,12 +52,12 @@ import org.qbroker.event.Event;
  * outlink of nohit. Since there may be multiple subscriptions for an incoming
  * message, please make sure the outlink of pool has the capacity no less than
  * the maximum number of subscriptions.
- *<br/><br/>
+ *<br><br>
  * PublishNode contains a number of rulesets.  Each ruleset defines a unique
  * subscription with a name, a group of property patterns, and a URI template
  * for delivery. It may have an active time window for blackout.  The number
  * of the rulesets and their content may change dynamically on demand.
- *<br/><br/>
+ *<br><br>
  * PublishNode always creates two extra rulesets.  The first one is the
  * nohit ruleset for those messages whose topics have no subscribers.  The
  * second is the candidate ruleset for all messages whose topic has at least
@@ -70,7 +70,7 @@ import org.qbroker.event.Event;
  * The stats of the rules are stored in the fields of RULE_SIZE, RULE_COUNT
  * and RULE_PEND.  RULE_PEND is for number of cached topics, RULE_SIZE for
  * number of preliminary hits, whereas RULE_COUNT is for number of real hits.
- *<br/><br/>
+ *<br><br>
  * SessionTimeout determines how often to clean up expired topics from the
  * cache.  If SessionTimeout is larger than zero, any cached topics will be
  * expired if their idle time exceeds SessionTimeout.  Those expired topics
@@ -79,12 +79,12 @@ import org.qbroker.event.Event;
  * by a space char. It is required for extracting topic string from a message.
  * URIField specifies where to store the delivery URI in the subscribed
  * messages. By default, it is set to pubURI.
- *<br/><br/>
+ *<br><br>
  * You are free to choose any names for all four outlinks.  But PublishNode
  * always assumes the first outlink for pool, the second for bypass, the third
  * for failure, the last for nohit.  The names of pool has to be different from
  * other outlinks.  The names of bypass, failure and nohit can be same.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

@@ -15,7 +15,7 @@ import org.qbroker.jms.JMSEvent;
 
 /**
  * ObjectEvent is an Event that implements JMS ObjectMessage
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

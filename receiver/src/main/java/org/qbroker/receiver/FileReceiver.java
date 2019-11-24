@@ -38,13 +38,15 @@ import org.qbroker.event.Event;
 /**
  * FileReceiver monitors a file or page on a server and retrieves the file
  * from it.  It can also run a script and packs the output to the message.
- * The JMS Messages will be put to an XQueue as the output.
- * FileReceiver supports flow control and allows object control from
- * its owner.  It is fault tolerant with retry and idle options.
- *<br/><br/>
+ * The JMS Messages will be put to an XQueue as the output. Currently,
+ * FileReceiver supports various types of data sources, such as file, log, ftp,
+ * ftps, http, https, sftp and shell script. FileReceiver also supports flow
+ * control and allows object control from its owner.  It is fault tolerant with
+ * retry and idle options.
+ *<br><br>
  * In case of the script, please make sure to redirect the STDERR to STDOUT
  * or close the STDERR, since FileReceiver only reads from its STDOUT.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

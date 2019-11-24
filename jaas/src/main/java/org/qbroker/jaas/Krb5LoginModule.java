@@ -13,7 +13,7 @@ import javax.security.auth.spi.LoginModule;
 /**
  * Krb5LoginModule extends com.sun.security.auth.module.Krb5LoginModule
  * with support of more options for realm and kdc.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

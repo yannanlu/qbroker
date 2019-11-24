@@ -29,13 +29,14 @@ import org.qbroker.persister.Persister;
 import org.qbroker.event.Event;
 
 /**
- * FilePersister listens to an XQueue and receives JMS Messages
- * from it.  Either it stores the JMS Messages on a remote server as files,
- * or it downloads files from a remote server according to the content of
- * the messages and puts back the messages with the downloaded content in
- * their body.  FilePersister supports flow control and allows object control
+ * FilePersister listens to an XQueue and receives JMS Messages from the XQueue
+ * as the requests. Either it stores the JMS Messages on a remote service as
+ * files, or it downloads files from a remote service and loads the downloaded
+ * content to the messages. Currently, FilePersister supports various types of
+ * data stores, such as file, log, ftp, ftps, http, https, sftp and shell
+ * script. FilePersister also supports flow control and allows object control
  * from its owner.  It is fault tolerant with retry and idle options.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

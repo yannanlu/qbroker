@@ -29,13 +29,13 @@ import org.qbroker.monitor.ScriptLauncher;
  * with certain patterns showing up frequently. In case it fails to find those
  * log entries within a certain period, ExpectedLog treats the log late and
  * raises alerts.
- *<br/><br/>
+ *<br><br>
  * Use ExpectedLog to detect the new occurrence of log entries matching one of
  * the given patterns.  ExpectedLog may be repetitively used to check the log
  * file.  It will pick up the new log entries only.  It also guarantees the
  * order of the occurrences.  If a certain log entry appears, the new entry will
  * be stored in the buffer for analysis.  The buffer will be updated every time.
- *<br/><br/>
+ *<br><br>
  * ExpectedLog supports excluding patterns to exclude the certain log entries
  * that are not interesting.  The monitor is fully configurable.  In case it
  * fails to find any log to match the predefined patterns, it will use the
@@ -43,7 +43,7 @@ import org.qbroker.monitor.ScriptLauncher;
  * at the start up, the monitor will disable itself for only once to delay the
  * evaluations.  If there is still no log found next time, the default
  * timestamp of the log file will be used for evaluations.
- *<br/><br/>
+ *<br><br>
  * ExpectedLog also supports time correlations and size correlations between
  * the reference file and the log entries that match to the patterns.
  * The reference file controls the correlation process.  Whenever the reference
@@ -52,7 +52,7 @@ import org.qbroker.monitor.ScriptLauncher;
  * entries as expected, the ExpectedLog treats it OK.  Otherwise, it will send
  * alerts according to the predefined tolerance on the lateness of the target
  * logs.
- *<br/><br/>
+ *<br><br>
  * In order to configure ExpectedLog to do time correlations, you have to
  * specify a map named reference in its property hash. The reference map
  * contains most of the properties required by a FileMonitor object, such as
@@ -60,7 +60,7 @@ import org.qbroker.monitor.ScriptLauncher;
  * by the threshold parameters.  In fact, ExpectedLog will create a separate
  * instance for the reference file.  The method of performAction() will actually
  * do the time correlations between two objects.
- *<br/><br/>
+ *<br><br>
  * In case of the size correlations, you must specify the triggerSize in the
  * property map.  The triggerSize is zero or any positive number that
  * defines two different states, on and off.  In on state, the size of the
@@ -68,7 +68,7 @@ import org.qbroker.monitor.ScriptLauncher;
  * the reference file is less than the triggerSize and the monitor is in
  * Blackout state.  Therefore, the size of the reference file acts like a
  * switch.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

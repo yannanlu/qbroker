@@ -33,13 +33,13 @@ import org.qbroker.monitor.Monitor;
  * WinlogMonitor queries Windows Event log and searches for patterns.
  * It relies on an external script to query the Event logs.  Currently,
  * we are using extractLog.js to do the job.
- *<br/><br/>
+ *<br><br>
  * Use WinlogMonitor to check Windows Event log repetitively.  It runs
  * a predefined JScript to query the Event log with certain selector rules
  * and picks up the newly updated log entries.  It guarantees the order and
  * the integrity of the new logs, as long as the query script is well defined
  * and it updates the RecordNumber and TimeGenerated with each query.
- *<br/><br/>
+ *<br><br>
  * In order to keep tracking the RecordNumbers, WinlogMonitor relies on a
  * reference file.  The reference file contains the RecordNumber of the
  * reference Event log, its TimeGenerated and the length of the log.
@@ -49,18 +49,18 @@ import org.qbroker.monitor.Monitor;
  * first log entry in the current log stream that has either a later
  * TimeGenerated or a larger RecordNumber as compared to those of the reference
  * log.  In fact, the object log is the first new log in the current log stream.
- *<br/><br/>
+ *<br><br>
  * Those three parameters are stored in the reference file in the names of
  * position, timestamp and offset.  RecordNumber is represented by position.
  * TimeGenerated is repressented by timestamp.  The offset is the byte count
  * or length of the reference log.
- *<br/><br/>
- * Here are the rules for the reference file:<br/><br/>
- * (1) If there is the reference file, use it and trust it.<br/>
+ *<br><br>
+ * Here are the rules for the reference file:<br><br>
+ * (1) If there is the reference file, use it and trust it.<br>
  * (2) If there is no reference file, use the current time as the timestamp
  * of the reference log and set the position of reference log
- * and the offset to 0.<br/>
- *<br/>
+ * and the offset to 0.<br>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -617,7 +617,7 @@ public class WinlogMonitor extends Monitor implements Comparator<int[]> {
     /**
      * update the current reference info. use it only after found a new log
      * you have to provide all three arguments
-     *<br/>
+     *<br>
      * position: RecordNumber of the log entry
      * timestamp: TimeGenerated of the log entry
      * offset: length of the new log entry
@@ -713,7 +713,7 @@ public class WinlogMonitor extends Monitor implements Comparator<int[]> {
     /** to return a line as a String read from the input
      * The char of newline, '\n', will be at the end of the line
      * In case of empty input, it returns null
-     *<br/>
+     *<br>
      * NB. make sure the buffer is reset at close of the InputStream
      * It is not MT-Safe due to buffer, leftover, and startBytes
      */

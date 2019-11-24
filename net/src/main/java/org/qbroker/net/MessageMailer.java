@@ -17,12 +17,12 @@ import org.qbroker.common.TraceStackThread;
 
 /**
  * MessageMailer is a generic mailer to send emails
- *<br/><br/>
+ *<br><br>
  * It takes an email address of recipient, your return address, and the subject
  * of the mail as the argument at the initial stage.  The send() method takes a
  * String of the message body as the argument and calls JavaMail API to mail the
  * message.  It does not guarantee the mail being delivered.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

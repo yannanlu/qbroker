@@ -58,13 +58,13 @@ import org.qbroker.event.Event;
  * request with a newly created XQueue for either a new consumer or a new
  * producer to serve on the connection. The request will be sent to the right
  * outlink according to the ruleset.
- *<br/><br/>
+ *<br><br>
  * ServiceNode has two types of outlinks, position-fixed and non-fixed.
  * There are three position-fixed outlinks: producer for all requests to
  * a ReceiverPool, consumer for all requests to a PersisterPool, nohit for
  * all requests not covered by any rulesets.  The non-fixed outlinks are for
  * the dynamic destinations or sources.
- *<br/><br/>
+ *<br><br>
  * ServiceNode also contains a number of predefined rulesets.  These rulesets
  * categorize messages into non-overlapping groups.  Therefore, each ruleset
  * defines a unique message group.  The ruleset also specifies the way to
@@ -74,7 +74,7 @@ import org.qbroker.event.Event;
  * messages will not be routed to the nohit outlink.  Instead, they will be
  * removed at once by ServiceNode. The stats of pending messages will be
  * tracked by RULE_PEND for each ruleset.
- *<br/><br/>
+ *<br><br>
  * If the XQueue does not exist and the ruleset is up to the consumer pool,
  * ServiceNode will create a new ObjectMessage as the request for a new
  * persister thread.  It will also create an XQueue and puts the XQueue and
@@ -86,7 +86,7 @@ import org.qbroker.event.Event;
  * proxy thread to pipe all messages from the socket to the XQueue. This
  * way, ServiceNode is able to deliver JMS messages to arbitrary destinations
  * according to their URIs and the predefined rulesets dynamically.
- *<br/><br/>
+ *<br><br>
  * If the XQueue does not exist and the ruleset is up to the producer pool,
  * ServiceNode will create a new ObjectMessage as the request for a new
  * receiver thread.  It will also create an XQueue and puts the XQueue and
@@ -98,7 +98,7 @@ import org.qbroker.event.Event;
  * proxy thread to pipe all messages from the XQueue to the socket.  This
  * way, ServiceNode is able to pick up JMS messages from arbitrary sources
  * according to their URIs and the predefined rulesets dynamically.
- *<br/><br/>
+ *<br><br>
  * URI is used to identify destinations or sources.  In order to construct the
  * URI string for an arbitrary destination or source, each ruleset has to
  * define a template via URITemplate.  Optinally, URISubstitution may be
@@ -111,7 +111,7 @@ import org.qbroker.event.Event;
  * new ObjectMessage for the either pools to create a new consumer or a new
  * producer.  If any of the operations fails, the handshake message will be
  * removed and the socket will be closed as a failure.
- *<br/><br/>
+ *<br><br>
  * For each new destination/source, ServiceNode uses the same Object message as
  * the request containing the URI and the XQueue.  The request is sent to either
  * PersisterPool/ReceiverPool via the corresponding outlink.  Then ServiceNode
@@ -124,7 +124,7 @@ import org.qbroker.event.Event;
  * or receiver times out.  MaxRetry is used to control when to timeout the
  * request on the pool.  It also controls the timeout on a dead persister or
  * receiver thread.
- *<br/><br/>
+ *<br><br>
  * ServiceNode also maintains an active set of XQueues as the transmit queues
  * for all destinations and sources.  Behind each XQueue, there is at least
  * one persister or receiver thread processing the messages.  The messages
@@ -135,13 +135,13 @@ import org.qbroker.event.Event;
  * its queue will be stopped. Its persister or receiver thread and the transmit
  * queue will be removed from the cache.  The associated socket will be closed
  * too.
- *<br/><br/>
+ *<br><br>
  * You are free to choose any names for the three fixed outlinks.  But
  * ServiceNode always assumes the first outlink for the producer, the second
  * for consumer and the third is for nohit. The rest of the outlinks are
  * on-demand outlinks for dynamic destinations or sources. The name of the
  * first outlink has to be unique on the node.
- *<br/><br/>
+ *<br><br>
  * Currently, there is no support for NOHIT outlink yet.  But it may be added
  * in the future to support existing static XQueues.  If a ruleset is nohit
  * and the XQueue does not exist, ServiceNode will send an ObjectMessage as
@@ -149,7 +149,7 @@ import org.qbroker.event.Event;
  * the escalation queue.  So the manager of the apps should reply with an
  * static XQueue with partition info.  Then ServiceNode starts the proxy
  * thread to handle the connection.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -1440,13 +1440,13 @@ public class ServiceNode extends Node {
     /**
      * It gets a String from the input XQueue and write all bytes to the
      * OutputStream continuously.
-     *<br/><br/>
+     *<br><br>
      * Most of the IOExceptions from the stream IO operations, like write,
      * will be thrown to notify the caller.  The caller is supposed to catch
      * the exception, either to reset the stream or to do other stuff.
      * If maxIdleTime > 0 and it is idle for too long, TimeoutException will
      * be thrown; 
-     *<br/><br/>
+     *<br><br>
      * This method is MT-Safe.
      */
     private void write(XQueue xq, OutputStream out, String u, int maxIdleTime)

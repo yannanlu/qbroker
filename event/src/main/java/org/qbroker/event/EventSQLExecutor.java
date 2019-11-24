@@ -23,9 +23,9 @@ import org.qbroker.event.EventAction;
  * EventSQLExecutor runs a SQL statement on a database in response to an event.
  * The SQL statement may contains the template placeholders referecing the
  * attributes of the event.
- *<br/><br/>
+ *<br><br>
  * NB. The action part is MT-Safe.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

@@ -58,7 +58,7 @@ import org.qbroker.event.Event;
  * failure, the incoming messages will be routed to the outlink of failure.  If
  * none of the rulesets matches the incoming messages, they will be put to the
  * outlink of nohit.  The rest of the outlinks are collectibles for responses.
- *<br/><br/>
+ *<br><br>
  * MapReduceNode contains a number of predefined rulesets.  These rulesets
  * categorize messages into non-overlapping groups via the property filter.
  * Therefore, each ruleset defines a unique message group.  If the associated
@@ -66,7 +66,7 @@ import org.qbroker.event.Event;
  * ruleset, it is a ruleset of map-reduce. There may be other parameters for
  * the map and reduce operations. For example, TimeToLive and Quorum are two
  * important parameters for the reduce process.
- *<br/><br/>
+ *<br><br>
  * The aggregation on responses is defined in BodyAggregation. It supports the
  * first, last, append for text, and merge or union for JSON or XML payload,
  * etc. In case of merge for JSON payload, JSONPath is required in the hash.
@@ -77,7 +77,7 @@ import org.qbroker.event.Event;
  * that is used to select the data from the responses. The selected data will
  * be merged as a child node to the parent node of the XML document as the
  * result.
- *<br/><br/>
+ *<br><br>
  * The default map process is to copy the message body as the request for each
  * selected outlink. The selected outlinks are defined via the list of
  * SelectedOutLink. If it is defined in a ruleset, its member can be either
@@ -91,20 +91,20 @@ import org.qbroker.event.Event;
  * formats the request out of message and sets the result to that property.
  * Therefore, it may contain Template and Substitution. This way, each outlink
  * may have its own request.
- *<br/><br/>
+ *<br><br>
  * If SelectedOutLink is a string, the ruleset expects a JSONPath defined for
  * selecting a list of items from the JSON payload. In this case, each selected
  * content will be treated as a sub-request. All the sub-requests will be
  * mapped to a single outlink specified by SelectedOutLink. All the properties
  * will be copied over to each of the sub-request.
- *<br/><br/>
+ *<br><br>
  * You are free to choose any names for the three fixed outlinks.  But
  * MapReduceNode always assumes the first outlink for done, the second for
  * failure and the third for nohit.  The rest of the outlinks are for responses.
  * It is OK for those three fixed outlinks to share the same name.  Please make
  * sure the first fixed outlink has the actual capacity no less than that of
  * the uplink.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

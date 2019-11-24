@@ -32,7 +32,7 @@ import org.qbroker.event.Event;
  * is running as a dedicated user only on certain well known hosts. Therefore,
  * SonicMQMonitor is able to use the combinations of the user and the hostnames
  * to associate non-topic connections with a specific queue.
- *<br/></br>
+ *<br><br>
  * HostPattern is a map contains Pattern expression to select hostnames for the
  * consumer applications with a specific destination name. UserMappingRule is
  * a list of maps with two items of Pattern and Substitution. On a given name
@@ -41,11 +41,11 @@ import org.qbroker.event.Event;
  * part is applied on the name to map the destination name to the username.
  * One example is to cut off the ending "Queue" to convert a queue name to
  * a user name.
- *<br/></br>
+ *<br><br>
  * In order for SonicMQMonitor to work, the metrics on connections, queues and
  * brokers must be enabled. Please check the source code to figure out the list
  * of the metrics.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

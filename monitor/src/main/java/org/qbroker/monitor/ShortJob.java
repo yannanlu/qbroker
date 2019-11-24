@@ -22,7 +22,7 @@ import org.qbroker.monitor.ScriptLauncher;
 /**
  * ShortJob runs a short-lived script or a java job upon changes of the
  * status of certain occurrence
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

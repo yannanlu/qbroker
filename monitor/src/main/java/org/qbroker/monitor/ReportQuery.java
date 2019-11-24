@@ -21,7 +21,7 @@ import org.qbroker.monitor.Report;
  * ReportQuery queries an internal report for skipping status or other data.
  * It is used as a dependency to test the skipping status or to match the data
  * content.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

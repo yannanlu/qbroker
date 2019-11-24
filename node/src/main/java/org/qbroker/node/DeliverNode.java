@@ -47,13 +47,13 @@ import org.qbroker.event.Event;
  * caches the thread and the id of the XQueue using the URI as the key.
  * Therefore, DeliverNode is able to deliver JMS messages to arbitrary
  * destinations based to their URIs and the predefined rulesets on-demand.
- * <br/><br/>
+ * <br><br>
  * It has two types of outlinks, position-fixed and non-fixed.
  * There are three position-fixed outlinks: pool for all requests to the
  * PersisterPool, failure for the messages failed in the delivery process,
  * nohit for those messages not covered by any rulesets.  The non-fixed
  * outlinks are transmit queues for the on-demand destinations.
- *<br/><br/>
+ *<br><br>
  * DeliverNode also contains a number of predefined rulesets.  These
  * rulesets categorize messages into non-overlapping groups.  Therefore,
  * each rule defines a unique message group.  The ruleset also specifies
@@ -62,7 +62,7 @@ import org.qbroker.event.Event;
  * an extra ruleset, nohit, to handle them.  Therefore all the nohit messages
  * will be routed to nohit outlink.  The downstream node at nohit is supposed
  * to handle all nohit messages.
- *<br/><br/>
+ *<br><br>
  * URI is used to identify destinations.  In order to construct the URI for an
  * arbitrary destination, each ruleset contains two sets of format operations.
  * The first one is the array of templates with the name of URITemplate.
@@ -81,7 +81,7 @@ import org.qbroker.event.Event;
  * message first. Then it adds the DefaultProperty to the new request for the
  * new persister. So the extra properties are able to passed over to the
  * persister pool.
- *<br/><br/>
+ *<br><br>
  * For each new destination, DeliverNode creates an Object message as the
  * request containing the URI and the XQueue, as well as the other
  * properties provided they are defined.  The request is sent to the
@@ -94,7 +94,7 @@ import org.qbroker.event.Event;
  * the request for a new persister times out.  MaxRetry is used to control
  * when to timeout the request to the pool.  It also controls the timeout on
  * a dead persister thread.
- *<br/><br/>
+ *<br><br>
  * DeliverNode also maintains an active set of XQueues as the transmit queues
  * for all destinations.  Behind each XQueue, there is at least one persister
  * thread delivering the messages to the destinations.  The messages may be
@@ -104,14 +104,14 @@ import org.qbroker.event.Event;
  * every heartbeat.  If one of them has been idle for over MaxIdleTime, its
  * queue will be stopped. Its persister thread and the transmit queue will be
  * removed from the cache.
- *<br/><br/>
+ *<br><br>
  * You are free to choose any names for the three fixed outlinks.  But
  * DeliverNode always assumes the first outlink for pool, the second for
  * failure and the third for nohit.  The name for nohit outlink is allowed to
  * be same as that of failure outlink.  But neither nohit nor failure is
  * allowed to share their names with the pool.  The rest of the outlinks are
  * for the on-demand destinations.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -1383,8 +1383,8 @@ public class DeliverNode extends Node {
 
     /**
      * It returns the number of done messages removed from the input XQueue.
-     * If milliSec < 0, there is no wait and it tries to collect all cells.
-     * Otherwise, it just tries to collect the first collectible cell.
+     * If milliSec is less than 0, there is no wait and it tries to collect all
+     * cells. Otherwise, it just tries to collect the first collectible cell.
      */
     protected int feedback(XQueue in, long milliSec) {
         Object[] asset;

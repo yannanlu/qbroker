@@ -7,11 +7,11 @@ import java.util.ArrayList;
 
 /**
  * DataSet - A set of data intervals defining a set of number.
- *<br/><br/>
+ *<br><br>
  * A DataSet contains a set of intervals on the number axis.  Its method
  * of contains() evalues a given number and returns true if it belongs to the
  * set, or false otherwise.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

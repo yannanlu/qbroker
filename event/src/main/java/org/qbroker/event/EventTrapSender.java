@@ -22,9 +22,9 @@ import org.qbroker.event.EventAction;
 /**
  * EventTrapSender implements EventAction and sends multiple traps to an SNMP
  * management station.  Currently, it supports v1 and v2c traps.
- *<br/><br/>
+ *<br><br>
  * This is MT-Safe.  It requires Java 1.4 or above due to SNMP4J.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

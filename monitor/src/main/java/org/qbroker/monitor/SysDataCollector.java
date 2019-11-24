@@ -21,7 +21,7 @@ import org.qbroker.monitor.Report;
 
 /**
  * SysDataMonitor collects the basic stats of OS and monitors their ranges.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

@@ -27,14 +27,14 @@ import org.qbroker.monitor.WebTester;
 
 /**
  * URLMonitor monitors a given web page on its last modified time and/or size
- *<br/><br/>
+ *<br><br>
  * Use URLMonitor to get the update time and/or size of the given page.  It is
  * assumed that the page exists and is accessible all times.  The page should
  * contain update time stamp that will be parsed by URLMonitor.
- *<br/><br/>
+ *<br><br>
  * You can use URLMonitor to monitor when the page has been updated.  If not,
  * how late it is.  In case of very late, URLMonitor sends alerts.
- *<br/><br/>
+ *<br><br>
  * URLMonitor also supports mtime correlations and size correlations between
  * the page and other mtime objects.  In this case, there are two objects
  * involved.  One is the reference.  The other is the target page to be
@@ -44,7 +44,7 @@ import org.qbroker.monitor.WebTester;
  * updated accordingly, the URLMonitor treats it OK.  Otherwise, it will
  * send alerts according to the predefined tolerance on the lateness of the
  * target page being updated.
- *<br/><br/>
+ *<br><br>
  * In order to configure URLMonitor to do time correlations, you have to
  * specify a map named reference in its property map.  The reference
  * map contains most of the properties required by an mtime object, such as
@@ -52,7 +52,7 @@ import org.qbroker.monitor.WebTester;
  * by the threshold parameters.  In fact, URLMonitor will create a separate
  * instance for the reference.  The method of performAction() will actually
  * do the time correlations between two objects.
- *<br/><br/>
+ *<br><br>
  * In case of the size correlations, you must specify the triggerSize in the
  * property map.  The triggerSize is zero or any positive number that
  * defines two different states.  One is the state that the page size is less
@@ -61,12 +61,12 @@ import org.qbroker.monitor.WebTester;
  * If both are in the same states, URLMonitor thinks it OK.  Otherwise,
  * URLMonitor will send alerts according to the predefined tolerance on
  * the lateness of the target page keeping its state in sync.
- *<br/><br/>
+ *<br><br>
  * In case that URLMonitor is used as a dependency with the disableMode enabled,
  * it checks mtime of the page to determine the skipping status. If CheckETag
  * is set to be true and the request is HEAD, it will only checks the etag to
  * determine the skipping status.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

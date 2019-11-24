@@ -40,7 +40,7 @@ import org.qbroker.event.Event;
  * the list are able to be updated or reset. ConfigTemplate is used to manage
  * the configurations on a set of instances sharing the similar properties
  * with only one parameter different.
- *<br/><br/>
+ *<br><br>
  * ConfigTemplate also supports dynamic creations of the item list. In this
  * case, Item has to be a Map defining an MonitorReport to query the
  * list of items dynamically. The instance of the MonitorReport will be used
@@ -48,7 +48,7 @@ import org.qbroker.event.Event;
  * updated automatically. The method of isDynamic() is used to check if the
  * instance of ConfigTemplate supporting dynamic item list or not. It also
  * supports the private report for each dynamically generated monitor.
- *<br/><br/>
+ *<br><br>
  * In case of dynamic generated monitors, ConfigTemplate supports both private
  * report and/or shared report. A private report is the report dedicated to
  * each generated monitor. The reporter makes the private reports available
@@ -59,7 +59,7 @@ import org.qbroker.event.Event;
  * Its purpose is to save the resources for ConfigTemplate's reporters in the
  * back. The keyword for the private report is KeyTemplate. The keyword for
  * the shared report is the value of REPORT_LOCAL defined for ReportMode.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

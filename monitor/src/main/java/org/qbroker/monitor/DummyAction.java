@@ -17,7 +17,7 @@ import org.qbroker.monitor.MonitorAction;
  * DummyAction is a dummy action only.  The actions will be invoked on the
  * event only if the status is OCCURRED.  However, the event will be sent out
  * up to tolerance times with QuietPeriod support.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

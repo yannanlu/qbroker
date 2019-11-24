@@ -25,10 +25,10 @@ import org.qbroker.net.ScriptedBrowser;
  * first step is always to get the page of the given URI. If NextTask is
  * defined in the config, each of the tasks will be executed one after another
  * in the listed order. If any task fails, the entire test will be fail.
- *<br/><br/>
+ *<br><br>
  * Each member of NextTask will contain Operation, LocatorType, LocatorValue,
  * SleepTime in ms and WaitTime in sec.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

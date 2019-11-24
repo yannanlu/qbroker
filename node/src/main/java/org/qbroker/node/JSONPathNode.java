@@ -42,21 +42,21 @@ import org.qbroker.event.Event;
  * sets them into message as the properties. The original JSON payload should 
  * be always stored in the message body. JSONPathNode will not modify the JSON
  * payload.
- *<br/><br/>
+ *<br><br>
  * JSONPathNode contains a number of predefined rulesets. These rulesets
  * categorize messages into non-overlapping groups. Therefore, each rule
  * defines a unique message group. The ruleset also defines the JSONPath
  * expressions to retrieve content from the JSON payload.
- *<br/><br/>
+ *<br><br>
  * JSONPathNode supports dynamic setting of JSON path expressions. It means
  * you can reference properties of the message in your json path expressions.
  * JSONPathNode will retrieve the data from the incoming message and compiles
  * the expressions before the evaluation. If TimestampKey is defined in a rule,
  * it will be used to retrieve the timestamp from the json payload to reset
  * JMSTimestamp of the message, provided TimePattern is also defined.
- *<br/><br/>
+ *<br><br>
  * Currently, only the simple JSON path starting with '.' is supported.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

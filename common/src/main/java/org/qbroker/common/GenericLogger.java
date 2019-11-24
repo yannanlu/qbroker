@@ -11,11 +11,11 @@ import org.apache.log4j.PropertyConfigurator;
 /**
  * GenericLogger is a generic logger with append() and overwrite().
  * It opens the log file everytime and closes it after the output.
- *<br/><br/>
+ *<br><br>
  * It also supports event logging via the static methods of info(), notice(),
  * warning(), err(), and crit(). It is for breaking the circular dependencies
  * of Maven modules.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

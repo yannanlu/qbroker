@@ -25,7 +25,7 @@ import org.qbroker.event.EventAction;
 /**
  * EventPoster implements EventAction and posts/gets content to/from a
  * given URL.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

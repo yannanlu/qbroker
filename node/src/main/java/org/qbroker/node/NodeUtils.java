@@ -31,7 +31,7 @@ import org.qbroker.event.Event;
 /**
  * NodeUtils contains a bunch of constants and static methods on brokers
  * for common uses
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

@@ -33,7 +33,7 @@ import org.qbroker.common.Evaluation;
  * string and returns the result.  It supports the substitution between
  * LineFeed (\n) and CarrigeReturn (\r). It also supports the substitution like
  * "s/a/c/g" or "s/c/b/g" where c is the hexdecimal char, such as \x02.
- *<br/><br/>
+ *<br><br>
  * It also supports expressions in a different way as compared to Perl5.
  * In this case, the substitution expression is supposed to be something like
  * "s//?=xxx/e" where 'e' at the end indicates the expression substitution.
@@ -44,6 +44,7 @@ import org.qbroker.common.Evaluation;
  * caller is supposed to log the details or to throw exception with details.
  * Here lists all supported exressions:
  * <table>
+ * <caption>Supported Expressions</caption>
  * <tr><th>Expression</th><th>Operation</th><th>Type</th><th>Example</th></tr>
  * <tr><td>s//+=n/e</td><td>Add</td><td>Number</td><td>s//+=3/e</td></tr>
  * <tr><td>s//-=n/e</td><td>Substract</td><td>Number</td><td>s//-=3/e</td></tr>
@@ -79,9 +80,9 @@ import org.qbroker.common.Evaluation;
  * The last part is the string as the replacement. For sub() or gsub(), it
  * replaces either the first regex match or all the regex maches with the
  * replacement. So the second part is a regex string.
- * <br/><br/>
+ * <br><br>
  * The constructor may throw any errors in initialization of the substitution.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

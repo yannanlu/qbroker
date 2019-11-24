@@ -22,7 +22,7 @@ import org.qbroker.monitor.WebTester;
  * may get reset frequently. The stats data may not be accurate. So we
  * try to collect the averate rates. In the event, the number of inMessages
  * is actually enqRate, while the outMessages for deqRate.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

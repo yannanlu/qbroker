@@ -34,10 +34,10 @@ import org.qbroker.event.Event;
  * into the predefined EscalationRange, a new event will be generated as the
  * escalation.  If Type is set to MessageEscalator, the returned event
  * will be a TextEvent as a JMS Message.
- *<br/><br/>
+ *<br><br>
  * EventEscalator implements EventEscalation. It provides a way to
  * correlate the same sort of events across the time line.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

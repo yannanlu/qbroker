@@ -5,7 +5,7 @@ import java.util.Enumeration;
 
 /**
  * Enumerator implements Enumeration with an Iterator.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

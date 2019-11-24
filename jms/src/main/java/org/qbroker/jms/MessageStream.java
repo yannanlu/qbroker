@@ -47,23 +47,23 @@ import org.qbroker.event.Event;
 /**
  * MessageStream handles Stream IO on JMS Messages.  The Stream has to be
  * established before using this object.
- *<br/><br/>
+ *<br><br>
  * There are four methods, read(), write(), request() and respond() on Stream.
  * The method of read() is MT-Safe.  If read() gets the end of stream,
  * it will stop and return.  The method of write() is for asynchronous
  * output whereas request() is for synchronous requests. For testing purpose,
  * MessageStream supports two methods, echo() and collect().
- *<br/><br/>
+ *<br><br>
  * MessageStream reacts on EOF differently according to the Mode.  If its value
  * is set to command mode, read() just exits when an EOF is read.  For Linux
  * comm port,  the timeout implementation returns an EOF.  Therefore, setting
  * the value to ignore mode will have most of read operation to ignore the EOF
  * and continue to read.  If the value is set to daemon, read() will throw an
  * IOException whenever it reads an EOF to indicate end of stream unexpectedly.
- *<br/><br/>
+ *<br><br>
  * For charSet and encoding, you can overwrite the default encoding by
  * starting JVM with "-Dfile.encoding=UTF8 your_class".
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -265,14 +265,14 @@ public class MessageStream {
      * into JMS Messages and adds the messages to an XQueue.
      * It supports flexible but static delimiters at either
      * or both ends.  It also has the blind trim support at both ends.
-     *<br/><br/>
+     *<br><br>
      * Most of the IOExceptions from the stream IO operations, like read,
      * will be thrown to notify the caller.  The caller is supposed to catch
      * the exception, either to reset the stream or to do other stuff.
      * It also throws JMSException from the operations regarding to the message
      * itself, like get/set JMS properties.  This does not require to reset
      * the stream at all.
-     *<br/><br/>
+     *<br><br>
      * This is MT-Safe as long as the threads share the same offhead,
      * offtail, sotBytes and eotBytes.
      */
@@ -287,21 +287,21 @@ public class MessageStream {
      * an XQueue.  It supports flexible but static delimiters at either
      * or both ends.  It also has the blind trim support at both ends.
      * At the end, it returns number of messages read from input stream.
-     *<br/><br/>
+     *<br><br>
      * Most of the IOExceptions from the stream IO operations, like read,
      * will be thrown to notify the caller.  The caller is supposed to catch
      * the exception, either to reset the stream or to do other stuff.
      * It also throws JMSException from the operations regarding to the message
      * itself, like get/set JMS properties.  This does not require to reset
      * the stream at all.
-     *<br/><br/>
+     *<br><br>
      * The class variable controls the reaction on EOF.  If the value is set to
      * command mode, it just exits when an EOF is read.  For Linux comm port,  
      * the timeout implementation returns EOF.  Therefore, setting the value
      * to ignore mode will have the method to ignore EOF and continue to read.  
      * If the value is set to daemon, it will throw IOException whenever it
      * reads an EOF to indicate connection reset by peer.
-     *<br/><br/>
+     *<br><br>
      * This is MT-Safe as long as the threads share the same offhead,
      * offtail, sotBytes and eotBytes.
      */
@@ -1035,20 +1035,20 @@ public class MessageStream {
      * So the downstream message flow is not supposed to modify or remove that
      * ID.  It supports flexible but static delimiters at either or both ends.
      * It also has the blind trim support at both ends.
-     *<br/><br/>
+     *<br><br>
      * The msgList is a dedicated instance of QList for tracking the
      * collectible responses. The sBuf is also a dedicated buffer with
      * delimiter supports. The last argument is a dedicate instance of
      * CollectibleCells for reverse propagations.  Its capacity should be same
      * as the xq.
-     *<br/><br/>
+     *<br><br>
      * Most of the IOExceptions from the stream IO operations, like read,
      * will be thrown to notify the caller.  The caller is supposed to catch
      * the exception, either to reset the stream or to do other stuff.
      * It also throws JMSException from the operations regarding to the message
      * itself, like get/set JMS properties.  This does not require to reset
      * the stream at all.
-     *<br/><br/>
+     *<br><br>
      * To support re-entrance, it depends on msgList and sBuf for state info.
      * Please make sure sBuf has the same properties as the instance.
      * This is MT-Safe as long as the threads share the same offhead, offtail,
@@ -1829,7 +1829,7 @@ public class MessageStream {
      * the SID to identify the corresponding request and loads the response
      * into the request message before removing it from the XQueue. It returns
      * 1 upon success to indicate one response received, or 0 otherwise.
-     *<br/><br/>
+     *<br><br>
      * If parser is defined, it will assume that each outgoing messages are
      * tagged with sid on the rcField.  The response is supposed to have the
      * same tag for the pending message.
@@ -2731,14 +2731,14 @@ public class MessageStream {
      * to associate the response with the request.  It also supports flexible
      * but static delimiters at either or both ends.  It also has the blind
      * trim support at both ends.
-     *<br/><br/>
+     *<br><br>
      * Most of the IOExceptions from the stream IO operations, like read,
      * will be thrown to notify the caller.  The caller is supposed to catch
      * the exception, either to reset the stream or to do other stuff.
      * It also throws JMSException from the operations regarding to the message
      * itself, like get/set JMS properties.  This does not require to reset
      * the stream at all.
-     *<br/><br/>
+     *<br><br>
      * Since the request operation relies on a request, this method will
      * intercept the request and process it.  The incoming message is required
      * to be writeable.  The method will set a String property of the message
@@ -2747,7 +2747,7 @@ public class MessageStream {
      * check the value of the property once it gets the message back.  If
      * the return code is 0, the request is successful.  This method will not
      * acknowledge messages.  It is up to the requester to do that.
-     *<br/><br/>
+     *<br><br>
      * To support multi-plexing, it depends on msgList and sBuf to track the
      * pending requests and the state info. It does not support re-entrance.
      */
@@ -2965,14 +2965,14 @@ public class MessageStream {
      * response.  Both write and read operations block the message flow.
      * Therefore, there is no need to track SID for each messages.
      * It supports flexible terminate patterns with timeout.
-     *<br/><br/>
+     *<br><br>
      * Most of the IOExceptions from the stream IO operations, like read,
      * will be thrown to notify the caller.  The caller is supposed to catch
      * the exception, either to reset the stream or to do other stuff.
      * It also throws JMSException from the operations regarding to the message
      * itself, like get/set JMS properties.  This does not require to reset
      * the stream at all.
-     *<br/><br/>
+     *<br><br>
      * Since the request operation relies on a request, this method will
      * intercept the request and process it.  The incoming message is required
      * to be writeable.  The method will set a String property of the message
@@ -2981,7 +2981,7 @@ public class MessageStream {
      * check the value of the property once it gets the message back.  If
      * the return code is 0, the request is successful.  This method will not
      * acknowledge messages.  It is up to the requester to do that.
-     *<br/><br/>
+     *<br><br>
      * It is NOT MT-safe.
      */
     public long request(InputStream in, XQueue xq, OutputStream out)
@@ -3280,18 +3280,18 @@ public class MessageStream {
     /**
      * It gets JMS Messages from an XQueue and write all bytes to the
      * OutputStream continuously.
-     *<br/><br/>
+     *<br><br>
      * Most of the IOExceptions from the stream IO operations, like write,
      * will be thrown to notify the caller.  The caller is supposed to catch
      * the exception, either to reset the stream or to do other stuff.
      * It also throws JMSException from the operations regarding to the message
      * itself, like get/set JMS properties.  This does not require to reset
      * the stream at all.
-     *<br/><br/>
+     *<br><br>
      * If the MaxIdleTime is set to none-zero, it will monitor the idle time
      * and will throw TimeoutException once the idle time exceeds MaxIdleTime.
      * it is up to the caller to handle this exception.
-     *<br/><br/>
+     *<br><br>
      * It will not modify the original messages.  If the XQueue has enabled
      * the EXTERNAL_XA, it will also acknowledge every messages.  This method
      * is MT-Safe.

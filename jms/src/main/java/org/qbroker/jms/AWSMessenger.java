@@ -41,7 +41,7 @@ import org.qbroker.event.Event;
 /**
  * AWSMessenger connects to an AWS service and converts the JMS messages into
  * AWS requests. Currently, it only supports the action of request.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

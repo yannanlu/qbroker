@@ -15,7 +15,7 @@ import org.qbroker.jms.MessageUtils;
 
 /**
  * QueueConnector is an Interface for JMS Queue and its Connections
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

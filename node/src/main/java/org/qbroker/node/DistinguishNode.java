@@ -37,7 +37,7 @@ import org.qbroker.event.Event;
  * messages either duplicate or older versions, failure for those messages
  * failed in the distinguishing processes, and nohit for all the messages
  * that do not hit any explicitly defined ruleset.
- *<br/><br/>
+ *<br><br>
  * DistinguishNode contains a number of predefined rulesets.  These rulesets
  * categorize messages into non-overlapping groups.  Therefore, each rule
  * defines a unique message group. The ruleset also specifies the parameters
@@ -53,7 +53,7 @@ import org.qbroker.event.Event;
  * will be treated as the duplicates. DistinguishNode also creates one extra
  * ruleset by default for all nohit messages. The reserved word, nohit, is the
  * name of this default ruleset.
- *<br/><br/>
+ *<br><br>
  * DistinguishNode also supports the cache ruleset which is similar to a
  * regular distinction ruleset. The only difference on the configurations is
  * that the former has also defined RuleType as "cache". However, the routing
@@ -63,7 +63,7 @@ import org.qbroker.event.Event;
  * activities are mutually exclusive on any given instance of the node.
  * Therefore, a DistinguishNode with active cache rulesets is called on the
  * cache mode.
- *<br/><br/>
+ *<br><br>
  * One of the use cases of cache rulesets is that an active-passive message
  * flow cluster with the only one DistinguishNode. In this case, the master
  * flow processes all the incoming messages. By desing, those messages only
@@ -89,17 +89,17 @@ import org.qbroker.event.Event;
  * please make sure its uplink has the 2nd half of the cells unused. The unused
  * partition will be reserved for escalations so that the container is able to
  * forward the escalations.
- *<br/><br/>
+ *<br><br>
  * DistinguishNode also supports checkpointing of the internal data cache via
  * the container.  In order to checkpoint, the CheckpointDir must be defined
  * on the container level.
- *<br/><br/>
+ *<br><br>
  * You are free to choose any names for the four fixed outlinks.  But
  * DistiguishNode always assumes the first outlink for done, the second for
  * bypass, the third for failure and the last for nohit.  The outlink of
  * failure or nohit can share the same name with the first two others.  It
  * means these outlinks may share the same output channel.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

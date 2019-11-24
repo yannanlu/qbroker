@@ -43,7 +43,7 @@ import org.qbroker.event.Event;
  * a bunch of assistant methods, such as merge(), and stores the aggregation
  * map with various policies and operations. Together, they can be used to
  * aggregate the message body externally.
- *<br/><br/>
+ *<br><br>
  * In case of average, AveragedOver is required.  Its referenced name should be
  * defined before it. In case of standard deviation, VarianceOf is requires.
  * Its referenced name should be defined before it. In case of max or min, the 
@@ -51,7 +51,7 @@ import org.qbroker.event.Event;
  * referenced name by MaxOf or MinOf should be defined before it. If TimePattern
  * is defined for max or min, Aggregation will parse the value to get the
  * timestamp for comparisons.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

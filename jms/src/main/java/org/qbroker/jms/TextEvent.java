@@ -13,7 +13,7 @@ import org.qbroker.jms.JMSEvent;
 
 /**
  * TextEvent is an Event that implements JMS TextMessage
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

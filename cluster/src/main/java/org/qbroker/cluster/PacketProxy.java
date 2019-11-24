@@ -27,7 +27,7 @@ import org.qbroker.event.Event;
 /**
  * PacketProxy is a proxy forwarding UDP packets to existing destinations.
  * As a utility, it can ack like an observer for a cluster.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -370,10 +370,10 @@ public class PacketProxy implements Runnable {
     }
 
     /**
-     * It displays packets for troubleshooting and debugging.<br/>
-     * option: 0 - displaying incoming packets with tag of a space<br/>
-     * option: 1 - displaying outgoing packets with tag of a colon<br/>
-     * option: 2 - displaying discarded incoming packets with tag of a bam<br/>
+     * It displays packets for troubleshooting and debugging.<br>
+     * option: 0 - displaying incoming packets with tag of a space<br>
+     * option: 1 - displaying outgoing packets with tag of a colon<br>
+     * option: 2 - displaying discarded incoming packets with tag of a bam<br>
      * location: - debug mask for a specified section
      */
     private void display(int option, int location, DatagramPacket packet) {

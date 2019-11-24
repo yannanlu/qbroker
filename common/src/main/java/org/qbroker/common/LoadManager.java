@@ -28,7 +28,7 @@ import org.qbroker.common.Template;
  * allocations.  But LoadManager will always find the unique allocations.
  * The allocation process is incremental and stateful.  The result depends on
  * its history and state. 
- *<br/><br/>
+ *<br><br>
  * A work load has three properties, type, weight and pattern.  The type is
  * either preferred or sticky.  A preferred work load has its preferred node
  * defined via the pattern.  As long as there is a node matching the pattern is
@@ -41,10 +41,10 @@ import org.qbroker.common.Template;
  * configuration and the maximum balance of work loads.  The pattern is used
  * to select preferable nodes.  For any sticky work loads, its pattern should
  * be set to a universal match.
- *<br/><br/>
+ *<br><br>
  * A node has the only one property, capacity or maximum weight.  The capacity
  * determines the limit on total weight of the work loads.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

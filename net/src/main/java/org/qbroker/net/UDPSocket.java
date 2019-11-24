@@ -23,7 +23,7 @@ import org.qbroker.common.Utils;
  * destination IP address and the prot.  Please do not use it to transfer
  * the data more than 8K, since there is no implementation on handling data
  * longer than the buffer size.
- *<br/><br/>
+ *<br><br>
  * Please also be careful on the differences of implementations and Java
  * versions.  On Java 1.4, the send() method has implemented ICMP ping
  * if connect() is used.  Therefore, you will get PortUnreachableException
@@ -33,12 +33,12 @@ import org.qbroker.common.Utils;
  * pass hostname as null and set up the socket as a server socket.  This
  * will bypass connect() in the initialization.  Set address and port
  * to each outgoing packets for sending.
- *<br/><br/>
+ *<br><br>
  * Be careful also on the timeout.  If it is set to zero, the block on receive
  * is forever.  This may end up dead lock.
- *<br/><br/>
+ *<br><br>
  * This is NOT MT-Safe.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

@@ -58,7 +58,7 @@ import org.qbroker.event.Event;
  * specified in the properties of the message.   The URI has to be accessible
  * from the filesystem or the supported storage.  The original XML payload
  * should be always stored in the message body.
- *<br/><br/>
+ *<br><br>
  * XSLTNode contains a number of predefined rulesets.  These rulesets
  * categorize messages into non-overlapping groups.  Therefore, each rule
  * defines a unique message group.  The ruleset also defines the transformation
@@ -71,12 +71,12 @@ import org.qbroker.event.Event;
  * you can reference properties of the message in your parameters.  XSLTNode
  * will retrieve the data from incoming message and set the parameters before
  * the transformation.
- *<br/><br/>
+ *<br><br>
  * If TargetXPath is defined, XSLTNode expects another xml document stored in
  * the field specified by XMLField. It will extract the xml content according
  * to SourceXPath and merges the result into the XML payload of the message
  * at the position specified by TargetXPath.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

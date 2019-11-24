@@ -37,7 +37,7 @@ import org.qbroker.common.Utils;
 
 /**
  * HTTPClient is a wrapper of HttpClient to implement HTTPConnector.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -249,7 +249,7 @@ public class HTTPClient implements org.qbroker.common.HTTPConnector {
      * defined in HttpURLConnection with the error message stored in the
      * response StringBuffer. The response buffer is used for both input and
      * output. The byte buffer is for input only.
-     *<br/><br/>
+     *<br><br>
      * NB. urlStr is not supposed to contain any query string.
      */
     public int doPost(String urlStr, Map extra, BytesBuffer buf,

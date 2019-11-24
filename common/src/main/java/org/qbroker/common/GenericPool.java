@@ -21,7 +21,7 @@ import org.qbroker.common.Utils;
  * the minmum number of active instances.  Therefore, in case there are more
  * active instances than the minimum required number, any instance idled for
  * too long may get closed to save resources.
- *<br/><br/>
+ *<br><br>
  * GenericPool supports any concrete class or interface, as long as it is not
  * any Java primary types.  The argument of obj can be a String for
  * the full Java classname or a Class of the object.  Otherwise, GenericPool
@@ -31,13 +31,13 @@ import org.qbroker.common.Utils;
  * of initArgs is used to create the new instnances.  It must not contain any
  * nulls. In case there is a conflict with the class name and the argument,
  * please specify the class name for the pTypes.
- *<br/><br/>
+ *<br><br>
  * In case of a concrete class, it is up to the object itself to decide
  * how to close an instance.  If there is an instance method of close() or
  * destroy(), GenericPool will invoke it to close the active instance.
  * Otherwise, GenericPool simply resets its status and timestamp, as well as
  * sets the instance object to null.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -211,7 +211,7 @@ public class GenericPool {
      * new instances.  If the creation is sucessful, it returns the instance.
      * Otherwise, the exception is returned to indicate failure.  Therefore,
      * applications are supposed to check the object before any use.
-     *<br/><br/>
+     *<br><br>
      * Due to MT features, you have to provide milliSec as the waitinmg time.
      */
     public Object checkout(long milliSec, Object[] args) {

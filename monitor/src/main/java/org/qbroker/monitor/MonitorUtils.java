@@ -38,7 +38,7 @@ import org.qbroker.event.Event;
 
 /**
  * MonitorUtils wrappes some utilities for Monitor stuff
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -157,10 +157,10 @@ public class MonitorUtils {
      * dependencies with status of NOSKIP. Otherwise, it returns either
      * MonitorReport.DISABLED without exceptions or MonitorReport.EXCEPTION
      * with exceptions.
-     *<br/><br/>
-     * NOSKIP:             true<br/>
-     * SKIPPED, DISABLED:  false<br/>
-     * EXCEPTION:          exception<br/>
+     *<br><br>
+     * NOSKIP:             true<br>
+     * SKIPPED, DISABLED:  false<br>
+     * EXCEPTION:          exception<br>
      */
     public static int checkDependencies(long currentTime, List[] dependencies,
         String prefix) {
@@ -548,13 +548,13 @@ public class MonitorUtils {
      * or a property name for either a map or a list. The corresponding values
      * are either a empty string or a list of names. It supports the following
      * three scenarios:
-     *<br/>
-     * LIST/LIST: {"MonitorGroup": ["Monitor"]}<br/>
-     * LIST: {"Flow": ["Receiver", "Node", "Persister"]}<br/>
-     * MAP: {"ConfigRepository": ""}<br/>
-     *<br/><br/>
+     *<br>
+     * LIST/LIST: {"MonitorGroup": ["Monitor"]}<br>
+     * LIST: {"Flow": ["Receiver", "Node", "Persister"]}<br>
+     * MAP: {"ConfigRepository": ""}<br>
+     *<br><br>
      * where Flow is the basename in this context.
-     *<br/><br/>
+     *<br><br>
      * The returned Map contains the same keys as those of IncludeGroup. But
      * the value for ecah key is a List of Set for names of the primary
      * includes. The index of the Set in the List is corresponding to the

@@ -55,7 +55,7 @@ import org.qbroker.event.Event;
 /**
  * JDBCMessenger connects to a database specified by URI and initializes the
  * operation of query and update for SQL statement with JMS Messages.
- *<br/><br/>
+ *<br><br>
  * There are four methods, select(), query(), update() and list() for the SQL
  * statements.  The method of select() executes a fixed query statement. In
  * case of repeated select operation, DependencyGroup has to be defined. It
@@ -71,12 +71,12 @@ import org.qbroker.event.Event;
  * use update().  It will keep retry upon database failures until the message
  * expires. The method of list() has no SQL statement. It is to list all tables
  * in a database with dynamic filter support or all columns in a specific table.
- *<br/><br/>
+ *<br><br>
  * In case of BLOB or LONGVARBINARY data is queried with a BytesMessage, the
  * method of query will only return the first row with the last BLOB or
  * LONGVARBINARY data stored in the message body.  The rest of the data will
  * formatted into the SQLField if there is any.
- *<br/><br/>
+ *<br><br>
  * In case of query with INSERT action, the method of query() will also
  * check the extra SQL statement stored in the ExtraSQLField of the message.
  * If the statement is defined, it will be executed only if the first statement
@@ -84,13 +84,13 @@ import org.qbroker.event.Event;
  * id or something else.  The result of the extra statement will be put into
  * the ExtraSQLField as a string for return.  In case of error, "ERROR: "
  * will be prefixed to the result string.
- *<br/><br/>
+ *<br><br>
  * In case of select, it supports the standard formatter on each of the
  * selected messages.
- *<br/><br/>
+ *<br><br>
  * For charSet and encoding, you can overwrite the default encoding by
  * starting JVM with "-Dfile.encoding=UTF8 your_class".
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -816,7 +816,7 @@ public class JDBCMessenger extends DBConnector {
      * requester will be able to get the result content or ResultSet out of
      * the message.  In case of non-select SQL statement, it will execute the
      * statement and store the return code into the RCField.
-     *<br/><br/>
+     *<br><br>
      * Since the query operation relies on the request, this method will
      * intercept the request and processes it.  The incoming message is required
      * to be writeable.  The method will set a String property of the message
@@ -825,14 +825,14 @@ public class JDBCMessenger extends DBConnector {
      * check the value of the property once it gets the message back.  If
      * the return code is 0, the query is successful.  Otherwise, the
      * message body will not contain the content out of query operation.
-     *<br/><br/>
+     *<br><br>
      * If the SQL statement is an INSERT action and its execution is successful,
      * this method will also check the extra SQL statement stored in the
      * ExtraSQLField of the message.  If the statement is defined, it will be
      * executed immediately.  Its result will be put into the same field as the
      * return.  The requester is supposed to check the content in ExtraSQLField.
      * This extra SQL can be used to get Auto-Increment id or something else.
-     *<br/><br/>
+     *<br><br>
      * If the MaxIdleTime is set to none-zero, it will monitor the idle time
      * and will throw TimeoutException once the idle time exceeds MaxIdleTime.
      * it is up to the caller to handle this exception.
@@ -1550,11 +1550,11 @@ public class JDBCMessenger extends DBConnector {
      * SQL statement and data from each message.  After the compiling and
      * setting data on the statement, it executes the SQL statement for
      * the database operation of update, insert or delete.
-     *<br/><br/>
+     *<br><br>
      * If the MaxIdleTime is set to none-zero, it will monitor the idle time
      * and will throw TimeoutException once the idle time exceeds MaxIdleTime.
      * It is up to the caller to handle this exception.
-     *<br/><br/>
+     *<br><br>
      * The original message will not be modified.  If the XQueue has enabled
      * the EXTERNAL_XA bit, it will also acknowledge the messages.
      * It is NOT MT-Safe due to the cached SQL statements.
@@ -1915,7 +1915,7 @@ public class JDBCMessenger extends DBConnector {
      * REMARK. The result will be put into the message before it is removed
      * from the XQueue.  The requester will be able to get the result content
      * out of the message.
-     *<br/><br/>
+     *<br><br>
      * Since the list operation relies on the request, this method will
      * intercept the request and processes it.  The incoming message is required
      * to be writeable.  The method will set a String property of the message
@@ -1924,7 +1924,7 @@ public class JDBCMessenger extends DBConnector {
      * check the value of the property once it gets the message back.  If
      * the return code is 0, the query is successful.  Otherwise, the
      * message body will not contain the content out of query operation.
-     *<br/><br/>
+     *<br><br>
      * If the MaxIdleTime is set to none-zero, it will monitor the idle time
      * and will throw TimeoutException once the idle time exceeds MaxIdleTime.
      * it is up to the caller to handle this exception.
@@ -2471,7 +2471,7 @@ public class JDBCMessenger extends DBConnector {
      * the resultset and puts them into the BytesMessage.  Upon success, it
      * returns the number of records retrieved.  Otherwise, it returns -1
      * indicating there is no BLOB data or LONGVARBINARY data found.
-     *<br/><br/>
+     *<br><br>
      * The BLOB data or the LONGVARBINARY data in the last position will be put
      * into the message body.  The rest will be formatted into the field
      * specified by the given key.

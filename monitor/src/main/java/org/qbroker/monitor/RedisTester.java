@@ -25,25 +25,25 @@ import org.qbroker.monitor.Report;
 /**
  * RedisTester connects to a Redis server and sends a request of "info" for
  * status check.
- *<br/><br/>
+ *<br><br>
  * It provides a test method, testRedis() for the service.  This method
  * throws exceptions if the internal error occurs.   Otherwise it returns an
  * integer indicating the status of the MessageBus.  If the return code
  * is not zero, the response will be stored in the last responseText.
- *<br/><br/>
- * Status     Code         Description<br/>
- *   -1     TESTFAILED     unexpected system errors<br/>
- *   0      TESTOK         MessageBus is OK<br/>
- *   1      PROTOCOLERROR  protocol error, probably wrong port<br/>
- *   2      CMDFAILED      MessageBus command failed<br/>
- *   3      CHLNOTFOUND    channel not found on server<br/>
- *   4      CLIENTERROR    client error<br/>
- *   5      SERVERERROR    MessageBus internal error<br/>
- *   6      READFAILED     failed to read from server<br/>
- *   7      WRITEFAILED    failed to write to server<br/>
- *   8      CONNTIMEOUT    connection timeout, probably server is busy<br/>
- *   9      CONNREFUSED    connection refused, probably server is down<br/>
- *<br/>
+ *<br><br>
+ * Status     Code         Description<br>
+ *   -1     TESTFAILED     unexpected system errors<br>
+ *   0      TESTOK         MessageBus is OK<br>
+ *   1      PROTOCOLERROR  protocol error, probably wrong port<br>
+ *   2      CMDFAILED      MessageBus command failed<br>
+ *   3      CHLNOTFOUND    channel not found on server<br>
+ *   4      CLIENTERROR    client error<br>
+ *   5      SERVERERROR    MessageBus internal error<br>
+ *   6      READFAILED     failed to read from server<br>
+ *   7      WRITEFAILED    failed to write to server<br>
+ *   8      CONNTIMEOUT    connection timeout, probably server is busy<br>
+ *   9      CONNREFUSED    connection refused, probably server is down<br>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

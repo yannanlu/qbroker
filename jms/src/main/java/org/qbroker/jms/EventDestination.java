@@ -7,7 +7,7 @@ import javax.jms.Destination;
 
 /**
  * EventDestination stores JMS Destination for event
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

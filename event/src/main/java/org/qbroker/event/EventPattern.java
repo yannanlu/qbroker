@@ -18,7 +18,7 @@ import org.qbroker.common.DataSet;
 
 /**
  * EventPattern implements EventFilter for Perl5 pattern match with events
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

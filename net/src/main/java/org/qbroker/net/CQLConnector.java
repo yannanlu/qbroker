@@ -35,10 +35,10 @@ import org.qbroker.common.TraceStackThread;
 /**
  * CQLConnector connects to a Cassandra cluster and provides some basic CQL
  * operation methods: select(), and execute().
- *<br/><br/>
+ *<br><br>
  * This is NOT MT-Safe.  Therefore, you need to use multiple instances to
  * achieve your MT-Safty goal.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -261,7 +261,7 @@ public class CQLConnector implements Connector {
      * StringBuffer according to the ResultType.  The int array of rc
      * should have at least two numbers.  The first is for the number of
      * rows.  The second is for the number of columns.
-     *<br/>
+     *<br>
      * If any returned string is null, it will be reset into an empty string.
      */
     public static StringBuffer getResult(int type, ResultSet rset, int[] rc)
@@ -397,7 +397,7 @@ public class CQLConnector implements Connector {
      * a StringBuffer according to the ResultType.  The int array of rc
      * should have at least two numbers.  The first is for the number of
      * rows.  The second is for the number of columns.
-     *<br/>
+     *<br>
      * If any returned string is null, it will be reset into an empty string.
      */
     public static StringBuffer getResult(List<ColumnMetadata> list, int[] rc)

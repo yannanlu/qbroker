@@ -41,10 +41,10 @@ import org.qbroker.jms.EchoService;
  * HTTP client as the response. Therefore, MessageHandler is the frontend and
  * the gateway for message services. It is responsible for transformations
  * between HTTP requests/responses and JMS messages.
- *<br/><br/>
+ *<br><br>
  * N.B. The name of the handler is supposed to be same as the substring of
  * the context path starting from the 2nd character (after the beginning "/").
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

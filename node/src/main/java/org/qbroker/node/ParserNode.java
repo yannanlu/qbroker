@@ -34,7 +34,7 @@ import org.qbroker.event.Event;
  * to any rulesets, failure for the messages failed at the parsing process.
  * Those parsed messages will have variables extracted from the body and
  * put to the message properties for easy access.
- *<br/><br/>
+ *<br><br>
  * ParserNode contains a number of predefined rulesets.  These rulesets
  * categorize messages into non-overlapping groups.  Therefore, each rule
  * defines a unique message group.  The ruleset also defines the parser and
@@ -50,12 +50,12 @@ import org.qbroker.event.Event;
  * reset JMSTimestamp of the messages for the group.  On the node level,
  * DisplayMask and StringProperty control the display result of outgoing
  * messages.
- *<br/><br/>
+ *<br><br>
  * ParserNode supports a post formatter defined within the filter for the
  * parser rules. Even if the rule is a bypass one, it can also have a post
  * formatter as long as its preferred outlink is the first outlink. In case of
  * failure or nohit, the post formatter will be disabled.
- *<br/><br/>
+ *<br><br>
  * ParserNode allows the developers to plugin their own parsers.
  * The requirement is minimum.  The class should have a public method of
  * parse() that takes the String to be parsed as the only argument.  The
@@ -63,11 +63,11 @@ import org.qbroker.event.Event;
  * a constructor taking a Map, or a List, or just a String as the only argument
  * for configurations. ParserNode will invoke the public method to parse
  * the either message body or certain message property as a text.
- *<br/><br/>
+ *<br><br>
  * You are free to choose any names for the three fixed outlinks.  But
  * ParserNode always assumes the first outlink for done, the second for failure
  * and the last for nohit.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

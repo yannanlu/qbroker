@@ -49,13 +49,13 @@ import org.qbroker.monitor.WebTester;
  * update the local files. If there is no change at all, the value of the new
  * property map stored in the report will be reset to null to indicate no
  * change.
- *<br/><br/>
+ *<br><br>
  * Use PropertyMonitor to get the update time of a given set of properties.
  * The properties can be stored in a file, a web page or a database table.
  * It is assumed there is a timestamp for each set of properties. If the
  * timestamp is newer, the downloaded property map will be stored in the
  * report with the key of "Property".
- *<br/><br/>
+ *<br><br>
  * You can use it to monitor changes on properties of an application.  If the
  * properties have been updated, performAction() will compare the new set of
  * properties to the existing ones and returns the change map via the latest
@@ -64,41 +64,41 @@ import org.qbroker.monitor.WebTester;
  * value. If there is no change, it will be set to null. Otherwise, you can
  * retrieve the change map from the report. With this property map, you can
  * reload the objects directly.
- *<br/><br/>
+ *<br><br>
  * PropertyMonitor is able to include properties defined outside the master
  * file.  IncludeGroup is a map specifying all the components to be
- * loaded from outside of the master file.  It supports three scenarios:<br/>
- * LIST/LIST: {"MonitorGroup": ["Monitor"]}<br/>
- * LIST: {"Flow": ["Reporter"]}<br/>
- * MAP:  {"ConfigRepository":""}<br/>
+ * loaded from outside of the master file.  It supports three scenarios:<br>
+ * LIST/LIST: {"MonitorGroup": ["Monitor"]}<br>
+ * LIST: {"Flow": ["Reporter"]}<br>
+ * MAP:  {"ConfigRepository":""}<br>
  * where Flow is the name of the master property file.
- *<br/><br/>
+ *<br><br>
  * PropertyMonitor also supports secondary includes on certain type of primary
  * included components.  It means those components may contain listed objects
  * defined outside of their configuration files.  SecondaryInclude is a map
  * specifying what lists of primary includes may contain secondary includes.
  * Any key of SecondaryInclude has to be one of the values of IncludeGroup.
- * For example:<br/>
- * {"Node": "IncludePolicy"}<br/>
+ * For example:<br>
+ * {"Node": "IncludePolicy"}<br>
  * where Node is the name of the list with primary includes.  IncludePolicy is
  * the name of the map specifying what classnames of Node may have secondary
- * includes in their lists specified by the values.  For example:<br/>
- * {"org.qbroker.node.EventMonitor": "Ruleset"}<br/>
+ * includes in their lists specified by the values.  For example:<br>
+ * {"org.qbroker.node.EventMonitor": "Ruleset"}<br>
  * where Ruleset is the name of the list that may contain secondary includes.
  * IncludePolicy should be defined in the master configuration for that Node
  * object.
- *<br/><br/>
+ *<br><br>
  * If DataField is defined, PropertyMonitor will use it to retrieve a list from
  * the property map. Then those objects not referenced by the list will be
  * removed for the support of projections.
- *<br/><br/>
+ *<br><br>
  * Currently, it only supports web based or local JSON properties. Since it is
  * always instantiated before the static reports, it can not use any of the
  * global variables defined in the static reports. However, it does support
  * the special variables loaded from a set of environment variables. But they
  * are limited to URI and authentication stuff. Those environment variables
  * have the higher precedence over the inline properties.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -1417,7 +1417,7 @@ public class PropertyMonitor extends Monitor {
      * the master configuration file and the files for individual components.
      * The configuration parameters are stored in the json file, pm.json,
      * that defines how to handle all applications, etc.
-     *<br/><br/>
+     *<br><br>
      * Usage: java PropertyMonitor [-?|-l|-I configFile|...]
      */
     public static void main(String args[]) {

@@ -8,26 +8,26 @@ import org.qbroker.common.XQueue;
  * CollectibleCells are a fixed numner of indexed cells that are collectible
  * with the associated unigue IDs. All the collectible (TAKEN) cells are always
  * kept in their natural order.
- *<br/><br/>
+ *<br><br>
  * A cell is always in one of the two different status, EMPTY, and TAKEN. All
  * cells line up in a circular array.  The cells in the same status always stay
  * together in a group. Therefore the circle is divided into two segments of
  * arcs. There are two marks separating those two arcs, ie, the two different
  * groups of cells. Tail divieds empty cells and taken cells. Head separates
  * taken cells and empty cells.
- *<br/><br/>
+ *<br><br>
  * There are two methods to change the status of a cell. The method of
  * take() is to take an empty cell and toggles its status from EMPTY to TAKEN.
  * The method of collect() is to collect a taken cell and switches it from
  * TAKEN to EMPTY.
- *<br/><br/>
- * capacity -- maximum number of cells in the list<br/>
- * size -- number of taken cells<br/>
- * status -- status of a cell<br/>
- * id -- the fixed id of a cell<br/>
- *<br/>
+ *<br><br>
+ * capacity -- maximum number of cells in the list<br>
+ * size -- number of taken cells<br>
+ * status -- status of a cell<br>
+ * id -- the fixed id of a cell<br>
+ *<br>
  * This is MT-Safe.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -96,7 +96,7 @@ public class CollectibleCells {
 
     /**
      * collects the id-th cell and returns the id upon success or -1 otherwise.
-     * If milliSec < 0, there is no wait.
+     * If milliSec is less than 0, there is no wait.
      */
     public synchronized int collect(long milliSec, int id) {
         int cid, k, current;

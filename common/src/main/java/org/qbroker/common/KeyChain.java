@@ -16,8 +16,9 @@ import java.util.Comparator;
  * int array. KeyChain has a public method of sort(). It can be used to sort
  * the objects in the ascending order according to their sequence keys.  The
  * index of the keys may not be same as their internal index to the object.
- *<br/><br/>
+ *<br><br>
  * <table>
+ * <caption>Key Type</caption>
  * <tr><th>Key Type</th><th>Data Type</th></tr>
  * <tr><td>KEY_STRING</td><td>String</td></tr>
  * <tr><td>KEY_INT</td><td>int</td></tr>
@@ -27,9 +28,9 @@ import java.util.Comparator;
  * <tr><td>KEY_TIME</td><td>time</td></tr>
  * <tr><td>KEY_SEQUENCE</td><td>sequence number</td></tr>
  * </table>
- *<br/><br/>
+ *<br><br>
  * This is NOT MT-Safe.  Therefore please use it with care.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -188,8 +189,8 @@ public abstract class KeyChain implements Comparator {
      * It truncates the chain by deleting the first given number of keys
      * permanently and returns the number of keys deleted. It assumes all
      * keys have already been sorted. If there are active keys left, it will
-     * also reset the ctime to that of the most baked key. If k <= 0, it will
-     * delete all removed keys.
+     * also reset the ctime to that of the most baked key. If k is less than or
+     * equal to 0, it will delete all removed keys.
      */
     public abstract int truncate(int k);
 

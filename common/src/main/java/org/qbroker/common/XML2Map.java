@@ -29,12 +29,12 @@ import org.qbroker.common.PHP2Map;
  * data tree.  A String is only a leaf in the data tree.  With these three
  * basic types of objects, any data structures will be representable.
  * The mapping is one-to-one.  Therefore, the mapping is bidirectional.
- *<br/><br/>
+ *<br><br>
  * It recognizes the only attribute: type.  The type defines the storage type
  * of the data object, either scalar in default or vector.  Its value of
  * "ARRAY" for an element of an List, "NULL" for a null scalar and
  * "NULL_ARRAY" for a null element of an List.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

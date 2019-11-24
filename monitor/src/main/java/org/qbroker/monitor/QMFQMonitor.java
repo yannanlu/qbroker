@@ -19,7 +19,7 @@ import org.qbroker.net.QMFRequester;
 /**
  * QMFQMonitor monitors the message flow on a queue via QMF. It supports
  * generic QMF for Apache QPid for now.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

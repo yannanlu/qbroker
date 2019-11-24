@@ -6,24 +6,24 @@ package org.qbroker.common;
  * QList combines a List and Queue as a FIFO storage for storing objects
  * with associated unigue IDs.  It also has a Browser for quick browsing on
  * all the new objects or all occupied cells.
- *<br/><br/>
+ *<br><br>
  * All cells in the QList line up in a circular array.  The cells in the same
  * status always stay together in a group.  Therefore the circle is divided into
  * four segments of arcs.  There are four marks separating those four arcs, ie,
  * the four different groups of cells.  Head divides taken cells and occupied
  * cells.  Tail separates occupied cells and reserved cells.  Lead divides
  * taken cells and empty cells.  Mark separates reserved cells and empty cells.
- *<br/><br/>
- * capacity -- maximum number of cells in the queue<br/>
- * size -- number of the new and taken objects in the queue<br/>
- * depth -- number of new objects in the queue<br/>
- * watermark -- size + number of reserved cells<br/>
- * collectible -- number of empty cells that have not been collected yet<br/>
- * type -- type of a cell or status of the object<br/>
- * id -- the id of a cell or the object<br/>
- *<br/>
+ *<br><br>
+ * capacity -- maximum number of cells in the queue<br>
+ * size -- number of the new and taken objects in the queue<br>
+ * depth -- number of new objects in the queue<br>
+ * watermark -- size + number of reserved cells<br>
+ * collectible -- number of empty cells that have not been collected yet<br>
+ * type -- type of a cell or status of the object<br>
+ * id -- the id of a cell or the object<br>
+ *<br>
  * This is not MT-Safe. It should only used by its owner.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

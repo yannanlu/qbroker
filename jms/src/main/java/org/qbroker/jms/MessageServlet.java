@@ -52,7 +52,7 @@ import org.qbroker.jms.EchoService;
  * clients and sends messages back on HTTP. Therefore, MessageServlet is the
  * frontend and the gateway for message services.  It is responsible for
  * transformation between the HTTP requests/responses and JMS messages.
- *<br/><br/>
+ *<br><br>
  * MessageServlet has 6 rulesets referenced by the URL path. The first one is
  * /jms for receiving event postables as the JMS TextEvents. The second is
  * /collectible for receiving event postables from the client and transforming
@@ -68,12 +68,12 @@ import org.qbroker.jms.EchoService;
  * message. One of examples with HeaderRegex is "^[Xx]-.+$" that matches all
  * HTTP headers of starting with "X-". In case of POST, it also supports file
  * upload or raw content such as xml or json.
- *<br/><br/>
+ *<br><br>
  * A collectible TextEvent is a TextEvent with its message body set to the
  * collectible format of the original message. It is meant to be sent to remote
  * destinations. In order to get content of the original message, the remote 
  * consumer will have to parse the message body with the EventParser.
- *<br/><br/>
+ *<br><br>
  * For ad hoc form requests, MessageServlet treats them in two different ways.
  * If the attribute of view is defined in the request and it is not empty, the
  * request will be converted into a TextEvent. Otherwise, if the attribute of
@@ -81,13 +81,13 @@ import org.qbroker.jms.EchoService;
  * Event. If neither view nor name is defined, the ad hoc request will be
  * dropped as a bad request. Further more, if the attribute of URI is defined
  * and it is not empty, the request Event will be packed into collectible.
- *<br/><br/>
+ *<br><br>
  * Once an incoming request is transformed into message, MessageServlet will
  * invoke doRequest() of the assigned service to process the message as the
  * request. After the process is done, the message is supposed to have the
  * response loaded. MessageServlet will convert it back to the HTTP response
  * and sends the response back to the HTTP client.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

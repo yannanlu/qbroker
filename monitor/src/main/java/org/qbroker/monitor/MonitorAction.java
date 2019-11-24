@@ -2,10 +2,10 @@ package org.qbroker.monitor;
 
 /**
  * MonitorAction is an interface for an action upon a report
- *<br/><br/>
+ *<br><br>
  * It is up to the implementation to decide whether to support
  * checkpointing and how to do checkpointing
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

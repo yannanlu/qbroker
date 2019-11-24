@@ -13,7 +13,7 @@ import org.qbroker.event.Event;
 
 /**
  * ReportAggregator aggregates multiple internal reports for certain data.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

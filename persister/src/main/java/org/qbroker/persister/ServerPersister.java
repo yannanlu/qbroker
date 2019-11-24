@@ -52,7 +52,7 @@ import org.qbroker.event.Event;
  * from the same XQueue and each client gets its own copies.  In this case,
  * there is no flow control and buffer overrun may occur.  Therefore,
  * ServerPersister is a JMS message outlet, or a JMS message provider.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -880,11 +880,11 @@ public class ServerPersister extends Persister {
     /**
      * It gets a String from the XQueue and write all bytes to the
      * OutputStream continuously.
-     *<br/><br/>
+     *<br><br>
      * Most of the IOExceptions from the stream IO operations, like write,
      * will be thrown to notify the caller.  The caller is supposed to catch
      * the exception, either to reset the stream or to do other stuff.
-     *<br/><br/>
+     *<br><br>
      * This method is MT-Safe.
      */
     private long write(XQueue xq,OutputStream out,String u) throws IOException {

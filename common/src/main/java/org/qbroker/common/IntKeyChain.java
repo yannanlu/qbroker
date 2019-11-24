@@ -15,9 +15,9 @@ import java.util.Comparator;
  * It sorts the objects in the ascending order according to their sequence
  * keys. The index of the keys may not be same as their internal index to
  * the object.
- *<br/><br/>
+ *<br><br>
  * This is NOT MT-Safe.  Therefore please use it with care.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -311,8 +311,8 @@ public class IntKeyChain extends KeyChain {
      * It truncates the chain by deleting the first given number of keys
      * permanently and returns the number of keys deleted. It assumes all
      * keys have already been sorted. If there are active keys left, it will
-     * also reset the ctime to that of the most baked key. If k <= 0, it will
-     * delete all removed keys.
+     * also reset the ctime to that of the most baked key. If k is less than or
+     * equal to 0, it will delete all removed keys.
      */
     public int truncate(int k) {
         int i, j, m, n;

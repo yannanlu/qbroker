@@ -55,7 +55,7 @@ import org.qbroker.event.Event;
  * generates a new message as the final escalation. Then the occurrence will be
  * destroyed. The outlink of done can be shared with with other outlinks except
  * for pool.
- *<br/><br/>
+ *<br><br>
  * MonitorNode also contains a number of predefined rulesets.  These
  * rulesets categorize messages into non-overlapping groups via the filters.
  * Therefore, each rule defines a unique message group.  If a ruleset is not
@@ -74,13 +74,13 @@ import org.qbroker.event.Event;
  * For those messages falling off all defined rulesets, MonitorNode always
  * creates an extra ruleset, nohit, to handle them.  Therefore all the nohit
  * messages will be routed to the outlink of nohit.
- *<br/><br/>
+ *<br><br>
  * You are free to choose any names for the five fixed outlinks.  But
  * MonitorNode always assumes the first outlink for pool, the second for
  * done, the third for bypass, the fourth for failure and the last for nohit.
  * It is OK for the last four outlinks to share the same name. But the name of
  * the first outlink has to be unique.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

@@ -28,7 +28,7 @@ import org.qbroker.common.Utils;
  * RMQConnector connects to an exchange on a RabbitMQ server and initializes
  * the channel, the queue and the bindings for operations, such as check, get
  * and pub.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

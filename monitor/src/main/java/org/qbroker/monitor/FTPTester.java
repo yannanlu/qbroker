@@ -26,26 +26,26 @@ import org.qbroker.monitor.Report;
 
 /**
  * FTPTester tests an ftp server to see if it hangs or it is down
- *<br/><br/>
+ *<br><br>
  * It provides a test method, testFTPD() for ftp servers.  This method
  * throws exceptions if the internal error occurs.   Otherwise it returns an
  * integer indicating the status of the ftp server.  If the return code
  * is not zero, the response will be stored in the last responseText or
  * the one where failure occurs.
- *<br/><br/>
- * Status     Code         Description<br/>
- *   -1     TESTFAILED     unexpected system errors<br/>
- *   0      TESTOK         server is OK<br/>
- *   1      PROTOCOLERROR  protocol error, probably wrong port<br/>
- *   2      CMDFAILED      ftp command failed<br/>
- *   3      FILENOTFOUND   file not found on server<br/>
- *   4      CLIENTERROR    client error, such as permissin issues<br/>
- *   5      SERVERERROR    ftp server internal error<br/>
- *   6      READFAILED     failed to read from server<br/>
- *   7      WRITEFAILED    failed to write to server<br/>
- *   8      CONNTIMEOUT    connection timeout, probably server is busy<br/>
- *   9      CONNREFUSED    connection refused, probably server is down<br/>
- *<br/>
+ *<br><br>
+ * Status     Code         Description<br>
+ *   -1     TESTFAILED     unexpected system errors<br>
+ *   0      TESTOK         server is OK<br>
+ *   1      PROTOCOLERROR  protocol error, probably wrong port<br>
+ *   2      CMDFAILED      ftp command failed<br>
+ *   3      FILENOTFOUND   file not found on server<br>
+ *   4      CLIENTERROR    client error, such as permissin issues<br>
+ *   5      SERVERERROR    ftp server internal error<br>
+ *   6      READFAILED     failed to read from server<br>
+ *   7      WRITEFAILED    failed to write to server<br>
+ *   8      CONNTIMEOUT    connection timeout, probably server is busy<br>
+ *   9      CONNREFUSED    connection refused, probably server is down<br>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

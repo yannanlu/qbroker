@@ -31,10 +31,10 @@ import org.qbroker.event.Event;
  * ChannelMonitor monitors an MQSeries channel object for its stats and status
  * Since it monitors the flow rate of the channel, it will disable itself
  * at the start up for only once.
- *<br/><br/>
+ *<br><br>
  * It supports SecurityExit in case it is required on the server side.
  * You can specify the username and password if SecurityExit is defined.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

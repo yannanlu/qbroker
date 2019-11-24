@@ -15,7 +15,7 @@ import org.qbroker.event.Event;
  * the pattern is null or an empty string, the text will be assumed as an event
  * collectible. Otherwise, the text is supposed to contain an event postable
  * and the pattern has to have the only one group member for the postable.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

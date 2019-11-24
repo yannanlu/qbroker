@@ -20,7 +20,7 @@ import org.qbroker.event.EventScriptLauncher;
 /**
  * EventActionGroup is a wrapper for a group of EventAction objects.
  * With it, you can fire off a group of actions on an event.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

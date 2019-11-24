@@ -28,9 +28,9 @@ import org.qbroker.event.EventAction;
 /**
  * EventSyslogger implements EventAction and logs a message to a syslogd
  * via an UDP packet.
- *<br/><br/>
+ *<br><br>
  * This is MT-Safe.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

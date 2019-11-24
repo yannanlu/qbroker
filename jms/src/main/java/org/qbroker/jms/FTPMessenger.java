@@ -47,7 +47,7 @@ import org.qbroker.event.Event;
  * FTPMessenger connects to an FTP server and initializes one of the operations,
  * such as retrieve, download and store.  It carries out the operation with
  * JMS Messages.
- *<br/><br/>
+ *<br><br>
  * There are seven methods, retrieve(), download(), list(), store(), copy(),
  * upload() and pickup().  The first method, retrieve(), is used to retrieve
  * files from FTP servers. The method of download() is used for synchronous
@@ -55,10 +55,10 @@ import org.qbroker.event.Event;
  * to remote FTP servers. The method of copy() is for copying a file from
  * one FTP server to anther. Both upload() and pickup() are for large file
  * transfers with JobPersister.
- *<br/><br/>
+ *<br><br>
  * This is NOT MT-Safe.  Therefore, you need to use multiple instances to
  * achieve your MT goal.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -444,7 +444,7 @@ public class FTPMessenger extends FTPConnector {
      * The message will be removed from the XQueue so that the requester at
      * the other end of the XQueue can easily process the content either out of
      * the local filename or out of the message.
-     *<br/><br/>
+     *<br><br>
      * Since the download operation relies on a request, this method will  
      * intercept the request and processes it. The incoming message is required
      * to be writeable.  The method will set a String property of the message
@@ -454,7 +454,7 @@ public class FTPMessenger extends FTPConnector {
      * the return code is 0, the download is successful.  Otherwise, the
      * download operation is failed. No matter what happens, it will not
      * acknowledge the message.
-     *<br/><br/>
+     *<br><br>
      * If the MaxIdleTime is set to none-zero, it will monitor the idle time
      * and will throw TimeoutException once the idle time exceeds MaxIdleTime.
      * it is up to the caller to handle this exception.
@@ -905,7 +905,7 @@ public class FTPMessenger extends FTPConnector {
      * that the incoming request is to abort the current transfer job, it will
      * stop the transfer process and cleans up the job. The init message will
      * be acknowledged and removed from the uplink.
-     *<br/><br/>
+     *<br><br>
      * Since the upload operation relies on requests, the method will intercept
      * the requests and processes them.  The incoming message is required
      * to be writeable.  The method will set a String property of the message
@@ -914,7 +914,7 @@ public class FTPMessenger extends FTPConnector {
      * check the value of the property once it gets the message back.  If
      * the return code is 0, the upload is successful.  Otherwise, the message
      * body will contain the failure reason out of upload operation.
-     *<br/><br/>
+     *<br><br>
      * If the MaxIdleTime is set to none-zero, it will monitor the idle time
      * and will throw TimeoutException once the idle time exceeds MaxIdleTime.
      * it is up to the caller to handle this exception.
@@ -1506,7 +1506,7 @@ public class FTPMessenger extends FTPConnector {
      * that the incoming request is to abort the current transfer job, it will
      * stop the transfer process and cleans up the job. The init message will
      * be acknowledged and removed from the uplink.
-     *<br/><br/>
+     *<br><br>
      * Since the pickup operation relies on requests, the method will intercept
      * the requests and processes them.  The incoming message is required
      * to be writeable.  The method will set a String property of the message
@@ -1515,7 +1515,7 @@ public class FTPMessenger extends FTPConnector {
      * check the value of the property once it gets the message back.  If
      * the return code is 0, the pickup is successful.  Otherwise, the message
      * body will contain the failure reason out of upload operation.
-     *<br/><br/>
+     *<br><br>
      * If the MaxIdleTime is set to none-zero, it will monitor the idle time
      * and will throw TimeoutException once the idle time exceeds MaxIdleTime.
      * it is up to the caller to handle this exception.
@@ -2104,7 +2104,7 @@ public class FTPMessenger extends FTPConnector {
      * in it and gets the list via ftp.  It puts the list of files into the
      * message body one name per line and sends it back.  The requester at the
      * other end of the XQueue can easily read the list out of the message.
-     *<br/><br/>
+     *<br><br>
      * Since the list operation relies on a request, this method will  
      * intercept the request and process it.  The incoming message is required
      * to be writeable.  The method will set a String property of the message
@@ -2113,7 +2113,7 @@ public class FTPMessenger extends FTPConnector {
      * check the value of the property once it gets the message back.  If
      * the return code is 0, the list is successful.  Otherwise, the
      * message body will not contain the content out of the list operation.
-     *<br/><br/>
+     *<br><br>
      * If the MaxIdleTime is set to none-zero, it will monitor the idle time
      * and will throw TimeoutException once the idle time exceeds MaxIdleTime.
      * it is up to the caller to handle this exception.
@@ -2426,17 +2426,17 @@ public class FTPMessenger extends FTPConnector {
     /**
      * It gets a JMS Message from the XQueue and stores its body into a remote
      * file via ftp continuously.
-     *<br/><br/>
+     *<br><br>
      * It will always try to retrieve the URL from the field specified by
      * FieldName property.  If the message does not contain the URL, the method
      * will use the default URL defined by URI property.
-     *<br/><br/>
+     *<br><br>
      * It also supports LocalStore feature so that it will read the content
      * from the local file and stores the file to the remote filesystem.
      * If the local file is a directory, it will transfer all the files
      * and subdirectories to remote filesystem.  In this case, there is no
      * guarantee on the file transfer.
-     *<br/><br/>
+     *<br><br>
      * The store operation also supports the requests.  If the XAMode has
      * enabled the XA_CLIENT bit, it will treat the message as a request from
      * the uplink.  In this case, the incoming message is required
@@ -2448,11 +2448,11 @@ public class FTPMessenger extends FTPConnector {
      * request will be dropped due to failures.  On the other hand, if the
      * XA_CLIENT bit has been disabled by XAMode, the incoming message will
      * not be modified.
-     *<br/><br/>
+     *<br><br>
      * If the MaxIdleTime is set to none-zero, it will monitor the idle time
      * and will throw TimeoutException once the idle time exceeds MaxIdleTime.
      * it is up to the caller to handle this exception.
-     *<br/><br/>
+     *<br><br>
      * If the XQueue has enabled the EXTERNAL_XA bit, it will also acknowledge
      * the messages.  This method is MT-Safe.
      */
@@ -2869,13 +2869,13 @@ public class FTPMessenger extends FTPConnector {
      * It gets a JMS Message from the XQueue and retrieves the property map in
      * JSON content from its body. It copies the source file defined in
      * FileName to the remote file in LocalStore via ftp.
-     *<br/><br/>
+     *<br><br>
      * It will always try to retrieve the URL from the field specified by
      * FileName property.  If the message does not contain the URL, the method
      * will use the default URL defined by URI property.  The LocalStore
      * specifies the target filename and its property map is required to be
      * stored in message body.
-     *<br/><br/>
+     *<br><br>
      * The copy operation also supports the requests.  If the XAMode has
      * enabled the XA_CLIENT bit, it will treat the message as a request from
      * the uplink.  In this case, the incoming message is required
@@ -2887,11 +2887,11 @@ public class FTPMessenger extends FTPConnector {
      * request will be dropped due to failures.  On the other hand, if the
      * XA_CLIENT bit has been disabled by XAMode, the incoming message will
      * not be modified.
-     *<br/><br/>
+     *<br><br>
      * If the MaxIdleTime is set to none-zero, it will monitor the idle time
      * and will throw TimeoutException once the idle time exceeds MaxIdleTime.
      * it is up to the caller to handle this exception.
-     *<br/><br/>
+     *<br><br>
      * If the XQueue has enabled the EXTERNAL_XA bit, it will also acknowledge
      * the messages.  This method is MT-Safe.
      */

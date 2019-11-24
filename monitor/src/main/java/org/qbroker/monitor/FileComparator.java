@@ -21,7 +21,7 @@ import org.qbroker.monitor.Monitor;
 
 /**
  * FileComparator uses rsync to compare checksums between two sets of files
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

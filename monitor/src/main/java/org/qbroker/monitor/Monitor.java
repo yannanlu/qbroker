@@ -31,7 +31,7 @@ import org.qbroker.monitor.MonitorAction;
  * MonitorReport and MonitorAction.  It has two abstract methods,
  * generateReport() and performAction().  Other methods can be overridden
  * if it is necessary.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

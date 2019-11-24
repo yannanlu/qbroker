@@ -4,7 +4,7 @@ package org.qbroker.common;
  * UniqueID generates unique and monotonously increaing IDs.
  * It supports three different uniqueness scopes, JVM wide,
  * machine wide and globe wide.
- *<br/><br/>
+ *<br><br>
  * The unique ID is a 16 byte HexString on globe scope, 12
  * byte HexString on machine scope and 10 byte HexString
  * on JVM scope.  For a full length HexString, the first
@@ -12,12 +12,12 @@ package org.qbroker.common;
  * sequence number and next 2 byes for pid of JVM and
  * the last 4 bytes for the hostid of the machine.
  * Currently, hostid is not implemented yet.
- *<br/><br/>
+ *<br><br>
  * Since Win2K does not support hostid, you should use the
  * IP address to identify the machine.  Please remember, there may
  * be overlap between some hostid and ip.  Therefore, please use ip
  * across entire cluster if there is any Win2K node.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

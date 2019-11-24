@@ -17,7 +17,7 @@ import org.qbroker.event.Event;
 
 /**
  * EventUtils has some utilities for Event processing
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -70,9 +70,9 @@ public class EventUtils {
      * It returns a formatted string of the event in the compact format.
      * The Map of change should contain only key-value pairs for
      * add/replace/delete.
-     * value = null: delete<br/>
-     * key in event: replace<br/>
-     * no key in event: add<br/>
+     * value = null: delete<br>
+     * key in event: replace<br>
+     * no key in event: add<br>
      * NB. change will be cleared at the return
      */
     public static String pretty(Event event, Map change) {
@@ -156,9 +156,9 @@ public class EventUtils {
      * It returns a formatted string of the event in the compact format.
      * The Map of change should contain only key-value pairs for
      * add/replace/delete.
-     * value = null: delete<br/>
-     * key in event: replace<br/>
-     * no key in event: add<br/>
+     * value = null: delete<br>
+     * key in event: replace<br>
+     * no key in event: add<br>
      * NB. change will be cleared at the return
      */
     public static String compact(Event event, Map change) {
@@ -244,13 +244,13 @@ public class EventUtils {
      * The postable format of an event is a uri query string ready to be
      * posted to a web server.  The Map of change should contain only
      * key-value pairs for add/replace/delete.
-     *<br/>
+     *<br>
      * value = null: delete
-     *<br/>
+     *<br>
      * key in event: replace
-     *<br/>
+     *<br>
      * no key in event: add
-     *<br/><br/>
+     *<br><br>
      * NB. change will be cleared at the return
      */
     public static String postable(Event event, Map change) {
@@ -460,13 +460,13 @@ public class EventUtils {
      * into an event by EventParser.  But it does not contain the trailing
      * newline chararcter and the leading timestamp as well as the IP address.
      * The change should contain only key-value pairs for add/replace/delete
-     *<br/>
+     *<br>
      * value = null: delete
-     *<br/>
+     *<br>
      * key in event: replace
-     *<br/>
+     *<br>
      * no key in event: add
-     *<br/><br/>
+     *<br><br>
      * NB. change will be cleared at the return
      */
     public static String collectible(Event event, Map change) {

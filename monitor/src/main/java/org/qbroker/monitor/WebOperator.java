@@ -25,10 +25,10 @@ import org.qbroker.monitor.WebTester;
  * WebOperator responses to operation problems of a web server, such as
  * it hangs or it is down.  If SessionInitializer is defined, it will get
  * the session cookie and maintains the session while testing.
- *<br/><br/>
+ *<br><br>
  * WebOperator may get READFAILED error sometimes. ReadErrorIgnored is used to
  * ignore the error if it is larger than zero.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

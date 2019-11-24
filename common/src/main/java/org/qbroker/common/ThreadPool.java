@@ -21,7 +21,7 @@ import org.qbroker.common.Utils;
  * stays busy until the method exits. The thread will be checked in to the pool.
  * The application has control over the number of active threads by checking
  * out or checking in.
- *<br/><br/>
+ *<br><br>
  * Once a task is completed by a thread, the thread will automatically
  * check itself in.  The pool will decide the fate of the thread.  If the
  * thread is to be removed from the pool, the thread will stop and exit.
@@ -31,13 +31,13 @@ import org.qbroker.common.Utils;
  * number of running threads.  Therefore, in case there are more running
  * threads than the minimum required number, any newly checked-in thread
  * may get stopped to save resources.
- *<br/><br/>
+ *<br><br>
  * ThreadPool supports any method, as long as it is MT-Safe. The argument
  * of the method has to be an Array of Class.  It will be used to locate
  * the method on the object.  Therefore, you have to specify the name of
  * the method, its pTypes array and the object itself in order to create
  * a ThreadPool.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -112,7 +112,7 @@ public class ThreadPool implements Runnable {
      * If the creation is sucessful, it returns the thread.  Otherwise,
      * null is returned.  Application is supposed to check the size if
      * it gets null.
-     *<br/><br/>
+     *<br><br>
      * Due to MT features, you have to provide milliSec as the waitinmg time.
      */
     public Thread checkout(long milliSec) {

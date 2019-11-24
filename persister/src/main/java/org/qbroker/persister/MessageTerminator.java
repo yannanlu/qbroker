@@ -44,7 +44,7 @@ import org.qbroker.event.Event;
  * modifying the messages, such as setting their return code, a ruleset may
  * acknowledge messages according to their cell ids. So MessageTerminator is
  * used to terminate message channels.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

@@ -4,7 +4,7 @@ import org.qbroker.common.Filter;
 
 /**
  * EventFilter is an Interface for filtering event with a give pattern
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

@@ -42,14 +42,14 @@ import org.qbroker.event.Event;
  * RMQMessenger connects to a RabbitMQ server and initializes one of the
  * operations, such as get and pub.  It carries out the operation with support
  * of JMS Messages.
- *<br/><br/>
+ *<br><br>
  * There are two methods, get() and put(). The first method, get(), is used to
  * get messages from a queue on the RabbitMQ server.  The method of pub() is
  * to publish messages with certain routing keys to the RabbitMQ server.
- *<br/><br/>
+ *<br><br>
  * This is NOT MT-Safe.  Therefore, you need to use multiple instances to
  * achieve your MT goal.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

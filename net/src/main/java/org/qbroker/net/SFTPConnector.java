@@ -30,10 +30,10 @@ import org.qbroker.common.TraceStackThread;
 /**
  * SFTPConnector connects to a SSH server and provides the following
  * methods for file transfers: sftpGet(), sftpPut() and sftpList().
- *<br/><br/>
+ *<br><br>
  * This is NOT MT-Safe.  Therefore, you need to use multiple instances to
  * achieve your MT-Safty goal.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

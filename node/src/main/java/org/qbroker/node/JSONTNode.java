@@ -44,25 +44,25 @@ import org.qbroker.event.Event;
  * according to rulesets. It filters messages into three outlinks: done
  * for all the processed messages, nohit for those messages do not belong
  * to any rulesets, failure for the messages failed in the transformations.
- *<br/><br/>
+ *<br><br>
  * JSONTNode contains a number of predefined rulesets.  These rulesets
  * categorize messages into non-overlapping groups.  Therefore, each rule
  * defines a unique message group.  The ruleset also defines the transformation
  * parameters, such URITemplate to build the path to a JSON template file,
  * and TTL for the cache.
- *<br/><br/>
+ *<br><br>
  * If a list of JSONFormatter is defined in the rule, the rule is for the
  * default formatter. In this case, the format operations are defined in
  * each of the items. JSONTNode will run them in the order and saves the
  * result to the message body.
- *<br/><br/>
+ *<br><br>
  * If URITemplate is defined, it supports a simple JSON template with sections
  * and filters. The template file, referenced by URITemplate, will be compiled
  * and cached as JSON template. The format result will be converted to JSON
  * and set back to the message body. The cache count of templates for the
  * rule will be stored to RULE_PEND. The cache count will be updated when the
  * session times out which is determined by SessionTimeout.
- *<br/><br/>
+ *<br><br>
  * JSONTNode allows developers to plugin their own formatters by specifying
  * the ClassName for the plugin.  The requirement is minimum.  The class should
  * have a public method of format() that takes a parsed JSON map and a parameter
@@ -75,7 +75,7 @@ import org.qbroker.event.Event;
  * In the normal operation, JSONTNode will invoke the method to format
  * the json payload. The method should never acknowledge any message in any
  * case.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

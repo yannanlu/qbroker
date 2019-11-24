@@ -2,7 +2,7 @@ package org.qbroker.common;
 
 /**
  * Filter is an Interface for filtering on a generic object with a give pattern
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

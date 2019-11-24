@@ -28,7 +28,7 @@ import org.qbroker.common.TraceStackThread;
 /**
  * DBConnector connects to a database specified by URI and initializes the
  * operations of select and update, etc, for SQL statements.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

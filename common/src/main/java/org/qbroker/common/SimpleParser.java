@@ -14,7 +14,7 @@ import org.apache.oro.text.regex.MalformedPatternException;
 /**
  * SimpleParser parses a text into a Map according to the given patterns
  * with single-line match enabled.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

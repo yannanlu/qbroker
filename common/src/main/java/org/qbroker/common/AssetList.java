@@ -13,11 +13,11 @@ import org.qbroker.common.QList;
  * the MetaData. For example, the gid, ttl or option can be stored in the
  * MetaData for better descriptions of the asset.  The range of IDs is
  * from 0 thru capacity - 1.
- *<br/><br/>
+ *<br><br>
  * This class is only a data container.  For access efficiency, there is
  * no protection on data integrity.  It is NOT MT-Safe either.  Therefore,
  * please use it with care.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

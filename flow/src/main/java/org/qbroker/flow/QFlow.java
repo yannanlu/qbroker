@@ -65,7 +65,7 @@ import org.qbroker.event.Event;
  * message flows, just like you can build objects with Lego components.
  * Besides, QFlow also provides certain services to all the flows, like the
  * supports for clutsering, load balancing and monitoring.
- *<br/><br/>
+ *<br><br>
  * QFlow has a special internal queue called escalation.  It is the internal
  * escalation channel shared by all components.  Its name, escalation, is one
  * of the reserved name for XQueues.  In fact, QFlow listens to this queue.
@@ -73,14 +73,14 @@ import org.qbroker.event.Event;
  * For a MessageFlow, it can only be used as an outLink by a MessageNode with
  * the proper partition specified explicitly.  Please make sure the container's
  * EscalationCapacity is large enough for it.  By default, it is 64.
- *<br/><br/>
+ *<br><br>
  * QFlow supports the remote control and query synchronously via AdminServer.
  * To enable this feature, you need to define the AdminServer in the master
  * configuration file.  AdminServer is a plugin to QFlow for direct queries
  * or controls.  In fact, its output XQueue is escalation.  If it is defined,
  * the user will be able to query or modify the status of the instance of
  * QFlow directly.
- *<br/><br/>
+ *<br><br>
  * If ClusterNode is defined, QFlow will run in cluster mode.  The
  * ClusterNode will monitor the status of the cluster and will update its
  * own status frequently.  It will also escalate information to the container
@@ -88,15 +88,15 @@ import org.qbroker.event.Event;
  * DefauleStatus for the broker so that QFlow will be able to switch its
  * status between SERVICE_RUNNING and the DefaultStatus.  It also supports
  * the failover actions to manage the resources at the failover.
- *<br/><br/>
+ *<br><br>
  * If ConfigRepository is defined, QFlow will support on-demand reload of
  * configuration changes from the repository.  By design, QFlow supports
  * multiple message flows via MessageFlow list.  However, only the legacy
  * configuration with a single flow has been tested.  To make sure it is
  * the legacy configuration, please always set MaxNumberFlow to 1.
- *<br/><br/>
+ *<br><br>
  * It is MT-Safe.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -1560,18 +1560,18 @@ public class QFlow implements Service, Runnable {
     }
 
     /**
-     * It processes requests according to the preconfigured rulesets.
-     * If timeout < 0, there is no wait.  If timeout > 0, it will wait for
-     * the processed event until timeout.  If timeout = 0, it blocks until
-     * the event is processed.  It returns 1 for success, 0 for timed out and
-     * -1 for failure.  The method is MT-Safe.
-     *<br/><br/>
+     * It processes requests according to the preconfigured rulesets. If
+     * timeout is less than zero, there is no wait.  If timeout is larger than
+     * zero, it will wait for the processed event until timeout.  If timeout is
+     * zero, it blocks until the event is processed.  It returns 1 for success,
+     * 0 for timed out and -1 for failure.  The method is MT-Safe.
+     *<br><br>
      * A request is either a JMSEvent for remote queries and escalations or a
      * non-JMS Event for local queries and escalations.  In case of remote, the
      * root XQueue of the default flow is used as the message gateway to request
      * the remote objects.  For local queries, the outlink of escalation is used
      * to route the messages.
-     *<br/><br/>
+     *<br><br>
      * N.B., The input request will be modified for the response.
      */
     public int doRequest(org.qbroker.common.Event req, int timeout) {
@@ -2350,7 +2350,7 @@ public class QFlow implements Service, Runnable {
      * It invokes the predefined actions upon the incoming event and returns
      * the current role of the container which may get changed as the result
      * of the actions.
-     *<br/><br/>
+     *<br><br>
      * There are two types of incoming events, TextEvent and non-JMS Event.
      * TextEvent is an external JMS message either delivered by AdminServer or
      * escalated from the default message flow.  Non-JMS Event is escalated
@@ -2360,14 +2360,14 @@ public class QFlow implements Service, Runnable {
      * reload and failover, etc.  NOTICE is for notifications such as state
      * change and status update, etc.  INFO is for queries of state and
      * escalations of event, report and data, etc.
-     *<br/><br/>
+     *<br><br>
      * The following attributes are required for each incoming event:
-     *<br/>
-     * priority     INFO for query, NOTICE for update and WARNING for admin<br/>
-     * operation    action of the request: query,reload,stop,disable,enable<br/>
-     * category     category of the target<br/>
-     * name         name the target<br/>
-     * type         type the response content: json, xml or text<br/>
+     *<br>
+     * priority     INFO for query, NOTICE for update and WARNING for admin<br>
+     * operation    action of the request: query,reload,stop,disable,enable<br>
+     * category     category of the target<br>
+     * name         name the target<br>
+     * type         type the response content: json, xml or text<br>
      * status       status
      */
     private int invokeAction(long currentTime, long sessionTime, Event event) {

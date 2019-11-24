@@ -17,11 +17,11 @@ import org.qbroker.common.AssetList;
  * keys in a consistent way. The method of add() and remove() are used to
  * add/remove a key to/from HashChain.  The method of map() returns the id
  * of a specific key for the message. The number of the replicas is predfined.
- *<br/><br/>
+ *<br><br>
  * The default hash method is MD5.
- *<br/><br/>
+ *<br><br>
  * This is NOT MT-Safe.  Therefore please use it with care.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

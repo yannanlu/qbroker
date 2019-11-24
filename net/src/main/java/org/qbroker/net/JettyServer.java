@@ -39,6 +39,12 @@ import org.qbroker.common.Service;
 import org.qbroker.common.Utils;
 import org.qbroker.common.TraceStackThread;
 
+/**
+ * JettyServer is an embedded HTTP server as the wrapper of Jetty server.
+ *<br>
+ * @author yannanlu@yahoo.com
+ */
+
 public class JettyServer extends HttpServlet implements HTTPServer {
     private String name;
     private String username = null;

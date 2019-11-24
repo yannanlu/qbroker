@@ -24,12 +24,12 @@ import org.qbroker.common.Utils;
  * change the message. Instead, it returns the formatted text. By default,
  * Msg2Text formats the message into an Event in terms of either postable or
  * collectible.
- *<br/><br/>
+ *<br><br>
  * In case that no Template is defined, the default formatter will be used. The
  * default formatter will process all properties for both JMS and user.
  * If the Template is an empty text, the simple formatter will be used. The
  * simple formatter will process all the user properties only.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -120,7 +120,7 @@ public class Msg2Text {
      * template and the repeated template.  Upon success, it loads the
      * formatted text into the message body and returns null to indicate OK.
      * Otherwise, it returns an error text.
-     *<br/><br/>
+     *<br><br>
      * It can be used as the plugin formatter in FormatNode.
      */
     public String format(Message msg) {

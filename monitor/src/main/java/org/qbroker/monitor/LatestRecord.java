@@ -21,7 +21,7 @@ import org.qbroker.monitor.DBQuery;
 
 /**
  * LatestRecord queries a DB for a record and monitor its latest update time
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

@@ -25,7 +25,7 @@ import org.qbroker.event.Event;
  * It converts the messages into JMS Messages and puts them to an XQueue
  * as the output. RMQReceiver supports flow control and allows object control
  * from its owner.  It is fault tolerant with retry and idle options.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

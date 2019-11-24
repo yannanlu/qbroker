@@ -22,13 +22,13 @@ import org.qbroker.event.Event;
  * The method of evaluate() returns true if the selector matches the JSON data.
  * Otherwise, it returns false. It supports 3 types of selectors, Pattern,
  * DataSet and Map with keys for JSON Paths and values for patterns or ranges.
- *<br/><br/>
+ *<br><br>
  * JSONSelector of type 1 or type 3 can be used to store data for overloading.
  * One example is to store the json path on the current JSON data for
  * modifications. The method of getValue() returns the original string from
  * type 1 selector only. The method of getValue(String key) returns the String
  * value at the given key from type 3 selector only.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

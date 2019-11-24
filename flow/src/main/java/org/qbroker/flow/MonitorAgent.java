@@ -67,13 +67,13 @@ import org.qbroker.event.Event;
  * and MessageFlows.  The MonitorGroup contains various monitors that
  * periodically check if something have happened.  Whereas the MessageFlow
  * is to process messages for on-demand services.
- *<br/><br/>
+ *<br><br>
  * MonitorAgent periodically runs the registered monitors.
  * Registered monitors are grouped according to their dependencies.
  * The monitors in a same group are guaranteed to be checked in the
  * same order as they are in the group.  However, the order of different
  * groups is not honored by MonitorAgent due to MT implementation.
- *<br/><br/>
+ *<br><br>
  * Each registered monitore contains three components, a MonitorReport
  * to generate the latest report on the monitored object, a MonitorAction
  * to handle the monitor report, and a set of time windows in which the
@@ -85,13 +85,13 @@ import org.qbroker.event.Event;
  * The result is passed through in status.  No matter what status is,
  * the MonitorAction.performAction(status, currentTime, report) will always
  * be called.
- *<br/><br/>
+ *<br><br>
  * If an exception is thrown by MonitorReport.generateReport(currentTime),
  * the content of the report is invalid.  It does not make sense to check
  * on the invalid report.  Therefore MonitorAgent always catches the
  * exception and skips both the checking process and the action if any
  * exception is caught.
- *<br/><br/>
+ *<br><br>
  * It is up to developers to implement both interfaces of MonitorReport
  * and MonitorAction.  The return object of
  * MonitorReport.generateReport(currentTime) is a Map.  It is
@@ -99,34 +99,34 @@ import org.qbroker.event.Event;
  * in it.  It may be the status code indicating the latest status or anything,
  * or the timestamp of a file, or a ResultSet of a database query, etc, as long
  * as the associated action knows how to retrieve them.
- *<br/><br/>
+ *<br><br>
  * MonitorAgent also supports shared information.  Some of the reports
  * can have their test results shared with others as the dependencies or
  * merged into a new report.  The shared information is called the internal
  * report that is a Map, too.  The other objects can access them via
  * ReportQuery report.
- *<br/><br/>
+ *<br><br>
  * You can disable all the monitor groups via some monitor jobs.  To do that,
  * you have to define the report and specify the correct ReportMode.
- *<br/><br/>
+ *<br><br>
  * MonitorAgent also can be configured to pick up its configuration
  * changes automatically from the configuration repository.  The object
  * needs to be defined in the default group. Its name must be specified within
  * ConfigRepository tag.
- *<br/><br/>
+ *<br><br>
  * MonitorAgent can also host multiple message flows.  A message flow
  * is a message driven application for message broker service.  With the
  * message flow, you can have MonitorAgent to pick up and deliver
  * JMS messages via various transports.  In order to configure a message flow,
  * you need to define Receivers, Nodes and Persisters under MessageFlow list.
  * For detailed information, please reference the docs for QFlow.
- *<br/><br/>
+ *<br><br>
  * The default MessageFlow is the flow with the name of default.  It is the
  * dedicated MessageFlow for event escalations.  It shoule be always the first
  * message flow if it is defined.  In this case, URL should not be defined in
  * the master configuration file since all the events will be escalated by the
  * default MessageFlow.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -1322,7 +1322,7 @@ public class MonitorAgent implements Service, Runnable {
      * It invokes the predefined actions upon the incoming event and returns
      * the current role of the container which may get changed as the result
      * of the actions.
-     *<br/><br/>
+     *<br><br>
      * There are two types of incoming events, TextEvent and non-JMS Event.
      * TextEvent is an external JMS message either delivered by AdminServer or
      * escalated from the default message flow.  Non-JMS Event is escalated
@@ -1332,14 +1332,14 @@ public class MonitorAgent implements Service, Runnable {
      * reload and failover, etc.  NOTICE is for notifications such as state
      * change and status update, etc.  INFO is for queries of state and
      * escalations of event, report and data, etc.
-     *<br/><br/>
+     *<br><br>
      * The following attributes are expected in the incoming event:
-     *<br/>
-     * priority     INFO for query, NOTICE for update and WARNING for admin<br/>
-     * operation    action of the request: query,update,stop,disable,enable<br/>
-     * category     category of the target<br/>
-     * name         name the target<br/>
-     * type         type of response: json, xml or text<br/>
+     *<br>
+     * priority     INFO for query, NOTICE for update and WARNING for admin<br>
+     * operation    action of the request: query,update,stop,disable,enable<br>
+     * category     category of the target<br>
+     * name         name the target<br>
+     * type         type of response: json, xml or text<br>
      * status       statu such as disabled or normal with NOTICE
      */
     private int invokeAction(long currentTime, long sessionTime, Event event) {
@@ -4669,13 +4669,14 @@ public class MonitorAgent implements Service, Runnable {
     }
 
     /**
-     * It processes the request according to the preconfigured rulesets.
-     * If timeout < 0, there is no wait.  If timeout > 0, it will wait for
-     * the processed event until timeout.  If timeout = 0, it blocks until
-     * the processed event is done.  It returns 1 for success, 0 for timed
-     * out and -1 for failure. All the requests will be routed to adminServer
-     * via the outlink of escalation. The method is MT-Safe.
-     *<br/><br/>
+     * It processes the request according to the preconfigured rulesets. If
+     * timeout is less than zero, there is no wait. If timeout is larger than
+     * zero, it will wait for the processed event until timeout.  If timeout
+     * is zero, it blocks until the processed event is done.  It returns 1 for
+     * success, 0 for timeout and -1 for failure. All the requests will be
+     * routed to adminServer via the outlink of escalation. The method is
+     * MT-Safe.
+     *<br><br>
      * N.B., The input request will be modified for the response.
      */
     public int doRequest(org.qbroker.common.Event req, int timeout) {
@@ -5038,9 +5039,9 @@ public class MonitorAgent implements Service, Runnable {
     /**
      * The configuration parameters are stored in the property file,
      * Agent.json, that lists all monitorGroups, etc.
-     *<br/><br/>
+     *<br><br>
      * Usage: java org.qbroker.flow.MonitorAgent [-?|-l|-I ConfigFile|...]
-     *<br/>
+     *<br>
      * @param args the command line arguments
      */
     @SuppressWarnings("unchecked")

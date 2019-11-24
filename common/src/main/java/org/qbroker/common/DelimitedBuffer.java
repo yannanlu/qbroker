@@ -6,7 +6,7 @@ package org.qbroker.common;
  * DelimitedBuffer is a byte buffer for parsing delimited content.
  * The delimiter can be defined at the beginning as SOT and/or at the
  * end as EOT.  However, EOT and SOT should never share any byte chars.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -73,9 +73,9 @@ public class DelimitedBuffer {
      * It scans the byte array of the internal buffer for either EOT or
      * SOT strings starting from offset up to its end defined by length.
      * It returns the position immediately after the string.
-     * If position > 0, it is end of SOT.  If position < 0,
-     * it is end of EOT.  Otherwise, it returns 0, nothing found.
-     *<br/><br/>
+     * If position is larger than 0, it is end of SOT.  If position is less
+     * than 0, it is end of EOT.  Otherwise, it returns 0, nothing found.
+     *<br><br>
      * It is ok not to define SOT and/or EOT.  However,
      * EOT and SOT must never share any same byte (no overlap)
      * This method is NOT MT-Safe since it requires the global

@@ -45,7 +45,7 @@ import org.qbroker.event.Event;
  * MongoDBMessenger connects to a Mongo database specified by URI and
  * initializes the operations of find and update, etc with JMS Messages on
  * various document collections.
- *<br/><br/>
+ *<br><br>
  * There are four methods, findone(), list(), find() and update() for MongoDB
  * operations.  The method of findone() executes a predefined query on the
  * default collection.  The rest of methods extract both the collection name
@@ -56,7 +56,7 @@ import org.qbroker.event.Event;
  * persisting request.  Therefore, if you what to update collections
  * automatically, please use update().  It will keep retry upon database
  * failures until the message expires.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -930,7 +930,7 @@ public class MongoDBMessenger extends MongoDBConnector {
      * can be put into the message before it is removed from the XQueue.  The
      * requester will be able to get the result content or DBCursor out of
      * the message.
-     *<br/><br/>
+     *<br><br>
      * Since the query operation relies on the request, this method will
      * intercept the request and processes it.  The incoming message is required
      * to be writeable.  The method will set a String property of the message
@@ -939,7 +939,7 @@ public class MongoDBMessenger extends MongoDBConnector {
      * check the value of the property once it gets the message back.  If
      * the return code is 0, the query is successful.  Otherwise, the
      * message body will not contain the content out of query operation.
-     *<br/><br/>
+     *<br><br>
      * If the MaxIdleTime is set to none-zero, it will monitor the idle time
      * and will throw TimeoutException once the idle time exceeds MaxIdleTime.
      * it is up to the caller to handle this exception.
@@ -1415,11 +1415,11 @@ public class MongoDBMessenger extends MongoDBConnector {
      * If the collection name contains the char of '.', the method has to be
      * appended to it. If there is no '.' in the name, the default method of
      * update will be assumed.
-     *<br/><br/>
+     *<br><br>
      * If the MaxIdleTime is set to none-zero, it will monitor the idle time
      * and will throw TimeoutException once the idle time exceeds MaxIdleTime.
      * It is up to the caller to handle this exception.
-     *<br/><br/>
+     *<br><br>
      * The original message will not be modified.  If the XQueue has enabled
      * the EXTERNAL_XA bit, it will also acknowledge the messages.
      * It is NOT MT-Safe.

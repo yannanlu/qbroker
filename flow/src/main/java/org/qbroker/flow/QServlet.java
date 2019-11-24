@@ -62,7 +62,7 @@ import org.qbroker.event.Event;
  * and sends messages back on HTTP via the servlet. Therefore, QServlet is
  * the frontend and one of the reveiver of QFlow.  It is responsible for
  * transformation between the HTTP requests/responses and JMS messages.
- *<br/><br/>
+ *<br><br>
  * QServlet has 6 rulesets referenced by the URL path. The first one is /jms
  * for receiving event postables as the JMS TextEvents. The second is
  * /collectible for receiving event postables from the client and transforming
@@ -78,13 +78,13 @@ import org.qbroker.event.Event;
  * examples with HeaderRegex is "^[Xx]-.+$" that matches all HTTP headers of
  * starting with "X-". In case of POST, it also supports file upload or raw
  * content such as xml or json.
- *<br/><br/>
+ *<br><br>
  * A collectible TextEvent is a TextEvent with its message body set to the
  * collectible format of the original message.  It is supposed to be forwarded
  * to remote destinations in the format of text. In order to get content of
  * the original message, the consumer will have to parse the message body with
  * the EventParser.
- *<br/><br/>
+ *<br><br>
  * For ad hoc form requests, QServlet treats them in two different ways.
  * If the attribute of view is defined in the request and it is not empty, the
  * request will be converted into a TextEvent. Otherwise, if the attribute of
@@ -92,7 +92,7 @@ import org.qbroker.event.Event;
  * Event. If neither view nor name is defined, the ad hoc request will be
  * dropped as a bad request. Further more, if the attribute of URI is defined
  * and it is not empty, the request Event will be packed into collectible.
- *<br/><br/>
+ *<br><br>
  * Once the incoming requests is transformed into messages, they will be
  * routed to the default receiver XQueue of the QFlow.  After they are
  * processed, the messages will be retrieved as the response.  Those
@@ -107,7 +107,7 @@ import org.qbroker.event.Event;
  * be defined in the incoming request.  It also can be overwritten by
  * the workflow.  This is useful if the content is already a valid
  * web page and you do not want to modify it.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

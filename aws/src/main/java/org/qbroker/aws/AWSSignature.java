@@ -1,4 +1,4 @@
-package org.qbroker.common;
+package org.qbroker.aws;
 
 /* AWSSignature.java - AWS signature for REST calls to S3 */
 
@@ -6,10 +6,11 @@ import java.security.NoSuchAlgorithmException;
 import java.security.InvalidKeyException;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import org.qbroker.common.Base64Encoder;
 
 /**
  * AWSSignature provides a signature for REST calls to S3 service.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

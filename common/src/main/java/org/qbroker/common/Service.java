@@ -7,7 +7,7 @@ import org.qbroker.common.Event;
 /**
  * Service is an interface that processes requests stored in Event and returns
  * the Event back as the response.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

@@ -21,7 +21,7 @@ import org.qbroker.monitor.Report;
  * from either a given property file or a list of environment variables.
  * The loading starts from the inline properties at first, and then property
  * file, and environment variables at last.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

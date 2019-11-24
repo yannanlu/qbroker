@@ -23,7 +23,7 @@ import org.qbroker.event.Event;
  * sent into an XQueue as the output. RedisReceiver supports flow control and
  * allows object control from its owner.  It is fault tolerant with retry and
  * idle options.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

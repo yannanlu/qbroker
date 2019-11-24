@@ -28,7 +28,7 @@ import org.qbroker.event.Event;
  * of evaluate() returns true if the filter matches the JSON data. Otherwise,
  * it returns false. The method of format is to format the JSON data with the
  * internal formatter.
- *<br/><br/>
+ *<br><br>
  * The filter part contains two sets of EvalMaps. One set is for positive match
  * to include certain patterns. The other set is for negtive match to exclude
  * certain patterns. An EvalMap contains key-value pairs to supports 3 types of
@@ -39,16 +39,16 @@ import org.qbroker.event.Event;
  * the key of "v:xxx". For keys without namespace, they are json paths to
  * retrieve data to be evaluated. The value will be either a Perl5 Pattern or
  * a list of number ranges.
- *<br/><br/>
+ *<br><br>
  * The template part supports JSONSection for keys with the namespace of "s:".
  * In this case, the list of sections must be provided for the format method.
  * The parameter map is supposed to contain the root JSON doc at the key of
  * "r:_JSON_".
- *<br/><br/>
+ *<br><br>
  * It also supports the dynamic pattern or value for keys with the namespace
  * of "v:". In this case, the parameter map is supposed to contain the
  * value of the variable under the key of "v:xxx".
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

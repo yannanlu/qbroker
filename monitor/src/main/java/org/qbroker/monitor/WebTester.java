@@ -31,40 +31,40 @@ import org.qbroker.monitor.Report;
 /**
  * WebTester sends requests via a client socket and gets response back.
  * It supports protocols of http, https and generic tcp sockets.
- *<br/><br/>
+ *<br><br>
  * It provides a test method, testHTTPD() for web servers.  This method
  * throws exceptions if the internal error occurs.   Otherwise it returns an
  * integer indicating the status of the web server.
- *<br/><br/>
- * Status     Code         Description<br/>
- *   0      TESTOK         server is OK<br/>
- *   1      PROTOCOLERROR  protocol error, probably wrong port<br/>
- *   2      PATTERNNOHIT   pattern not matched, wrong page or server error<br/>
- *   3      NOTMULTIPART   not a multipart<br/>
- *   4      CLIENTERROR    client error, such as page not found, broken link<br/>
- *   5      SERVERERROR    web server internal error<br/>
- *   6      READFAILED     failure in read, probably server is busy<br/>
- *   7      WRITEFAILED    failure in write, probably server is busy<br/>
- *   8      CONNTIMEOUT    connection timeout, probably server is busy<br/>
- *   9      CONNREFUSED    connection refused, probably server is down<br/>
- *exception TESTFAILED     unexpected system errors<br/>
- *<br/><br/>
+ *<br><br>
+ * Status     Code         Description<br>
+ *   0      TESTOK         server is OK<br>
+ *   1      PROTOCOLERROR  protocol error, probably wrong port<br>
+ *   2      PATTERNNOHIT   pattern not matched, wrong page or server error<br>
+ *   3      NOTMULTIPART   not a multipart<br>
+ *   4      CLIENTERROR    client error, such as page not found, broken link<br>
+ *   5      SERVERERROR    web server internal error<br>
+ *   6      READFAILED     failure in read, probably server is busy<br>
+ *   7      WRITEFAILED    failure in write, probably server is busy<br>
+ *   8      CONNTIMEOUT    connection timeout, probably server is busy<br>
+ *   9      CONNREFUSED    connection refused, probably server is down<br>
+ *exception TESTFAILED     unexpected system errors<br>
+ *<br><br>
  * One of the client error is 401 error, Not authorized.  It will happen when
  * a password protected page is requested.  In order to get the page, the
  * base64 encoded authentication string should be specified in the argument
  * hash.  For security reason, we do not use the original string.  To get the
  * auth string, try to use the following tool:
- *<br/><br/>
+ *<br><br>
  * echo -n 'USERNAME:PASSWORD' | base64
- *<br/><br/>
+ *<br><br>
  * The output is the base64 encoded username and password, the auth string.
- *<br/><br/>
+ *<br><br>
  * The other method, generateReport(long), returns a report in a Map
  * that contains the response as a String and status code defined above
  * except exceptions.  It catches all exceptions and returns -1 indicating
  * internal error.  Therefore, generateReport(long) will not throw any
  * exceptions.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

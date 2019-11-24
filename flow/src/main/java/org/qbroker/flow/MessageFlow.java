@@ -49,7 +49,7 @@ import org.qbroker.event.Event;
  * them to pick up or deliver messages via various transports, like JMS, TCP
  * Socket, FTP, HTTP, JDBC, Serial Port, UDP Packet, SYSLOG, etc.  It is also
  * expandable and extensible by implementing new message nodes.
- *<br/><br/>
+ *<br><br>
  * Between two linked message nodes, there is a communication channel for them
  * to transport JMSMessages internally.  MessageFlow uses XQueue for the
  * inter-node communications.  As an instance of XQueue, also called a link,
@@ -64,26 +64,26 @@ import org.qbroker.event.Event;
  * of MessageFlow are used only as the default values.  For a node of either
  * MessageReceiver or MessagePersister, its XAMode only determines its JMS
  * Transaction type.
- *<br/><br/>
+ *<br><br>
  * MessageFlow supports the escalation channel for message nodes to escalate
  * messages to the container or the caller.  Its name of "escalation" is a
  * reserved name and it can only be used in MessageNodes as an outLink with
  * its partition specified explicitly.
- *<br/><br/>
+ *<br><br>
  * MessageFlow supports the static ConfigTemplate for both Receiver and
  * Persister. It means a list of persisters or receivers can share the same
  * configuration template. But it does not allow duplicated names for either
  * generated persisters or generated recievers.
- *<br/><br/>
- * FLOW_READY    initialized and ready to work<br/>
- * FLOW_RUNNING  running normally<br/>
- * FLOW_RETRYING trying to get back to running state<br/>
- * FLOW_PAUSE    pausing for a bit while still running<br/>
- * FLOW_STANDBY  standby for a bit longer while still running<br/>
- * FLOW_DISABLED flow is disabled<br/>
- * FLOW_STOPPED  all threads stopped, can be restart later<br/>
- * FLOW_CLOSED   end of life time, is not runable any more<br/>
- *<br/>
+ *<br><br>
+ * FLOW_READY    initialized and ready to work<br>
+ * FLOW_RUNNING  running normally<br>
+ * FLOW_RETRYING trying to get back to running state<br>
+ * FLOW_PAUSE    pausing for a bit while still running<br>
+ * FLOW_STANDBY  standby for a bit longer while still running<br>
+ * FLOW_DISABLED flow is disabled<br>
+ * FLOW_STOPPED  all threads stopped, can be restart later<br>
+ * FLOW_CLOSED   end of life time, is not runable any more<br>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

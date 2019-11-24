@@ -24,10 +24,10 @@ import org.qbroker.common.Utils;
 /**
  * RiakConnector connects to a Riak service and provides some basic Riak
  * operation methods: list(), fetch(), store(), and delete().
- *<br/><br/>
+ *<br><br>
  * This is NOT MT-Safe.  Therefore, you need to use multiple instances to
  * achieve your MT-Safty goal.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

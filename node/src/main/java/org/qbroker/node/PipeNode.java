@@ -39,7 +39,7 @@ import org.qbroker.event.Event;
  * Then it dispatches them based on the priorities and thresholds for each of
  * groups.  There is only one outlink, pipe.  All the groups share the same
  * pipe with different priorities and thresholds.
- *<br/><br/>
+ *<br><br>
  * PipeNode contains multiple rulesets that categorize the incoming messages
  * into non-overlapped groups.  Each group has its own priority for scheduling
  * and threshold as the maximum number of active messages waiting for feedback.
@@ -49,13 +49,13 @@ import org.qbroker.event.Event;
  * identical. PipeNode will make sure only the first one of the identical
  * messages will be scheduled. This way, PipeNode is able to control flow
  * thruput on each group of messages.
- *<br/><br/>
+ *<br><br>
  * By default, PipeNode has the cache enabled.  So all the overflown messages
  * will be cached. Due to the scheduling process, the message affinity may
  * get broken. However, if the cache is disabled, the message affinity will
  * be guaranteed. In this case, the first overflown message will block until
  * the required resource is available.
- *<br/><br/>
+ *<br><br>
  * PipeNode always creates an extra ruleset, nohit, for those messages not
  * hitting any pre-defined rulesets.  It is always the first ruleset with the
  * id of 0. For nohit, there is no flow control by default. It means that
@@ -79,7 +79,7 @@ import org.qbroker.event.Event;
  * successive messages. These intervals will be used to delay the message
  * propagations. It can be used to replay messages in their original throughput
  * rate.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

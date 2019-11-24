@@ -47,20 +47,20 @@ import org.qbroker.event.Event;
  * sets them into message as the properties.  The original XML payload should 
  * be always stored in the message body.  XPathNode will not modify the XML
  * payload.
- *<br/><br/>
+ *<br><br>
  * XPathNode supports dynamic setting of xpath expressions.  It means you can
  * reference properties of the message in your xpath expressions.  XPathNode
  * will retrieve the data from the incoming message and compiles the expressions
  * before the evaluation.
- *<br/><br/>
+ *<br><br>
  * XPathNode allows one of the xpath expressions to select a list of items.
  * In this case, ListKey has to be defined. It specifies the key for that
  * special xpath expression. The expression will be applied in the context of
  * XPathConstants.NODESET. XPathNode will retrieves the data from each item
  * and appends them one by one with a predefined delimiter.
- *<br/><br/>
+ *<br><br>
  * This requires Xalan-J 2.7.0 due to JAXP 1.3 for XPath support.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

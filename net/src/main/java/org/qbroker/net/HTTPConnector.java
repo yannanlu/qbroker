@@ -27,13 +27,13 @@ import org.qbroker.net.ClientSocket;
  * implementation of HttpURLConnection is lousy.  It sometimes causes the
  * thread stuck.  Its disconnect() is not working either under MT env.
  * Therefore, we have to provide an alternative implementation.
- *<br/><br/>
+ *<br><br>
  * Most of the HTTP 1.1 requirements has been impletemented, including the
  * persistent connection and the chunked response. But it is not fully tested
  * yet. So use it with care for HTTP 1.1 requests.
- *<br/><br/>
+ *<br><br>
  * This is MT-Safe and supports and SSL.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -362,7 +362,7 @@ public class HTTPConnector implements org.qbroker.common.HTTPConnector {
      * defined in HttpURLConnection with the error message stored in the
      * response StringBuffer. The response buffer is used for both input and
      * output. The byte buffer is for input only.
-     *<br/><br/>
+     *<br><br>
      * NB. urlStr is not supposed to contain any query string.
      */
     public int doPost(String urlStr, Map extra, BytesBuffer buf,

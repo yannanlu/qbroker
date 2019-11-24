@@ -26,7 +26,7 @@ import org.qbroker.event.Event;
  * from it via a query.  It puts the JMS Messages to an XQueue as the output.
  * JDBCReceiver supports flow control and allows object control from
  * its owner.  It is fault tolerant with retry and idle options.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

@@ -1,5 +1,7 @@
 package org.qbroker.aws;
 
+/* AWSClient.java - AWS Client for AWS services */
+
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
@@ -15,6 +17,12 @@ import com.amazonaws.auth.profile.internal.ProfileStaticCredentialsProvider;
 import org.qbroker.common.Utils;
 import org.qbroker.common.HTTPConnector;
 import org.qbroker.net.HTTPClient;
+
+/**
+ * AWSClient is an abstract class for accessing AWS services.
+ *<br>
+ * @author yannanlu@yahoo.com
+ */
 
 public abstract class AWSClient {
     protected Map<String, BasicProfile> cache = null;

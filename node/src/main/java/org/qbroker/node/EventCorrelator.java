@@ -41,7 +41,7 @@ import org.qbroker.event.Event;
  * of done can be shared with other outlinks. Since EventCorrelator
  * does not consume any events, any in-coming events has to find a way out via
  * one of the three outlinks.
- *<br/><br/>
+ *<br><br>
  * EventCorrelator contains a number of predefined rulesets.  These rulesets
  * are used to categorize events into groups.  It defines an EventFilter for
  * selecting events and an EventMerger for building a summary event on the
@@ -54,7 +54,7 @@ import org.qbroker.event.Event;
  * merger to generate a new event and to attach the summary of all the events
  * in the group. All the summary events will get formatted if the post
  * formatter is defined in their rulesets.
- *<br/><br/>
+ *<br><br>
  * EventCorrelator always creates two extra rulesets.   The first one is nohit
  * ruleset for those events without any matches.  The other is candidate
  * ruleset for all incoming events hitting at least one matches.  Since there
@@ -71,19 +71,19 @@ import org.qbroker.event.Event;
  * control the displaying result of all candidate events.  If the DisplayMask
  * of a ruleset is set to -1, that rule will inherit the DisplayMask and the
  * StringProperty from the node for display control on the rule level.
- *<br/><br/>
+ *<br><br>
  * It is OK to have a bypass ruleset without any EventMerger.  Any ruleset
  * with PreferredOutLink defined is called bypass ruleset.  If a bypass ruleset
  * matches an event,  the event will be routed to the specified outlink
  * directly, bypassing rest of the correlation process.  It is acting like
  * a jump out of the loop.
- *<br/><br/>
+ *<br><br>
  * You are free to choose any names for the four fixed outlinks.  But
  * EventCorrelator always assumes the first outlink for done, the second for
  * bypass, the third for failure and the last for nohit.  Any two or more
  * outlinks can share the same outlink name.  It means these outlinks are
  * sharing the same output channel.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -449,7 +449,7 @@ public class EventCorrelator extends Node {
     /**
      * It correlates the events into groups identified by their groupID and
      * returns total number of events in the groups
-     *<br/><br/>
+     *<br><br>
      * NB.  It is not MT-Safe due to global ruleInfo, filter, etc
      */
     private int correlate(long currentTime, int[] ruleMap,

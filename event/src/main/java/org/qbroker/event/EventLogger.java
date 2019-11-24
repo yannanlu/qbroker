@@ -21,7 +21,7 @@ import org.qbroker.net.HTTPConnector;
 /**
  * EventLogger is a logger using log4j to log events.  It also supports
  * web logging.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

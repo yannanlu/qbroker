@@ -53,7 +53,7 @@ import org.qbroker.event.Event;
 /**
  * TConnector connects to a topic and initializes one of the operations,
  * such as sub, pub, RegSub or DeregSub.
- *<br/><br/>
+ *<br><br>
  * It supports both MQ Broker (V1) and MQSI Broker (V2) for Publication and
  * Subscription.  You can choose the version by BrokerVersion.  Due to IBM's
  * implementation on publish, the API for publish has some kind of transaction
@@ -64,7 +64,7 @@ import org.qbroker.event.Event;
  * But the API will wait for the reply and hold the flow.  If the broker is
  * not available at the publish client startup, the client will fail.
  * There is a parameter to set so that the transaction size is 0.
- *<br/><br/>
+ *<br><br>
  * There are two ways to get around this problem.  The first one is to set up
  * a generic publish message flow in MQSI Broker.  The flow will pick up the
  * topic string from certain JMS property and add the publish header with
@@ -78,20 +78,20 @@ import org.qbroker.event.Event;
  * use this implementation, please remember to specify the full path of each
  * JMS properties in the message selector.  For example, if you reference a
  * property called "FileName", you have to use "Root.MQRFH2.usr.FileName".
- *<br/><br/>
+ *<br><br>
  * Here is the detail about the Pub/Sub support with point-to-point:
- *<br/><br/>
- * (1) always assume the subscription queue is set up already.<br/>
- * (2) browse SYSTEM.JMS.ADMIN.QUEUE for the clientID and subscriptionID.<br/>
- * (3) if found the entry, compare the topic and the subscription queue.<br/>
- * (4) if they are same, use get() rather than sub() to receive one message.<br/>
+ *<br><br>
+ * (1) always assume the subscription queue is set up already.<br>
+ * (2) browse SYSTEM.JMS.ADMIN.QUEUE for the clientID and subscriptionID.<br>
+ * (3) if found the entry, compare the topic and the subscription queue.<br>
+ * (4) if they are same, use get() rather than sub() to receive one message.<br>
  * (5) if either topic or queue is not same, unsub old topic and sub new topic
- *      via broker and continue to get the message.<br/>
+ *      via broker and continue to get the message.<br>
  * (6) if there is no match entry, sub the topic via broker and continue
- *     to get the messages.<br/>
- *<br/>
+ *     to get the messages.<br>
+ *<br>
  * This is NOT MT-Safe due to IBM's implementation on sessions and conn.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -786,7 +786,7 @@ public class TConnector implements TopicConnector {
      * It subscribes a JMS topic and sends the JMS messages into a output
      * channel that may be a JMS destination, an OutputStream or an XQueue.
      * It supports the message acknowledgement at the source.
-     *<br/><br/>
+     *<br><br>
      * It catches JMSException in the operations regarding to the message
      * itself, like get/set JMS properties.  In this case, it still tries to
      * send the message to the output channel and logs the errors.  It
@@ -1061,7 +1061,7 @@ public class TConnector implements TopicConnector {
      * It reads bytes from the InputStream and publish them into a JMS topic as
      * JMS messages.  It supports flexable but static delimiters at either
      * or both ends.  It also has the blind trim support at both ends.
-     *<br/><br/>
+     *<br><br>
      * This is MT-Safe as long as the threads share the same offhead,
      * offtail, sotBytes and eotBytes.
      */
@@ -1447,7 +1447,7 @@ public class TConnector implements TopicConnector {
      * It gets JMS messages from the XQueue and publishes them on a JMS topic. 
      * It supports both transaction in the delivery session and the
      * message acknowledgement at the source.
-     *<br/><br/>
+     *<br><br>
      * It catches JMSException in the operations regarding to the message
      * itself, like get/set JMS properties or acknowlegement. In this case,
      * it removes the message from the XQueue and logs the errors.  It
@@ -1455,7 +1455,7 @@ public class TConnector implements TopicConnector {
      * like publish or commit.  Such JMSException will be thrown so that
      * the caller can handle it either to reset the connection or to do
      * something else.
-     *<br/><br/>
+     *<br><br>
      * If the MaxIdleTime is set to none-zero, it will monitor the idle time
      * and will throw TimeoutException once the idle time exceeds MaxIdleTime.
      * it is up to the caller to handle this exception.

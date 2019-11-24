@@ -10,7 +10,7 @@ import java.util.List;
  * By default, the returned JSON is in matrix format with the key name on
  * each column. If the type is defined and it is not "1", the returned JSON
  * will be in array format.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

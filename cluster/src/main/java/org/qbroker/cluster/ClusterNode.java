@@ -17,7 +17,7 @@ import org.qbroker.event.Event;
  * cluster anytime as long as it is allowed and there is a room available
  * in the cluster.  Any worker can leave the cluster anytime at its wish.
  * If the last member quits, the cluster goes down.
- *<br/><br/>
+ *<br><br>
  * ClusterNode is supposed to run at backgroud.  It is required to be an
  * automaton that maintains its own state according to certain predefined
  * rules automatically.  It communicates with outside through an XQueue and
@@ -26,14 +26,14 @@ import org.qbroker.event.Event;
  * application should use relay() API to pass opaque data or instructions.
  * ClusterNode is supposed to be able to intercept the instructions or
  * relay the data to the cluster or other nodes.
- *<br/><br/>
- * A ClusterNode may be in one of the following states:<br/>
- * NODE_NEW:      just starting up, not joining the cluster yet<br/>
- * NODE_RUNNING:  joined in the cluster and running OK<br/>
- * NODE_STANDBY:  joined in the cluster but still in transient state<br/>
- * NODE_TIMEOUT:  missed a fixed number of heartbeats from the node<br/>
- * NODE_DOWN:     no longer active<br/>
- *<br/>
+ *<br><br>
+ * A ClusterNode may be in one of the following states:<br>
+ * NODE_NEW:      just starting up, not joining the cluster yet<br>
+ * NODE_RUNNING:  joined in the cluster and running OK<br>
+ * NODE_STANDBY:  joined in the cluster but still in transient state<br>
+ * NODE_TIMEOUT:  missed a fixed number of heartbeats from the node<br>
+ * NODE_DOWN:     no longer active<br>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

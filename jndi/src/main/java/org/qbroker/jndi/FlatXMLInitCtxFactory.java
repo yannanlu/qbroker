@@ -11,7 +11,7 @@ import javax.naming.spi.InitialContextFactory;
  * FlatXMLInitCtxFactory returns an instance of flat Context consisting of
  * XML configuration files in the directory specified by PROVIDER_URL.
  * Each XML file is a reference to an Object.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

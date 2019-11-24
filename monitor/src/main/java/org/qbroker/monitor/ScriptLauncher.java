@@ -27,7 +27,7 @@ import org.qbroker.monitor.Monitor;
  * ScriptLauncher launches a script outside JVM and parses its stdout for
  * patterns. It supports time dependent command with __MM____dd__ and a single
  * secret in the form of __secret__.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

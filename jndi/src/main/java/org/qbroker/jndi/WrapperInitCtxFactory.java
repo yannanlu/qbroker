@@ -10,7 +10,7 @@ import javax.naming.spi.InitialContextFactory;
 /*
  * WrapperInitCtxFactory returns an instance of WrapperContext for certain
  * JNDI Context.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

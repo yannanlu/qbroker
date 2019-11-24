@@ -49,20 +49,20 @@ import org.qbroker.event.Event;
  * to true, AgeMonitor will disable itself without Exceptions.  Otherwise,
  * AgeMonitor will throw an IOException.  Operation determines how to select
  * the data object.
- *<br/><br/>
+ *<br><br>
  * In case the data does not contain the timestamp, or it is empty, AgeMonitor
  * will either disable itself or just throw exception on the bad data.
  * If EmptyDataIgnored is set true, AgeMonitor will ignore the bad data and
  * disable itself.  Otherwise, it will throw exception on the bad data.
  * By default, EmptyDataIgnored is set true.
- *<br/><br/>
+ *<br><br>
  * There is a special treatment for the age of a UNIX process.
  * First, you should use /bin/ps -o user,pid,etime,args -u USER to
  * get the info of the process since etime is more accurate than the
  * stime.  On DateFormat, you should use D-HH:mm:ss for the etime.
  * On a Windows process, you can use tasklist.exe /V to get its CPUTime.  In
  * this case, D-HH:mm:ss should be used as the time pattern.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

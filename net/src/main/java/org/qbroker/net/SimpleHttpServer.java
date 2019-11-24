@@ -1,6 +1,6 @@
 package org.qbroker.net;
   
-/* SimpleHttpServer.java - a wrapper of HttpServer for embedded HTTP servers */
+/* SimpleHttpServer.java - an HttpServer for embedded HTTP servers */
 
 import java.net.URI;
 import java.util.HashMap;
@@ -44,6 +44,12 @@ import org.qbroker.common.Base64Encoder;
 import org.qbroker.common.Service;
 import org.qbroker.common.Utils;
 import org.qbroker.common.TraceStackThread;
+
+/**
+ * SimpleHTTPServer is an embedded HTTP server implementing SimpleHttpServer.
+ *<br>
+ * @author yannanlu@yahoo.com
+ */
 
 public class SimpleHttpServer implements HttpHandler, HTTPServer {
     private String name = null;

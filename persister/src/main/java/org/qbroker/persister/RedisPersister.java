@@ -30,7 +30,7 @@ import org.qbroker.event.Event;
  * to the content of the messages and puts the results back to the messages in
  * their body. RedisPersister supports flow control and allows object control
  * from its owner.  It is fault tolerant with retry and idle options.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

@@ -27,7 +27,7 @@ import org.qbroker.event.Event;
  * EventPersister listens to an XQueue and receives ObjectMessages
  * from it.  The incomint message is supposed to contain a task Map.
  * EventPersister completes the task and returns the message with updates.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

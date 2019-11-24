@@ -19,7 +19,7 @@ import org.qbroker.common.Utils;
  * to a Centralized Repository.  It has its own transport method, send(),
  * which can be used to send event to the repository if the logger has been
  * initialized.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -213,7 +213,7 @@ public class Event implements org.qbroker.common.Event {
 
     /**
      * It sets an attribute of the Event
-     *<br/>
+     *<br>
      * @param name      the name of the attribute
      * @param value     the value of the attribute
      */

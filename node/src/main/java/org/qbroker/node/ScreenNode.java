@@ -41,7 +41,7 @@ import org.qbroker.event.Event;
  * those messages falling out of screen process. Since ScreenNode does not
  * consume any messages, any in-coming messages has to find a way out via one
  * of the four outlinks.
- *<br/><br/>
+ *<br><br>
  * ScreenNode contains a number of pre-defined rulesets.  These rulesets
  * categorize messages into non-overlapping groups.  Therefore, each ruleset
  * defines a unique message group.  The ruleset also defines the screening
@@ -55,7 +55,7 @@ import org.qbroker.event.Event;
  * for the cache. Further more, ScreenNode always creates one extra ruleset,
  * nohit. The ruleset of nohit is for all the messages not hitting any of
  * the patterns.
- *<br/><br/>
+ *<br><br>
  * ScreenNode will not consume any messages. But it may remove the withheld
  * messages from the uplink for certain rulesets. If EXTERNAL_XA bit is set
  * on the uplink, those removed messages will be acknowledged as well.
@@ -66,7 +66,7 @@ import org.qbroker.event.Event;
  * messages for the ruleset will be acknowledged and removed from the uplink.
  * There is a big consequence to disable XA on a ruleset. Please be extremely
  * careful if you wnat to disable XA on any ruleset.
- *<br/><br/>
+ *<br><br>
  * Here are considerations on when to disable XA on a ruleset. First, you may
  * want ScreenNode to withhold more messages than the capacity of the uplink.
  * Second, the source JMS servers may not be able to handle large amount of
@@ -74,25 +74,25 @@ import org.qbroker.event.Event;
  * set to zero explicitly to disable the XA. As you know, most of the JMS
  * vendors implement message acknowledgement via sessions. The acknowledgement
  * by ScreenNode may upset the XA control of the message flow.
- *<br/><br/>
+ *<br><br>
  * ScreenNode also supports the termination rulesets. A terminate ruleset is
  * similar to a screen ruleset.  The only difference is that the former has
  * also defined TargetRule that specifies the name of a screen ruleset for
  * caching terminations. Its KeyTemplate is used to generate the screen key
  * so that the withheld message will be flushed to terminate its session. Each
  * message of a termination ruleset will be routed to the outlink of done.
- *<br/></br>
+ *<br>
  * ScreenNode is also able to monitor the load level report of its first
  * outlink if its report is defined. In this case, all cache sessions will be
  * frozen temporarily if the load level is too high.  It means ScreenNode will
  * ignore all TTLs and treats all cache sessions without expirations.
- *<br/><br/>
+ *<br><br>
  * You are free to choose any names for the four fixed outlinks.  But
  * ScreenNode always assumes the first outlink for done, the second for bypass,
  * the third for failure and the last for nohit.  Any two or more outlinks can
  * share the same outlink name.  It means these outlinks are sharing the same
  * output channel.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

@@ -5,7 +5,7 @@ package org.qbroker.common;
 /**
  * XQueue is an Interface of First-In-First-Out storage with both tracking
  * and transaction support.
- *<br/><br/>
+ *<br><br>
  * XQueue contains a fixed number of cells with unique ids. Each cell can hold
  * one object.  A cell can be in one of four different states: EMPTY, RESERVED,
  * OCCUPIED and TAKEN.  Only an empty cell is able to be reserved.  Only
@@ -19,13 +19,13 @@ package org.qbroker.common;
  * collected yet, its empty cell is also a collectible.  The method of collect()
  * is used to collect an empty cell explicity.  The method of reserve() will
  * implicitly collect the cell if it has not been collected yet.
- *<br/><br/>
+ *<br><br>
  * Similarly, each object in an XQueue can be in one of four states, too.  Once
  * an object is added to the queue or a cell is occupied by an object, it is
  * new and avaiable to be taken.  Once it is taken, the object is in use.
  * Next state will be either done or new due to rollback.  Once the object is
  * done, it will be ready for recycle.  This state is called ready.
- *<br/><br/>
+ *<br><br>
  * Once the object is put into a cell, the association with the cell will
  * not change until the object is removed from the cell.  Therefore, the
  * unique cell IDs can be used to track or operate the objects in the queue.
@@ -41,21 +41,21 @@ package org.qbroker.common;
  * occupied again.  The method takeback() is to take a new object out of the
  * occupied cell and makes the cell empty again.  The method browser() gives
  * an instance of Browser for application to browse all the new objects.
- *<br/><br/>
- * capacity -- maximum number of cells in the queue<br/>
- * size -- number of the new and taken objects in the queue<br/>
- * depth -- number of new objects in the queue<br/>
- * collectible -- number of empty cells that have not been collected yet<br/>
- * status -- status of a cell or the object<br/>
- * id -- the id of a cell or the object<br/>
- *<br/>
+ *<br><br>
+ * capacity -- maximum number of cells in the queue<br>
+ * size -- number of the new and taken objects in the queue<br>
+ * depth -- number of new objects in the queue<br>
+ * collectible -- number of empty cells that have not been collected yet<br>
+ * status -- status of a cell or the object<br>
+ * id -- the id of a cell or the object<br>
+ *<br>
  * The implementation can focus on either the objects or on the cells.  If the
  * focus is on the cells, the implementation can assign an unique ID to each of
  * the cells for tracking support.  The tracking support allows application to
  * easily track the status of the objects via their cell IDs.
- *<br/><br/>
+ *<br><br>
  * It is up to the implementation to support MT-Safty and XA.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

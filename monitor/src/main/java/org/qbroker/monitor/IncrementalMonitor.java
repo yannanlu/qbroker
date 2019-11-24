@@ -49,10 +49,10 @@ import org.qbroker.event.Event;
  * The output may contains multiple lines.  IncrementalMonitor parses the text
  * line by line to get the numbers.  Then it aggregates them according to
  * the specified operation.
- *<br/><br/>
+ *<br><br>
  * It supports v1 and v2c SNMP query.  But it requires Java 1.4 or above due
  * SNMP4J.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

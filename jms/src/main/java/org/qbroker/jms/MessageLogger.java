@@ -43,13 +43,13 @@ import org.qbroker.event.Event;
 
 /**
  * MessageLogger handles common logs as JMS Messages.
- *<br/><br/>
+ *<br><br>
  * There are three methods, fetch(), download() and append().  The former is
  * NOT MT-Safe.  During the fetch operation, the message acknowledgement and
  * session transaction are supported via explicitly persisting reference.
  * The method of download() is used for synchronous requests.  The method of
  * append() is used for asynchronous logging or storing.
- *<br/><br/>
+ *<br><br>
  * For fetch(), there are 4 different transaction mode determined by XAMode.
  * For XAMode = 1 or 3, the client based transcation is enabled so that the
  * commit is done by the persister when it completes to persist the message.
@@ -62,10 +62,10 @@ import org.qbroker.event.Event;
  * It means the state info will be flushed to the disk on every processed log
  * entry. If SaveReference is set to false, otherwise, the state info will not
  * saved to the reference file.
- *<br/><br/>
+ *<br><br>
  * For charSet and encoding, you can overwrite the default encoding by
  * starting JVM with "-Dfile.encoding=UTF8 your_class".
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -303,11 +303,11 @@ public class MessageLogger {
      * It has the acknowledge support or session transcation support if
      * the XAMode is enabled.  With the session transaction, the application
      * has to call commit() explicitly to persist the reference.
-     *<br/><br/>
+     *<br><br>
      * For those nohit log entries, it will commit them anyway.  This may
      * break the client transaction control.  So please make sure to use
      * the correct pattern to catch all entries.
-     *<br/><br/>
+     *<br><br>
      * This method is NOT MT-Safe.
      */
     public void fetch(XQueue xq) throws IOException, JMSException {
@@ -878,7 +878,7 @@ public class MessageLogger {
      * and downloads the local file.  It puts the content of the file into
      * the message body and sends it back.  The requester at the other end
      * of the xq can easily read the content out of the message.
-     *<br/><br/>
+     *<br><br>
      * Since the download operation relies on a request, this method will
      * intercept the request and process it.  The incoming message is required
      * to be writeable.  The method will set a String property of the message
@@ -887,7 +887,7 @@ public class MessageLogger {
      * check the value of the property once it gets the message back.  If
      * the return code is 0, the download is successful.  Otherwise, the
      * message body will not contain the content out of download operation.
-     *<br/><br/>
+     *<br><br>
      * This method will not acknowledge messages.  It is up to the requester to
      * do that.
      */
@@ -1156,7 +1156,7 @@ public class MessageLogger {
     /**
      * It gets a JMS Message from an XQueue and append the formatted content
      * to the logfile continuously, or store the content to a file.
-     *<br/><br/>
+     *<br><br>
      * The store or append operation also supports requests.  If the XAMode has
      * enabled the XA_CLIENT bit, it will treat the message as a request from
      * the uplink.  In this case, the incoming message is required
@@ -1168,7 +1168,7 @@ public class MessageLogger {
      * request will be dropped due to failures.  On the other hand, if the
      * XA_CLIENT bit has been disabled by XAMode, the incoming message will
      * not be modified.
-     *<br/><br/>
+     *<br><br>
      * If the XQueue has enabled the EXTERNAL_XA, it will also acknowledge
      * the messages.  This method is MT-Safe.
      */

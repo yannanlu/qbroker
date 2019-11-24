@@ -8,26 +8,26 @@ import org.qbroker.common.XQueue;
  * ReservableCells are a fixed number of indexed cells that are reservable with
  * the associated unigue IDs. All the reserved cells are always kept in their
  * natural order.
- *<br/><br/>
+ *<br><br>
  * A cell always is in one of the two different status, EMPTY, and RESERVED. All
  * cells line up in a circular array.  The cells in the same status always stay
  * together in a group. Therefore the circle is divided into two segments of
  * arcs. There are two marks separating those two arcs, ie, the two different
  * groups of cells. Tail divieds empty cells and reserved cells. Head separates
  * reserved cells and empty cells.
- *<br/><br/>
+ *<br><br>
  * There are two methods to change the status of a cell. The method of
  * reserve() is to reserve an empty cell and toggles its status from EMPTY to
  * RESERVED. The method of cancel() is to cancel the reservation and swithes
  * the cell from RESERVED to EMPTY.
- *<br/><br/>
- * capacity -- maximum number of cells in the list<br/>
- * size -- number of reserved cells<br/>
- * status -- status of a cell<br/>
- * id -- the fixed id of a cell<br/>
- *<br/>
+ *<br><br>
+ * capacity -- maximum number of cells in the list<br>
+ * size -- number of reserved cells<br>
+ * status -- status of a cell<br>
+ * id -- the fixed id of a cell<br>
+ *<br>
  * This is MT-Safe.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -123,7 +123,7 @@ public class ReservableCells {
 
     /**
      * reserves the id-th cell and returns the id upon success or -1 otherwise.
-     * If milliSec < 0, there is no wait.
+     * If milliSec is less than 0, there is no wait.
      */
     public synchronized int reserve(long milliSec, int id) {
         if (id < 0 || id >= capacity)

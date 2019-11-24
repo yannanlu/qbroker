@@ -27,7 +27,7 @@ import org.qbroker.monitor.Monitor;
 
 /**
  * ProcessMonitor monitors an OS process with specific patterns
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

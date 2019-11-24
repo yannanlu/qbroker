@@ -29,7 +29,7 @@ import org.qbroker.monitor.FTPTester;
  * Use FileTester to test accessibility of a given file. In case of directory,
  * FileTester can check if it is empty or not with support of pattern, mtime
  * and size.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

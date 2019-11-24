@@ -17,7 +17,7 @@ import java.text.ParsePosition;
 /**
  * TimeWindows - A set of time slots in which something is expected to occur
  * and a method to check if it has occurred or is late.
- *<br/><br/>
+ *<br><br>
  * A TimeWindows contains a set of time windows in which something is expected
  * to occur at least once, and other rules.  Its method, check(), requires two
  * time stamps, the current time of testing and the latest time to be checked.
@@ -30,13 +30,13 @@ import java.text.ParsePosition;
  * Within any active time windows, it returns NORMAL if nothing is wrong or
  * the timing event occurs.  Otherwise it returns a positive integer depending
  * upon what you are interested in.
- *<br/><br/>
+ *<br><br>
  * If the user is expecting something occurred in a recent time range before
  * the test, the threshold should contain only one negative value defining how
  * recent in seconds.  If the occurrence takes place as expected,
  * the method, check(), returns OCCURRED.  Otherwise, it returns NORMAL
  * indicating nothing happened or BLACKOUT indicating outside of time window.
- *<br/><br/>
+ *<br><br>
  * If the user is concerned about something's lateness regarding to the previous
  * occurrence, he/she has to specify the allowable lateness time spans, or
  * late-thresholds.  If the first late-threshold is reached or passed,
@@ -44,7 +44,7 @@ import java.text.ParsePosition;
  * threshold is reached or passed, it returns ALATE indicating alarmingly late.
  * The next level of lateness is ELATE, indicating extremely late.  User can
  * specify multi-level late thresholds.  If there is no late, it returns NORMAL.
- *<br/><br/>
+ *<br><br>
  * The TimeWindows is just a set of rules and a check method for something
  * expected to occur sometime somehow.  It does not care how to obtain the
  * time stamp of the latest occurrence.  It has no action to handle the
@@ -52,7 +52,7 @@ import java.text.ParsePosition;
  * resolution is acceptable.  It also behaves in dealing with the DST time line.
  * In order to know what kind of thresholds defined for the TimeWindows, you
  * can check the integer returned by getThresholdLength().
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

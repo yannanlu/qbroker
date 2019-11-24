@@ -14,7 +14,7 @@ import com.ibm.mq.MQC;
  * and password can be set via the String of SecurityData in the form of
  * username:password.  If the caller does not specify the password, the
  * default username and password will be set to the MQCSP object.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

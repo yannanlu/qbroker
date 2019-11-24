@@ -10,7 +10,7 @@ import progress.message.jclient.TopicSession;
 /**
  * SonicMQUtils provides methods to disable/enable the flow control on a
  * SonicMQ JMS session.
- *<br/>
+ *<br><br>
  * @author yannanlu@yahoo.com
  */
 

@@ -42,7 +42,7 @@ import org.qbroker.event.Event;
  * incoming messages will be routed to the outlink failure.  If none of the
  * rulesets matches the incoming messages, they will be put to the outlink of
  * nohit. The rest of the outlinks are collectibles to fulfill requests.
- *<br/><br/>
+ *<br><br>
  * CacheNode contains a number of predefined rulesets.  These rulesets
  * categorize messages into non-overlapping groups via the property filter.
  * Therefore, each ruleset defines a unique message group. If the associated
@@ -62,7 +62,7 @@ import org.qbroker.event.Event;
  * of nohit is for all the messages not hitting any of the predefined rulesets.
  * For a cache ruleset, the number of collected responses is stored in
  * RULE_PEND.  So it is easy to track the hit ratio of the cache.
- *<br/><br/>
+ *<br><br>
  * CacheNode also supports the invalidation rulesets.  The invalidation ruleset
  * is simliar to the cache ruleset.  The only difference is that the former
  * has also defined TargetRule. TargetRule specifies the name of a cache
@@ -73,34 +73,34 @@ import org.qbroker.event.Event;
  * group keys. When you define an invalidation ruleset, make sure the ruleset
  * referenced by the TargetRule has already been defined before the
  * invalidation ruleset.
- *<br/><br/>
+ *<br><br>
  * For static cache, CacheNode supports the update ruleset with TargetRule
  * defined for a static cahce rule. When CacheNode invokes an update ruleset,
  * The message payload will be saved into the cache with the given key. So
  * the static cache will cache the data fed by the incoming messages.
- *<br/><br/>
+ *<br><br>
  * If a ruleset has its preferred outlink to one of the collectibles but
  * has no KeyTemplate defined, it is a simple rule to collect responses.
  * In this rule, CacheNode just routs the requests to the outlink and collects
  * the responses. There is no caching involved with this type of rules.
- *<br/><br/>
+ *<br><br>
  * CacheNode maintains a dedicated cache for each of the cache rules. But it
  * is assumed that the caching keys are unique across all caches. If you run
  * into key conflict with CacheNode, please use a different instance of
  * CacheNode.
- *<br/><br/>
+ *<br><br>
  * CacheNode has two properties to control timing. They are Heartbeat in sec
  * and SessionTimeout in sec. Heartbeat is the frequncy to run the sanity
  * check on pending requests. By default, it is 120 sec. SessionTimeout
  * controls the caching time for the templates of JDBC queries. By default,
  * it is 3600 sec.
- *<br/><br/>
+ *<br><br>
  * You are free to choose any names for the three fixed outlinks.  But
  * CacheNode always assumes the first outlink for done, the second for failure
  * and the third for nohit. The rest of the outlinks are for workers. It is OK
  * for those three fixed outlinks to share the same name. Please make sure the
  * first fixed outlink has the actual capacity no less than that of the uplink.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -1559,7 +1559,7 @@ public class CacheNode extends Node {
      * If such a pending request is found, it will be removed from the pending
      * list after its passthru. At the end, the method returns the total number
      * of processed requests.
-     *<br/><br/>
+     *<br><br>
      * This method is not efficient. So use it in low frequency.
      */
     private int check(long currentTime, XQueue in, byte[] buffer) {
@@ -1709,8 +1709,8 @@ public class CacheNode extends Node {
 
     /**
      * It passes the message from the input XQueue over to an output XQueue and
-     * returns 1 upon success or 0 otherwise. If tid < 0, msg will not be
-     * put back to uplink in case of failure.
+     * returns 1 upon success or 0 otherwise. If tid is less than 0, msg will
+     * not be put back to uplink in case of failure.
      */
     protected int passthru(long currentTime, Message msg, XQueue in,
         int rid, int oid, int cid, int tid) {
@@ -1878,8 +1878,8 @@ public class CacheNode extends Node {
 
     /**
      * It returns the number of done messages removed from the input XQueue.
-     * If milliSec < 0, there is no wait and it tries to collect all cells.
-     * Otherwise, it just tries to collect the first collectible cell.
+     * If milliSec is less than 0, there is no wait and it tries to collect all
+     * cells. Otherwise, it just tries to collect the first collectible cell.
      */
     protected int feedback(XQueue in, long milliSec) {
         Object[] asset;

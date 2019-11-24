@@ -12,24 +12,24 @@ import org.qbroker.receiver.MessageReceiver;
 
 /**
  * Receiver is an abstract class of MessageReceiver.
- *<br/><br/>
- * tolerance:    not used<br/>
- * maxRetry:     number of times to reconnect in one period<br/>
- * repeatPeriod: quietPeriod + maxRetry, period of repeat operation<br/>
- * pauseTime:    sleepTime in millisec for PAUSE state or default baseTime<br/>
- * standbyTime:  sleepTime in millisec for STANDBY state or reconnect action<br/>
- * timeout:      timeout in millisec to reset retryCount for a new session<br/>
- * waitTime:     sleep time in millisec for disable action<br/>
- *<br/>
- * RCVR_READY    connected and ready to work<br/>
- * RCVR_RUNNING  running normally<br/>
- * RCVR_RETRYING trying to get back to running state<br/>
- * RCVR_PAUSE    pausing for a bit while still connected<br/>
- * RCVR_STANDBY  standby for a bit longer while still connected<br/>
- * RCVR_DISABLED connection closed but still standby<br/>
- * RCVR_STOPPED  completed the job and closed all connections<br/>
- * RCVR_CLOSED   closed all connections and ready to destroy object<br/>
- *<br/>
+ *<br><br>
+ * tolerance:    not used<br>
+ * maxRetry:     number of times to reconnect in one period<br>
+ * repeatPeriod: quietPeriod + maxRetry, period of repeat operation<br>
+ * pauseTime:    sleepTime in millisec for PAUSE state or default baseTime<br>
+ * standbyTime:  sleepTime in millisec for STANDBY state or reconnect action<br>
+ * timeout:      timeout in millisec to reset retryCount for a new session<br>
+ * waitTime:     sleep time in millisec for disable action<br>
+ *<br>
+ * RCVR_READY    connected and ready to work<br>
+ * RCVR_RUNNING  running normally<br>
+ * RCVR_RETRYING trying to get back to running state<br>
+ * RCVR_PAUSE    pausing for a bit while still connected<br>
+ * RCVR_STANDBY  standby for a bit longer while still connected<br>
+ * RCVR_DISABLED connection closed but still standby<br>
+ * RCVR_STOPPED  completed the job and closed all connections<br>
+ * RCVR_CLOSED   closed all connections and ready to destroy object<br>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

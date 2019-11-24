@@ -35,7 +35,7 @@ import org.qbroker.event.Event;
  * outlinks: done for all completed requests, failure for the messages failed
  * in the collecting process, nohit for those messages not covered by any
  * rulesets.  The non-fixed outlinks are called collectibles for responses.
- *<br/><br/>
+ *<br><br>
  * CollectNode also contains a number of predefined rulesets.  These
  * rulesets categorize requests into non-overlapping groups.  Therefore, each
  * rule defines a unique request group.  The ruleset also specifies the
@@ -44,7 +44,7 @@ import org.qbroker.event.Event;
  * a ruleset is just like a workflow.  For those messages falling off all
  * defined rulesets, CollectNode always creates an extra ruleset, nohit,
  * to handle them.  All the nohit requests will be routed to nohit outlink.
- *<br/><br/>
+ *<br><br>
  * For each incoming request, CollectNode sends it to its associated worker
  * via the initial outlink.  Then CollectNode frequently checks the response for
  * each outstanding requests.  The response is supposed to have the return code
@@ -69,7 +69,7 @@ import org.qbroker.event.Event;
  * outlink on success for the branch, skips all tasks in between.  Therefore
  * a request message will be able to go through a list of outlinks step by step
  * as configured.
- *<br/><br/>
+ *<br><br>
  * As an option, a task can also specify a single data field of the message to
  * be formattable.  In order to do that, you need to define a single Template
  * and/or a single TextSubstitution for that field.  If the response of the
@@ -83,7 +83,7 @@ import org.qbroker.event.Event;
  * task, it can also have the data field, the template and the substitution
  * defined. If all tasks have completed without errors, the ReturnCode property
  * of the message will be reset to null before its final exit.
- *<br/><br/>
+ *<br><br>
  * In an MT env, it may get deadlocked due to circular dependencies among
  * the task outlinks.  CollectNode implements walk-sweep method to collect
  * messages with circular dependencies.  But it may take long time for an
@@ -94,14 +94,14 @@ import org.qbroker.event.Event;
  * to its task queue.  Therefore, please make sure the first format rule of
  * a ruleset is stateless.  If you have a stateful format rule as the default
  * task, please create a stateless task and add the new task before it.
- *<br/><br/>
+ *<br><br>
  * You are free to choose any names for the three fixed outlinks.  But
  * CollectNode always assumes the first outlink for done, the second for
  * failure and the third for nohit.  The rest of the outlinks are for workers.
  * It is OK for those three fixed outlinks to share the same name. Please make
  * sure the first fixed outlink has the actual capacity no less than that of
  * the uplink.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -815,7 +815,7 @@ public class CollectNode extends Node {
      * so that a new message can be added to the vacant cell.  It returns
      * 1 if the cell is vacant or 0 if the cell is reused or -1 if there is no
      * vacancies in the new output XQueue.
-     *<br/><br/>
+     *<br><br>
      * If it is not negative, the argument of option specifies the id of
      * a known empty cell in the new output XQueue.  If msg is not null,
      * it will be added to the empty cell on the next outlink.  Otherwise,
@@ -1109,7 +1109,7 @@ public class CollectNode extends Node {
     /**
      * It collects a group of messages depending on each others in a circle
      * and returns the number of messages successfully collected.
-     *<br/><br/>
+     *<br><br>
      * It is assumed that the list contains message ID for all collecables
      * in its metadata.  The current oid and the next oid of a collecable
      * can be retrieved from msgList via its message ID.

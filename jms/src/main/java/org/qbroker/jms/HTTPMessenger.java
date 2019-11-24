@@ -46,7 +46,7 @@ import org.qbroker.event.Event;
 /**
  * HTTPMessenger connects to a web server and initializes one of the operations,
  * such as retrieve, download and store, or other commands.
- *<br/><br/>
+ *<br><br>
  * There are four methods, retrieve(), download(), fulfill() and store().  The
  * first method, retrieve(), is used to retrieve content from a web server.
  * The method of download() is used for synchronous requests.  The method of
@@ -56,7 +56,7 @@ import org.qbroker.event.Event;
  * methods treat the return code of 2xx as a success. If IgnoreHTTP412 is set
  * to be true, the methods of download(), fulfill() and store() will not treat
  * the return code of 412 as a failure.
- *<br/><br/>
+ *<br><br>
  * ResponseProperty is a map for retrieving the header properties from an HTTP
  * response. It contains multiple key-value pairs with key for an HTTP header
  * and value for a property name of messages. Once the response is back,
@@ -64,10 +64,10 @@ import org.qbroker.event.Event;
  * other hand, RequestProperty is a map for setting header properties on an
  * HTTP request. Before sending the request to an HTTP service, those selected
  * headers will be set via copying the properties from the message.
- *<br/><br/>
+ *<br><br>
  * This is NOT MT-Safe.  Therefore, you need to use multiple instances to
  * achieve your MT goal.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -569,7 +569,7 @@ public class HTTPMessenger {
      * downloads the web page via http.  It puts the content of the page into
      * the message body and sends it back.  The requester at the other end
      * of the XQueue can easily read the content out of the message.
-     *<br/><br/>
+     *<br><br>
      * Since the download operation relies on a request, this method will
      * intercept the request and process it.  The incoming message is required
      * to be writeable.  The method will set a String property of the message
@@ -578,7 +578,7 @@ public class HTTPMessenger {
      * check the value of the property once it gets the message back.  If
      * the return code is 0, the download is successful.  Otherwise, the
      * message body will not contain the content out of download operation.
-     *<br/><br/>
+     *<br><br>
      * It supports GET, POST and PUT.  For POST, IsPost must be set to true.
      * For PUT, UsePut has to be set to true. The Template or message body
      * must contain the query content for POST or PUT. If it is GET, Template
@@ -1207,7 +1207,7 @@ public class HTTPMessenger {
      * request is fulfilled, it puts the fulfilled response into the message
      * body and sends it back. The requester at the other end of the XQueue can
      * easily read the content out of the message.
-     *<br/><br/>
+     *<br><br>
      * Since the fulfill operation relies on an initial request and multiple
      * subsequent checks, this method will intercept the JMS request and
      * process it.  The incoming message is required to be writeable.  The
@@ -1216,12 +1216,12 @@ public class HTTPMessenger {
      * process. The requester is required to check the value of the property
      * once it gets the message back.  If the return code is 0, the fulfillment
      * is successful.  Otherwise, the message body will not contain the result.
-     *<br/><br/>
+     *<br><br>
      * For the initial request, it supports both GET and POST.  If it is POST,
      * IsPost must be set to true.  The Template or message body must contains
      * the fulfillment content for POST.  If it is GET, Template will be used
      * to set the dynamic path for the REST calls.
-     *<br/><br/>
+     *<br><br>
      * The incoming message is also supposed to have a substitution statement
      * to rewrite the URL for the subsequent rest calls to check the response.
      * It should be stored in SubField if it is defined.  For the subsequent
@@ -1665,11 +1665,11 @@ public class HTTPMessenger {
     /**
      * It gets a JMS Message from the XQueue and stores its content into a
      * URL via http POST continuously.
-     *<br/><br/>
+     *<br><br>
      * It will always try to retrieve the URL from the field specified by
      * FieldName property.  If the message does not contain the URL, the method
      * will use the default URL defined by URI property.
-     *<br/><br/>
+     *<br><br>
      * The store operation also supports the requests.  If the XAMode has
      * enabled the XA_CLIENT bit, it will treat the message as a request from
      * the uplink.  In this case, the incoming message is required
@@ -1681,7 +1681,7 @@ public class HTTPMessenger {
      * request will be dropped due to failures.  On the other hand, if the
      * XA_CLIENT bit has been disabled by XAMode, the incoming message will
      * not be modified.
-     *<br/><br/>
+     *<br><br>
      * If the XQueue has enabled the EXTERNAL_XA bit, it will also acknowledge
      * the messages.  This method is MT-Safe.
      */

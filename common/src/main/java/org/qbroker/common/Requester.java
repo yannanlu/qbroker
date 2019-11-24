@@ -8,7 +8,7 @@ import org.qbroker.common.WrapperException;
 /**
  * Requester is an interface that sends the request to a generic service and
  * waits for the response. The response is always a JSON text.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

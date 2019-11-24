@@ -24,9 +24,9 @@ import org.qbroker.event.EventAction;
  * EventScriptLauncher runs a script outside JVM in response to an event.
  * The script may contains the template placeholders referecing the
  * attributes of the event, as well as a secret.
- *<br/><br/>
+ *<br><br>
  * NB. The action part is MT-Safe.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

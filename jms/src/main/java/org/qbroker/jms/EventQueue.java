@@ -5,7 +5,7 @@ import javax.jms.JMSException;
 
 /**
  * EventQueue represents JMS Queue for event
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

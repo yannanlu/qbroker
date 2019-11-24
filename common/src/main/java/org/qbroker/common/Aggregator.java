@@ -19,7 +19,7 @@ import org.qbroker.common.Utils;
 /**
  * Aggregator contains a list of stateless operations for aggregations
  * on the properties retrieved from a Map.
- *<br/><br/>
+ *<br><br>
  * In case of average, AveragedOver is required.  Its referenced name should be
  * defined before it. In case of standard deviation, VarianceOf is requires.
  * Its referenced name should be defined before it. In case of max or min, the 
@@ -27,7 +27,7 @@ import org.qbroker.common.Utils;
  * referenced name by MaxOf or MinOf should be defined before it. If TimePattern
  * is defined for max or min, Aggregation will parse the value to get the
  * timestamp for comparisons.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

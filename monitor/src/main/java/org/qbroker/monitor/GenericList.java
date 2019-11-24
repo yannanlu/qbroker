@@ -41,9 +41,9 @@ import org.qbroker.event.Event;
 /**
  * GenericList queries a data source for a list of keys. The list of the keys
  * will be stored in a List under the key of "List" in the report. 
- *<br/><br/>
+ *<br><br>
  * This needs more work to support other data sources.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

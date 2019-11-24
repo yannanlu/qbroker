@@ -9,7 +9,7 @@ import javax.jms.BytesMessage;
 /**
  * MessageInputStream is an InputStream on a given JMS BytesMessage.
  * So you can use it to read the content of the message.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

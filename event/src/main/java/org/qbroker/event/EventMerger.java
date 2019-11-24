@@ -2,7 +2,7 @@ package org.qbroker.event;
 
 /**
  * EventMerger is an Interface for a merger that merges events
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

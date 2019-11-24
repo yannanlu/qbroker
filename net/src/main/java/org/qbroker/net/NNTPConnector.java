@@ -33,10 +33,10 @@ import org.qbroker.common.TraceStackThread;
  * NNTPConnector connects to a NNTP server and provides the following methods
  * for news group operations: nntpGet(), nntpPost(), nntpListArticles(),
  * and nntpListGroups().
- *<br/><br/>
+ *<br><br>
  * This is NOT MT-Safe.  Therefore, you need to use multiple instances to
  * achieve your MT-Safty goal.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

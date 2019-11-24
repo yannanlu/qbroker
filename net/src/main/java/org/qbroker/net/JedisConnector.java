@@ -20,10 +20,10 @@ import org.qbroker.common.TraceStackThread;
  * JedisConnector connects to a Redis server and provides the following
  * methods for Redis operations: set(), get(), zcadd, rpush, lpop, publish
  * and list(). But it does not support synchronous subscribe.
- *<br/><br/>
+ *<br><br>
  * This is NOT MT-Safe.  Therefore, you need to use multiple instances to
  * achieve your MT-Safty goal.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

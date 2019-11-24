@@ -12,9 +12,9 @@ import org.qbroker.monitor.Report;
 
 /**
  * ActionSkipper controls whether to skip the actions according to step info
- *<br/><br/>
+ *<br><br>
  * Use ActionSkiper to bypass actions.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

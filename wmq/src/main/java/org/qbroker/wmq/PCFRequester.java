@@ -53,7 +53,7 @@ import org.qbroker.event.Event;
  * PCFRequester connects to the admin service of a WebSphere MQ queue manager
  * for PCF requests. Currently, it supports the method of display only.
  * This is NOT MT-Safe due to IBM's implementation on sessions and conn.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -464,7 +464,7 @@ public class PCFRequester implements Requester {
      * request, it sends the message to the queue manager as a query and waits
      * for the response back. The response will be loaded into body of the
      * request message according to the result type, similar to a DB qurey.
-     *<br/><br/>
+     *<br><br>
      * It also supports the dynamic content filter and the formatter on queried
      * messages. The filter and the formatter are defined via a JSON text with
      * Ruleset defined as a list. The JSON text is stored in the body of the
@@ -910,7 +910,7 @@ public class PCFRequester implements Requester {
      * filled in the given string buffer. The content in the string buffer
      * is a JSON. If the disconnect flag is set to true, it disconnects right
      * before it returns. Otherwise, it will keep the connection.
-     *<br/></br/>
+     *<br><br>
      * In case of a fatal failure, it disconnects first and then throws a
      * WrapperException with cause set to the vendor specific exception or IO
      * related exception. Therefore please make sure to get the cause exception

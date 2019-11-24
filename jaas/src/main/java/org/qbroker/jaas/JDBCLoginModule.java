@@ -21,7 +21,7 @@ import org.qbroker.monitor.DBQuery;
 
 /**
  * JDBCLoginModule is a LoginModule to authenticate user via JDBC data source.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

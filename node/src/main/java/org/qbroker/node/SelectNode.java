@@ -66,7 +66,7 @@ import org.qbroker.event.Event;
  * payload of the message may be very large, SelectNode tries to ignore any
  * filters on message body. It will not display message body of the incoming
  * messages either.
- *<br/><br/>
+ *<br><br>
  * SelectNode contains a number of predefined rulesets.  These rulesets
  * categorize messages into non-overlapping groups.  Therefore, each ruleset
  * defines a unique message group.  The ruleset also defines the operations
@@ -82,7 +82,7 @@ import org.qbroker.event.Event;
  * from the external file. This is good in case the size of content is too
  * large for a message. All the delivered new messages will be tracked by
  * RULE_PEND of their rulesets.
- *<br/><br/>
+ *<br><br>
  * The default operation is to split the content via the given delimiters.
  * The split items will be selected for the ruleset. Alternatively, SelectNode
  * also supports other 3x2 different ways to select items from the message
@@ -96,7 +96,7 @@ import org.qbroker.event.Event;
  * contains multiple static patterns or XPaths. SelectNode will use each of
  * them to select items. Their keys will be set to the TagField on the new
  * messages.
- *<br/><br/>
+ *<br><br>
  * SelectNode also allows developers to plug-in their own methods to select.
  * In this case, the full ClassName of the selection implementation and its
  * SelectorArguments must be well defined in the rulesets.  The requirement on
@@ -109,7 +109,7 @@ import org.qbroker.event.Event;
  * configurations.  SelectNode will invoke its public method to get the list
  * of the selected items from either message body or certain message property
  * of each incoming message.
- *<br/><br/>
+ *<br><br>
  * If CountField is defined for a ruleset, the total count of selected items
  * will be set to the specified field of the incoming messages. In case of the
  * split operation with given delimiters, the total count will be set at the
@@ -121,20 +121,20 @@ import org.qbroker.event.Event;
  * the incoming message must be writeable. In most of the cases, you can use
  * the receivers to set a dummy property on all incoming messages since
  * it will make them writeable.
- *<br/><br/>
+ *<br><br>
  * If XAMode is defined in a rulset, it will overwrite the default value
  * defined on the node level. If the XAMode of a ruleset is on, SelectNode
  * will make sure all the outgoing messages are delivered before routing the
  * original message to bypass. Otherwise, the original message will be routed
  * to bypass right after those newly created messages dispatched. In this case,
  * SelectNode will not wait on their delivery.
- *<br/><br/>
+ *<br><br>
  * You are free to choose any names for the four fixed outlinks.  But
  * SelectNode always assumes the first outlink for done, the second for bypass,
  * the third for failure and the last for nohit.  They all can share the same
  * name, too.  For the first outlink, if it is partitioned, you must define
  * the same Partition explicitly on every selection ruleset.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

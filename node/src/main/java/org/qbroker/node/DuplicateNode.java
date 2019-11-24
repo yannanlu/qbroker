@@ -31,7 +31,7 @@ import org.qbroker.event.Event;
  * and non-primary as of rest of outlinks.  All the incoming messages always
  * go out thru the primary outlink.  Their duplicates will be routed to their
  * selected non-primay outlinks.
- *<br/><br/>
+ *<br><br>
  * DuplicateNode may also contain a number of predefined rulesets.  These
  * rulesets categorize messages into non-overlapping groups.  Therefore, each
  * rule defines a unique message group.  If a ruleset has the preferredOutLink
@@ -42,7 +42,7 @@ import org.qbroker.event.Event;
  * not collectible. Otherwise, the original message will be duplicated into
  * copies for delivery. The total number of duplicated messages are tracked
  * by RULE_PEND of their rulesets.
- *<br/><br/>
+ *<br><br>
  * A ruleset may define a list of the outlinks as the selected non-primary
  * outlinks for the duplicated messages.  If any selected outlink is either
  * the primary or not existing, DuplicateNode will ignore it with a warning.
@@ -52,7 +52,7 @@ import org.qbroker.event.Event;
  * a bypass ruleset.  For those messages falling off all defined rulesets,
  * DuplicateNode always creates an extra ruleset, nohit, to handle them.
  * Nohit ruleset is always a bypass rule to the primay outlink.
- *<br/><br/>
+ *<br><br>
  * NB. There is a transaction control on the primary (first) outlink.
  * The XAMode can be defined on the node level or on the rule level.
  * The XAMode on the rule level will overwrite the one on the node level.
@@ -63,7 +63,7 @@ import org.qbroker.event.Event;
  * transaction support.  However, if the XAMode of the node is off, all the
  * non-primary outlinks will propagate with no wait.  Therefore, there is a
  * chance that the messages either double fed or lost on non-primary outlinks.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -590,9 +590,9 @@ public class DuplicateNode extends Node {
 
     /**
      * It passes the message from the input XQueue over to an output XQueue and
-     * returns 1 upon success or 0 otherwise. In case of cid < 0, the message
-     * has nothing to do with the input XQueue. Nothing will be added to
-     * msgList for tracking. No update on stats of ruleset either.
+     * returns 1 upon success or 0 otherwise. In case of cid is less than 0,
+     * the message has nothing to do with the input XQueue. Nothing will be
+     * added to msgList for tracking. No update on stats of ruleset either.
      * If tid is 1, it will cache the duplicated msg into msgList for
      * later retrieval.
      */
@@ -770,8 +770,8 @@ public class DuplicateNode extends Node {
     }
 
     /**
-     * It returns the number of done messages removed from in.
-     * If milliSec < 0, there is no wait and it tries to collect all cells.
+     * It returns the number of done messages removed from in.  If milliSec
+     * is less than 0, there is no wait and it tries to collect all cells.
      * Otherwise, it just tries to collect the first collectible cell.
      * If ruleInfo[RULE_MODE] is 1, it will retrieve the duplicated msg
      * from msgList and copies it to their destinations.

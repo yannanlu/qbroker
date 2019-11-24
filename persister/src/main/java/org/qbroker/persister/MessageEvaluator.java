@@ -82,7 +82,7 @@ import org.qbroker.event.Event;
  * set to -1 for EXCEPTION. MessageEvaluator will not consume any messages,
  * nor commit any messages. It just bounces them back via removing them from
  * the input XQueue.
- *<br/><br/>
+ *<br><br>
  * MessageEvaluator contains a number of predefined rulesets.  Each ruleset
  * has its own unique name and the evaluation rules.  It may also contain the
  * formatting rules or plugins for modifying the properties of the messages.
@@ -91,7 +91,7 @@ import org.qbroker.event.Event;
  * JSONPath evaluations, JSONT templates, XPath evaluations and XSLT templates,
  * etc. MessageEvaluator also supports CommaList, PipeList or ColonList for
  * evaluations on multiple rulesets.
- *<br/><br/>
+ *<br><br>
  * For the default formatting support, the ruleset is supposed to have an array
  * of FormatterArgument.  A FormatterArgument contains a name specifying what
  * property to be modifued, and two sets of format operations. The first set
@@ -108,7 +108,7 @@ import org.qbroker.event.Event;
  * all the operations of FormatterArguments on each SUCCESS message in the
  * order of the list.  If any of the operations fails, the message will be
  * marked as EXCEPTION.
- *<br/><br/>
+ *<br><br>
  * Besides FormatterArgument, MessageEvaluator also allows to have a simple
  * template file defined in the name of TemplateFile for a ruleset. In this
  * case, MessageEvaluator will load the template file at the start up and
@@ -116,16 +116,16 @@ import org.qbroker.event.Event;
  * end of the format process. If NeedChop is defined with the value of "true",
  * MessageEvaluator will try to chop the newline off the end of the loaded
  * content.
- *<br/><br/>
+ *<br><br>
  * MessageEvaluator also supports SimpleParser with a list of ParserArgument
  * defined. It is used to parse the message payload and updates the various
  * properties of the message.
- *<br/><br/>
+ *<br><br>
  * MessageEvaluator also supports JSONPath evaluations with a map of JSONPath
  * defined. It is used to retrieve data from the JSON payload and updates the
  * various properties of the message. Therefore, the map of JSONPath should
  * specify the property name as the key and a JSONPath expression as the value.
- *<br/><br/>
+ *<br><br>
  * For JSONT support, the ruleset must not have any FormatterArgument defined.
  * Instead, the full path of the JSONT template file must be specified in the
  * name of JTMPFile. If there is any parameter to be set, they should be defined
@@ -134,20 +134,20 @@ import org.qbroker.event.Event;
  * the JSONT template file, compiles it at the startup and stores it to cache.
  * The parameters will be set dynamically in case there is any reference on the
  * properties of the incoming message.
- *<br/><br/>
+ *<br><br>
  * MessageEvaluator also supports JSON formatter with a list of JSONFormatter
  * defined. A JSONFormatter is a map containing JSONPath, Operation, DataType,
  * Selector, and Template and Substitution. It supports various operations on
  * the messages and their JSON payload, such as get, set, remove, select,
  * first, last and merge, etc.
- *<br/><br/>
+ *<br><br>
  * MessageEvaluator also supports XPath evaluations, similar to the evaluation
  * of JSONPath. It also supports operations of xmerge and xcut. XMerge is to
  * merge an XML content stored in XMLField into the XML payload of the message.
  * The ruleset should define SourceXPath and TargetXPath. Currently, only
  * append is supported for XMerge. XCut is to remove the object at a given
  * XPath expression.
- *<br/><br/>
+ *<br><br>
  * For XSLT support, the ruleset must not have any FormatterArgument defined.
  * Instead, the full path of the XSL template file must be specified
  * in the name of XSLFile.  If there is any parameters to be set, they should
@@ -155,33 +155,33 @@ import org.qbroker.event.Event;
  * template file, compiles it at startup and stores it to cache. The parameters
  * will be set dynamically in case there is any references on the data of the
  * incoming message.
- *<br/><br/>
+ *<br><br>
  * A PipeList is a list of pipe delimited names which reference a bunch of
  * existing rulesets. MessageEvaluator will match the message to the patterns
  * of each ruleset and invokes the formatter on the first hit only.
- *<br/><br/>
+ *<br><br>
  * A ColonList is a list of colon delimited names which reference a bunch of
  * existing rulesets. MessageEvaluator will match the message to the patterns
  * of each ruleset and invokes the formatter on every ruleset that is a hit.
- *<br/><br/>
+ *<br><br>
  * A CommaList is a list of comma delimited names which reference a bunch of
  * existing rulesets. MessageEvaluator will evaluate all the rulesets one by
  * one at the listed order. If any ruleset fails or does not match, the entire
  * evaluation process also fails.
- *<br/><br/>
+ *<br><br>
  * For time window support, the ruleset can evalute the age of the message.
  * It requires ActiveTime, KeyTemplate and TimePattern to be defined in the
  * ruleset.  If it is for age, please make sure the threshold contains at
  * lease two numbers.  For occurrence, please make sure it contains only
  * one negative number.
- *<br/><br/>
+ *<br><br>
  * For static caching support, the ruleset must have StaticCache defined as
  * a map with key-value pairs. Optionally, ResultField, KeyTemplate and
  * KeySubstitution can be defined also. ResultField specifies where to store
  * the cache result. By default, it is stored to message body. KeyTemplate
  * and KeySubstitution are used to retrieve the cache key. By default,
  * KeyTemplate is "##body##".
- *<br/><br/>
+ *<br><br>
  * MessageEvaluator allows developers to plugin their own transformations by
  * specifying the full classname in the rules.  The requirement is minimum.
  * First, the method of the transformation has to be defined.  The second,
@@ -196,7 +196,7 @@ import org.qbroker.event.Event;
  * plugin.  In the normal operation, MessageEvaluator will invoke the method
  * to format the SUCCESS messages.  The method should never acknowledge or
  * commit any messages in any case.
- *<br/><br/>
+ *<br><br>
  * In case a plugin needs to connect to external resources for dynamic
  * format process, it should define an extra method of close() to close all
  * the external resources gracefully.  Its format method should also be able
@@ -204,12 +204,12 @@ import org.qbroker.event.Event;
  * automatically.  If the container wants to stop the node, it will call the
  * methods of close() on all transformers in order to release all external
  * resources.
- *<br/><br/>
+ *<br><br>
  * MessageEvaluator always copies the original value of RCField to the
  * OriginalRCField before resetting it.  If you want to evaluate the value of
  * the property in RCField, please ensure to reference the OriginalRCField in
  * your pattern group.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

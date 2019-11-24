@@ -21,7 +21,7 @@ import org.qbroker.jms.JMSEvent;
 
 /**
  * BytesEvent is an Event that implements JMS BytesMessage
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

@@ -17,10 +17,10 @@ import org.qbroker.common.Utils;
  * static method, exec(), returns the stdout of the command if it
  * is successful before it is timed out.  Otherwise, exec() throws
  * TimeoutException for timeout or RuntimeException for errors.
- *<br/><br/>
+ *<br><br>
  * RunCommand parses the cmdLine into a cmdArray before execute it.
  * Therefore, you can use double-quotes in the commandLine.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

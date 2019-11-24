@@ -26,9 +26,9 @@ import org.qbroker.event.Event;
 /**
  * FileSynchronizer monitors a source file on its last modified time and
  * keeps its target file in sync with the source.
- *<br/><br/>
+ *<br><br>
  * Currently, it only supports the data source of http, ftp and file.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

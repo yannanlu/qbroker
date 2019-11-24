@@ -46,13 +46,13 @@ import org.qbroker.event.Event;
  * message body as the result. The message will be routed to the first outlink
  * upon success. Due to JSR223, it requires Java 6 to compile and to run. Make
  * sure all the jars for the ScriptEngines are loaded.
- *<br/><br/>
+ *<br><br>
  * ScriptNode contains a number of predefined rulesets.  These rulesets
  * categorize messages into non-overlapping groups.  Therefore, each rule
  * defines a unique message group.  The ruleset also defines the format
  * parameters, such URITemplate to build the path to the script file,
  * ScriptEngine and TTL for the cache.
- *<br/><br/>
+ *<br><br>
  * If ScriptEngine is defined for a rule, ScriptNode will format the JSON data
  * with the script specified in the messages. The script is supposed to have
  * a function of format defined. It takes two Java Map objects as the only
@@ -62,7 +62,7 @@ import org.qbroker.event.Event;
  * payload of the message. The cache count of engines for the rule will be
  * stored to RULE_PEND. It will be updated when the session time exceeds the
  * given SessionTimeout.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

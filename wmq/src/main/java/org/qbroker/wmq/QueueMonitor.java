@@ -26,16 +26,16 @@ import org.qbroker.event.Event;
 
 /**
  * QueueMonitor monitors an MQSeries queue object for queue depth and status
- *<br/><br/>
+ *<br><br>
  * If ResetQStats is set true and StatsLog is set, it will reset Queue stats
  * on the queue and log the enq/deq counts and hiDepth.  The reset will have
  * qmgr reset counters on the queue.  So there should be only one monitor to
  * reset the stats on the same queue.  Otherwise, the stats returned by the
  * call will not be correct.
- *<br/><br/>
+ *<br><br>
  * It supports SecurityExit in case it is required on the server side.
  * You can specify the username and password if SecurityExit is defined.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

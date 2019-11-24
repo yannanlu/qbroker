@@ -47,7 +47,7 @@ import org.qbroker.event.Event;
  * RedisMessenger connects to a Redis data store specified by URI and
  * initializes the operations of get and put, etc with JMS Messages on
  * various redis operations.
- *<br/><br/>
+ *<br><br>
  * The following methods, get(), put(), sub(), pub(), query() and update() are
  * supported for the Redis operations. The method of get() gets all the items
  * from a Redis list with the given name. The method of put() puts content of
@@ -57,7 +57,7 @@ import org.qbroker.event.Event;
  * is extracts the Redis command from the message and executes it to qeury data.
  * The method of update() extracts the Redis command from the message and
  * executes the command to update the Redis dataset.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -797,7 +797,7 @@ public class RedisMessenger implements Connector {
      * content will be put into the message body before the message is removed
      * from the XQueue.  The requester will be able to get the result content
      * out of the message.
-     *<br/><br/>
+     *<br><br>
      * Since the query operation relies on the request, this method will
      * intercept the request and processes it.  The incoming message is required
      * to be writeable.  The method will set a String property of the message
@@ -806,7 +806,7 @@ public class RedisMessenger implements Connector {
      * check the value of the property once it gets the message back.  If
      * the return code is 0, the query is successful.  Otherwise, the
      * message body will not contain the content out of query operation.
-     *<br/><br/>
+     *<br><br>
      * If the MaxIdleTime is set to none-zero, it will monitor the idle time
      * and will throw TimeoutException once the idle time exceeds MaxIdleTime.
      * it is up to the caller to handle this exception.
@@ -1141,11 +1141,11 @@ public class RedisMessenger implements Connector {
      * Redis update command from each message.  After the compiling and
      * setting data on the command, it executes the Redis command to update
      * the dataset on the Redis server.
-     *<br/><br/>
+     *<br><br>
      * If the MaxIdleTime is set to none-zero, it will monitor the idle time
      * and will throw TimeoutException once the idle time exceeds MaxIdleTime.
      * it is up to the caller to handle this exception.
-     *<br/><br/>
+     *<br><br>
      * The original message will not be modified.  If the XQueue has enabled
      * the EXTERNAL_XA bit, it will also acknowledge the messages also.
      */

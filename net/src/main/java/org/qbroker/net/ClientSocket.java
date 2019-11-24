@@ -27,7 +27,7 @@ import org.qbroker.common.Utils;
  * is successful before it is timed out.  If type is set to TYPE_HTTPS,
  * the socket will be on SSL that verifies the certificate. If type is set
  * to TYPE_SSL, the socket will be on SSL that trusts all certificates.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

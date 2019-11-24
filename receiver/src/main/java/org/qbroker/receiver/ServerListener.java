@@ -49,7 +49,7 @@ import org.qbroker.event.Event;
  * and idle options.  The maximum number of client connections is determined
  * by both Capacity and Partition of the XQueue.  Backlog is the queue length
  * of the server socket listener.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -458,7 +458,7 @@ public class ServerListener extends Receiver {
      * the outgoing ObjectMessage and adds the message to the XQueue.  The
      * message flow downstream will pick up the socket and operates on it
      * according to the message properties and the policies.
-     *<br/>
+     *<br>
      * It is MT-Safe.
      */
     public void negotiate(HashMap client) {

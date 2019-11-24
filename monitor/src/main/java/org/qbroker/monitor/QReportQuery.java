@@ -13,7 +13,7 @@ import org.qbroker.json.JSON2Map;
 /**
  * QReportQuery queries an internal report for queue status and queue depth.
  * It is used as a dependency to test the skipping status.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

@@ -2,7 +2,7 @@ package org.qbroker.common;
 
 /**
  * TimeoutException is an exception for generic timeout.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

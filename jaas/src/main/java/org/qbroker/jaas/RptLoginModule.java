@@ -22,7 +22,7 @@ import org.qbroker.monitor.ReportQuery;
 /**
  * RptLoginModule is a LoginModule to authenticate user via the internal report.
  * It is assumed that the MD5 ecrypted password is stored in a report.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

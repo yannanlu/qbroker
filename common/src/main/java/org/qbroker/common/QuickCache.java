@@ -18,12 +18,12 @@ import java.util.Date;
  * visible any more.  The expired object will be removed from the cache
  * eventually by the automatic or passive disfragmentation.  Therefore, the
  * size of QuickCache is self adjustable with the time and the load.
- *<br/><br/>
+ *<br><br>
  * QuickCache caches objects with their own expiration time.  Since each object
  * automatically expires once it passes its TTL, the size of the cache
  * changes with time and load.  Therefore, you can control the size of the cache
  * by adjusting the TTLs according to the load.
- *<br/><br/>
+ *<br><br>
  * QuickCache also has timeout and threshold to control the automatic
  * disfragmentations.  When certain objects expire, QuickCache will not
  * clean them up immediately.  It waits until the certain conditions are met.
@@ -31,12 +31,12 @@ import java.util.Date;
  * the status of the cache changes, its mtime changes too.  For auto part,
  * if the timeout is set to 0, the time-driven disfragmentation is disabled.
  * If the threshold is set to 0, the size-driven disfragmentation is disabled.
- *<br/><br/>
+ *<br><br>
  * Besides the objects, QuickCache also stores MetaData for each objects.
  * Metadata is an opaque array with integers.  It is up to the developers to
  * decide how many integers and what they stand for.  For example, users can
  * put id and gid into the MetaData array.
- *<br/><br/>
+ *<br><br>
  * For each object, QuickCache will create some internal properties, like
  * TIME, COUNT and TTL.  QuickCache uses them to manage the cached objects.
  * However, these internal properties may mean differently according to
@@ -52,7 +52,7 @@ import java.util.Date;
  * for an object to be treaded as expired.  Hence if the COUNT is less than or
  * equal to TTL, the object is treated as expired since it is not used often
  * enough.  The expired objects will be removed eventually by disfragmentation.
- *<br/><br/>
+ *<br><br>
  * Since QuickCache is a dynamic container, it may actively or passively
  * remove those objects that are not needed any longer, in order to free memory.
  * The disfragmentation may base on either TIME or COUNT.  Therefore, there
@@ -60,6 +60,7 @@ import java.util.Date;
  * defines a unique way for QuickCache to determin what objects can be removed.
  * Here is the list for all 8 options:
  * <table>
+ * <caption>Options</caption>
  * <tr><th>Option</th><th>Time</th><th>Count</th><th>TTL</th></tr>
  * <tr><td>META_MTAC</td><td>mtime</td><td>acount</td><td>TIME</td></tr>
  * <tr><td>META_MCMT</td><td>mtime</td><td>mcount</td><td>COUNT</td></tr>
@@ -71,9 +72,9 @@ import java.util.Date;
  * <tr><td>META_ACAT</td><td>atime</td><td>acount</td><td>COUNT</td></tr>
  * </table>
  * The default is META_MTAC.
- *<br/><br/>
+ *<br><br>
  * This is NOT MT-Safe.  Therefore please use it with care.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -240,10 +241,10 @@ public class QuickCache implements Comparator<long[]> {
      * then returns 0.  If the key has not expired, it returns -1 for insert
      * failure.  If the key does not exist, it just inserts the object and
      * timestamp, then returns 1.
-     *<br/><br/>
-     * return code:<br/>
-     * 1: new object inserted successfully<br/>
-     * 0: object expired, so updated the object and its meta data<br/>
+     *<br><br>
+     * return code:<br>
+     * 1: new object inserted successfully<br>
+     * 0: object expired, so updated the object and its meta data<br>
      * -1: object exists, no changes made to it
      */
     public int insert(String key, long timestamp, int ttl, int[] meta,
@@ -320,10 +321,10 @@ public class QuickCache implements Comparator<long[]> {
      * and timestamp, then returns 1.  If the key has not expired, it updates
      * anyway and returns 0.  If the key does not exist, it returns -1 for
      * failure.
-     *<br/><br/>
-     * return code:<br/>
-     * 1: object expired, but it and its meta data are updated<br/>
-     * 0: unexpired object updated successfully<br/>
+     *<br><br>
+     * return code:<br>
+     * 1: object expired, but it and its meta data are updated<br>
+     * 0: unexpired object updated successfully<br>
      * -1: update failed due to its not existence
      */
     public int update(String key, long timestamp, int ttl, int[] meta,
@@ -424,10 +425,10 @@ public class QuickCache implements Comparator<long[]> {
      * normally the method returns null except for the case that TTL is on count
      * and COUNT is reset to 0 by touch(). In that case, it returns the new
      * object, just like the original object does not exist.
-     *<br/><br/>
-     * returned object:<br/>
-     * itself: new object inserted successfully or invalid object replaced<br/>
-     * null: object expired and replaced<br/>
+     *<br><br>
+     * returned object:<br>
+     * itself: new object inserted successfully or invalid object replaced<br>
+     * null: object expired and replaced<br>
      * other: replaced object, its meta data updated
      */
     public Object replace(String key, long timestamp, int ttl, int[] meta,

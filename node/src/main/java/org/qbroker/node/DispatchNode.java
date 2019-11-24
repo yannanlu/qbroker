@@ -33,7 +33,7 @@ import org.qbroker.event.Event;
  * outlinks as the destinations. Those outlinks are grouped exclusively
  * according to their group names. Within each group, all the oulinks are
  * equivalent and backing up with each other in case of failure or high load.
- *<br/><br/>
+ *<br><br>
  * DispatchNode uses the predefined rulesets to dispatch incoming messages.
  * These rulesets categorize messages into non-overlapping groups. Therefore,
  * each rule defines a unique message group. The ruleset also specifies the
@@ -41,7 +41,7 @@ import org.qbroker.event.Event;
  * falling off all defined rulesets, DispatchNode always creates an extra
  * ruleset, nohit, to handle them. By default, nohit ruleset always uses the
  * last outlink unless there is one defined explicitly.
- *<br/><br/>
+ *<br><br>
  * Currently, DispatchNode supports only four types of dynamic switchings:
  * roundrobin, weighted, preferred and sticky. All the switchings are based on
  * the same outlink groups. DispatchNode assumes all the destinations are
@@ -58,7 +58,7 @@ import org.qbroker.event.Event;
  * message. If the outlink has a high load or it is not available, sticky
  * messages will be routed to its redirect outlink. For nohit ruleset, the
  * switching type is always preferred.
- *<br/><br/>
+ *<br><br>
  * In case of a high load or a failure from the report on a given outlink, its
  * status will be set to standby mode for load balance and high availability.
  * Meanwhile, DispatchNode will failover all stuck messages to other available
@@ -73,7 +73,7 @@ import org.qbroker.event.Event;
  * it will only do static switching and load balancing. DispatchNode supports
  * static reports with a non-zero SessionTimeout. In this case, the static
  * report must contain ReportType with the value of "static" in lower case.
- *<br/><br/>
+ *<br><br>
  * Threshold contains 3 values for low, medium and high load.  The load for
  * each outlink is supposed to be updated by reporters.  DispatchNode checks
  * the load for each outlink every heartbeat and controls the pace of the
@@ -85,7 +85,7 @@ import org.qbroker.event.Event;
  * medium, the outlink will be marked as standby mode. In the meantime, all the
  * messages in the outlink will be migrated to another outlink with lower load
  * in the group.
- *<br/><br/>
+ *<br><br>
  * In order for DispatchNode to check the report for each outlink, ReportName
  * has to be defined in each OutLink. DispatchNode looks up the report via the
  * report name every heartbeat. First, it checks the timestamp of the report.
@@ -96,10 +96,10 @@ import org.qbroker.event.Event;
  * balance. Otherwise, it will be assumed to be zero. In case of the static
  * report, DispatchNode will use the local flow rate for each session. Anyway,
  * the reports can be used to control the load balance and flow rate.
- *<br/><br/>
+ *<br><br>
  * There is no limit on the number of outlinks. All the outlinks will take part
  * in the load balance process.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -1028,7 +1028,7 @@ public class DispatchNode extends Node {
      * rules. It will not manipulate the status of the destinations, except
      * for calling reset for enq number and updating the metadata on them for
      * internal uses.
-     *<br/><br/>
+     *<br><br>
      * It supports both failover and failback.
      */
     private int update(long currentTime, int gid, XQueue in) {
@@ -1285,7 +1285,7 @@ public class DispatchNode extends Node {
      * another destination and updates the outInfo and ruleInfo as well as the
      * redirects for each outlink. Upon success, it returns number of messages
      * migrated.
-     *<br/><br/>
+     *<br><br>
      * In case of from = -1, it migrates all the pending messages whose PID
      * (preferred oid) is same as to.  Otherwise, it migrates all messages in
      * from to their failover outlink.

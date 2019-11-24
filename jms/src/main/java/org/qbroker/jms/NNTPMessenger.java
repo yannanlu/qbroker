@@ -41,15 +41,15 @@ import org.qbroker.event.Event;
  * NNTPMessenger connects to an NNTP server and initializes one of the
  * operations, such as fetch, retrieve and post.  It carries out the
  * operation with JMS Messages.
- *<br/><br/>
+ *<br><br>
  * There are three methods, fetch(), retrieve(), list() and post().  The
  * first method, fetch(), is used to fetch new articles from NNTP servers.
  * The method of retrieve() is used for synchronous requests.  The method of
  * post() is used for asynchronous posting content to the NNTP server.
- *<br/><br/>
+ *<br><br>
  * This is NOT MT-Safe.  Therefore, you need to use multiple instances to
  * achieve your MT goal.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -595,7 +595,7 @@ public class NNTPMessenger extends NNTPConnector {
      * the header info into the message header and puts the content of the
      * article into the message body and sends it back.  The requester at the
      * other end of the XQueue can easily read the content out of the message.
-     *<br/><br/>
+     *<br><br>
      * Since the retrieve operation relies on a request, this method will  
      * intercept the request and process it.  The incoming message is required
      * to be writeable.  The method will set a String property of the message
@@ -604,7 +604,7 @@ public class NNTPMessenger extends NNTPConnector {
      * check the value of the property once it gets the message back.  If
      * the return code is 0, the retrieve is successful.  Otherwise, the
      * message body will not contain the content out of retrieve operation.
-     *<br/><br/>
+     *<br><br>
      * If the MaxIdleTime is set to none-zero, it will monitor the idle time
      * and will throw TimeoutException once the idle time exceeds MaxIdleTime.
      * it is up to the caller to handle this exception.
@@ -946,7 +946,7 @@ public class NNTPMessenger extends NNTPConnector {
      * into the message body one articleID per line and sends it back.  The
      * requester at the other end of the XQueue can easily read the list out
      * of the message.
-     *<br/><br/>
+     *<br><br>
      * Since the list operation relies on a request, this method will
      * intercept the request and process it.  The incoming message is required
      * to be writeable.  The method will set a String property of the message
@@ -955,7 +955,7 @@ public class NNTPMessenger extends NNTPConnector {
      * check the value of the property once it gets the message back.  If
      * the return code is 0, the list is successful.  Otherwise, the
      * message body will not contain the content out of the list operation.
-     *<br/><br/>
+     *<br><br>
      * If the MaxIdleTime is set to none-zero, it will monitor the idle time
      * and will throw TimeoutException once the idle time exceeds MaxIdleTime.
      * it is up to the caller to handle this exception.
@@ -1259,11 +1259,11 @@ public class NNTPMessenger extends NNTPConnector {
     /**
      * It gets a JMS Message from the XQueue and posts its content into the
      * NNTP server continuously.
-     *<br/><br/>
+     *<br><br>
      * It will always try to retrieve the header info from the message based
      * on HeaderField property.  If the message does not contain the header
      * info, the method will use the default header.
-     *<br/><br/>
+     *<br><br>
      * The post operation also supports the requests.  If the XAMode has
      * enabled the XA_CLIENT bit, it will treat the message as a request from
      * the uplink.  In this case, the incoming message is required
@@ -1275,11 +1275,11 @@ public class NNTPMessenger extends NNTPConnector {
      * request will be dropped due to failures.  On the other hand, if the
      * XA_CLIENT bit has been disabled by XAMode, the incoming message will
      * not be modified.
-     *<br/><br/>
+     *<br><br>
      * If the MaxIdleTime is set to none-zero, it will monitor the idle time
      * and will throw TimeoutException once the idle time exceeds MaxIdleTime.
      * it is up to the caller to handle this exception.
-     *<br/><br/>
+     *<br><br>
      * If the XQueue has enabled the EXTERNAL_XA bit, it will also acknowledge
      * the messages.  This method is MT-Safe.
      */

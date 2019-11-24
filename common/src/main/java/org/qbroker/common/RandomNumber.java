@@ -2,9 +2,9 @@ package org.qbroker.common;
 
 /**
  * RandomNumber generates random numbers between 0 and 1.
- *<br/><br/>
+ *<br><br>
  * It is MT-Safe.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

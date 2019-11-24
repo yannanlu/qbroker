@@ -8,37 +8,38 @@ import org.qbroker.common.Service;
 /**
  * MessageReceiver is an interface that receives JMS Messages from their
  * originations and puts them to an XQueue as the output.  This XQueue
- * will be used as the input by either MessageNodes or MessagePersisters.
- *<br/><br/>
+ * will be used as the input by instances of either MessageNode or
+ * MessagePersister.
+ *<br><br>
  * MessageReceiver can be used as the input node in a message flow.  It may
- * actively fetch or pick up the messages from a remote originations.
+ * actively fetch or pick up the messages from a remote origination.
  * It may also scan the local log files for messages.  Or it just creates
- * messages periodically.  Alternatively, it may listen to a local socket port
+ * messages periodically.  Alternatively, it may listen to a network socket
  * for receiving messages passively.  Therefore MessageReceiver is a source
  * of JMS Messages.
- *<br/><br/>
+ *<br><br>
  * For the transaction support of MessageReceiver, it is up to the
  * implementations.  If the implementation supports the transactions, the
  * property of XAMode should be used to control the transactions.  If XAMode
- * is set to 0, the Auto Acknowledgement should be enabled.  Otherwise,
+ * is set to zero, the Auto Acknowledgement should be enabled.  Otherwise,
  * the transaction should be implemented as Client Acknowledgement.  In the
  * mode of Client Acknowledgement, MessageReceiver relies on extrenal
  * resources to acknowledge the messages.  Meanwhile, its output XQueue should
  * have its EXTERNAL_XA bit set so that Client Acknowledgement will be able to
  * propagate to all XQueues downstream.
- *<br/><br/>
- * At any given time, MessageReceiver is on one of the
- * following 8 different states:
- *<br/>
- * RCVR_READY    connected and ready to work<br/>
- * RCVR_RUNNING  running normally<br/>
- * RCVR_RETRYING trying to reconnect and get back to work<br/>
- * RCVR_PAUSE    pausing for a bit while still connected<br/>
- * RCVR_STANDBY  standby for a bit longer while still connected<br/>
- * RCVR_DISABLED disabled temporarily with all connections closed<br/>
- * RCVR_STOPPED  completed the job and closed all connections<br/>
- * RCVR_CLOSED   closed all connections and ready to destroy object<br/>
- *<br/>
+ *<br><br>
+ * At any given time, MessageReceiver is on one of the following 8 different
+ * states:
+ *<br>
+ * RCVR_READY    connected and ready to work<br>
+ * RCVR_RUNNING  running normally<br>
+ * RCVR_RETRYING trying to reconnect and get back to work<br>
+ * RCVR_PAUSE    pausing for a bit while still connected<br>
+ * RCVR_STANDBY  standby for a bit longer while still connected<br>
+ * RCVR_DISABLED disabled temporarily with all connections closed<br>
+ * RCVR_STOPPED  completed the job and closed all connections<br>
+ * RCVR_CLOSED   closed all connections and ready to destroy object<br>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

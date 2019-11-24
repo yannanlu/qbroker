@@ -50,7 +50,7 @@ import org.qbroker.event.EventParser;
  * from it.  It puts the JMS Messages to an XQueue as the output.
  * StreamReceiver supports flow control and allows object control from
  * its owner.  It is fault tolerant with retry and idle options.
- *<br/><br/>
+ *<br><br>
  * In case that Destination is defined and scheme is tcp, StreamReceiver
  * will send a request to the server to open the destination after the
  * connection and waits for the response.  The request is supposed to contain
@@ -59,7 +59,7 @@ import org.qbroker.event.EventParser;
  * StreamReceiver will read JMS messages out of the InputStream for the
  * normal operation.  In this case, SOTimeout is used for connection timeout
  * while ReceiveTime is used to timeout read().
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

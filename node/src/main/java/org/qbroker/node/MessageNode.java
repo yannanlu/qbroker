@@ -15,14 +15,14 @@ import org.qbroker.common.Service;
  * MessageNode should never consume any messages.  An incoming message has
  * to go out of one of the output XQueues.  However, it is OK for MessageNode
  * to create new Messages as the reaction upon the incoming messages.
- *<br/><br/>
+ *<br><br>
  * The transaction support is determined by the property of XAMode and the
  * EXTERNAL_XA bit of the input XQueue.  If the input XQueue has no EXTERNAL_XA
  * bit set, XAMode can be either 0 as disabled or positive as enabled.
  * Otherwise, XAMode should always be or reset to positive to enable the
  * transction support.  The transaction support is the only way to guarentee 
  * the EXTERNAL_XA feature is fulfilled.
- *<br/><br/>
+ *<br><br>
  * If XAMode is set to 0 and the input XQueue has no EXTERNAL_XA bit set,
  * the incoming message should be removed from the input XQueue once it is
  * put to an output XQueue.  In this case, the de-queue processes are fully
@@ -33,23 +33,23 @@ import org.qbroker.common.Service;
  * propagate in upstream direction.  MessageNode should never acknowledge
  * any messages unless something is really out of control.  It should also
  * enforce the propagation of EXTERNAL_XA bit for all output XQueues.
- *<br/><br/>
+ *<br><br>
  * It is up to developers to decide whether to implement the support of dynamic
  * rules.  If not, all the rules will be static.  They will not be changable on
  * the fly.  The support of checkpointing is not mandatory either.  However,
  * please make sure to document those methods and have them return -1 or null.
- *<br/><br/>
+ *<br><br>
  * At any given time, MessageNode is on one of the following 8 different states:
- *<br/>
- * NODE_READY    all resources opened and ready to work<br/>
- * NODE_RUNNING  running normally<br/>
- * NODE_RETRYING trying to reopen resources and get back to work<br/>
- * NODE_PAUSE    pausing for a bit while still ready to run<br/>
- * NODE_STANDBY  standby for a bit longer while still ready to run<br/>
- * NODE_DISABLED disabled temporarily while still ready to run<br/>
- * NODE_STOPPED  completed the job and closed all resources<br/>
- * NODE_CLOSED   closed all resources and ready to destroy object<br/>
- *<br/>
+ *<br>
+ * NODE_READY    all resources opened and ready to work<br>
+ * NODE_RUNNING  running normally<br>
+ * NODE_RETRYING trying to reopen resources and get back to work<br>
+ * NODE_PAUSE    pausing for a bit while still ready to run<br>
+ * NODE_STANDBY  standby for a bit longer while still ready to run<br>
+ * NODE_DISABLED disabled temporarily while still ready to run<br>
+ * NODE_STOPPED  completed the job and closed all resources<br>
+ * NODE_CLOSED   closed all resources and ready to destroy object<br>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -139,11 +139,11 @@ public interface MessageNode {
     /**
      * copies certain type of MetaData from its id-th instance to the buffer
      * and returns the real id of the instance , or -1 on failure.  There are
-     * four types of MetaData available:<br/>
-     * META_MSG         MetaData of outstanding messages in the uplink<br/>
-     * META_OUT         MetaData of output links<br/>
-     * META_RULE        MetaData of rule sets<br/>
-     * META_XQ          MetaData of XQueues<br/>
+     * four types of MetaData available:<br>
+     * META_MSG         MetaData of outstanding messages in the uplink<br>
+     * META_OUT         MetaData of output links<br>
+     * META_RULE        MetaData of rule sets<br>
+     * META_XQ          MetaData of XQueues<br>
      */
     public int getMetaData(int type, int id, long[] data);
     /** cleans up and resets all MetaData for XQs and messages */

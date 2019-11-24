@@ -8,7 +8,7 @@ import java.io.IOException;
 
 /**
  * TraceStackThread is a thread used to trace the stack info of a java program.
- *<br/>
+ *<br>
  * @author  yannanlu@yahoo.com
  */
 

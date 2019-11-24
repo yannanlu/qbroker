@@ -30,14 +30,14 @@ import org.qbroker.common.Utils;
 
 /**
  * NewlogFetcher reads the new log entries from a sequential log file
- *<br/><br/>
+ *<br><br>
  * Use NewlogFetcher to check a sequential log file repetitively.  It only
  * picks up the newly updated log entries.  It guarantees the order and the
  * integrity of the new logs.  In order to guarantee the order and
  * the integrity, each log entry should have a timestamp and the value of
  * the timestamp has to be in non-decreasing order, i.e., the timestamp
  * of the log is always no later than those of the following logs.
- *<br/><br/>
+ *<br><br>
  * In order to keep tracking the positions, NewlogFetcher relies on a
  * reference file.  The reference file contains the position of the reference
  * log, its timestamp and the offset of the objective log.  A reference
@@ -49,31 +49,31 @@ import org.qbroker.common.Utils;
  * log entry.  Any log after the offset is treated as a new log.  In fact,
  * NewlogFetcher frequently opens the log file and looks for the objective log.
  * It then scans the offset bytes to locate the new logs.
- *<br/><br/>
- * Here are the rules for the reference file:<br/><br/>
- * (1) If there is the reference file, use it and trust it.<br/>
+ *<br><br>
+ * Here are the rules for the reference file:<br><br>
+ * (1) If there is the reference file, use it and trust it.<br>
  * (2) If there is no reference file, use the timestamp of the current log file
  * as the timestamp of the reference log and set the position of reference log
- * and the offset to 0.<br/>
+ * and the offset to 0.<br>
  * (3) If there is no current log file, try the timestamp of the old log
- * file.<br/>
- * (4) If still no reference, use the default reference (0 currentTime 0).<br/>
+ * file.<br>
+ * (4) If still no reference, use the default reference (0 currentTime 0).<br>
  * (5) If there is a mismatch to the position of the reference log, trust
  * the timestamp of the reference log and search for the objective log in
  * the current log file.  The objective log is the first log entry with
- * a timestamp later than the reference timestamp.<br/>
+ * a timestamp later than the reference timestamp.<br>
  * (6) If there is a mismatch to the offset of the objective log, trust the
- * current log first.<br/>
- * (7) If it does not find a objective log, reset the offset to 0.<br/>
- *<br/><br/>
+ * current log first.<br>
+ * (7) If it does not find a objective log, reset the offset to 0.<br>
+ *<br><br>
  * The reference file is not required.  But if the file is not defined, you
  * will have to set SaveReference to false to disable the update on the
  * state info.
- *<br/><br/>
+ *<br><br>
  * To speed up sequential IO, it has opened two IO Streams on the same FD.
  * RandomAccessFile is used for random IO and seek. BufferedReader is used for
  * sequential IO.  The speed-up is more than 10 times.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -716,7 +716,7 @@ public class NewlogFetcher {
     /**
      * It updates the current reference info. Use it only after you have
      * found a new log.  You have to provide all three arguments
-     *<br/><br/>
+     *<br><br>
      * position: beginning of the new log entry
      * timestamp: timestamp of the new log entry
      * offset: length of the new log entry
@@ -936,7 +936,7 @@ public class NewlogFetcher {
      * It returns a line as a String read from the input.
      * The char of newline, '\n', will be at the end of the line.
      * In case of empty input, it returns null.
-     *<br/>
+     *<br>
      * NB. make sure the buffer is reset at close of the InputStream
      * It is not MT-Safe due to buffer, leftover, and startBytes
      */

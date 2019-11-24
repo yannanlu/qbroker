@@ -48,10 +48,10 @@ import org.qbroker.event.Event;
 /**
  * TConnector connects to a JMS topic and initializes one of the operations,
  * such as sub, pub, DeregSub and RegSub.
- *<br/><br/>
+ *<br><br>
  * For durable subscriptions, you have to specify SubscriptionID.  On the other
  * hand, if SubscriptionID is defined, it is assumed to be durable subscription.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

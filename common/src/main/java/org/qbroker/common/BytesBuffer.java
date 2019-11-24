@@ -9,7 +9,7 @@ import java.io.IOException;
 /**
  * BytesBuffer is a byte array with an auto growable size.
  * NB. It is not MT-safe.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

@@ -3,7 +3,7 @@ package org.qbroker.common;
 /**
  * NonSQLException is an exception for generic non-SQL data store. It is a
  * wrapper of vendor's exception.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

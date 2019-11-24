@@ -25,7 +25,7 @@ import org.qbroker.json.JSON2Map;
  * from the JSON payload. In this case, the returned Map will filled with the
  * key-value pairs specified in JSONPath map. Otherwise, the returned map will
  * contain the original parsing result.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

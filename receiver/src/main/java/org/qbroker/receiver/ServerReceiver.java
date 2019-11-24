@@ -48,7 +48,7 @@ import org.qbroker.event.Event;
  * fault tolerant with retry and idle options.  The max number of client
  * connections is determined by both Capacity and Partition of the XQueue.
  * Backlog is the queue length of the server socket listener.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

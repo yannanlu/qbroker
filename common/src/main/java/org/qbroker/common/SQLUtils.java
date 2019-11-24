@@ -30,7 +30,7 @@ import org.qbroker.common.Utils;
 /**
  * SQLUtils contains a bunch of constants and static methods on SQL operations
  * for common uses
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -91,7 +91,7 @@ public class SQLUtils {
      * The array will be put into the Map in the key of Sequence. Their
      * data types will be stored in an int array and be put into the Map
      * in the key of Type.  The transformed SQL text will be returned.
-     *<br/><br/>
+     *<br><br>
      * In case there is no named parameters defined, the original SQL text
      * will be returned with no changes to the Map.
      */
@@ -134,7 +134,7 @@ public class SQLUtils {
     /**
      * It translates the data in String into the right data type and set
      * the value according to its index on the PreparedStatement.
-     *<br/>
+     *<br>
      * Due to MT-safety issue with SimpleDateFormat, please provide your own
      * instance of SimpleDateFormat.
      */
@@ -198,7 +198,7 @@ public class SQLUtils {
      * StringBuffer according to the ResultType.  The int array of rc
      * should have at least two numbers.  The first is for the number of
      * records.  The second is for the number of columns.
-     *<br/>
+     *<br>
      * If any returned string is null, it will be reset into an empty string.
      */
     public static StringBuffer getResult(int type, ResultSet rset, int[] rc)

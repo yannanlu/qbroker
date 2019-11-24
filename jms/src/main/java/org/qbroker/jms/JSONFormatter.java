@@ -33,7 +33,7 @@ import org.qbroker.event.Event;
  * the result will be parsed into JSON data and applied to the JSON payload.
  * Currently, the supported operations are get, set, parse, merge, union,
  * select, remove, first, last, sort and uniq, etc.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

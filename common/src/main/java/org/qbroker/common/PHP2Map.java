@@ -26,10 +26,10 @@ import org.qbroker.common.Utils;
  * pointing to a PHP Array. A PHP Array is treated as a Map.  With these
  * two basic types of objects, any data structures will be representable. The
  * mapping is one-to-one in one way at least. It exposes the structure data.
- *<br/><br/>
+ *<br><br>
  * The method of parse() returned a Map. The PHP data are stored in
  * the key of "PHP".
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

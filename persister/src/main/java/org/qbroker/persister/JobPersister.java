@@ -43,7 +43,7 @@ import org.qbroker.event.Event;
  * reset the error code on the message and removes it from the queue. Once
  * the job is done, the job init message will be acknowledged and removed
  * from the queue.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

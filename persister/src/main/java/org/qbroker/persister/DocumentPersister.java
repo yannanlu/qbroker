@@ -29,9 +29,9 @@ import org.qbroker.event.Event;
  * the messages and puts the content back to the messages in their body.
  * DocumentPersister supports flow control and allows object control from
  * its owner.  It is fault tolerant with retry and idle options.
- *<br/><br/>
+ *<br><br>
  * Currently, it only supports MongoDB and Riak.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

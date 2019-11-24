@@ -32,18 +32,18 @@ import org.qbroker.common.TextSubstitution;
  * The comments in Javascript style will be ignored. With these three basic
  * types of objects, any data structures will be representable. The mapping
  * is one-to-one.  Therefore, the mapping is bi-directional.
- *<br/><br/>
+ *<br><br>
  * The method of parse() assumes the JSON data is either a Map or a List and
  * returns a Map or a List representing the unescaped JSON data. The method of
  * isArray() can be used to test if the JSON data is a Map or a List.
- *<br/><br/>
+ *<br><br>
  * The method of get() returns the JSON object referenced by the JSONPath.
  * Currently, it only supports simple JSONPath with delimiter of dot. The array
  * index can be a number or a simplate expression within the solid bracket.
  * In case of expressions, the variable of #{xxxx} references the value of the
  * key xxxx with the current map in a list context. It does not support fancy
  * expressions. Please check with dust.js for the JSON path.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

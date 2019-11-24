@@ -32,10 +32,10 @@ import org.qbroker.net.JMXRequester;
 /**
  * QMFRequester connects to a generic QMF server for QMF requests. Currently,
  * it supports the methods of list, getValues and getResponse for QPid only.
- *<br/><br/>
+ *<br><br>
  * It requires qpid-client.jar, qpid-common.jar, slf4-api.jar, slf4-log4j12,jar
  * and Java 6 to compile.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -385,11 +385,11 @@ public class QMFRequester implements Requester {
      * filled in the given string buffer. The content in the string buffer
      * is a JSON. If the disconnect flag is set to true, it disconnects right
      * before it returns. Otherwise, it will keep the connection.
-     *<br/></br/>
+     *<br><br>
      * The QMF command is supposed to be as follows:
-     *</br>
+     *<br>
      * DISPLAY Target attr0:attr1:attr2
-     *<br/></br/>
+     *<br><br>
      * In case of a fatal failure, it disconnects first and then throws a
      * WrapperException with cause set to the vendor specific exception or IO
      * related exception. Therefore please make sure to get the cause exception

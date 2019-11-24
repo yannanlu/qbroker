@@ -39,7 +39,7 @@ import org.qbroker.common.TraceStackThread;
 
 /**
  * Generic Utilities
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -567,11 +567,11 @@ public class Utils {
      * or a property name for either a map or a list. The corresponding values
      * are either a empty string or a list of names. It supports the following
      * three scenarios:
-     *<br/>
-     * LIST/LIST: {"MonitorGroup": ["Monitor"]}<br/>
-     * LIST: {"Flow": ["Receiver", "Node", "Persister"]}<br/>
-     * MAP: {"ConfigRepository": ""}<br/>
-     *<br/><br/>
+     *<br>
+     * LIST/LIST: {"MonitorGroup": ["Monitor"]}<br>
+     * LIST: {"Flow": ["Receiver", "Node", "Persister"]}<br>
+     * MAP: {"ConfigRepository": ""}<br>
+     *<br><br>
      * where Flow is the basename in this context.
      */
     public static String[] getIncludes(String basename,

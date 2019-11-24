@@ -23,7 +23,7 @@ import org.qbroker.event.Event;
  * It publishes the messages with certain routing keys to a RabbitMQ exchange
  * as the output. RMQPersister supports flow control and allows object control
  * from its owner.  It is fault tolerant with retry and idle options.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

@@ -24,19 +24,19 @@ import org.qbroker.event.Event;
 /**
  * UnixlogMonitor monitors a general Unix log file and detects the new
  * occurrences of log entries matching at least one of the given patterns
- *<br/><br/>
+ *<br><br>
  * Use UnixlogMonitor to detect the new occurrence of log entries matching
  * the given patterns.  UnixlogMonitor may be repetitively used to check the log
  * file.  It will pick up the new log entries only.  It also guarantees the
  * order of the occurrences.  If a certain log entry appears, the new entry will
  * be stored in the buffer for analysis.  The buffer will be updated every time.
- *<br/><br/>
+ *<br><br>
  * UnixlogMonitor can also sum up numbers in the log entries, as long as the
  * pattern contains something like (\d+).  Currently, it will process the
  * only one number or less, determined by the attribute of numberDataFields.
  * In default, it is -1, ie, no number to sum.  It will use the log buffer and
  * number of logs.  If it is set to 0, the sum will be the number of logs.
- *<br/><br/>
+ *<br><br>
  * UnixlogMonitor also has excluding patterns to exclude the special log
  * entries that are not critical.  The monitor is fully configurable.
  * The matching events are categoried as INFO, WARNING, ERR and CRIT.
@@ -47,7 +47,7 @@ import org.qbroker.event.Event;
  * try to invoke the action scripts if they are defined.  If ERR continues and
  * stays the same for more than maxRetry in a row, it will be upgraded to the
  * next level, CRIT.
- *<br/><br/>
+ *<br><br>
  * Sometimes, certain log entries are fatal to the application and require
  * special attentions. For example, OutOfMemoryError requires a restart since
  * the working thread is dead. UnixlogMonitor supports escalation patterns to
@@ -56,12 +56,12 @@ import org.qbroker.event.Event;
  * there is a catch, the event priority will be escalated to ALERT temporarily
  * so that it can trigger the actions on ALERT only. In this case, the value for
  * the attribute of firstEntry will be the first fatal log entry.
- *<br/><br/>
+ *<br><br>
  * UnixlogMonitor supports ExpirationTime.  If it is defined and is larger
  * than zero in second, UnixlogMonitor will ignore any new log entry that
  * has a timestamp older than the difference of currentTime - expirationTime.
  * It can be used to skip the old log entries.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

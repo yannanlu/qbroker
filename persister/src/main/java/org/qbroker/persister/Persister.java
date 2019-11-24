@@ -12,24 +12,24 @@ import org.qbroker.persister.MessagePersister;
 
 /**
  * Persister is an abstract class of MessagePersister.
- *<br/><br/>
- * tolerance:    not used<br/>
- * maxRetry:     number of times to reconnect in one period<br/>
- * repeatPeriod: quietPeriod + maxRetry, period of repeat operation<br/>
- * pauseTime:    sleepTime in millisec for PAUSE state or default baseTime<br/>
- * standbyTime:  sleepTime in millisec for STANDBY state or reconnect action<br/>
- * timeout:      timeout in millisec to reset retryCount for a new session<br/>
- * waitTime:     sleep time in millisec for disable action<br/>
- *<br/>
- * PSTR_READY    connected and ready to work<br/>
- * PSTR_RUNNING  running normally<br/>
- * PSTR_RETRYING trying to get back to running state<br/>
- * PSTR_PAUSE    pausing for a bit while still connected<br/>
- * PSTR_STANDBY  standby for a bit longer while still connected<br/>
- * PSTR_DISABLED connection closed but still standby<br/>
- * PSTR_STOPPED  completed the job and closed all connections<br/>
- * PSTR_CLOSED   closed all connections and ready to destroy object<br/>
- *<br/>
+ *<br><br>
+ * tolerance:    not used<br>
+ * maxRetry:     number of times to reconnect in one period<br>
+ * repeatPeriod: quietPeriod + maxRetry, period of repeat operation<br>
+ * pauseTime:    sleepTime in millisec for PAUSE state or default baseTime<br>
+ * standbyTime:  sleepTime in millisec for STANDBY state or reconnect action<br>
+ * timeout:      timeout in millisec to reset retryCount for a new session<br>
+ * waitTime:     sleep time in millisec for disable action<br>
+ *<br>
+ * PSTR_READY    connected and ready to work<br>
+ * PSTR_RUNNING  running normally<br>
+ * PSTR_RETRYING trying to get back to running state<br>
+ * PSTR_PAUSE    pausing for a bit while still connected<br>
+ * PSTR_STANDBY  standby for a bit longer while still connected<br>
+ * PSTR_DISABLED connection closed but still standby<br>
+ * PSTR_STOPPED  completed the job and closed all connections<br>
+ * PSTR_CLOSED   closed all connections and ready to destroy object<br>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

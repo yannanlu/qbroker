@@ -50,13 +50,13 @@ import org.qbroker.event.Event;
  * data sources based on their URIs and the predefined rulesets on-demand.
  * The received messages will be cached in their XQueues for picking up until
  * they expires.
- * <br/><br/>
+ * <br><br>
  * PickupNode has two types of outlinks, position-fixed and non-fixed.
  * There are three position-fixed outlinks: pool for all requests to the
  * ReceiverPool, failure for the messages failed in the request process,
  * nohit for those messages not covered by any rulesets.  The non-fixed
  * outlinks are transmit queues for the on-demand data sources.
- *<br/><br/>
+ *<br><br>
  * PickupNode also contains a number of predefined rulesets.  These
  * rulesets categorize messages into non-overlapping groups.  Therefore,
  * each rule defines a unique message group.  The ruleset also specifies
@@ -65,7 +65,7 @@ import org.qbroker.event.Event;
  * an extra ruleset, nohit, to handle them.  Therefore all the nohit messages
  * will be routed to nohit outlink.  The downstream node at nohit is supposed
  * to handle all nohit messages.
- *<br/><br/>
+ *<br><br>
  * URI is used to identify data sources.  In order to construct the URI
  * for an arbitrary data source, each ruleset contains two sets of
  * format operations.  The first one is the array of templates with the name
@@ -84,7 +84,7 @@ import org.qbroker.event.Event;
  * incoming message first. Then it adds the DefaultProperty to the new request
  * for the new receiver. So the extra properties are able to passed over to
  * the receiver pool.
- *<br/><br/>
+ *<br><br>
  * For each new data source, PickupNode creates an Object message as
  * the request containing the URI and the XQueue, as well as the other
  * properties provided they are defined.  The request is sent to the
@@ -97,7 +97,7 @@ import org.qbroker.event.Event;
  * the request for a new receiver times out.  MaxRetry is used to control
  * when to timeout the request to the pool.  It also controls the timeout on
  * a dead receiver thread.
- *<br/><br/>
+ *<br><br>
  * PickupNode also maintains an active set of XQueues as the receiving queues
  * for all data sources.  In front of each XQueue, there is at least one
  * receiver thread receiving the messages from the data sources.  The
@@ -107,14 +107,14 @@ import org.qbroker.event.Event;
  * frequently in every heartbeat.  If one of them has been idle for over
  * MaxIdleTime, the queue will be stopped.  Its receiver thread and the queue
  * as well as the leftover messages will also be removed from cache.
- *<br/><br/>
+ *<br><br>
  * You are free to choose any names for the three fixed outlinks.  But
  * PickupNode always assumes the first outlink for pool, the second for
  * failure and the third for nohit.  The name for nohit outlink is allowed
  * to be same as that of failure outlink.  But neither nohit nor failure is
  * allowed to share their names with pool.  The rest of the outlinks are
  * for the on-demand data sources.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

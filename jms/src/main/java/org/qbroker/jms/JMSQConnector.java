@@ -60,14 +60,14 @@ import org.qbroker.event.Event;
  * supposed to reset the browser every time with null string as the only
  * argument.  If ReferenceFile is defined, the state info will be persisted
  * to the file for restart.
- *<br/><br/>
+ *<br><br>
  * For put operations, Overwrite mask controls whether to reset the persistence,
  * the priority, and the expiration time on each incoming message. 0 means no
  * overwrite. In this case, the persistence, the priority, and the time-to-live
  * will be recovered from each incoming message for send action. 1 is to reset
  * the persistence to a specific value. 2 is to reset the priority to a
  * certain value. 4 is to reset the expiration time with a given time-to-live.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -771,7 +771,7 @@ public abstract class JMSQConnector implements QueueConnector {
      * be appended into the body of the incoming message as the response.
      * Please always to set a reasonable MaxNumberMsg to limit maximum number
      * of messages for the query.
-     *<br/><br/>
+     *<br><br>
      * It also supports the dynamic content filter and the formatter on queried
      * messages. The filter and the formatter are defined via a JSON text with
      * Ruleset defined as a list. The JSON text is stored in the body of the
@@ -1154,7 +1154,7 @@ public abstract class JMSQConnector implements QueueConnector {
      * It gets JMS messages from the JMS queue and sends them into a output
      * channel that may be a JMS destination, an OutputStream or an XQueue.
      * It supports the message acknowledgement at the consumer end.
-     *<br/><br/>
+     *<br><br>
      * It catches JMSException in the operations regarding to the message
      * itself, like get/set JMS properties.  In this case, it still tries to
      * send the message to the output channel and logs the errors.  It
@@ -1521,7 +1521,7 @@ public abstract class JMSQConnector implements QueueConnector {
      * It reads bytes from the InputStream and put them into a JMS queue as
      * JMS messages.  It supports flexable but static delimiters at either
      * or both ends.  It also has the blind trim support at both ends.
-     *<br/><br/>
+     *<br><br>
      * This is MT-Safe as long as the threads share the same offhead,
      * offtail, sotBytes and eotBytes.
      */
@@ -1898,7 +1898,7 @@ public abstract class JMSQConnector implements QueueConnector {
      * In this case, the overwrite mask of 1 is to reset the persistence to a
      * specific value. 2 is to reset the priority to a certain value. 4 is to
      * reset the expiration time with a given time-to-live.
-     *<br/><br/>
+     *<br><br>
      * It catches JMSException in the operations regarding to the message
      * itself, like get/set JMS properties or acknowlegement. In this case,
      * it removes the message from the XQueue and logs the errors.  It
@@ -1906,7 +1906,7 @@ public abstract class JMSQConnector implements QueueConnector {
      * like send or commit.  Such JMSException will be thrown so that
      * the caller can handle it either to reset the connection or to do
      * something else.
-     *<br/><br/>
+     *<br><br>
      * If the MaxIdleTime is set to none-zero, it will monitor the idle time
      * and will throw TimeoutException once the idle time exceeds MaxIdleTime. 
      * it is up to the caller to handle this exception.
@@ -2186,7 +2186,7 @@ public abstract class JMSQConnector implements QueueConnector {
      * requests. Then it receives response messages one by one and copies the
      * message body from the response to the request message and reset its
      * rcField with a success code before removing it from the XQueue.
-     <br/><br/>
+     <br><br>
      * It supports the message acknowledgement at the source. In the send
      * operation, the persistence, the priority, and the expiration time of
      * each message may get reset according to the overwrite mask. If overwrite
@@ -2196,7 +2196,7 @@ public abstract class JMSQConnector implements QueueConnector {
      * 1 is to reset the persistence to a specific value. 2 is to reset the
      * priority to a certain value. 4 is to reset the expiration time with a
      * given time-to-live.
-     *<br/><br/>
+     *<br><br>
      * For each sent request, it tries to receive the response message from
      * the given response queue without message selectors. If the response
      * queue name is null, a temporary queue will be created for each of the
@@ -2205,11 +2205,11 @@ public abstract class JMSQConnector implements QueueConnector {
      * will be reset to the value of "0". In case of timeout on the receive
      * process, the expRC will be set to indicate the failure. In case of
      * failure, the error text will be set to the request body.
-     *<br/><br/>
+     *<br><br>
      * It catches JMSException in the operations regarding to the message
      * itself, like get/set JMS properties or acknowlegement. In this case,
      * it removes the message from the XQueue and logs the errors.
-     *<br/><br/>
+     *<br><br>
      * If the MaxIdleTime is set to none-zero, it will monitor the idle time
      * and will throw TimeoutException once the idle time exceeds MaxIdleTime. 
      * It is up to the caller to handle this exception.
@@ -2607,11 +2607,11 @@ public abstract class JMSQConnector implements QueueConnector {
      * queues. If it fails to get the ReplyTo queue, just sents the message
      * to the default destination. It supports the message acknowledgement
      * at the source.
-     *<br/><br/>
+     *<br><br>
      * It catches JMSException in the operations regarding to the message
      * itself, like get/set JMS properties or acknowlegement. In this case,
      * it removes the message from the XQueue and logs the errors.
-     *<br/><br/>
+     *<br><br>
      * If the MaxIdleTime is set to none-zero, it will monitor the idle time
      * and will throw TimeoutException once the idle time exceeds MaxIdleTime. 
      * It is up to the caller to handle this exception.

@@ -6,7 +6,7 @@ import java.util.Set;
 
 /**
  * Event is the interfact for a generic event.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

@@ -32,14 +32,14 @@ import org.qbroker.json.JSONSection;
  * the key and the json path as the value. In the runtime, the values of the
  * variables will be loaded as normal parameters before the operation. After
  * the operation, they will be cleaned up.
- *<br/><br/>
+ *<br><br>
  * JSONSection represents a portion of JSON data as the value in the template.
  * It supports various operations on JSON data. Some of the operations allow
  * to update the JSON data with override parameters. An override parameter has
  * valid a JSON path as the name. Its value can be any non-null JSON object.
  * It can be set via the method of setParameter() before the operation. A
  * JSONTemplate may contain multiple well defined sections. 
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

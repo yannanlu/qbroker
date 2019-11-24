@@ -26,35 +26,35 @@ import org.qbroker.event.Event;
  * Node is an abstract class of MessageNode.  It has two abstract methods,
  * propagate() and initRuleset().  Other methods can be overridden if it is
  * necessary.
- *<br/><br/>
+ *<br><br>
  * There are 3 metadata lists for tracking the internal state and the stats of
  * the node.  The first one is msgList for the internal state of all the
  * outstanding messages in the uplink of the node.  An outstanding message is
  * the message still in process and not committed from the internal queue yet.
  * In most scenarios, if a message is outstanding for a long time, it means
  * the down stream of the message flow gets stuck somehow.
- *<br/><br/>
+ *<br><br>
  * The next list is assetList for all the outlinks.  The metadata field of
  * OUT_STATUS is for the status of the outlink.  OUT_SIZE is for the number
  * of outstanding messages on the outlink. OUT_COUNT is for the total number
  * of committed messages on the outlink since the reset.  OUT_TIME is for
  * the time of the latest change on the metadata of the outlink.
- *<br/><br/>
+ *<br><br>
  * The last one is ruleList for all the rulesets of the node.  The metadata
  * field of RULE_STATUS is for the status of the ruleset.  RULE_SIZE is for
  * the number of outstanding messages with the ruleset.  RULE_COUNT is for the
  * total number of committed messages since the reset.  RULE_PEND is for the
  * number of cached or pending messages, depending on the function of the node.
  * RULE_TIME is for the time of the latest change on the metadata.
- *<br/><br/>
+ *<br><br>
  * There is also a configuration list for generating dynamic rulesets. It
  * manages a list of configuration properties for rulesets. So the node is able
  * to download or monitor the properties from certain external data sources.
- *<br/><br/>
+ *<br><br>
  * By default, the interanl XQueue is not supported.  In case the node supports
  * dynamic XQueues, please make sure to overwrite the methods of
  * internalXQSupported() and takebackEnabled().
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -211,10 +211,11 @@ public abstract class Node implements MessageNode {
 
     /**
      * It passes the message from the input XQueue over to an output XQueue and
-     * returns 1 upon success or 0 otherwise. In case of cid < 0, the message
-     * has nothing to do with the input XQueue. Nothing will be added to
-     * msgList for tracking. No callbacks and no update on rule stats either.
-     * If tid < 0, msg will not be put back to uplink in case of failure.
+     * returns 1 upon success or 0 otherwise. In case of cid is less than 0,
+     * the message has nothing to do with the input XQueue. Nothing will be
+     * added to msgList for tracking. No callbacks and no update on rule stats
+     * either. If tid is less than 0, msg will not be put back to uplink in
+     * case of failure.
      */
     protected int passthru(long currentTime, Message msg, XQueue in,
         int rid, int oid, int cid, int tid) {
@@ -385,8 +386,8 @@ public abstract class Node implements MessageNode {
 
     /**
      * It returns the number of done messages removed from the input XQueue.
-     * If milliSec < 0, there is no wait and it tries to collect all cells.
-     * Otherwise, it just tries to collect only one cell.
+     * If milliSec is less than 0, there is no wait and it tries to collect all
+     * cells. Otherwise, it just tries to collect only one cell.
      */
     protected int feedback(XQueue in, long milliSec) {
         Object[] asset;

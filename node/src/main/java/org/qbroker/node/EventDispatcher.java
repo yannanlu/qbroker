@@ -44,7 +44,7 @@ import org.qbroker.event.Event;
  * EventDispatcher dispatches the incoming events to multiple destinations
  * according to their content and the registered subscriptions.  It supports
  * generic JMS messages.
- *<br/><br/>
+ *<br><br>
  * EventDispatcher contains a number of subscriptions which define a filter
  * and a set of actions. Internally, EventDispatcher also creates a topic
  * pattern based on the filter for each subscription. The topic pattern will
@@ -68,12 +68,12 @@ import org.qbroker.event.Event;
  * please work on their copy via DuplicateNode and leave the original messages
  * alone. In case of any failure, the original incoming event will be sent to
  * the outlink of failure.
- *<br/><br/>
+ *<br><br>
  * A subscription is defined in a ruleset.  Each ruleset contains a unique
  * name of the subscription, an EventSelector to match events, a TimeWindows
  * to define active time of the subscription and a group of EventActions for
  * the subscription.
- *<br/><br/>
+ *<br><br>
  * EventDispatcher always creates two extra rulesets.  The first is the
  * nohit ruleset for those events not hitting any matches.  The second is the
  * candidate ruleset for all events matching to at least one of subscriptions. 
@@ -86,12 +86,12 @@ import org.qbroker.event.Event;
  * The stats of the rules are stored in the fields of RULE_SIZE, RULE_COUNT
  * and RULE_PEND.  RULE_PEND is for number of cached topics, RULE_SIZE for
  * number of preliminary hits, whereas RULE_COUNT is for number of real hits.
- *<br/><br/>
+ *<br><br>
  * SessionTimeout determines how often to clean up expired topics from the
  * cache.  If SessionTimeout is larger than zero, any cached topics will be
  * expired if their idle time exceeds SessionTimeout.  Those expired topics
  * will be removed from the cache in next session to save resources.
- *<br/><br/>
+ *<br><br>
  * You are free to choose any names for these four fixed outlinks.  But
  * EventDispatcher always assumes the first outlink as the pool for requests,
  * the second for the bypass messages, the third for the failures and the
@@ -99,7 +99,7 @@ import org.qbroker.event.Event;
  * share the same name. But the name of the first outlink has to be unique.
  * In case some of them sharing the same name, it means these outlinks are
  * sharing the same output channel.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

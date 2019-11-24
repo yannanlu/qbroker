@@ -29,10 +29,10 @@ import org.qbroker.common.TraceStackThread;
 /**
  * MongoDBConnector connects to a MongoDB and provides some basic DB operation
  * methods: list(), count(), find(), findone(), insert(), update() and remove().
- *<br/><br/>
+ *<br><br>
  * This is NOT MT-Safe.  Therefore, you need to use multiple instances to
  * achieve your MT-Safty goal.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

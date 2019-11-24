@@ -24,7 +24,7 @@ import org.qbroker.event.Event;
  * the content of the messages and puts back the messages with the data content
  * to their body. JDBCPersister supports flow control and allows object control
  * from its owner.  It is fault tolerant with retry and idle options.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

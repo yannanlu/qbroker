@@ -41,7 +41,7 @@ import org.qbroker.event.Event;
  * the incoming JMS message and applies the FreeMarker template to the data.
  * The output will be set to the message body as the result. The message will
  * be routed to the first outlink.
- *<br/><br/>
+ *<br><br>
  * FreeMarkerNode contains a number of predefined rulesets.  These rulesets
  * categorize messages into non-overlapping groups.  Therefore, each rule
  * defines a unique message group.  The ruleset also defines the transformation
@@ -49,7 +49,7 @@ import org.qbroker.event.Event;
  * paths to the FreeMarker template files, as well as their TTL.
  * The cache count of templates for the rule will be stored to RULE_PEND. It
  * will be updated when the session time exceeds the given SessionTimeout.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

@@ -22,10 +22,10 @@ import org.qbroker.common.Event;
  * SerialPortDevice opens a serial port for synchronous I/O of a byte stream.
  * It does not perform any I/O.  It is User's job to read/write the bytes
  * from/to the stream.
- *<br/><br/>
+ *<br><br>
  * @see #getInputStream
  * @see #getOutputStream
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

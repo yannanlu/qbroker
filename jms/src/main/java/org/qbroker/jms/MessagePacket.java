@@ -42,14 +42,14 @@ import org.qbroker.event.Event;
 /**
  * MessagePacket handles JMS Messages IO on DatagramSocket.  The DatagramSocket
  * has to be established before using this object.
- *<br/><br/>
+ *<br><br>
  * There are four methods, listen(), talk(), inquire() and reply() on packets.
  * The method of listen() is NOT MT-Safe.  The method of talk() is for
  * asynchronous output whereas inquire() is for synchronous requests.
- *<br/><br/>
+ *<br><br>
  * For charSet and encoding, you can overwrite the default encoding by
  * starting JVM with "-Dfile.encoding=UTF8 your_class".
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -248,14 +248,14 @@ public class MessagePacket {
      * It listens to the DatagramSocket for incoming DatagramPackets.  Once
      * receiving a DatagramPacket, it loads the payload of the packet to a
      * JMSMessage and puts it to the XQueue as output.
-     *<br/><br/>
+     *<br><br>
      * Most of the IOExceptions from the stream IO operations, like receive,
      * will be thrown to notify the caller.  The caller is supposed to catch
      * the exception, either to reset the socket or to do other stuff.
      * It also throws JMSException from the operations regarding to the message
      * itself, like get/set JMS properties.  This does not require to reset
      * the socket at all.
-     *<br/><br/>
+     *<br><br>
      * This method is NOT MT-Safe.
      */
     public long listen(DatagramSocket in, XQueue xq) throws IOException,
@@ -528,14 +528,14 @@ public class MessagePacket {
      * JMSMessage and puts it to the XQueue as output.  Meanwhile, it checks
      * the XQueue for the feedback messages.  Once it finds one, the content
      * of the message will be sent out as the reply.
-     *<br/><br/>
+     *<br><br>
      * Most of the IOExceptions from the packet IO operations, like receive,
      * will be thrown to notify the caller.  The caller is supposed to catch
      * the exception, either to reset the socket or to do other stuff.
      * It also throws JMSException from the operations regarding to the message
      * itself, like get/set JMS properties.  This does not require to reset
      * the socket at all.
-     *<br/><br/>
+     *<br><br>
      * This method is NOT MT-Safe.
      */
     public long reply(DatagramSocket sock, XQueue xq) throws IOException,
@@ -983,14 +983,14 @@ public class MessagePacket {
      * rules and sends the packet to the DatagramSocket.  Meanwhile, it
      * listens to the DatagramSocket for reply packet and sends the reply
      * back to the XQueue if there is one.
-     *<br/><br/>
+     *<br><br>
      * Most of the IOExceptions from the packet IO operations, like send,
      * will be thrown to notify the caller.  The caller is supposed to catch
      * the exception, either to reset the socket or to do other stuff.
      * It also throws JMSException from the operations regarding to the message
      * itself, like get/set JMS properties.  This does not require to reset
      * the socket at all.
-     *<br/><br/>
+     *<br><br>
      * Since the inquire operation relies on a request, this method will
      * intercept the request and process it.  The incoming message is required
      * to be writeable.  The method will set a String property of the message
@@ -999,7 +999,7 @@ public class MessagePacket {
      * check the value of the property once it gets the message back.  If
      * the return code is 0, the inquirey is successful.  This method will
      * not acknowledge messages.  It is up to the requester to do that.
-     *<br/><br/>
+     *<br><br>
      * This method is NOT MT-Safe.
      */
     public long inquire(XQueue xq, DatagramSocket sock) throws IOException,
@@ -1230,14 +1230,14 @@ public class MessagePacket {
      * It continually gets a JMS Message from the XQueue, loads its content
      * to a DatagramPacket according to the format rules and sends the packet
      * to the DatagramSocket.
-     *<br/><br/>
+     *<br><br>
      * Most of the IOExceptions from the packet IO operations, like send,
      * will be thrown to notify the caller.  The caller is supposed to catch
      * the exception, either to reset the socket or to do other stuff.
      * It also throws JMSException from the operations regarding to the message
      * itself, like get/set JMS properties.  This does not require to reset
      * the socket at all.
-     *<br/><br/>
+     *<br><br>
      * It will not modify the original messages.  If the XQueue has enabled
      * the EXTERNAL_XA, it will also acknowledge every messages.  This method
      * is MT-Safe.

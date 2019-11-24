@@ -2,10 +2,10 @@ package org.qbroker.event;
 
 /**
  * EventEscalation is an interface for an escalation upon an event.
- *<br/><br/>
+ *<br><br>
  * It is up to the implementation to decide whether to support
  * checkpointing and how to do checkpointing.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

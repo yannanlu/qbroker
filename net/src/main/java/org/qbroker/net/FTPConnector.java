@@ -30,10 +30,10 @@ import org.qbroker.common.TraceStackThread;
 /**
  * FTPConnector connects to an FTP server and provides the following
  * methods for file transfers: ftpGet(), ftpPut() and ftpList().
- *<br/><br/>
+ *<br><br>
  * This is NOT MT-Safe.  Therefore, you need to use multiple instances to
  * achieve your MT-Safty goal.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

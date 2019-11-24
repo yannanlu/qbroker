@@ -9,7 +9,7 @@ import java.io.File;
 
 /**
  * This is NOT MT-Safe.  Therefore please use it with care.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

@@ -30,10 +30,10 @@ import org.qbroker.common.TraceStackThread;
 /**
  * FTPSConnector connects to an FTPS server and provides the following
  * methods for file transfers: ftpsGet(), ftpsPut() and ftpsList().
- *<br/><br/>
+ *<br><br>
  * This is NOT MT-Safe.  Therefore, you need to use multiple instances to
  * achieve your MT-Safty goal.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

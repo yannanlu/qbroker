@@ -10,7 +10,7 @@ import javax.management.Notification;
  * It takes the full classname and the name of the method to handle the
  * notifications for the constructor. It assumes that the method to hanle the
  * notifications is void method with the notification as the only one argument.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

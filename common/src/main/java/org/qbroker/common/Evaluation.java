@@ -11,7 +11,7 @@ package org.qbroker.common;
  * supports basic numeric comparisons and 4 string comparisons for single
  * quoted strings, such as "==", "!=", "=~" and "!~". The match operation is
  * based on String.match().
- *<br/><br/>
+ *<br><br>
  * There are 3 public methods, evaluate(), choose() and isStringExpression().
  * They all take a text as the input expression. The first returns either a
  * Long or a Double for a numeric expression, or an Integer for a boolean
@@ -21,7 +21,7 @@ package org.qbroker.common;
  * strings based on evaluation of the boolean experssion. The last returns true
  * if the expression is a ternary expression for single quoted strings, or
  * false otherwise.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

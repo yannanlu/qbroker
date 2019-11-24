@@ -19,18 +19,18 @@ import org.qbroker.event.Event;
 /**
  * PacketNodeBean is a collection of properties for tracking the
  * state of a given source of UPD packets
- *<br/><br/>
+ *<br><br>
  * A PacketNodeBean has bunch of node properties, like name,
  * role, address, port, hearbeat, status, latest timestamp,
  * sequence ID, packet type, packet count, packet info and
  * the first packet.  It is used for tracking the state of the node.
  * It can also be used for non UPD schemes. 
- *<br/><br/>
+ *<br><br>
  * There are 3 getters and setters for extra uri, address and port,
  * respectively.  They are used for storing extra data for the node.
- *<br/><br/>
+ *<br><br>
  * It is NOT MT-Safe. So use it with care.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

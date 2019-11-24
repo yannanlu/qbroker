@@ -32,10 +32,10 @@ import org.qbroker.event.Event;
  * of JMS messages according to predefined policies.  It sends them to
  * the output XQueue with the predefined name and time signatures.
  * These messages can then be used to trigger other actions down the stream.
- *<br/><br/>
+ *<br><br>
  * In case of non-daemon mode, it only runs once but with the support of Limit.
  * The Limit is number of copies for the generated messages.
- *<br/><br/>
+ *<br><br>
  * HeartbeatGenerator allows to define a Template or a TemplateFile to build
  * message body for each Monitor rule. If TemplateFile is an empty string,
  * it is assumed to use the shared template file. The shared template file
@@ -44,7 +44,7 @@ import org.qbroker.event.Event;
  * StringProperty on the container level. Among the variable names in a
  * template, "name" and "sequence" are two reserved words. Please do not
  * defined them in the StringProperty on Receiver level.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

@@ -18,9 +18,9 @@ import org.qbroker.common.TraceStackThread;
 /**
  * IMQRequester connects to the admin service of a Sun OpenMQ MBean Server
  * for JMX requests.
- *<br/><br/>
+ *<br><br>
  * It requires imq.jar, imqjmx.jar and Java 5 to compile.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

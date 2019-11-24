@@ -47,7 +47,7 @@ import org.qbroker.monitor.MonitorUtils;
 /**
  * MessageUtils contains a bunch of constants and static methods on JMSMessage
  * for common uses
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -641,7 +641,7 @@ public class MessageUtils {
      * In case of BytesMessages, you may need to reset them before
      * using this method to process message body.  The previous read
      * will change the starting position of the byte stream.
-     *<br/><br/>
+     *<br><br>
      * You need to provide a byte array: buffer[bufferSize] for MT-Safe.
      */
     public static String processBody(Message inMessage, byte[] buffer)
@@ -1260,7 +1260,7 @@ public class MessageUtils {
 
     /**
      * duplicates a message and returns a JMSEvent in the same type.
-     *<br/><br/>
+     *<br><br>
      * You need to provide a byte array: buffer[bufferSize] for MT-Safe.
      */
     public static Message duplicate(Message msg, byte[] buffer)
@@ -1353,7 +1353,7 @@ public class MessageUtils {
      * the new message where type 0 is for BytesMessage, 1 for TextMessage,
      * 2 for MapMessage and 3 for ObjectMessage.  In case of failure, it
      * may just return null without exception.
-     *<br/><br/>
+     *<br><br>
      * You need to provide a byte array: buffer[bufferSize] for MT-Safe.
      */
     public static Message convert(Message msg, int type, byte[] buffer)

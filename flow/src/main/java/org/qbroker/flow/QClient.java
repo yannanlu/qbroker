@@ -2,10 +2,10 @@ package org.qbroker.flow;
 
 /**
  * QClient.java
- *<br/><br/>
+ *<br><br>
  * QClient subscribs/publishes/registers/deregisters/browses/corpies/gets/
  * moves/puts JMS messages between queues and topics.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -41,7 +41,7 @@ import org.qbroker.event.Event;
  * QCLient browses/copies/gets/moves/puts JMS messages from/to/between queues.
  * The configuration parameters are stored in the property file, Client.json,
  * that list hostname, qmgr_name, q_name, etc.
- *<br/>
+ *<br>
  * Usage: java org.qbroker.flow.QClient [-?|-l|-I configFile|...]
  */
 @SuppressWarnings("unchecked")

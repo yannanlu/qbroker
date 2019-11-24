@@ -21,21 +21,21 @@ import org.qbroker.monitor.Monitor;
 
 /**
  * DBQuery queres a Database to see if it hangs or goes down
- *<br/><br/>
+ *<br><br>
  * It queries the given DBDriver, URI and an SQL Query statement.  It
  * throws exceptions if the internal error occurs.   Otherwise it returns an
  * integer indicating the status of the db server.
- *<br/><br/>
- * Status     Code         Description<br/>
- *   -2     NOTAVAILABLE   not available<br/>
- *   -1     CONNFAILED     connection failed<br/>
- *   0      QUERYOK        query is successful<br/>
- *   1      PROTOCOLERROR  protocol error, probably wrong port<br/>
- *   2      QUERYERROR     SQL Query not compile<br/>
- *   3      QUERYFAILED    SQL Query failed<br/>
- *   4      LOGINTIMEOUT   login timeout, probably server is busy<br/>
- *   5      LOGINREFUSED   login refused, probably password is wrong<br/>
- *<br/>
+ *<br><br>
+ * Status     Code         Description<br>
+ *   -2     NOTAVAILABLE   not available<br>
+ *   -1     CONNFAILED     connection failed<br>
+ *   0      QUERYOK        query is successful<br>
+ *   1      PROTOCOLERROR  protocol error, probably wrong port<br>
+ *   2      QUERYERROR     SQL Query not compile<br>
+ *   3      QUERYFAILED    SQL Query failed<br>
+ *   4      LOGINTIMEOUT   login timeout, probably server is busy<br>
+ *   5      LOGINREFUSED   login refused, probably password is wrong<br>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

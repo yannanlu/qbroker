@@ -45,20 +45,20 @@ import org.qbroker.event.Event;
  * group anytime as long as there is a room available in the group.
  * Any worker can leave the group anytime freely.  If the last node
  * quits, the cluster goes down.
- *<br/><br/>
+ *<br><br>
  * SerialPortNode is supposed to run at backgroud.  It is designed to be
  * a black automaton box.  It will automatically maitain the state of the
  * cluster.  But if the outLink is defined, it will also send the state
  * information and relays the data.  The applicarion on the node can send data
  * to any node via the API of relay().
- *<br/><br/>
- * A SerialPortNode may be in one of the following states:<br/>
- * NODE_NEW:      just starting up, not joining the cluster yet<br/>
- * NODE_RUNNING:  joined in the cluster and running OK<br/>
- * NODE_STANDBY:  joined in the cluster but still in transient state<br/>
- * NODE_TIMEOUT:  missed a fixed number of heartbeats from the node<br/>
- * NODE_DOWN:     no longer active<br/>
- *<br/>
+ *<br><br>
+ * A SerialPortNode may be in one of the following states:<br>
+ * NODE_NEW:      just starting up, not joining the cluster yet<br>
+ * NODE_RUNNING:  joined in the cluster and running OK<br>
+ * NODE_STANDBY:  joined in the cluster but still in transient state<br>
+ * NODE_TIMEOUT:  missed a fixed number of heartbeats from the node<br>
+ * NODE_DOWN:     no longer active<br>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -1153,10 +1153,10 @@ public class SerialPortNode implements ClusterNode, Runnable {
     }
 
     /**
-     * It displays packets for troubleshooting and debugging.<br/>
-     * option: 0 - displaying incoming packets with tag of a space<br/>
-     * option: 1 - displaying outgoing packets with tag of a colon<br/>
-     * option: 2 - displaying discarded incoming packets with tag of a bam<br/>
+     * It displays packets for troubleshooting and debugging.<br>
+     * option: 0 - displaying incoming packets with tag of a space<br>
+     * option: 1 - displaying outgoing packets with tag of a colon<br>
+     * option: 2 - displaying discarded incoming packets with tag of a bam<br>
      * location: - debug mask for a specified section
      */
     private void display(int option, int location, DatagramPacket packet) {
@@ -1419,7 +1419,7 @@ public class SerialPortNode implements ClusterNode, Runnable {
     /**
      * It initiates an election process for the new master and casts the vote,
      * or declares itself as the new master if it is the only one in the group.
-     *<br/><br/>
+     *<br><br>
      * NB. a node can only vote once in the same election
      */
     private DatagramPacket vote(long currentTime, String u) {

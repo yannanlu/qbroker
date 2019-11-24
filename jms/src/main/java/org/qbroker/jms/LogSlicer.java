@@ -36,17 +36,17 @@ import org.qbroker.event.Event;
 /**
  * LogSlicer slices a growing logfile into pieces dynamically
  * so that they can be havestered.
- *<br/><br/>
+ *<br><br>
  * LogSlicer continuously monitors the size of the logfile and renames
  * the file into a new name with a sequential id if either the session
  * times out and the file size is none zero, or the size reaches the
  * threshold before the timeout.
- *<br/><br/>
+ *<br><br>
  * It can be used to rotate logs as long as it is safe to truncate the
  * logs.  Some applications open the logfile to append and then close it
  * immediately.  Other applications keep the logfile open all the times.
  * It is safe to truncate the logfile in the former case.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

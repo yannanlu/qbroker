@@ -15,7 +15,7 @@ import org.qbroker.common.Utils;
 /**
  * UniformSplitter splits a JMS message into a plain text containing multiple
  * lines.  Currently, it only supports uniform spreadings of certain properties.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

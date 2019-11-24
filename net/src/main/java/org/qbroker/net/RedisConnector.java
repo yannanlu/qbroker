@@ -20,10 +20,10 @@ import org.qbroker.net.ClientSocket;
  * RedisConnector connects to a Redis server and provides the following
  * methods for Redis operations: rpush, lpop, blpop, publish, subscribe,
  * unsubscribe and nextMessage.
- *<br/><br/>
+ *<br><br>
  * This is NOT MT-Safe. Therefore, you need to use multiple instances to
  * achieve your MT-Safty goal.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

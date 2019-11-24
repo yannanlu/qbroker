@@ -13,7 +13,7 @@ import org.qbroker.common.Template;
 
 /**
  * EventSelector implements EventFilter for Perl5 patterns match with events
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

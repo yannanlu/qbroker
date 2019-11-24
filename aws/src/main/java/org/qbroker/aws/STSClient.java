@@ -1,5 +1,7 @@
 package org.qbroker.aws;
 
+/* STSClient.java - an AWS Client for accessing AWS Security Token service */
+
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
@@ -30,6 +32,12 @@ import com.amazonaws.services.securitytoken.model.AssumedRoleUser;
 import com.amazonaws.services.securitytoken.model.AssumeRoleRequest;
 import com.amazonaws.services.securitytoken.model.AssumeRoleResult;
 import org.qbroker.common.Utils;
+
+/**
+ * STSClient is an AWSClient for accessing AWS Security Token service.
+ *<br>
+ * @author yannanlu@yahoo.com
+ */
 
 public class STSClient extends AWSClient {
     AWSSecurityTokenService sts;

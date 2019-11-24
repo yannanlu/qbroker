@@ -47,7 +47,7 @@ import org.qbroker.event.Event;
  * of them is stopped or closed, PersisterPool will checkin the persister and
  * clean up the cache.  If the request is to return the used thread, it will
  * check in both the thread and the persister.
- *<br/><br/>
+ *<br><br>
  * URI is used to identify the destinations.  PersisterPool parses the
  * URI string and creates a Map with all properties from the key-value
  * pairs specified in the query-string.  Therefore, please carefully define
@@ -55,7 +55,7 @@ import org.qbroker.event.Event;
  * default properties defined for each implementations.  If any of the default
  * properties is missing in the URI, PersisterPool will copy it to the
  * property Map before the instantiation of the MessagePersister.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

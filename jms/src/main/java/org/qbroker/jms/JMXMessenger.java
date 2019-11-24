@@ -40,15 +40,15 @@ import org.qbroker.event.Event;
  * JMXMessenger connects to a JMX server and converts the JMS messages into
  * JMX requests. The request retrieved from a message is supposed to be as
  * follows:
- *<br/>
+ *<br>
  * ACTION Target attr0:attr1:attr2
- *<br/>
+ *<br>
  * where the colon delimitered attributes are optional. If there is no
  * attribute defined, it will display all attributes if the target is not a
  * pattern. In case the target contains at least one wildcard chars, * or ?, it
  * will only list names of the MBeans.  Currently, it only supports the action
  * of display.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -236,7 +236,7 @@ public class JMXMessenger implements Connector {
      * it sends each request to the JMX server as a query and waits
      * for the response back. The response will be loaded into body of the
      * request message according to the result type, similar to a DB qurey.
-     *<br/><br/>
+     *<br><br>
      * It also supports the dynamic content filter and the formatter on queried
      * messages. The filter and the formatter are defined via a JSON text with
      * Ruleset defined as a list. The JSON text is stored in the body of the

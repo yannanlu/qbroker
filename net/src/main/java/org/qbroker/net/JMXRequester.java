@@ -29,7 +29,7 @@ import org.qbroker.common.WrapperException;
 /**
  * JMXRequester connects to a generic JMX server for JMX requests. Currently,
  * it supports the methods of list, getValues and getResponse.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -315,11 +315,11 @@ public class JMXRequester implements Requester {
      * filled in the given string buffer. The content in the string buffer
      * is a JSON. If the disconnect flag is set to true, it disconnects right
      * before it returns. Otherwise, it will keep the connection.
-     *<br/></br/>
+     *<br><br>
      * The JMX request is supposed to be as follows: 
-     *</br>
+     *<br>
      * DISPLAY Target attr0:attr1:attr2
-     *<br/></br/>
+     *<br><br>
      * In case of a fatal failure, it disconnects first and then throws a
      * WrapperException with cause set to the vendor specific exception or IO
      * related exception. Therefore please make sure to get the cause exception

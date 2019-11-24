@@ -38,7 +38,7 @@ import org.qbroker.event.Event;
  * all the processed incoming messages, nohit for those messages do not belong
  * to any rulesets, failure for the incoming messages failed in the process.
  * However, the outlink of done can be shared with other outlinks.
- *<br/><br/>
+ *<br><br>
  * ActionNode contains a number of predefined rulesets.  These rulesets
  * categorize incoming messages into non-overlapping groups.  Therefore, each
  * rule defines a unique message group.  The ruleset also defines its actions
@@ -57,13 +57,13 @@ import org.qbroker.event.Event;
  * the escalation gets delayed for the ruleset of "last". For the ruleset of
  * "first", the delay happens after the escalation. EscalationMask controls
  * the display mask on escalation messages.
- *<br/><br/>
+ *<br><br>
  * Apart from the user defined rulesets, ActionNode always creates one extra
  * ruleset, nohit.  The ruleset of nohit is for those messages not hitting any
  * patterns.  Please remember, there is no one-to-one relationship between the
  * candidate messages and the escalation messages.  The total number of
  * escalation messages will be stored into the RULE_PEND field of the rulesets.
- *<br/><br/>
+ *<br><br>
  * Each ruleset contains the name of the rule, the classname of the action and
  * a Map of ActionArgument.  The ActionArgument has the configuration
  * parameters for the constructor.  If the classname is not defined in a rule,
@@ -76,7 +76,7 @@ import org.qbroker.event.Event;
  * returns a Java Object.  The returned object must be null for bypass or
  * the new JMS message for escalations.  If something is wrong, the returned
  * object should be a String as the text of the error.
- *<br/><br/>
+ *<br><br>
  * The plugin must also have a constructor taking a Map, or a List, or just a
  * String as the only argument for configurations. Based on the data type of
  * the constructor argument, developers should define configuration parameters
@@ -86,7 +86,7 @@ import org.qbroker.event.Event;
  * incoming messages.  It is OK for the method to modify the incoming messages.
  * But it is not recommented to acknowledge them.  If any of the operations
  * fails, the incoming message will be routed to failure outlink.
- *<br/><br/>
+ *<br><br>
  * In case a plugin needs to connect to external resources for dynamic
  * escalations, it should define an extra method of close() to close all
  * the external resources gracefully.  Its method of escalate() should also be
@@ -94,13 +94,13 @@ import org.qbroker.event.Event;
  * automatically.  If the container wants to stop the node, it will call the
  * resetMetaData() in which the methods of close() of all actions will be
  * called in order to release all external resources.
- *<br/><br/>
+ *<br><br>
  * You are free to choose any names for the four fixed outlinks.  But
  * ActionNode always assumes the first outlink for done, the second for bypass,
  * the third for failure and the last for nohit.  Any two or more outlinks can
  * share the same outlink name.  It means these outlinks are sharing the same
  * output channel.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -761,14 +761,15 @@ public class ActionNode extends Node {
 
     /**
      * It passes the message from the input XQueue over to an output XQueue and
-     * returns 1 upon success or 0 otherwise. In case of cid < 0, the message
-     * has nothing to do with the input XQueue. Nothing will be added to
-     * msgList for tracking. No callbacks and no update on rule stats either.
-     * If tid < 0, message will not be put back to uplink in case of failure.
-     * There is no callbacks and no update on rule stats either. In case of
-     * cid >= 0 and tid < 0, it will add msg stats to msgList for external
-     * tracking. But the user has to clean it up after the usage since it is
-     * not collectible by feedback() without the callback.
+     * returns 1 upon success or 0 otherwise. In case of cid less than 0, the
+     * message has nothing to do with the input XQueue. Nothing will be added
+     * to msgList for tracking. No callbacks and no update on rule stats either.
+     * If tid is less than 0, message will not be put back to uplink in case of
+     * failure. There is no callbacks and no update on rule stats either. In
+     * case of that cid is larger than or equal to 0 and tid is less than 0, it
+     * will add msg stats to msgList for external tracking. But the end user
+     * has to clean it up after the usage since it is not collectible by
+     * feedback() without the callback.
      */
     protected int passthru(long currentTime, Message msg, XQueue in,
         int rid, int oid, int cid, int tid) {
@@ -936,8 +937,8 @@ public class ActionNode extends Node {
 
     /**
      * It returns the number of done messages removed from the input XQueue.
-     * If milliSec < 0, there is no wait and it tries to collect all cells.
-     * Otherwise, it just tries to collect the first collectible cell.
+     * If milliSec is less than 0, there is no wait and it tries to collect all
+     * cells. Otherwise, it just tries to collect the first collectible cell.
      */
     protected int feedback(XQueue in, long milliSec) {
         Object o;

@@ -36,14 +36,14 @@ import org.qbroker.event.Event;
  * if it reaches the expiration time, or reset by certain incoming events.
  * If the Type is set to MessageTracker, it will return a TextEvent as a
  * JMS Message.
- *<br/><br/>
+ *<br><br>
  * EventTracker caches the aggregated events based on their keys and the
  * shared TimeToLive.  If the cached time for the key exceeds the TTL, it
  * will be expired and a new event will be generated for aggregation.
- *<br/><br/>
+ *<br><br>
  * EventTracker implements EventEscalation. It provides a way for us to
  * correlate events across the time line.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

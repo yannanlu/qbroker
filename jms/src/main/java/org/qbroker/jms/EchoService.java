@@ -9,7 +9,7 @@ import org.qbroker.jms.TextEvent;
 
 /**
  * EchoService echos requests for test purpose.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

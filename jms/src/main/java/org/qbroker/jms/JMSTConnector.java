@@ -35,17 +35,17 @@ import org.qbroker.event.Event;
 /**
  * JMSTConnector connects to a JMS topic and initializes one of the operations,
  * such as sub, pub.
- *<br/><br/>
+ *<br><br>
  * For durable subscriptions, you have to specify SubscriptionID.  On the other
  * hand, if SubscriptionID is defined, it is assumed to be durable subscription.
- *<br/><br/>
+ *<br><br>
  * For pub operations, Overwrite mask controls whether to reset the persistence,
  * the priority, and the expiration time on each incoming message. 0 means no
  * overwrite. In this case, the persistence, the priority, and the time-to-live
  * will be recovered from each incoming message for send action. 1 is to reset
  * the persistence to a specific value. 2 is to reset the priority to a
  * certain value. 4 is to reset the expiration time with a given time-to-live.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -269,7 +269,7 @@ public abstract class JMSTConnector implements TopicConnector {
      * It subscribes a JMS topic and sends the JMS messages into a output
      * channel that may be a JMS destination, an OutputStream or an XQueue.
      * It supports the message acknowledgement at the consumer end.
-     *<br/><br/>
+     *<br><br>
      * It catches JMSException in the operations regarding to the message
      * itself, like get/set JMS properties.  In this case, it still tries to
      * send the message to the output channel and logs the errors.  It
@@ -638,7 +638,7 @@ public abstract class JMSTConnector implements TopicConnector {
      * read bytes from the InputStream and publish them into a JMS topic as
      * JMS messages.  It supports flexable but static delimiters at either
      * or both ends.  It also has the blind trim support at both ends.
-     *<br/><br/>
+     *<br><br>
      * This is MT-Safe as long as the threads share the same offhead,
      * offtail, sotBytes and eotBytes.
      */
@@ -1016,7 +1016,7 @@ public abstract class JMSTConnector implements TopicConnector {
      * of 1 is to reset the persistence to a specific value. 2 is to reset
      * the priority to a certain value. 4 is to reset the expiration time
      * with a given time-to-live.
-     *<br/><br/>
+     *<br><br>
      * It catches JMSException in the operations regarding to the message
      * itself, like get/set JMS properties or acknowlegement. In this case,
      * it removes the message from the XQueue and logs the errors.  It
@@ -1024,7 +1024,7 @@ public abstract class JMSTConnector implements TopicConnector {
      * like publish or commit.  Such JMSException will be thrown so that
      * the caller can handle it either to reset the connection or to do
      * something else.
-     *<br/><br/>
+     *<br><br>
      * If the MaxIdleTime is set to none-zero, it will monitor the idle time
      * and will throw TimeoutException once the idle time exceeds MaxIdleTime.
      * it is up to the caller to handle this exception.

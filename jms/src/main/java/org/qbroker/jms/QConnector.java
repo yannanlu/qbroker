@@ -46,7 +46,7 @@ import org.qbroker.event.Event;
  * and SequentialSearch is on.  The application is supposed to reset the
  * browser every time with null string as the only argument.  If ReferenceFile
  * is defined, the state info will be persisted to the file for restart.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

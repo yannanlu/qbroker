@@ -45,7 +45,7 @@ import org.qbroker.event.Event;
  * from it.  It puts the JMS Messages to an OutputStream as the output.
  * StreamPersister supports flow control and allows object control from
  * its owner.  It is fault tolerant with retry and idle options.
- *<br/><br/>
+ *<br><br>
  * In case that Destination is defined and scheme is tcp, StreamPersister
  * will send a request to the server to open the destination after the
  * connection and waits for the response.  The request is supposed to contain
@@ -54,11 +54,11 @@ import org.qbroker.event.Event;
  * StreamPersister will send JMS messages down the OutputStream for the
  * normal operation.  In this case, SOTimeout is used for connection timeout
  * while ReceiveTime is used to timeout read().
- *<br/><br/>
+ *<br><br>
  * In case of the tcp socket and SessioneSize is larger than 0, StreamPersister
  * will auto reconnect whenever the processed msg count is same as the value of
  * SessionSize to terminate the session frequently.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

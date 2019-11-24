@@ -27,10 +27,10 @@ import org.qbroker.json.JSON2Map;
  * represented by Java null. The comments in Javascript style will be ignored.
  * With these basic types of objects, any data structures will be representable.
  * The mapping is one-to-one. Therefore, the mapping is bi-directional.
- *<br/><br/>
+ *<br><br>
  * The method of parse() assumes the JSON data is either a Map or a List.
  * It returns either a Map or a List representing the JSON data.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

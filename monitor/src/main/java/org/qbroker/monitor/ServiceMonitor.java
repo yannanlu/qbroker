@@ -29,10 +29,10 @@ import org.qbroker.monitor.MonitorReport;
  * the expression. If the evaluation returns false, the service is OK.
  * Otherwise, the service is in an error condition. ServiceMonitor escalates
  * the status based on the error conditions and the occurrance.
- *<br/><br/>
+ *<br><br>
  * Currently, it supports 3 types of data sources, such as http/https, script
  * and report for private reports.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

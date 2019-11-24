@@ -45,7 +45,7 @@ import org.qbroker.event.Event;
  * for the messages failed in the baking or sorting process. Since SortNode
  * does not consume any messages, any incoming message has to find a way out
  * via one of the four outlinks.
- *<br/><br/>
+ *<br><br>
  * SortNode contains a number of pre-defined rulesets.  These rulesets
  * categorize messages into non-overlapping groups.  Therefore, each rule
  * defines a unique message group.  The ruleset also defines the sorting
@@ -56,7 +56,7 @@ import org.qbroker.event.Event;
  * RULE_PEND field.  Furthermore, SortNode always creates one extra ruleset,
  * nohit.  The ruleset of nohit is for all the messages not hitting any of
  * the patterns.
- *<br/><br/>
+ *<br><br>
  * SortNode supports both the dynamic session and the baking process.
  * It is determined by BakeTime in millisecond and SessionTimeout in second.
  * If both BakeTime and SessionTimeout are set to 0 as the default, the session
@@ -73,7 +73,7 @@ import org.qbroker.event.Event;
  * case, the incoming messages will be baked rather than statically withheld.
  * During the baking process, some of the incoming messages will be routed out
  * right away. But majority of them will be withheld for a certain time peroid.
- *<br/><br/>
+ *<br><br>
  * BakeTime is the minimum time for the reference message of a session to be
  * withheld in case other low-key messages arriving late. The reference message
  * is the most baked message with a higher key value than the threshold which
@@ -94,7 +94,7 @@ import org.qbroker.event.Event;
  * message in the new session. This way, SortNode will smooth out the
  * fluctuations on the key values of message stream and recovers their
  * original order.
- *<br/><br/>
+ *<br><br>
  * SortNode also supports the claim mode.  If there is at least one claim
  * ruleset defined, the node has its claim mode on. A claim ruleset is
  * similar to a baking ruleset. The only difference on the configurations is
@@ -117,7 +117,7 @@ import org.qbroker.event.Event;
  * the incoming messages. Since the container of the worker flow will forward
  * the escalated messages to the SortNode, they will be processed by the
  * SortNode to claim the baked incoming messages.
- *<br/><br/>
+ *<br><br>
  * For a SortNode with the claim mode on, it allows the baking rules and the
  * claim rules to define IDTemplate. The IDTemplate specifies the way to
  * extract a unique ID from the messages.  These IDs will be cached into a
@@ -144,7 +144,7 @@ import org.qbroker.event.Event;
  * an ActionNode for escalations, please make sure the uplink of the SortNode
  * has the 2nd half of the cells unused. The unused partition will be reserved
  * for escalations so that the container is able to forward the escalations.
- *<br/><br/>
+ *<br><br>
  * SortNode will not consume any messages. But it may remove the withheld
  * messages from the uplink for certain rulesets. If EXTERNAL_XA bit is set
  * on the uplink, those removed messages will be acknowledged as well.
@@ -155,7 +155,7 @@ import org.qbroker.event.Event;
  * messages for the ruleset will be acknowledged and removed from the uplink.
  * There is a big consequence to disable XA on a ruleset. Please be extremely
  * careful if you wnat to disable XA on any ruleset.
- *<br/><br/>
+ *<br><br>
  * Here are considerations on when to disable XA on a ruleset. First, you may
  * want SortNode to withhold more messages than the capacity of the uplink.
  * Second, the source JMS servers may not be able to handle large amount of
@@ -163,11 +163,11 @@ import org.qbroker.event.Event;
  * set to zero explicitly to disable the XA. As you know, most of the JMS
  * vendors implement message acknowledgement via sessions. The acknowledgement
  * by SortNode may upset the XA control of the message flow.
- *<br/><br/>
+ *<br><br>
  * You are free to choose any names for the four fixed outlinks.  But
  * SortNode always assumes the first outlink for done, the second for bypass,
  * the third for failure and the last for nohit.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

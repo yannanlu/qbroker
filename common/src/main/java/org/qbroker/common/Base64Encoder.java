@@ -9,7 +9,7 @@ import org.qbroker.common.RandomNumber;
 
 /**
  * Base64Encoder has encryption support.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 public class Base64Encoder {

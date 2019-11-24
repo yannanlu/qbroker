@@ -21,11 +21,11 @@ import org.qbroker.event.Event;
  * from it.  It puts the JMS Messages to an XQueue as the output.
  * JMSSubscriber supports flow control and allows object control from
  * its owner.  It is fault tolerant with retry and idle options.
- *<br/><br/>
+ *<br><br>
  * Due to the serial access of subscription for IBM MQSeries,
  * you can specify ActionSynchronized = true to keep creation, reaction
  * as serial processes.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

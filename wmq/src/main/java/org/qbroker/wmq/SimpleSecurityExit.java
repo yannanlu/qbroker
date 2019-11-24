@@ -16,7 +16,7 @@ import com.ibm.mq.MQC;
  * SecurityData.  In case there is no security exit enabled on the server side,
  * it will skip the exit and resume the connection as if there is no
  * security exit enabled.  It supports both MQ V5.3 and MQ V6.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

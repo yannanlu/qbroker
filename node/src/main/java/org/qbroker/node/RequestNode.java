@@ -54,7 +54,7 @@ import org.qbroker.event.Event;
  * it as a bypass and routes it to one of the four fixed outlinks without any
  * delay. Since RequestNode does not consume any message, any incoming message
  * has to find a way out via one of the four fixed outlinks.
- *<br/><br/>
+ *<br><br>
  * RequestNode contains a number of pre-defined rulesets.  These rulesets
  * categorize messages into non-overlapping groups.  Therefore, each rule
  * defines a unique message group.  The ruleset also defines the cache or claim
@@ -62,14 +62,14 @@ import org.qbroker.event.Event;
  * in the process. Furthermore, RequestNode always creates one extra ruleset,
  * nohit.  The ruleset of nohit is for all the messages not hitting any of
  * the filters.
- *<br/><br/>
+ *<br><br>
  * You are free to choose any names for the first four fixed outlinks.  But
  * RequestNodee always assumes the first outlink for done, the second for
  * bypass, the third for failure and the fourth for nohit. The rest of the
  * outlinks are for collectibles. It is OK for those first four fixed outlinks
  * to share the same name. Please make sure the first fixed outlink has the
  * actual capacity no less than that of the uplink.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -1047,8 +1047,8 @@ public class RequestNode extends Node {
 
     /**
      * It passes the message from the input XQueue over to an output XQueue and
-     * returns 1 upon success or 0 otherwise. If tid < 0, msg will not be
-     * put back to uplink in case of failure.
+     * returns 1 upon success or 0 otherwise. If tid is less than 0, msg will
+     * not be put back to uplink in case of failure.
      */
     protected int passthru(long currentTime, Message msg, XQueue in,
         int rid, int oid, int cid, int tid) {
@@ -1209,8 +1209,8 @@ public class RequestNode extends Node {
 
     /**
      * It returns the number of done messages removed from the input XQueue.
-     * If milliSec < 0, there is no wait and it tries to collect all cells.
-     * Otherwise, it just tries to collect the first collectible cell.
+     * If milliSec is less than 0, there is no wait and it tries to collect all
+     * cells. Otherwise, it just tries to collect the first collectible cell.
      */
     protected int feedback(XQueue in, long milliSec) {
         Object[] asset;

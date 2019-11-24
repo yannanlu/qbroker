@@ -40,10 +40,10 @@ import org.qbroker.event.Event;
  * RiakMessenger connects to a Riak database specified by URI and
  * initializes the operations of fetch, store and download with JMS Messages on
  * various data buckets.
- *<br/><br/>
+ *<br><br>
  * This is NOT MT-Safe.  Therefore, you need to use multiple instances to
  * achieve your MT goal.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
@@ -398,12 +398,12 @@ public class RiakMessenger extends RiakConnector {
     /**
      * It gets a JMS Message from the XQueue and stores its content into a
      * bucket with the given key.
-     *<br/><br/>
+     *<br><br>
      * It always tries to retrieve the bucket name from the field specified
      * by BucketField and the key name from the field specified by the
      * KeyField.  If the message does not contain the bucket or key, the method
      * will use the default values.
-     *<br/><br/>
+     *<br><br>
      * If the XQueue has enabled the EXTERNAL_XA bit, it will also acknowledge
      * the messages.  This method is MT-Safe.
      */
@@ -609,11 +609,11 @@ public class RiakMessenger extends RiakConnector {
      * It listens to an XQueue for incoming JMS messages and extracts the
      * bucket name and the key name from each message.  Then it downloads the
      * content from the Riak server and loads the content to the message body.
-     *<br/><br/>
+     *<br><br>
      * If the MaxIdleTime is set to none-zero, it will monitor the idle time
      * and will throw TimeoutException once the idle time exceeds MaxIdleTime.
      * it is up to the caller to handle this exception.
-     *<br/><br/>
+     *<br><br>
      * The original message will not be modified.  If the XQueue has enabled
      * the EXTERNAL_XA bit, it will also acknowledge the messages also.
      */

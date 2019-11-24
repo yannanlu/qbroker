@@ -24,9 +24,9 @@ import org.qbroker.event.EventAction;
 /**
  * EventAppender implements EventAction and appends/writes a formatted
  * event to a give file.
- *<br/><br/>
+ *<br><br>
  * This is MT-Safe.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

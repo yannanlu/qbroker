@@ -23,7 +23,7 @@ import org.qbroker.event.Event;
  * JMXReceiver listens on JMX notifications from a JMX service and puts
  * notification content to JMS messages.  Those messages will be
  * sent into an XQueue as the output.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

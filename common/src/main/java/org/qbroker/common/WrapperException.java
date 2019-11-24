@@ -2,7 +2,7 @@ package org.qbroker.common;
 
 /**
  * WrapperException is an Exception to chain a generic Exception.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 

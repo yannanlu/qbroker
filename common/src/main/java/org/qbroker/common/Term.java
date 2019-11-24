@@ -7,7 +7,7 @@ import org.qbroker.common.Expression;
 /**
  * Term implements the interface of Expression. It is the smallest unit of
  * an expression.
- *<br/>
+ *<br>
  * @author yannanlu@yahoo.com
  */
 
