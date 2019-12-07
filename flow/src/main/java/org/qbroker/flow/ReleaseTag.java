@@ -3,6 +3,14 @@ package org.qbroker.flow;
 /* ReleaseTag.java - release tag for all the packages of qbroker */
 
 /**
+ * V1.2.20 (2019/12/07): added two methods to the interface of HTTPConnector,
+ * added two methods to HTTPConnector and HTTPClient in net, added support of
+ * basic auth to HTTPClient, added support of the header for Content-Type to
+ * HTTPClient, added MType to EventPoster to support xml or json content for
+ * POST operation, changed EscalationKey to escalationKey on the escalated
+ * event for EventTracker, added FormatKey to all implementations of
+ * EventAction for customized format on events
+ *<br>
  * V1.2.19 (2019/11/23): added support of a single secret to ScriptLauncher and
  * EventScriptLauncher, added priority pattern and isActive() to EventPoster,
  * removed canOverwrite() from XQueue and IndexedXQueue, removed overwriteable
@@ -328,7 +336,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V1.2.19 2019/11/23 10:25:47";
+    private static String ReleaseTAG = "QBroker V1.2.20 2019/12/07 10:07:35";
 
     public ReleaseTag() {
     }

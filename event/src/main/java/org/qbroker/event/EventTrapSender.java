@@ -34,11 +34,13 @@ public class EventTrapSender extends SNMPConnector implements EventAction {
     private String type;
     private String description;
     private String category;
+    private String formatKey = "type";
     private long serialNumber;
     private AssetList ruleList;
     private Pattern pattern = null;
     private Perl5Matcher pm = null;
     private int genericTrap = 6, specificTrap = 1, version = 1, debug = 0;
+    private boolean isType = true;
 
     public EventTrapSender(Map props) {
         super(props);
@@ -66,6 +68,14 @@ public class EventTrapSender extends SNMPConnector implements EventAction {
             description = EventUtils.substitute((String) o, template);
         else
             description = "send snmp traps";
+
+        if ((o = props.get("FormatKey")) != null) {
+            formatKey = (String) o;
+            if (formatKey.length() <= 0)
+                formatKey = "type";
+            else
+                isType = false;
+        }
 
         ruleList = new AssetList("SNMPTrap", 64);
         if ((o = props.get("TrapData")) != null && o instanceof List) {
@@ -270,7 +280,7 @@ public class EventTrapSender extends SNMPConnector implements EventAction {
     public synchronized void invokeAction(long currentTime, Event event) {
         int n = 0;
         List list;
-        String eventType;
+        String eventKey;
         String priorityName;
         if (event == null)
             return;
@@ -278,13 +288,20 @@ public class EventTrapSender extends SNMPConnector implements EventAction {
         priorityName = Event.priorityNames[event.getPriority()];
         if (pattern != null && !pm.contains(priorityName, pattern))
             return;
+
         serialNumber ++;
+        eventKey = (String) event.attribute.get(formatKey);
+        if (eventKey == null || eventKey.length() == 0) {
+            if (isType)
+                eventKey = "Default";
+            else { // retry on type
+                eventKey = (String) event.attribute.get("type");
+                if (eventKey == null || eventKey.length() == 0)
+                    eventKey = "Default";
+            }
+        }
 
-        eventType = (String) event.attribute.get("type");
-        if (eventType == null || eventType.length() == 0)
-            eventType = "Default";
-
-        list = (List) ruleList.get(eventType);
+        list = (List) ruleList.get(eventKey);
         if (list == null)
             list = (List) ruleList.get("Default");
 
@@ -293,7 +310,7 @@ public class EventTrapSender extends SNMPConnector implements EventAction {
         }
         catch (Exception e) {
             new Event(Event.ERR, name + ": failed to send trap for " +
-                eventType + ": " + Event.traceStack(e)).send();
+                eventKey + ": " + Event.traceStack(e)).send();
             return;
         }
 

@@ -60,6 +60,12 @@ public interface HTTPConnector {
     public int doPost(String urlStr, String line, StringBuffer response)
         throws IOException;
 
+    public int doPost(String urlStr, Map extra, BytesBuffer buf,
+        StringBuffer response) throws IOException;
+
+    public int doPost(String urlStr, Map extra, String line,
+        StringBuffer response) throws IOException;
+
     /**
      * It sends a PUT request to the HTTP server with the urlStr and the extra
      * request headers, as well as the content stored in the BytesBuffer.

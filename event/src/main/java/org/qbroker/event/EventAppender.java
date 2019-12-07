@@ -36,11 +36,12 @@ public class EventAppender implements EventAction {
     private String type;
     private String description;
     private String category;
+    private String formatKey = "type";
     private long serialNumber;
     private int debug = 0;
     private Map<String, Map> appender;
     private String logfile = null, uri;
-    private boolean append = true;
+    private boolean append = true, isType = true;
     private Pattern pattern = null;
     private Perl5Matcher pm = null;
 
@@ -97,6 +98,14 @@ public class EventAppender implements EventAction {
         else {
             throw(new IllegalArgumentException(name +
                 ": unsupported scheme: " + s));
+        }
+
+        if ((o = props.get("FormatKey")) != null) {
+            formatKey = (String) o;
+            if (formatKey.length() <= 0)
+                formatKey = "type";
+            else
+                isType = false;
         }
 
         appender = new HashMap<String, Map>();
@@ -283,7 +292,7 @@ public class EventAppender implements EventAction {
     public synchronized void invokeAction(long currentTime, Event event) {
         String str = null;
         Map map;
-        String eventType;
+        String eventKey;
         String priorityName;
         if (event == null)
             return;
@@ -291,13 +300,20 @@ public class EventAppender implements EventAction {
         priorityName = Event.priorityNames[event.getPriority()];
         if (pattern != null && !pm.contains(priorityName, pattern))
             return;
+
         serialNumber ++;
+        eventKey = (String) event.attribute.get(formatKey);
+        if (eventKey == null || eventKey.length() == 0) {
+            if (isType)
+                eventKey = "Default";
+            else { // retry on type
+                eventKey = (String) event.attribute.get("type");
+                if (eventKey == null || eventKey.length() == 0)
+                    eventKey = "Default";
+            }
+        }
 
-        eventType = (String) event.attribute.get("type");
-        if (eventType == null || eventType.length() == 0)
-            eventType = "Default";
-
-        map = appender.get(eventType);
+        map = appender.get(eventKey);
         if (map == null)
             map = appender.get("Default");
 
@@ -306,7 +322,7 @@ public class EventAppender implements EventAction {
         }
         catch (Exception e) {
             new Event(Event.ERR, name + ": failed to append text for " +
-                eventType + ": " + Event.traceStack(e)).send();
+                eventKey + ": " + Event.traceStack(e)).send();
             return;
         }
         if (debug > 0 && str != null)

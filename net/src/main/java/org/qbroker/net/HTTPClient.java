@@ -18,13 +18,18 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.Credentials;
+import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
+import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpPost;
@@ -52,9 +57,7 @@ public class HTTPClient implements org.qbroker.common.HTTPConnector {
     private String proxyHost = null;
     private int port, proxyPort = 1080;
     private int timeout = 60000;
-    private byte[] request;
     private int bufferSize = 8192;
-    private String authStr = null;
     private boolean isPost = false;
     private boolean isNewVersion = false;
     private boolean isHTTPS = false;
@@ -65,7 +68,6 @@ public class HTTPClient implements org.qbroker.common.HTTPConnector {
         Object o;
         URI u;
         String path;
-        StringBuffer strBuf = new StringBuffer();
         int i, n;
 
         if ((o = props.get("URI")) == null)
@@ -115,12 +117,6 @@ public class HTTPClient implements org.qbroker.common.HTTPConnector {
                 throw(new IllegalArgumentException("failed to decrypt " +
                     "EncryptedPassword: " + e.toString()));
             }
-
-            if (password != null) {
-                authStr = username + ":" + password;
-                authStr = new String(Base64Encoder.encode(authStr.getBytes()));
-                authStr = "Basic " + authStr;
-            }
         }
 
         if ((o = props.get("ProxyHost")) != null) {
@@ -133,49 +129,22 @@ public class HTTPClient implements org.qbroker.common.HTTPConnector {
             isNewVersion = true;
 
         if ((o = props.get("IsPost")) != null &&
-            "true".equalsIgnoreCase((String) o)) {
+            "true".equalsIgnoreCase((String) o))
             isPost = true;
-            strBuf.append("POST " + path + " HTTP/" +
-                ((isNewVersion) ? "1.1" : "1.0") + "\r\n");
-        }
-        else
-            strBuf.append("GET " + path + " HTTP/" +
-                ((isNewVersion) ? "1.1" : "1.0") + "\r\n");
 
-        strBuf.append("Host: " + host + "\r\n");
-        strBuf.append("User-Agent: " + "QBroker/2.0\r\n");
-        strBuf.append("Accept: " + "*/*\r\n");
-
-        if ((o = props.get("Referer")) != null) {
+        if ((o = props.get("Referer")) != null)
             referer = (String) o;
-            strBuf.append("Referer: " + referer + "\r\n");
-        }
 
-        if ((o = props.get("Cookie")) != null) {
+        if ((o = props.get("Cookie")) != null)
             cookie = (String) o;
-            strBuf.append("Cookie: " + cookie + "\r\n");
-        }
-
-        if (authStr != null)
-            strBuf.append("Authorization: " + authStr + "\r\n");
-
-        if (isPost) {
-           strBuf.append("Content-Type: application/x-www-form-urlencoded\r\n");
-        }
-        else {
-            strBuf.append("\r\n");
-        }
-        request = new byte[strBuf.length()];
-        request = strBuf.toString().getBytes();
 
         if ((o = props.get("SOTimeout")) != null)
             timeout = 1000 * Integer.parseInt((String) o);
         else
             timeout = 60000;
 
-        if (props.get("BufferSize") != null) {
+        if (props.get("BufferSize") != null)
             bufferSize = Integer.parseInt((String) props.get("BufferSize"));
-        }
 
         reconnect();
     }
@@ -254,6 +223,7 @@ public class HTTPClient implements org.qbroker.common.HTTPConnector {
      */
     public int doPost(String urlStr, Map extra, BytesBuffer buf,
         StringBuffer response, OutputStream out) throws IOException {
+        ContentType mtype = ContentType.APPLICATION_FORM_URLENCODED;
         int status, n = -1;
         if (buf == null || response == null || out == null)
             return HttpURLConnection.HTTP_BAD_REQUEST;
@@ -261,9 +231,17 @@ public class HTTPClient implements org.qbroker.common.HTTPConnector {
         if (urlStr == null) // for default url
             urlStr = uri;
 
+        if (extra != null && extra.containsKey("Content-Type")) {
+            String str = (String) extra.get("Content-Type");
+            if ("text/xml".equals(str))
+                mtype = ContentType.TEXT_XML;
+            else if ("application/json".equals(str))
+                mtype = ContentType.APPLICATION_JSON;
+            else if (!"application/x-www-form-urlencoded".equals(str))
+                mtype = ContentType.DEFAULT_BINARY;
+        }
         HttpPost httppost = new HttpPost(urlStr);
-        ByteArrayEntity reqEntity = new ByteArrayEntity(buf.toByteArray(),
-            ContentType.APPLICATION_FORM_URLENCODED);
+        ByteArrayEntity reqEntity= new ByteArrayEntity(buf.toByteArray(),mtype);
         httppost.setEntity(reqEntity);
         CloseableHttpResponse resp = client.execute(httppost);
         status = resp.getStatusLine().getStatusCode();
@@ -317,6 +295,25 @@ public class HTTPClient implements org.qbroker.common.HTTPConnector {
         return doPost(urlStr, buf, response);
     }
 
+    public int doPost(String urlStr, Map extra, BytesBuffer buf,
+        StringBuffer response) throws IOException {
+        BytesBuffer msgBuf = new BytesBuffer();
+        int i = doPost(urlStr, extra, buf, response, msgBuf);
+        if (i == HttpURLConnection.HTTP_OK) {
+            response.delete(0, response.length());
+            response.append(msgBuf.toString());
+        }
+        return i;
+    }
+
+    public int doPost(String urlStr, Map extra, String line,
+        StringBuffer response) throws IOException {
+        byte[] b = line.getBytes();
+        BytesBuffer buf = new BytesBuffer();
+        buf.write(b, 0, b.length);
+        return doPost(urlStr, extra, buf, response);
+    }
+
     /**
      * It sends a PUT request to the HTTP server with the urlStr and the extra
      * request headers, as well as the content stored in the BytesBuffer.
@@ -329,6 +326,7 @@ public class HTTPClient implements org.qbroker.common.HTTPConnector {
      */
     public int doPut(String urlStr, Map extra, BytesBuffer buf,
         StringBuffer response, OutputStream out) throws IOException {
+        ContentType mtype = ContentType.APPLICATION_FORM_URLENCODED;
         int status, n = -1;
         if (buf == null || response == null || out == null)
             return HttpURLConnection.HTTP_BAD_REQUEST;
@@ -336,9 +334,17 @@ public class HTTPClient implements org.qbroker.common.HTTPConnector {
         if (urlStr == null) // for default url
             urlStr = uri;
 
+        if (extra != null && extra.containsKey("Content-Type")) {
+            String str = (String) extra.get("Content-Type");
+            if ("text/xml".equals(str))
+                mtype = ContentType.TEXT_XML;
+            else if ("application/json".equals(str))
+                mtype = ContentType.APPLICATION_JSON;
+            else if (!"application/x-www-form-urlencoded".equals(str))
+                mtype = ContentType.DEFAULT_BINARY;
+        }
         HttpPut httpput = new HttpPut(urlStr);
-        ByteArrayEntity reqEntity = new ByteArrayEntity(buf.toByteArray(),
-            ContentType.APPLICATION_FORM_URLENCODED);
+        ByteArrayEntity reqEntity= new ByteArrayEntity(buf.toByteArray(),mtype);
         httpput.setEntity(reqEntity);
         CloseableHttpResponse resp = client.execute(httpput);
         status = resp.getStatusLine().getStatusCode();
@@ -559,7 +565,27 @@ public class HTTPClient implements org.qbroker.common.HTTPConnector {
                .setConnectionRequestTimeout(timeout)
                .setSocketTimeout(timeout).build();
        }
-       if (!isHTTPS || !trustAll)
+       if (username != null && password != null) {
+           CredentialsProvider provider = new BasicCredentialsProvider();
+           provider.setCredentials(AuthScope.ANY,
+               new UsernamePasswordCredentials(username, password));
+           if (!isHTTPS || !trustAll)
+               client = HttpClientBuilder.create()
+                   .setDefaultCredentialsProvider(provider)
+                   .setDefaultRequestConfig(cfg).build();
+           else try {
+               SSLContext sc = SSLContext.getInstance("SSL");
+               sc.init(null, new TrustManager[]{new TrustAllManager()}, null);
+               client = HttpClientBuilder.create().setSslcontext(sc)
+                   .setDefaultCredentialsProvider(provider)
+                   .setDefaultRequestConfig(cfg).build();
+           }
+           catch (GeneralSecurityException e) {
+               throw(new IOException("failed on SSL initiation: " +
+                   e.toString()));
+           }
+       }
+       else if (!isHTTPS || !trustAll)
            client = HttpClientBuilder.create()
                .setDefaultRequestConfig(cfg).build();
        else try {

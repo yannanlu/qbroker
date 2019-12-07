@@ -48,7 +48,6 @@ public class HTTPConnector implements org.qbroker.common.HTTPConnector {
     private int port, proxyPort = 1080;
     private int timeout = 60000;
     private Socket sock = null;
-    private byte[] request;
     private int bufferSize = 8192;
     private String authStr = null;
     private boolean isPost = false;
@@ -61,7 +60,6 @@ public class HTTPConnector implements org.qbroker.common.HTTPConnector {
         Object o;
         URI u;
         String path;
-        StringBuffer strBuf = new StringBuffer();
         int i, n;
 
         if ((o = props.get("URI")) == null)
@@ -129,49 +127,22 @@ public class HTTPConnector implements org.qbroker.common.HTTPConnector {
             isNewVersion = true;
 
         if ((o = props.get("IsPost")) != null &&
-            "true".equalsIgnoreCase((String) o)) {
+            "true".equalsIgnoreCase((String) o))
             isPost = true;
-            strBuf.append("POST " + path + " HTTP/" +
-                ((isNewVersion) ? "1.1" : "1.0") + "\r\n");
-        }
-        else
-            strBuf.append("GET " + path + " HTTP/" +
-                ((isNewVersion) ? "1.1" : "1.0") + "\r\n");
 
-        strBuf.append("Host: " + host + "\r\n");
-        strBuf.append("User-Agent: " + "QBroker/2.0\r\n");
-        strBuf.append("Accept: " + "*/*\r\n");
-
-        if ((o = props.get("Referer")) != null) {
+        if ((o = props.get("Referer")) != null)
             referer = (String) o;
-            strBuf.append("Referer: " + referer + "\r\n");
-        }
 
-        if ((o = props.get("Cookie")) != null) {
+        if ((o = props.get("Cookie")) != null)
             cookie = (String) o;
-            strBuf.append("Cookie: " + cookie + "\r\n");
-        }
-
-        if (authStr != null)
-            strBuf.append("Authorization: " + authStr + "\r\n");
-
-        if (isPost) {
-           strBuf.append("Content-Type: application/x-www-form-urlencoded\r\n");
-        }
-        else {
-            strBuf.append("\r\n");
-        }
-        request = new byte[strBuf.length()];
-        request = strBuf.toString().getBytes();
 
         if ((o = props.get("SOTimeout")) != null)
             timeout = 1000 * Integer.parseInt((String) o);
         else
             timeout = 60000;
 
-        if (props.get("BufferSize") != null) {
+        if (props.get("BufferSize") != null)
             bufferSize = Integer.parseInt((String) props.get("BufferSize"));
-        }
     }
 
     /**
@@ -405,6 +376,27 @@ public class HTTPConnector implements org.qbroker.common.HTTPConnector {
         BytesBuffer buf = new BytesBuffer();
         buf.write(b, 0, b.length);
         return doPost(urlStr, buf, response);
+    }
+
+    public int doPost(String urlStr, Map extra, BytesBuffer buf,
+        StringBuffer response) throws IOException {
+        BytesBuffer msgBuf = new BytesBuffer();
+        if (urlStr == null) // for default url
+            urlStr = uri;
+        int i = request(ACTION_POST, urlStr, extra, buf, response, msgBuf);
+        if (i == HttpURLConnection.HTTP_OK) {
+            response.delete(0, response.length());
+            response.append(msgBuf.toString());
+        }
+        return i;
+    }
+
+    public int doPost(String urlStr, Map extra, String line,
+        StringBuffer response) throws IOException {
+        byte[] b = line.getBytes();
+        BytesBuffer buf = new BytesBuffer();
+        buf.write(b, 0, b.length);
+        return doPost(urlStr, extra, buf, response);
     }
 
     /**

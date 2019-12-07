@@ -42,9 +42,10 @@ public class EventScriptLauncher implements EventAction {
     private Template template;
     private long serialNumber;
     private int timeout;
+    private boolean isType = true;
     private Pattern pattern = null;
     private Perl5Matcher pm = null;
-    private String program, hostname, pid, secret = null;
+    private String program, hostname, pid, secret = null, formatKey = "type";
 
     public EventScriptLauncher(Map props) {
         Object o;
@@ -86,6 +87,14 @@ public class EventScriptLauncher implements EventAction {
         if ((o = props.get("Timeout")) == null ||
             (timeout = 1000*Integer.parseInt((String) o)) < 0)
             timeout = 60000;
+
+        if ((o = props.get("FormatKey")) != null) {
+            formatKey = (String) o;
+            if (formatKey.length() <= 0)
+                formatKey = "type";
+            else
+                isType = false;
+        }
 
         if ((o = props.get("Script")) != null) {
             script = EventUtils.substitute((String) o, template);
@@ -186,7 +195,7 @@ public class EventScriptLauncher implements EventAction {
         Event ev;
         HashMap attr;
         Map map;
-        String key, value, priorityName, eventType, script = null;
+        String key, value, priorityName, eventKey, script = null;
         StringBuffer strBuf;
         int i, n;
 
@@ -199,11 +208,18 @@ public class EventScriptLauncher implements EventAction {
 
         serialNumber ++;
         attr = event.attribute;
-        eventType = (String) attr.get("type");
-        if (eventType == null || eventType.length() == 0)
-            eventType = "Default";
+        eventKey = (String) attr.get(formatKey);
+        if (eventKey == null || eventKey.length() == 0) {
+            if (isType)
+                eventKey = "Default";
+            else { // retry on type
+                eventKey = (String) attr.get("type");
+                if (eventKey == null || eventKey.length() == 0)
+                    eventKey = "Default";
+            }
+        }
 
-        map = launcher.get(eventType);
+        map = launcher.get(eventKey);
         if (map == null)
             map = launcher.get("Default");
         if (map == null || map.size() <= 0)
@@ -301,7 +317,7 @@ public class EventScriptLauncher implements EventAction {
     public boolean isActive(long currentTime, Event event) {
         HashMap attr;
         Map map;
-        String eventType, priorityName;
+        String eventKey, priorityName;
 
         if (event == null)
             return false;
@@ -311,11 +327,18 @@ public class EventScriptLauncher implements EventAction {
             return false;
 
         attr = event.attribute;
-        eventType = (String) attr.get("type");
-        if (eventType == null || eventType.length() == 0)
-            eventType = "Default";
+        eventKey = (String) attr.get(formatKey);
+        if (eventKey == null || eventKey.length() == 0) {
+            if (isType)
+                eventKey = "Default";
+            else { // retry on type
+                eventKey = (String) attr.get("type");
+                if (eventKey == null || eventKey.length() == 0)
+                    eventKey = "Default";
+            }
+        }
 
-        map = launcher.get(eventType);
+        map = launcher.get(eventKey);
         if (map == null)
             map = launcher.get("Default");
         if (map == null || map.size() <= 0)

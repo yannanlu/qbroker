@@ -36,8 +36,10 @@ public class FormattedEventMailer implements EventAction {
     private String type;
     private String description;
     private String category;
+    private String formatKey = "type";
     private long serialNumber;
     private int debug = 0;
+    private boolean isType = true;
     private MessageMailer mailer;
     private Map<String, Map> sender;
     private InternetAddress[] recipients;
@@ -83,6 +85,14 @@ public class FormattedEventMailer implements EventAction {
 
         if ((o = props.get("From")) != null)
             owner = (String) o;
+
+        if ((o = props.get("FormatKey")) != null) {
+            formatKey = (String) o;
+            if (formatKey.length() <= 0)
+                formatKey = "type";
+            else
+                isType = false;
+        }
 
         sender = new HashMap<String, Map>();
         key = (String) props.get("Subject");
@@ -271,7 +281,7 @@ public class FormattedEventMailer implements EventAction {
 
     public synchronized void invokeAction(long currentTime, Event event) {
         Map map;
-        String eventType, priorityName, str = null;
+        String eventKey, priorityName, str = null;
 
         if (event == null)
             return;
@@ -279,13 +289,20 @@ public class FormattedEventMailer implements EventAction {
         priorityName = Event.priorityNames[event.getPriority()];
         if (pattern != null && !pm.contains(priorityName, pattern))
             return;
+
         serialNumber ++;
+        eventKey = (String) event.attribute.get(formatKey);
+        if (eventKey == null || eventKey.length() == 0) {
+            if (isType)
+                eventKey = "Default";
+            else { // retry on type
+                eventKey = (String) event.attribute.get("type");
+                if (eventKey == null || eventKey.length() == 0)
+                    eventKey = "Default";
+            }
+        }
 
-        eventType = (String) event.attribute.get("type");
-        if (eventType == null || eventType.length() == 0)
-            eventType = "Default";
-
-        map = sender.get(eventType);
+        map = sender.get(eventKey);
         if (map == null)
             map = sender.get("Default");
 
@@ -294,7 +311,7 @@ public class FormattedEventMailer implements EventAction {
         }
         catch (Exception e) {
             new Event(Event.ERR, name + ": failed to send email for " +
-                eventType + ": " + Event.traceStack(e)).send();
+                eventKey + ": " + Event.traceStack(e)).send();
             return;
         }
         if (debug > 0 && str != null)

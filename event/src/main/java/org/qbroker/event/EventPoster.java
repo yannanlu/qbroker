@@ -35,14 +35,15 @@ public class EventPoster implements EventAction {
     private String type;
     private String description;
     private String category;
-    private String uri, host = null;
+    private String uri, host = null, formatKey = "type";
     private HTTPConnector conn = null;
     private long serialNumber;
     private int debug = 0;
     private Map<String, Map> poster;
+    private Map<String, String> header = new HashMap<String, String>();
     private Pattern pattern = null;
     private Perl5Matcher pm = null;
-    private boolean isPost = true;
+    private boolean isPost = true, isType = true;
     private final static String hostname = Event.getHostName().toLowerCase();
 
     public EventPoster(Map props) {
@@ -89,6 +90,17 @@ public class EventPoster implements EventAction {
             throw(new IllegalArgumentException(name +
                 ": host not defined in " + uri));
 
+        if ((o = props.get("MType")) != null)
+            header.put("Content-Type", (String) o);
+
+        if ((o = props.get("FormatKey")) != null) {
+            formatKey = (String) o;
+            if (formatKey.length() <= 0)
+                formatKey = "type";
+            else
+                isType = false;
+        }
+
         poster = new HashMap<String, Map>();
         ph = Utils.cloneProperties(props);
         ph.put("URI", uri);
@@ -96,6 +108,7 @@ public class EventPoster implements EventAction {
         ph.remove("Type");
         ph.remove("Category");
         ph.remove("Priority");
+        ph.remove("FormatKey");
         if ((o = ph.remove("Timeout")) != null)
             ph.put("SOTimeout", o);
         if (!props.containsKey("IsPost")) // default is POST
@@ -235,7 +248,7 @@ public class EventPoster implements EventAction {
             else // do nothing
                 return null;
         }
-        else { // post event
+        else { // relay event
             if ((line = (String) attr.get("relayHost")) != null &&
                 host.equalsIgnoreCase(line)) // stop ping-pong here
                 return null;
@@ -251,7 +264,10 @@ public class EventPoster implements EventAction {
         }
         try {
             conn.reconnect();
-            rc = conn.doPost(null, line, strBuf);
+            if (header.size() > 0)
+                rc = conn.doPost(null, header, line, strBuf);
+            else
+                rc = conn.doPost(null, line, strBuf);
             conn.close();
         }
         catch (Exception e) {
@@ -339,7 +355,7 @@ public class EventPoster implements EventAction {
     }
 
     public synchronized void invokeAction(long currentTime, Event event) {
-        String eventType, priorityName, str = null;
+        String eventKey, priorityName, str = null;
         Map map;
 
         if (event == null)
@@ -350,11 +366,18 @@ public class EventPoster implements EventAction {
             return;
 
         serialNumber ++;
-        eventType = (String) event.attribute.get("type");
-        if (eventType == null || eventType.length() == 0)
-            eventType = "Default";
+        eventKey = (String) event.attribute.get(formatKey);
+        if (eventKey == null || eventKey.length() == 0) {
+            if (isType)
+                eventKey = "Default";
+            else { // retry on type
+                eventKey = (String) event.attribute.get("type");
+                if (eventKey == null || eventKey.length() == 0)
+                    eventKey = "Default";
+            }
+        }
 
-        map = poster.get(eventType);
+        map = poster.get(eventKey);
         if (map == null)
             map = poster.get("Default");
 
@@ -367,7 +390,7 @@ public class EventPoster implements EventAction {
         catch (Exception e) {
             str = (isPost) ? "post " : "query ";
             new Event(Event.ERR, name + ": failed to " + str + uri + " for " +
-                eventType + ": " + e.toString()).send();
+                eventKey + ": " + e.toString()).send();
             return;
         }
         if (debug > 0 && str != null)
@@ -382,7 +405,7 @@ public class EventPoster implements EventAction {
     public boolean isActive(long currentTime, Event event) {
         HashMap attr;
         Map map;
-        String eventType, priorityName;
+        String eventKey, priorityName;
 
         if (pattern == null)
             return true;
@@ -395,11 +418,18 @@ public class EventPoster implements EventAction {
             return false;
 
         attr = event.attribute;
-        eventType = (String) attr.get("type");
-        if (eventType == null || eventType.length() == 0)
-            eventType = "Default";
+        eventKey = (String) attr.get(formatKey);
+        if (eventKey == null || eventKey.length() == 0) {
+            if (isType)
+                eventKey = "Default";
+            else { // retry on type
+                eventKey = (String) attr.get("type");
+                if (eventKey == null || eventKey.length() == 0)
+                    eventKey = "Default";
+            }
+        }
 
-        map = poster.get(eventType);
+        map = poster.get(eventKey);
         if (map == null)
             map = poster.get("Default");
         if (map == null || map.size() <= 0)

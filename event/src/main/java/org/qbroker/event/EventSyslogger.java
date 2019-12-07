@@ -46,10 +46,11 @@ public class EventSyslogger implements EventAction {
     private static DatagramSocket socket = null;
     private DatagramPacket packet;
     private Map<String, Map> logger;
-    private String uri, hostname = "localhost";
+    private String uri, hostname = "localhost", formatKey = "type";
     private int port = 514, debug = 0;
     private int defaultFacility = LOG_USER;
     private int defaultPriority = Event.INFO;
+    private boolean isType = true;
     private SimpleDateFormat dateFormat=new SimpleDateFormat("MMM d HH:mm:ss ");
 
     // Syslog Facility
@@ -144,6 +145,14 @@ public class EventSyslogger implements EventAction {
             defaultFacility = getFacilityByName((String) o);
             if (defaultFacility < 0)
                 defaultFacility = LOG_USER;
+        }
+
+        if ((o = props.get("FormatKey")) != null) {
+            formatKey = (String) o;
+            if (formatKey.length() <= 0)
+                formatKey = "type";
+            else
+                isType = false;
         }
 
         logger = new HashMap<String, Map>();
@@ -366,7 +375,7 @@ public class EventSyslogger implements EventAction {
     }
 
     public synchronized void invokeAction(long currentTime, Event event) {
-        String eventType, priorityName, str = null;
+        String eventKey, priorityName, str = null;
         Map map;
 
         if (event == null)
@@ -377,11 +386,18 @@ public class EventSyslogger implements EventAction {
             return;
 
         serialNumber ++;
-        eventType = (String) event.attribute.get("type");
-        if (eventType == null || eventType.length() == 0)
-            eventType = "Default";
+        eventKey = (String) event.attribute.get(formatKey);
+        if (eventKey == null || eventKey.length() == 0) {
+            if (isType)
+                eventKey = "Default";
+            else { // retry on type
+                eventKey = (String) event.attribute.get("type");
+                if (eventKey == null || eventKey.length() == 0)
+                    eventKey = "Default";
+            }
+        }
 
-        map = logger.get(eventType);
+        map = logger.get(eventKey);
         if (map == null)
             map = logger.get("Default");
 
@@ -390,7 +406,7 @@ public class EventSyslogger implements EventAction {
         }
         catch (Exception e) {
             new Event(Event.ERR, name + ": failed to log to " + uri + " for " +
-                eventType + ": " + Event.traceStack(e)).send();
+                eventKey + ": " + Event.traceStack(e)).send();
             return;
         }
         if (debug > 0 && str != null)

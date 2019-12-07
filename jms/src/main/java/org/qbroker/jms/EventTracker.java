@@ -378,7 +378,7 @@ public class EventTracker implements EventEscalation {
         ev.setAttribute("description", description);
         ev.setAttribute("date", Event.dateFormat(new Date(te)));
         ev.setAttribute("status", statusText[status + statusOffset]);
-        ev.setAttribute("EscalationKey", key);
+        ev.setAttribute("escalationKey", key);
         ev.setAttribute("escalationCount", String.valueOf(escalationCount));
         if (meta != null && level != Event.INFO)
             ev.setAttribute("firstOccurred",
