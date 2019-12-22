@@ -46,11 +46,11 @@ import org.qbroker.event.Event;
  *<br><br>
  * In case of average, AveragedOver is required.  Its referenced name should be
  * defined before it. In case of standard deviation, VarianceOf is requires.
- * Its referenced name should be defined before it. In case of max or min, the 
- * name of the field does not have to exist in the incoming message.  But the
- * referenced name by MaxOf or MinOf should be defined before it. If TimePattern
- * is defined for max or min, Aggregation will parse the value to get the
- * timestamp for comparisons.
+ * Its referenced name should be defined before it. In case of max or min or
+ * first, the name of the field does not have to exist in the incoming message.
+ * But the referenced name by MaxOf or MinOf or FirstOf must be defined before
+ * it. If TimePattern is defined for max or min, Aggregation will parse the
+ * value to get the timestamp for comparisons.
  *<br>
  * @author yannanlu@yahoo.com
  */
@@ -227,6 +227,19 @@ public class Aggregation {
                     map.put("DefaultValue", "0");
                 }
                 break;
+              case AGGR_FIRST:
+                str = (String) ph.get("FirstOf");
+                if (str != null && !key.equals(str) &&
+                    aggrList.containsKey(str)) {
+                    Map h = (Map) aggrList.get(str);
+                    map.put("FirstOf", str);
+                    str = (String) h.get("DefaultValue");
+                }
+                else
+                    str = (String) ph.get("DefaultValue");
+                if (str == null || str.length() <= 0)
+                    map.put("DefaultValue", "");
+                break;
               case AGGR_AVG:
                 str = (String) ph.get("DefaultValue");
                 if (str == null || str.length() <= 0) {
@@ -373,6 +386,11 @@ public class Aggregation {
                     }
                     else if (map.containsKey("MinOf")) {
                         str = (String) map.get("MinOf");
+                        if (str != null && (k = aggrList.getID(str)) >= 0)
+                            value = result[k];
+                    }
+                    else if (map.containsKey("FirstOf")) {
+                        str = (String) map.get("FirstOf");
                         if (str != null && (k = aggrList.getID(str)) >= 0)
                             value = result[k];
                     }
@@ -807,6 +825,11 @@ public class Aggregation {
                     }
                     else if (map.containsKey("MinOf")) {
                         str = (String) map.get("MinOf");
+                        if (str != null && (k = aggrList.getID(str)) >= 0)
+                            value = result[k];
+                    }
+                    else if (map.containsKey("FirstOf")) {
+                        str = (String) map.get("FirstOf");
                         if (str != null && (k = aggrList.getID(str)) >= 0)
                             value = result[k];
                     }

@@ -9,7 +9,10 @@ package org.qbroker.flow;
  * HTTPClient, added MType to EventPoster to support xml or json content for
  * POST operation, changed EscalationKey to escalationKey on the escalated
  * event for EventTracker, added FormatKey to all implementations of
- * EventAction for customized format on events
+ * EventAction for customized format on events, added FirstOf to Aggregation,
+ * changed MinTimeSpan of EventTracker so that it is calculated from the
+ * previous escalated event instead of the previous event, the suppressed event
+ * will be aggregated, but it will not trigger escalations
  *<br>
  * V1.2.19 (2019/11/23): added support of a single secret to ScriptLauncher and
  * EventScriptLauncher, added priority pattern and isActive() to EventPoster,
@@ -336,7 +339,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V1.2.20 2019/12/07 10:07:35";
+    private static String ReleaseTAG = "QBroker V1.2.20 2019/12/07 12:03:49";
 
     public ReleaseTag() {
     }

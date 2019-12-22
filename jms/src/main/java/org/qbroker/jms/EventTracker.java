@@ -37,9 +37,14 @@ import org.qbroker.event.Event;
  * If the Type is set to MessageTracker, it will return a TextEvent as a
  * JMS Message.
  *<br><br>
- * EventTracker caches the aggregated events based on their keys and the
- * shared TimeToLive.  If the cached time for the key exceeds the TTL, it
- * will be expired and a new event will be generated for aggregation.
+ * EventTracker caches the aggregated events based on their keys and the shared
+ * TimeToLive.  If the cache time for the key exceeds the TTL, it will expire
+ * and a new event will be generated for aggregations.  EventTracker uses
+ * MinTimeSpan to suppress those events occurred immediately after the escalated
+ * event. MinTimeSpan is the seconds measured from the time of previous
+ * escalated event. In case that MinTimeSpan is defined as a positive value,
+ * any events within the time span will not trigger escalations. But they will
+ * be aggregated.
  *<br><br>
  * EventTracker implements EventEscalation. It provides a way for us to
  * correlate events across the time line.
@@ -137,12 +142,12 @@ public class EventTracker implements EventEscalation {
         if ((o = props.get("ResetField")) != null)
             resetField = (String) o;
 
-        if ((o = props.get("KeyTemplate")) != null && o instanceof String)
+        if ((o = props.get("KeyTemplate")) != null && o instanceof String) {
             keyTemp = new Template((String) o);
 
-        if ((o = props.get("KeySubstitution")) != null &&
-            o instanceof String)
-            keySub = new TextSubstitution((String)o);
+            if ((o=props.get("KeySubstitution")) != null && o instanceof String)
+                keySub = new TextSubstitution((String) o);
+        }
 
         if ((o = props.get("Aggregation")) == null || !(o instanceof List))
             throw(new IllegalArgumentException("Aggregation is not defined"));
@@ -242,12 +247,13 @@ public class EventTracker implements EventEscalation {
                 meta = cache.getMetaData(key);
                 long tm = msg.getTimestamp();
                 long te = event.getTimestamp();
-                if (minSpan > 0 && te - tm <  minSpan)
-                    return null;
-                else // aggregate
-                    i = aggr.aggregate(currentTime, event, msg);
+                i = aggr.aggregate(currentTime, event, msg);
                 if (i == 0) { // update internal count for the key
                     meta[0] ++;
+                    if (minSpan > 0 && te - tm <  minSpan) {
+                        serialNumber ++;
+                        return null;
+                    }
                     meta[1] += (int) (te - tm);
                     escalationCount = meta[2];
                     previousStatus = meta[3];
@@ -258,13 +264,13 @@ public class EventTracker implements EventEscalation {
                 meta = cache.getMetaData(key);
                 long tm = msg.getTimestamp();
                 long te = event.getTimestamp();
-                if (minSpan > 0 && te - tm < minSpan)
-                    return null;
-                else // aggregate
-                    i = aggr.aggregate(currentTime, (JMSEvent) event,
-                        (Message) msg);
+                i = aggr.aggregate(currentTime, (JMSEvent) event, (Message)msg);
                 if (i == 0) { // update internal count for the key
                     meta[0] ++;
+                    if (minSpan > 0 && te - tm < minSpan) {
+                        serialNumber ++;
+                        return null;
+                    }
                     meta[1] += (int) (te - tm);
                     escalationCount = meta[2];
                     previousStatus = meta[3];
