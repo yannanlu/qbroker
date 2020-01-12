@@ -328,13 +328,13 @@ public class JobNode extends Node implements Comparator<int[]> {
                 ruleInfo[RULE_TTL] = 0;
 
             // store Heartbeat into RULE_GID field
-            if ((o = ph.get("Heartbeat")) != null)
+            if ((o = ph.get("Heartbeat")) != null && o instanceof String)
                 ruleInfo[RULE_GID] = 1000 * Integer.parseInt((String) o);
             else
                 ruleInfo[RULE_GID] = defaultHeartbeat;
 
             // store Priority into RULE_EXTRA field
-            if ((o = ph.get("Priority")) != null)
+            if ((o = ph.get("Priority")) != null && o instanceof String)
                 ruleInfo[RULE_EXTRA] = Integer.parseInt((String) o);
             else
                 ruleInfo[RULE_EXTRA] = 0;
@@ -345,8 +345,10 @@ public class JobNode extends Node implements Comparator<int[]> {
             if (ruleInfo[RULE_MODE] <= 0)
                 ruleInfo[RULE_MODE] = 1;
 
-            if ((o = ph.get("DisplayMask")) != null)
+            if ((o = ph.get("DisplayMask")) != null && o instanceof String) {
                 ruleInfo[RULE_DMASK] = Integer.parseInt((String) o);
+                rule.put("DisplayMask", o);
+            }
             else
                 ruleInfo[RULE_DMASK] = 0;
 
@@ -1431,21 +1433,9 @@ public class JobNode extends Node implements Comparator<int[]> {
     }
 
     public void close() {
-        Browser browser;
-        Map rule;
-        int rid;
-        setStatus(NODE_CLOSED);
-        msgList.clear();
-        assetList.clear();
         reqList.clear();
         jobList.clear();
-        browser = ruleList.browser();
-        while((rid = browser.next()) >= 0) {
-            rule = (Map) ruleList.get(rid);
-            if (rule != null)
-                rule.clear();
-        }
-        ruleList.clear();
+        super.close();
     }
 
     public int compare(int[] a, int[] b) {

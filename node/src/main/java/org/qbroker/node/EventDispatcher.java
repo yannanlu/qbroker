@@ -229,6 +229,7 @@ public class EventDispatcher extends Node {
             for (i=0; i<=RULE_TIME; i++)
                 ruleInfo[i] = 0;
             ruleInfo[RULE_STATUS] = NODE_RUNNING;
+            ruleInfo[RULE_DMASK] = displayMask;
             ruleInfo[RULE_TIME] = tm;
             ruleInfo[RULE_OID] = outLinkMap[NOHIT_OUT];
             ruleInfo[RULE_PID] = TYPE_BYPASS;
@@ -248,6 +249,7 @@ public class EventDispatcher extends Node {
             for (i=0; i<=RULE_TIME; i++)
                 ruleInfo[i] = 0;
             ruleInfo[RULE_STATUS] = NODE_RUNNING;
+            ruleInfo[RULE_DMASK] = displayMask;
             ruleInfo[RULE_TIME] = tm;
             ruleInfo[RULE_OID] = outLinkMap[BYPASS_OUT];
             ruleInfo[RULE_PID] = TYPE_NONE;
@@ -465,8 +467,12 @@ public class EventDispatcher extends Node {
         ruleInfo[RULE_TIME] = tm;
 
         // displayMask of ruleset stored in dmask
-        if ((o = ph.get("DisplayMask")) != null && o instanceof String)
+        if ((o = ph.get("DisplayMask")) != null && o instanceof String) {
             ruleInfo[RULE_DMASK] = Integer.parseInt((String) o);
+            rule.put("DisplayMask", o);
+        }
+        else
+            ruleInfo[RULE_DMASK] = displayMask;
 
         if ((o = ph.get("EventPattern")) != null && o instanceof List) {
             list = (List) o;
@@ -722,7 +728,16 @@ public class EventDispatcher extends Node {
         else if (id > 0) { // for a normal rule
             if (getStatus() == NODE_RUNNING)
                 throw(new IllegalStateException(name + " is in running state"));
-            ruleList.remove(id);
+            Map h = (Map) ruleList.remove(id);
+            if (h != null) {
+                EventSelector filter = (EventSelector) h.remove("Filter");
+                if (filter != null)
+                    filter.clear();
+                EventActionGroup a = (EventActionGroup) h.remove("Action");
+                if (a != null)
+                    a.close();
+                h.clear();
+            }
         }
         else if (cfgList != null && (id = cfgList.getID(key)) >= 0) {
             id = super.removeRule(key, in);
@@ -763,11 +778,53 @@ public class EventDispatcher extends Node {
             }
             if (rule != null && rule.containsKey("Name")) {
                 String str = (String) rule.get("TopicPattern");
-                if (tp.equals(str)) { // same TopicPattern
+                if (str != null && !str.equals(tp)) { // TopicPattern changed
+                    Pattern ps;
+                    try {
+                        ps = pc.compile(str);
+                    }
+                    catch (Exception ex) {
+                        new Event(Event.ERR, name +
+                            " failed to compile pattern for " + key +
+                            ": " + Event.traceStack(ex)).send();
+                        return -1;
+                    }
+                    Map h = (Map) ruleList.remove(key);
+                    if (h != null) {
+                        EventSelector filter=(EventSelector) h.remove("Filter");
+                        if (filter != null)
+                            filter.clear();
+                        EventActionGroup a=(EventActionGroup)h.remove("Action");
+                        if (a != null)
+                            a.close();
+                        h.clear();
+                    }
+                    id = ((CachedList) ruleList).add(key, meta, ps, rule, id);
+                    if (id <= 0) { // failed to add the rule to the list
+                        new Event(Event.ERR, name + " failed to replace rule " +
+                            key).send();
+                        return -1;
+                    }
+                    meta[RULE_GID] = id;
+                    meta[RULE_PEND] = ((CachedList) ruleList).getTopicCount(id);
+                    if ((debug & DEBUG_DIFF) > 0)
+                        new Event(Event.DEBUG, name + "/" + key +
+                            ": topicPattern has been changed to " + str).send();
+                }
+                else { // same TopicPattern or both nupp TopicPattern
                     StringBuffer strBuf = ((debug & DEBUG_DIFF) <= 0) ? null :
                         new StringBuffer();
                     long[] ruleInfo = ruleList.getMetaData(id);
-                    ruleList.set(key, rule);
+                    Map h = (Map) ruleList.set(key, rule);
+                    if (h != null) {
+                        EventSelector filter=(EventSelector) h.remove("Filter");
+                        if (filter != null)
+                            filter.clear();
+                        EventActionGroup a=(EventActionGroup)h.remove("Action");
+                        if (a != null)
+                            a.close();
+                        h.clear();
+                    }
                     for (int i=0; i<RULE_TIME; i++) { // update metadata
                         switch (i) {
                           case RULE_GID:
@@ -784,30 +841,6 @@ public class EventDispatcher extends Node {
                     if ((debug & DEBUG_DIFF) > 0)
                         new Event(Event.DEBUG, name + "/" + key + " ruleInfo:" +
                             strBuf).send();
-                }
-                else { // TopicPattern changed
-                    Pattern ps;
-                    try {
-                        ps = pc.compile(str);
-                    }
-                    catch (Exception ex) {
-                        new Event(Event.ERR, name +
-                            " failed to compile pattern for " + key +
-                            ": " + Event.traceStack(ex)).send();
-                        return -1;
-                    }
-                    ruleList.remove(key);
-                    id = ((CachedList) ruleList).add(key, meta, ps, rule, id);
-                    if (id <= 0) { // failed to add the rule to the list
-                        new Event(Event.ERR, name + " failed to replace rule " +
-                            key).send();
-                        return -1;
-                    }
-                    meta[RULE_GID] = id;
-                    meta[RULE_PEND] = ((CachedList) ruleList).getTopicCount(id);
-                    if ((debug & DEBUG_DIFF) > 0)
-                        new Event(Event.DEBUG, name + "/" + key +
-                            ": topicPattern has been changed to " + str).send();
                 }
                 return id;
             }
@@ -1199,30 +1232,24 @@ public class EventDispatcher extends Node {
     public void close() {
         Map rule;
         Browser browser;
+        EventSelector filter;
+        EventActionGroup action;
         int rid;
-        setStatus(NODE_CLOSED);
-        cells.clear();
-        msgList.clear();
-        assetList.clear();
         browser = ruleList.browser();
         while((rid = browser.next()) >= 0) {
             rule = (Map) ruleList.get(rid);
-            if (rule != null)
-                rule.clear();
+            if (rule != null) {
+                filter = (EventSelector) rule.remove("Filter");
+                if (filter != null)
+                    filter.clear();
+                action = (EventActionGroup) rule.remove("Action");
+                if (action != null)
+                    action.close();
+            }
         }
-        ruleList.clear();
+        super.close();
         topicTemplate = null;
         pc = null;
-        if (cfgList != null) {
-            ConfigList cfg;
-            browser = cfgList.browser();
-            while((rid = browser.next()) >= 0) {
-                cfg = (ConfigList) cfgList.get(rid);
-                if (cfg != null)
-                    cfg.close();
-            }
-            cfgList.clear();
-        }
     }
 
     protected void finalize() {

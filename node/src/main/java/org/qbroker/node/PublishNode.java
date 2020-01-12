@@ -227,6 +227,7 @@ public class PublishNode extends Node {
             for (i=0; i<=RULE_TIME; i++)
                 ruleInfo[i] = 0;
             ruleInfo[RULE_STATUS] = NODE_RUNNING;
+            ruleInfo[RULE_DMASK] = displayMask;
             ruleInfo[RULE_TIME] = tm;
             ruleInfo[RULE_OID] = outLinkMap[NOHIT_OUT];
             ruleInfo[RULE_PID] = TYPE_BYPASS;
@@ -246,6 +247,7 @@ public class PublishNode extends Node {
             for (i=0; i<=RULE_TIME; i++)
                 ruleInfo[i] = 0;
             ruleInfo[RULE_STATUS] = NODE_RUNNING;
+            ruleInfo[RULE_DMASK] = displayMask;
             ruleInfo[RULE_TIME] = tm;
             ruleInfo[RULE_OID] = outLinkMap[BYPASS_OUT];
             ruleInfo[RULE_PID] = TYPE_NONE;
@@ -492,8 +494,12 @@ public class PublishNode extends Node {
         if ((o = ph.get("TimeToLive")) != null && o instanceof String)
             ruleInfo[RULE_TTL] = 1000 * Integer.parseInt((String) o);
 
-        if ((o = ph.get("DisplayMask")) != null && o instanceof String)
+        if ((o = ph.get("DisplayMask")) != null && o instanceof String) {
             ruleInfo[RULE_DMASK] = Integer.parseInt((String) o);
+            rule.put("DisplayMask", o);
+        }
+        else
+            ruleInfo[RULE_DMASK] = displayMask;
 
         if ((o = ph.get("URITemplate")) != null && o instanceof String) {
             rule.put("URITemplate", new Template((String) o));
@@ -724,7 +730,6 @@ public class PublishNode extends Node {
                 return id;
             }
         }
-
         return -1;
     }
 
@@ -744,7 +749,6 @@ public class PublishNode extends Node {
         else if (cfgList != null && (id = cfgList.getID(key)) >= 0) {
             id = super.removeRule(key, in);
         }
-
         return id;
     }
 
@@ -780,11 +784,47 @@ public class PublishNode extends Node {
             }
             if (rule != null && rule.containsKey("Name")) {
                 String str = (String) rule.get("TopicPattern");
-                if (tp.equals(str)) { // same TopicPattern
+                if (str != null && !str.equals(tp)) { // TopicPattern changed
+                    Pattern ps;
+                    try {
+                        ps = pc.compile(str);
+                    }
+                    catch (Exception ex) {
+                        new Event(Event.ERR, name +
+                            " failed to compile pattern for " + key +
+                            ": " + Event.traceStack(ex)).send();
+                        return -1;
+                    }
+                    Map h = (Map) ruleList.remove(key);
+                    if (h != null) {
+                        MessageFilter filter=(MessageFilter) h.remove("Filter");
+                        if (filter != null)
+                            filter.clear();
+                        h.clear();
+                    }
+                    id = ((CachedList) ruleList).add(key, meta, ps, rule, id);
+                    if (id <= 0) { // failed to add the rule to the list
+                        new Event(Event.ERR, name + " failed to replace rule " +
+                            key).send();
+                        return -1;
+                    }
+                    meta[RULE_GID] = id;
+                    meta[RULE_PEND] = ((CachedList) ruleList).getTopicCount(id);
+                    if ((debug & DEBUG_DIFF) > 0)
+                        new Event(Event.DEBUG, name + "/" + key +
+                            ": topicPattern has been changed to " + str).send();
+                }
+                else { // same TopicPattern or both null TopicPattern
                     StringBuffer strBuf = ((debug & DEBUG_DIFF) <= 0) ? null :
                         new StringBuffer();
                     long[] ruleInfo = ruleList.getMetaData(id);
-                    ruleList.set(key, rule);
+                    Map h = (Map) ruleList.set(key, rule);
+                    if (h != null) {
+                        MessageFilter filter=(MessageFilter) h.remove("Filter");
+                        if (filter != null)
+                            filter.clear();
+                        h.clear();
+                    }
                     for (int i=0; i<RULE_TIME; i++) { // update metadata
                         switch (i) {
                           case RULE_GID:
@@ -802,30 +842,6 @@ public class PublishNode extends Node {
                         new Event(Event.DEBUG, name + "/" + key + " ruleInfo:" +
                             strBuf).send();
                 }
-                else { // TopicPattern changed
-                    Pattern ps;
-                    try {
-                        ps = pc.compile(str);
-                    }
-                    catch (Exception ex) {
-                        new Event(Event.ERR, name +
-                            " failed to compile pattern for " + key +
-                            ": " + Event.traceStack(ex)).send();
-                        return -1;
-                    }
-                    ruleList.remove(key);
-                    id = ((CachedList) ruleList).add(key, meta, ps, rule, id);
-                    if (id <= 0) { // failed to add the rule to the list
-                        new Event(Event.ERR, name + " failed to replace rule " +
-                            key).send();
-                        return -1;
-                    }
-                    meta[RULE_GID] = id;
-                    meta[RULE_PEND] = ((CachedList) ruleList).getTopicCount(id);
-                    if ((debug & DEBUG_DIFF) > 0)
-                        new Event(Event.DEBUG, name + "/" + key +
-                            ": topicPattern has been changed to " + str).send();
-                }
                 return id;
             }
             else
@@ -834,7 +850,6 @@ public class PublishNode extends Node {
         else if (cfgList != null && cfgList.containsKey(key)) {
             return super.replaceRule(key, ph, in);
         }
-
         return -1;
     }
 
@@ -1131,32 +1146,9 @@ public class PublishNode extends Node {
     }
 
     public void close() {
-        Map rule;
-        Browser browser;
-        int rid;
-        setStatus(NODE_CLOSED);
-        cells.clear();
-        msgList.clear();
-        assetList.clear();
-        browser = ruleList.browser();
-        while((rid = browser.next()) >= 0) {
-            rule = (Map) ruleList.get(rid);
-            if (rule != null)
-                rule.clear();
-        }
-        ruleList.clear();
+        super.close();
         topicTemplate = null;
         pc = null;
-        if (cfgList != null) {
-            ConfigList cfg;
-            browser = cfgList.browser();
-            while((rid = browser.next()) >= 0) {
-                cfg = (ConfigList) cfgList.get(rid);
-                if (cfg != null)
-                    cfg.close();
-            }
-            cfgList.clear();
-        }
     }
 
     protected void finalize() {

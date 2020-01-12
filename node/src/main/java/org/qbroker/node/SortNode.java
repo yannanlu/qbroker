@@ -509,8 +509,10 @@ public class SortNode extends Node {
         else
             ruleInfo[RULE_OPTION] = RESET_NONE;
 
-        if ((o = ph.get("DisplayMask")) != null && o instanceof String)
+        if ((o = ph.get("DisplayMask")) != null && o instanceof String) {
             ruleInfo[RULE_DMASK] = Integer.parseInt((String) o);
+            rule.put("DisplayMask", o);
+        }
         else
             ruleInfo[RULE_DMASK] = displayMask;
 

@@ -359,8 +359,10 @@ public class PipeNode extends Node implements Comparator<int[]> {
         ruleInfo[RULE_OID] = 0;
         ruleInfo[RULE_PID] = TYPE_NONE;
 
-        if ((o = ph.get("DisplayMask")) != null && o instanceof String)
+        if ((o = ph.get("DisplayMask")) != null && o instanceof String) {
             ruleInfo[RULE_DMASK] = Integer.parseInt((String) o);
+            rule.put("DisplayMask", o);
+        }
         else
             ruleInfo[RULE_DMASK] = displayMask;
 
@@ -1395,25 +1397,8 @@ public class PipeNode extends Node implements Comparator<int[]> {
     }
 
     public void close() {
-        Browser browser;
-        Object[] asset;
-        Map rule;
-        int rid;
-        setStatus(NODE_CLOSED);
-        if (cells != null)
-            cells.clear();
-        callbackMethod = null;
-        cbw.clear();
-        msgList.clear();
-        assetList.clear();
+        super.close();
         reqList.clear();
-        browser = ruleList.browser();
-        while((rid = browser.next()) >= 0) {
-            rule = (Map) ruleList.get(rid);
-            if (rule != null)
-                rule.clear();
-        }
-        ruleList.clear();
     }
 
     public int compare(int[] a, int[] b) {

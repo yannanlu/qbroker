@@ -1689,7 +1689,7 @@ public class MessageFlow implements Runnable {
         str = threadName.substring(j+1, k);
 
         if ("Node".equals(str)) { // for MessageNode
-            int mask, status;
+            int mask, status, previous_status;
             MessageNode node = null;
             XQueue [] outLinks;
             i = Integer.parseInt(threadName.substring(k+1));
@@ -1715,6 +1715,7 @@ public class MessageFlow implements Runnable {
                 node.setStatus(MessageNode.NODE_RUNNING);
             new Event(Event.INFO, name + ": " + node.getName() +
                 " started on " + xq.getName()).send();
+            previous_status = node.getStatus();
             for (;;) {
                 if (status == MessageNode.NODE_RUNNING) try {
                     node.propagate(xq, outLinks);
@@ -1779,6 +1780,7 @@ public class MessageFlow implements Runnable {
                     }
                     catch (Exception e) {
                     }
+                    previous_status = status;
                     status = node.getStatus();
                 }
 
@@ -1791,6 +1793,7 @@ public class MessageFlow implements Runnable {
                     }
                     catch (Exception e) {
                     }
+                    previous_status = status;
                     status = node.getStatus();
                 }
 
@@ -1803,6 +1806,7 @@ public class MessageFlow implements Runnable {
                     }
                     catch (Exception e) {
                     }
+                    previous_status = status;
                     status = node.getStatus();
                 }
 
@@ -1815,6 +1819,16 @@ public class MessageFlow implements Runnable {
                 }
                 else if (status == MessageNode.NODE_RETRYING)
                     node.setStatus(MessageNode.NODE_RUNNING);
+
+                status = node.getStatus();
+                if (previous_status > MessageNode.NODE_RETRYING &&
+                    previous_status < MessageNode.NODE_STOPPED &&
+                    previous_status != status) { // state changed
+                    new Event(Event.INFO, name + ": " + node.getName() +
+                        " is " + statusText[status] + " on " +
+                        xq.getName()).send();
+                    previous_status = status;
+                }
             }
 
             if (node.getStatus() < MessageNode.NODE_STOPPED)

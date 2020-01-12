@@ -216,7 +216,7 @@ public class JSON2Map {
                         (indent == null) ? null : indent + "  ",end,withOrder));
                 else if (o instanceof Map)
                     strBuf.append(toJSON((Map) o,
-                    (indent == null) ? null : indent + "  ", end, withOrder));
+                        (indent == null) ? null : indent + "  ",end,withOrder));
                 else if (o instanceof String)
                     strBuf.append("\"" + Utils.escapeJSON((String) o) + "\"");
                 else // not a String
@@ -261,6 +261,98 @@ public class JSON2Map {
             else if (o instanceof Map)
                 strBuf.append(toJSON((Map) o,
                     (indent == null) ? null : indent + "  ", end, withOrder));
+            else if (o instanceof String)
+                strBuf.append("\"" + Utils.escapeJSON((String) o) + "\"");
+            else // not a String
+                strBuf.append("\"" + Utils.escapeJSON(o.toString()) + "\"");
+        }
+        strBuf.append(ed + ((indent == null) ? "" : indent) + "]");
+
+        return strBuf.toString();
+    }
+
+    /** returns JSON content for a given Map in alphabetical ascending order */
+    public static String normalize(Map m) {
+        return normalize(m, null, null);
+    }
+
+    /**
+     * It returns JSON content for a given Map in alphabatical ascending order
+     */ 
+    public static String normalize(Map m, String indent, String end) {
+        int i = 0;
+        String str;
+        String ind = (indent == null) ? "" : indent + "  ";
+        String ed = (end == null) ? "" : end;
+        String[] keys;
+        StringBuffer strBuf = new StringBuffer();
+        HashSet<String> keySet = new HashSet<String>();
+        Object o;
+        if (m == null)
+            m = new HashMap();
+        for (Object obj : m.keySet()) {
+            str = (String) obj;
+            if (str == null || str.length() <= 0)
+                continue;
+            keySet.add(str);
+        }
+        keys = keySet.toArray(new String[keySet.size()]);
+        keySet.clear();
+        if (keys.length > 1)
+            Arrays.sort(keys);
+        strBuf.append("{");
+        for (String key : keys) {
+            if (i > 0)
+                strBuf.append(",");
+            strBuf.append(ed + ind + "\"" + Utils.escapeJSON(key) + "\":");
+            i++;
+            o = m.get(key);
+            if (o == null)
+                strBuf.append("null");
+            else if (o instanceof List)
+                strBuf.append(normalize((List) o,
+                    (indent == null) ? null : indent + "  ",end));
+            else if (o instanceof Map)
+                strBuf.append(normalize((Map) o,
+                    (indent == null) ? null : indent + "  ", end));
+            else if (o instanceof String)
+                strBuf.append("\"" + Utils.escapeJSON((String) o) + "\"");
+            else // not a String
+                strBuf.append("\"" + Utils.escapeJSON(o.toString()) + "\"");
+        }
+        strBuf.append(ed + ((indent == null) ? "" : indent) + "}");
+
+        return strBuf.toString();
+    }
+
+    /** returns JSON content for a given List in alphabetical ascending order */
+    public static String normalize(List a) {
+        return normalize(a, null, null);
+    }
+
+    /**
+     * It returns JSON content for a given List in alphabetical ascending order
+     */
+    public static String normalize(List a, String indent, String end) {
+        int i = 0;
+        StringBuffer strBuf = new StringBuffer();
+        String ind = (indent == null) ? "" : indent + "  ";
+        String ed = (end == null) ? "" : end;
+        if (a == null)
+            a = new ArrayList();
+        strBuf.append("[");
+        for (Object o : a) {
+            if (i > 0)
+                strBuf.append(",");
+            strBuf.append(ed + ind);
+            if (o == null)
+                strBuf.append("null");
+            else if (o instanceof List)
+                strBuf.append(normalize((List) o,
+                    (indent == null) ? null : indent + "  ", end));
+            else if (o instanceof Map)
+                strBuf.append(normalize((Map) o,
+                    (indent == null) ? null : indent + "  ", end));
             else if (o instanceof String)
                 strBuf.append("\"" + Utils.escapeJSON((String) o) + "\"");
             else // not a String
@@ -3390,6 +3482,12 @@ public class JSON2Map {
                 else
                     System.out.println(toJSON((Map) o, "", "\n", true));
             }
+            else if ("normalize".equalsIgnoreCase(action)) {
+                if (o instanceof List)
+                    System.out.println(normalize((List) o));
+                else
+                    System.out.println(normalize((Map) o));
+            }
             else if ("parse".equalsIgnoreCase(action)) {
                 if ("json".equals(type)) {
                     if (o instanceof List)
@@ -3586,7 +3684,7 @@ public class JSON2Map {
         System.out.println("JSON2Map: parse JSON data in a file");
         System.out.println("Usage: java org.qbroker.json.JSON2Map -f filename -a action -t type -k path");
         System.out.println("  -?: print this message");
-        System.out.println("  -a: action of copy, parse, test, count, locate, get, put, remove, format, diff or flatten (default: copy)");
+        System.out.println("  -a: action of copy, normalize, parse, test, count, locate, get, put, remove, format, diff or flatten (default: copy)");
         System.out.println("  -k: key path (example: .views.list[0].name)");
         System.out.println("  -d: json data for put");
         System.out.println("  -t: type of xml or json (default: json)");

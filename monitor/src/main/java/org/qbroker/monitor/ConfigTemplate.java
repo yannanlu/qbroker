@@ -31,23 +31,32 @@ import org.qbroker.monitor.MonitorUtils;
 import org.qbroker.event.Event;
 
 /**
- * ConfigTemplate is a Template to generate a list of configuration properties
- * for a certain object. It contains a property template with only one place
- * holder for the object, a name template to generate a list of keys as the
- * distinct names for each of the instances, as well as a list of items as
- * the values of the place holder. Moreover, a name substitution is optional
- * to further normalize the value for the name only. The name template and
- * the list are able to be updated or reset. ConfigTemplate is used to manage
- * the configurations on a set of instances sharing the similar properties
- * with only one parameter different.
+ * ConfigTemplate manages a list of similar configuration properties with a
+ * property template for a specific object. The property template has at least
+ * one variable. It is used to generate the property configurations for all the
+ * instances with unique names in the list. Apart from the property template,
+ * ConfigTemplate has also a name template to generate a list of keys as the
+ * distinct names for each of the instances, as well as a list of items as the
+ * values for all the variables. Moreover, a name substitution is optional to
+ * further normalize the value for the names. Both the name template and the
+ * list of items are updatable and resetable on demand. ConfigTemplate supports
+ * updates on the property template also.
  *<br><br>
  * ConfigTemplate also supports dynamic creations of the item list. In this
- * case, Item has to be a Map defining an MonitorReport to query the
+ * case, Item has to be a Map specifying a MonitorReport to query or update the
  * list of items dynamically. The instance of the MonitorReport will be used
  * to generate the report frequently from which the list of items will be
  * updated automatically. The method of isDynamic() is used to check if the
- * instance of ConfigTemplate supporting dynamic item list or not. It also
- * supports the private report for each dynamically generated monitor.
+ * instance of ConfigTemplate supporting dynamic item list or not. If the
+ * managed object is of Monitor, it also supports the private report for each
+ * dynamically generated monitor.
+ *<br><br>
+ * ConfigTemplate supports overriding on the configuration properties if a list
+ * of property maps defined as Override. In each of the property map, it must
+ * contains the property of KeyRegex that is the regex expression to match
+ * against the name of the configuration property map. Once there is a match,
+ * its property map will be merged into the configuration properties as the
+ * override.
  *<br><br>
  * In case of dynamic generated monitors, ConfigTemplate supports both private
  * report and/or shared report. A private report is the report dedicated to
@@ -59,6 +68,8 @@ import org.qbroker.event.Event;
  * Its purpose is to save the resources for ConfigTemplate's reporters in the
  * back. The keyword for the private report is KeyTemplate. The keyword for
  * the shared report is the value of REPORT_LOCAL defined for ReportMode.
+ *<br><br>
+ * It is not MT-Safe, always use it within the same thread.
  *<br>
  * @author yannanlu@yahoo.com
  */
@@ -69,7 +80,7 @@ public class ConfigTemplate {
     private String[] items = null, keys = null;
     private Template template;
     private TextSubstitution tsub = null;
-    private Map<String, Object> keyMap = null;
+    private Map<String, String> keyMap = null;
     private Map<String, Object> privateReport = null;
     private Map cachedProps = null;
     private MonitorReport reporter = null;
@@ -121,7 +132,7 @@ public class ConfigTemplate {
             throw(new IllegalArgumentException(name +
                 ": no property template defined"));
 
-        keyMap = new HashMap<String, Object>();
+        keyMap = new HashMap<String, String>();
         if ((o = props.get("Item")) == null)
             throw(new IllegalArgumentException(name + ": no item defined"));
         else if (o instanceof List)
@@ -472,6 +483,8 @@ public class ConfigTemplate {
             }
             items = new String[k];
             keys = new String[k];
+            if (k <= 0)
+                return 0;
             k = 0;
             for (i=0; i<n; i++) {
                 o = list.get(i);

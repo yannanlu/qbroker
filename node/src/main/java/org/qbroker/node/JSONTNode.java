@@ -48,7 +48,7 @@ import org.qbroker.event.Event;
  * JSONTNode contains a number of predefined rulesets.  These rulesets
  * categorize messages into non-overlapping groups.  Therefore, each rule
  * defines a unique message group.  The ruleset also defines the transformation
- * parameters, such URITemplate to build the path to a JSON template file,
+ * parameters, such URITemplate for building the path to a JSON template file,
  * and TTL for the cache.
  *<br><br>
  * If a list of JSONFormatter is defined in the rule, the rule is for the
@@ -297,8 +297,10 @@ public class JSONTNode extends Node {
         else
             ruleInfo[RULE_OPTION] = RESET_NONE;
 
-        if ((o = ph.get("DisplayMask")) != null && o instanceof String)
+        if ((o = ph.get("DisplayMask")) != null && o instanceof String) {
             ruleInfo[RULE_DMASK] = Integer.parseInt((String) o);
+            rule.put("DisplayMask", o);
+        }
         else
             ruleInfo[RULE_DMASK] = displayMask;
 
@@ -418,6 +420,142 @@ public class JSONTNode extends Node {
             rule.put("PropertyName", displayPropertyName);
 
         return rule;
+    }
+
+    /**
+     * It removes the rule from the ruleList and returns the rule id upon
+     * success. It is not MT-Safe.
+     */
+    public int removeRule(String key, XQueue in) {
+        int id = ruleList.getID(key);
+        if (id == 0) // can not remove the default rule
+            return -1;
+        else if (id > 0) { // for a normal rule
+            if (getStatus() == NODE_RUNNING)
+                throw(new IllegalStateException(name + " is in running state"));
+            long[] ruleInfo = ruleList.getMetaData(id);
+            if (ruleInfo != null && ruleInfo[RULE_SIZE] > 0) // check integrity
+                throw(new IllegalStateException(name+": "+key+" is busy with "+
+                    ruleInfo[RULE_SIZE] + " outstangding msgs"));
+            Map h = (Map) ruleList.remove(id);
+            if (h != null) {
+                JSONFormatter fm = (JSONFormatter) h.remove("Formatter");
+                if (fm != null)
+                    fm.clear();
+                MessageFilter filter = (MessageFilter) h.remove("Filter");
+                if (filter != null)
+                    filter.clear();
+                h.clear();
+            }
+            if (ruleInfo[RULE_PID] >= 0) { // update reference count of plugin
+                long[] meta = pluginList.getMetaData((int) ruleInfo[RULE_PID]);
+                if (meta == null)
+                    throw(new IllegalStateException(name + ": " + key +
+                        " has no plugin found at " + ruleInfo[RULE_PID]));
+                meta[0] --;
+                if (meta[0] <= 0) { // reference count is 0, check closer
+                    Object[] asset =
+                        (Object[]) pluginList.remove((int) ruleInfo[RULE_PID]);
+                    if (asset != null && asset.length >= 3) { // invoke closer
+                        java.lang.reflect.Method closer;
+                        closer = (java.lang.reflect.Method) asset[2];
+                        if (closer != null && asset[1] != null) try {
+                            closer.invoke(asset[1], new Object[] {});
+                        }
+                        catch (Throwable t) {
+                        }
+                    }
+                }
+            }
+            return id;
+        }
+        else if (cfgList != null && cfgList.containsKey(key)) {
+            return super.removeRule(key, in);
+        }
+        return -1;
+    }
+
+    /**
+     * It replaces the existing rule of the key and returns its id upon success.
+     * It is not MT-Safe.
+     */
+    public int replaceRule(String key, Map ph, XQueue in) {
+        int id = ruleList.getID(key);
+        if (id == 0) // can not replace the default rule
+            return -1;
+        else if (id > 0) { // for a normal rule
+            if (ph == null || ph.size() <= 0)
+                throw(new IllegalArgumentException("Empty property for rule"));
+            if (!key.equals((String) ph.get("Name"))) {
+                new Event(Event.ERR, name + ": name not match for rule " + key +
+                    ": " + (String) ph.get("Name")).send();
+                return -1;
+            }
+            if (getStatus() == NODE_RUNNING)
+                throw(new IllegalStateException(name + " is in running state"));
+            long tm = System.currentTimeMillis();
+            long[] meta = new long[RULE_TIME+1];
+            long[] ruleInfo = ruleList.getMetaData(id);
+            Map rule = initRuleset(tm, ph, meta);
+            if (rule != null && rule.containsKey("Name")) {
+                StringBuffer strBuf = ((debug & DEBUG_DIFF) <= 0) ? null :
+                    new StringBuffer();
+                Map h = (Map) ruleList.set(id, rule);
+                if (h != null) {
+                    JSONFormatter fm = (JSONFormatter) h.remove("Formatter");
+                    if (fm != null)
+                        fm.clear();
+                    MessageFilter filter = (MessageFilter) h.remove("Filter");
+                    if (filter != null)
+                        filter.clear();
+                    h.clear();
+                }
+                tm = ruleInfo[RULE_PID];
+                for (int i=0; i<RULE_TIME; i++) { // update metadata
+                    switch (i) {
+                      case RULE_SIZE:
+                        break;
+                      case RULE_PEND:
+                      case RULE_COUNT:
+                        if (tm == meta[RULE_PID]) // same rule type
+                            break;
+                      default:
+                        ruleInfo[i] = meta[i];
+                    }
+                    if ((debug & DEBUG_DIFF) > 0)
+                        strBuf.append(" " + ruleInfo[i]);
+                }
+                if (tm >= 0) { // update reference count of plugin for old rule
+                    meta = pluginList.getMetaData((int) tm);
+                    if (meta == null)
+                        throw(new IllegalStateException(name + ": " + key +
+                            " has no plugin found at " + tm));
+                    meta[0] --;
+                    if (meta[0] <= 0) { // reference count is 0, check closer
+                        Object[] asset = (Object[]) pluginList.remove((int) tm);
+                        if (asset != null && asset.length >= 3) {//invoke closer
+                            java.lang.reflect.Method closer;
+                            closer = (java.lang.reflect.Method) asset[2];
+                            if (closer != null && asset[1] != null) try {
+                                closer.invoke(asset[1], new Object[] {});
+                            }
+                            catch (Throwable t) {
+                            }
+                        }
+                    }
+                }
+                if ((debug & DEBUG_DIFF) > 0)
+                    new Event(Event.DEBUG, name + "/" + key + " ruleInfo:" +
+                        strBuf).send();
+                return id;
+            }
+            else
+                new Event(Event.ERR, name + " failed to init rule "+key).send();
+        }
+        else if (cfgList != null && cfgList.containsKey(key)) {
+            return super.replaceRule(key, ph, in);
+        }
+        return -1;
     }
 
     @SuppressWarnings("unchecked")
@@ -1011,6 +1149,19 @@ public class JSONTNode extends Node {
     }
 
     public void close() {
+        Browser browser;
+        JSONFormatter formatter;
+        Map rule;
+        int rid;
+        browser = ruleList.browser();
+        while((rid = browser.next()) >= 0) {
+            rule = (Map) ruleList.get(rid);
+            if (rule != null) {
+                formatter = (JSONFormatter) rule.remove("Formatter");
+                if (formatter != null)
+                    formatter.clear();
+            }
+        }
         super.close();
         cache.clear();
         pluginList.clear();

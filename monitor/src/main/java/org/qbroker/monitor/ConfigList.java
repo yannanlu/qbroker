@@ -16,13 +16,16 @@ import org.qbroker.monitor.PropertyMonitor;
 import org.qbroker.event.Event;
 
 /**
- * ConfigList manages a list of configuration properties for various objects.
- * It contains a property monitor to download the configurations for all the
- * items of the list from a repository or a data source. Each downloaded
- * configuration has two identifiers, a unique id as the item in the list and
- * a unique name as the key for the object. ConfigList provides a set of
- * methods to maintain and manage these configurations loaded from a remote
- * repository or a remote data source.
+ * ConfigList manages a list of configuration properties from a remote
+ * repository or a remote data source for generic purposes. It has a property
+ * monitor to watch the remote repository or the remote data source. Once the
+ * monitor detects any changes on the configuration, it will download or fetch
+ * the new version of the configuration that consists of configuration
+ * properties for all the objects in the list. For each object of the list,
+ * its configuration has two identifiers, a unique id to identify the item in
+ * the list and a unique name as the key for the object. ConfigList provides
+ * a set of methods to maintain and manage these configurations picked up from
+ * a remote repository or a remote data source.
  *<br><br>
  * One of the use cases is the support of external rulesets for message nodes.
  *<br>

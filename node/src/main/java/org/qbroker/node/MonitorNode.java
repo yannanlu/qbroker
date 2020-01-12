@@ -375,19 +375,21 @@ public class MonitorNode extends Node {
         ruleInfo[RULE_TIME] = tm;
 
         // store TimeToLive into RULE_TTL field
-        if ((o = ph.get("TimeToLive")) != null)
+        if ((o = ph.get("TimeToLive")) != null && o instanceof String)
             ruleInfo[RULE_TTL] = 1000 * Integer.parseInt((String) o);
         else
             ruleInfo[RULE_TTL] = 0;
 
         // store Heartbeat into RULE_MODE field
-        if ((o = ph.get("Heartbeat")) != null)
+        if ((o = ph.get("Heartbeat")) != null && o instanceof String)
             ruleInfo[RULE_MODE] = 1000 * Integer.parseInt((String) o);
         else
             ruleInfo[RULE_MODE] = defaultHeartbeat;
 
-        if ((o = ph.get("DisplayMask")) != null)
+        if ((o = ph.get("DisplayMask")) != null && o instanceof String) {
             ruleInfo[RULE_DMASK] = Integer.parseInt((String) o);
+            rule.put("DisplayMask", o);
+        }
         else
             ruleInfo[RULE_DMASK] = 0;
 
@@ -449,77 +451,124 @@ public class MonitorNode extends Node {
         return rule;
     }
 
+    /** cleans up the tasks in the given taskList */
+    private int cleanupTasks(AssetList taskList) {
+        Browser browser;
+        Map task;
+        MonitorReport report;
+        int id, n = 0;
+        if (taskList == null)
+            return -1;
+        if (taskList.size() <= 0)
+            return 0;
+        browser = taskList.browser();
+        while ((id = browser.next()) >= 0) {
+            task = (Map) taskList.get(id);
+            if (task == null || task.size() <= 0)
+                continue;
+            n ++;
+            report = (MonitorReport) task.remove("Report");
+            if (report != null)
+                report.destroy();
+            task.clear();
+        }
+        taskList.clear();
+        return n;
+    }
+
+    /**
+     * It removes the rule from the ruleList and returns the rule id upon
+     * success. It is not MT-Safe.
+     */
+    public int removeRule(String key, XQueue in) {
+        int id = ruleList.getID(key);
+        if (id == 0) // can not remove the default rule
+            return -1;
+        else if (id > 0) { // for a normal rule
+            if (getStatus() == NODE_RUNNING)
+                throw(new IllegalStateException(name + " is in running state"));
+            long[] ruleInfo = ruleList.getMetaData(id);
+            if (ruleInfo != null && ruleInfo[RULE_SIZE] > 0) // check integrity
+                throw(new IllegalStateException(name+": "+key+" is busy with "+
+                    ruleInfo[RULE_SIZE] + " outstangding msgs"));
+            Map h = (Map) ruleList.remove(id);
+            if (h != null) {
+                MessageFilter filter = (MessageFilter) h.remove("Filter");
+                if (filter != null)
+                    filter.clear();
+                AssetList list = (AssetList) h.remove("TaskList");
+                if (list != null)
+                    cleanupTasks(list);
+                h.clear();
+            }
+            return id;
+        }
+        else if (cfgList != null && cfgList.containsKey(key)) {
+            return super.removeRule(key, in);
+        }
+        return -1;
+    }
+
     /**
      * It replaces the rule with the new rule defined by the property hashmap
      * and returns its id upon success. It is not MT-Safe.
      */
     public int replaceRule(String key, Map ph, XQueue in) {
         int id = ruleList.getID(key);
-        if (id > 0) {
+        if (id == 0) // can not replace the default rule
+            return -1;
+        else if (id > 0) { // for a normal rule
+            if (ph == null || ph.size() <= 0)
+                throw(new IllegalArgumentException("Empty property for rule"));
+            if (!key.equals((String) ph.get("Name"))) {
+                new Event(Event.ERR, name + ": name not match for rule " + key +
+                    ": " + (String) ph.get("Name")).send();
+                return -1;
+            }
             if (getStatus() == NODE_RUNNING)
                 throw(new IllegalStateException(name + " is in running state"));
             long tm = System.currentTimeMillis();
             long[] meta = new long[RULE_TIME+1];
             long[] ruleInfo = ruleList.getMetaData(id);
-            Map<String, Object> rule = initRuleset(tm, ph, meta);
-            if (rule != null && rule.containsKey("Name") &&
-                ruleInfo[RULE_PID] == meta[RULE_PID]) { // same type of rules
-                int i;
-                Map orig = (Map) ruleList.set(id, rule);
+            Map rule = initRuleset(tm, ph, meta);
+            if (rule != null && rule.containsKey("Name")) {
                 StringBuffer strBuf = ((debug & DEBUG_DIFF) <= 0) ? null :
                     new StringBuffer();
-                for (i=0; i<RULE_TIME; i++) { // update metadata
+                Map h = (Map) ruleList.set(id, rule);
+                if (h != null) {
+                    MessageFilter filter = (MessageFilter) h.remove("Filter");
+                    if (filter != null)
+                        filter.clear();
+                    AssetList list = (AssetList) h.remove("TaskList");
+                    if (list != null)
+                        cleanupTasks(list);
+                    h.clear();
+                }
+                tm = ruleInfo[RULE_PID];
+                for (int i=0; i<RULE_TIME; i++) { // update metadata
                     switch (i) {
                       case RULE_SIZE:
-                      case RULE_PEND:
-                      case RULE_COUNT:
                         break;
+                      case RULE_COUNT:
+                        if (tm == meta[RULE_PID]) // same rule type
+                            break;
                       default:
                         ruleInfo[i] = meta[i];
                     }
                     if ((debug & DEBUG_DIFF) > 0)
                         strBuf.append(" " + ruleInfo[i]);
                 }
-                if (meta[RULE_PID] == TYPE_ACTION && ruleInfo[RULE_PEND] > 0) {
-                    AssetList taskList = (AssetList) orig.get("TaskList");
-                    if (meta[RULE_EXTRA] <= taskList.getCapacity()) {
-                        rule.put("TaskList", taskList);
-                        ruleInfo[RULE_EXTRA] = taskList.getCapacity();
-                    }
-                    else { // copy over the existing tasks
-                        String str;
-                        AssetList list = (AssetList) rule.get("TaskList");
-                        Browser browser = taskList.browser();
-                        while ((i = browser.next()) >= 0) {
-                            str = taskList.getKey(i);
-                            meta = taskList.getMetaData(i);
-                            list.add(str, meta, taskList.get(i), i);
-                        }
-                    }
-                }
                 if ((debug & DEBUG_DIFF) > 0)
                     new Event(Event.DEBUG, name + "/" + key + " ruleInfo:" +
                         strBuf).send();
                 return id;
             }
-        }
-        else if (cfgList.containsKey(key)) {
-            int n;
-            ConfigList cfg;
-            if (getStatus() == NODE_RUNNING)
-                throw(new IllegalStateException(name + " is in running state"));
-            cfg = (ConfigList) cfgList.get(key);
-            cfg.resetReporter(ph);
-            cfg.setDataField(name);
-            refreshRule(key, in);
-            n = cfg.getSize();
-            if (n > 0)
-                id = ruleList.getID(cfg.getKey(0));
             else
-                id = 0;
-            return id;
+                new Event(Event.ERR, name + " failed to init rule "+key).send();
         }
-
+        else if (cfgList != null && cfgList.containsKey(key)) {
+            return super.replaceRule(key, ph, in);
+        }
         return -1;
     }
 
@@ -671,7 +720,7 @@ public class MonitorNode extends Node {
                     oid = outLinkMap[FAILURE_OUT];
                 else if (TYPE_ACTION != (int) ruleInfo[RULE_PID]) // bypass
                     oid = (int) ruleInfo[RULE_OID];
-                else try { // to init the occurrence and to add it to taskList
+                else try { // to init the monitor and to add it to taskList
                     rule = (Map) ruleList.get(rid);
                     propertyName = (String[]) rule.get("PropertyName");
                     template = (Template) rule.get("Template");
@@ -1339,19 +1388,14 @@ public class MonitorNode extends Node {
 
     public void close() {
         int rid;
-        Object o;
+        Map rule;
         Browser browser = ruleList.browser();
-        
         while ((rid = browser.next()) >= 0) {
-            o = ruleList.get(rid);
-            if (o == null || !(o instanceof Map))
-                continue;
-            o = ((Map) o).get("TaskList");
-            if (o == null || !(o instanceof AssetList))
-                continue;
-            ((AssetList) o).clear();
+            rule = (Map) ruleList.get(rid);
+            if (rule != null) {
+                cleanupTasks((AssetList) rule.get("TaskList"));
+            }
         }
-
         super.close();
         reqList.clear();
     }

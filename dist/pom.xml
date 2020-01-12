@@ -68,7 +68,7 @@
     <dependency>
       <groupId>org.qbroker</groupId>
       <artifactId>node</artifactId>
-      <version>1.1.9</version>
+      <version>1.1.10</version>
     </dependency>
     <dependency>
       <groupId>org.qbroker</groupId>
@@ -78,7 +78,7 @@
     <dependency>
       <groupId>org.qbroker</groupId>
       <artifactId>flow</artifactId>
-      <version>1.2.20</version>
+      <version>1.2.21</version>
     </dependency>
     <dependency>
       <groupId>org.qbroker</groupId>

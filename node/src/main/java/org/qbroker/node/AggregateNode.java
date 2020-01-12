@@ -410,8 +410,10 @@ public class AggregateNode extends Node {
         ruleInfo[RULE_TIME] = tm;
 
         // displayMask of ruleset stored in dmask 
-        if ((o = ph.get("DisplayMask")) != null && o instanceof String)
+        if ((o = ph.get("DisplayMask")) != null && o instanceof String) {
             ruleInfo[RULE_DMASK] = Integer.parseInt((String) o);
+            rule.put("DisplayMask", o);
+        }
         else
             ruleInfo[RULE_DMASK] = displayMask;
 
@@ -614,30 +616,113 @@ public class AggregateNode extends Node {
     }
 
     /**
+     * It removes the rule from the ruleList and returns the rule id upon
+     * success. It is not MT-Safe.
+     */
+    public int removeRule(String key, XQueue in) {
+        int id = ruleList.getID(key);
+        if (id == 0) // can not remove the default rule
+            return -1;
+        else if (id > 0) { // for a normal rule
+            if (getStatus() == NODE_RUNNING)
+                throw(new IllegalStateException(name + " is in running state"));
+            long[] ruleInfo = ruleList.getMetaData(id);
+            if (ruleInfo != null && ruleInfo[RULE_SIZE] > 0) // check integrity
+                throw(new IllegalStateException(name+": "+key+" is busy with "+
+                    ruleInfo[RULE_SIZE] + " outstangding msgs"));
+            Map h = (Map) ruleList.remove(id);
+            if (h != null) {
+                QuickCache cache = (QuickCache) h.remove("Cache");
+                if (cache != null)
+                    cache.clear();
+                Aggregation aggr = (Aggregation) h.remove("Aggregation");
+                if (aggr != null && aggr.hasBody())
+                    aggr.clearBodyMap();
+                MessageFilter filter = (MessageFilter) h.remove("Filter");
+                if (filter != null)
+                    filter.clear();
+                h.clear();
+            }
+            if (ruleInfo[RULE_PID] < 0) // clean up active cache
+                cacheList.remove(id);
+            else { // update reference count of plugin on the rule
+                long[] meta = pluginList.getMetaData((int) ruleInfo[RULE_PID]); 
+                if (meta == null)
+                    throw(new IllegalStateException(name + ": " + key +
+                        " has no plugin found at " + ruleInfo[RULE_PID]));
+                meta[0] --;
+                if (meta[0] <= 0) { // reference count is 0, check closer
+                    Object[] asset =
+                        (Object[]) pluginList.remove((int) ruleInfo[RULE_PID]);
+                    if (asset != null && asset.length >= 3) { // invoke closer
+                        java.lang.reflect.Method closer;
+                        closer = (java.lang.reflect.Method) asset[2];
+                        if (closer != null && asset[1] != null) try {
+                            closer.invoke(asset[1], new Object[] {});
+                        }
+                        catch (Throwable t) {
+                        }
+                    }
+                }
+            }
+            return id;
+        }
+        else if (cfgList != null && cfgList.containsKey(key)) {
+            return super.removeRule(key, in);
+        }
+        return -1;
+    }
+
+    /**
      * It replaces the existing rule of the key and returns its id upon success.
      * It is not MT-Safe.
      */
     public int replaceRule(String key, Map ph, XQueue in) {
         int id = ruleList.getID(key);
-        if (id > 0) {
+        if (id == 0) // can not replace the default rule
+            return -1;
+        else if (id > 0) { // for a normal rule
+            if (ph == null || ph.size() <= 0)
+                throw(new IllegalArgumentException("Empty property for rule"));
+            if (!key.equals((String) ph.get("Name"))) {
+                new Event(Event.ERR, name + ": name not match for rule " + key +
+                    ": " + (String) ph.get("Name")).send();
+                return -1;
+            }
             if (getStatus() == NODE_RUNNING)
                 throw(new IllegalStateException(name + " is in running state"));
-            String str;
             long tm = System.currentTimeMillis();
             long[] meta = new long[RULE_TIME+1];
             long[] ruleInfo = ruleList.getMetaData(id);
             Map rule = initRuleset(tm, ph, meta);
             if (rule != null && rule.containsKey("Name")) {
-                Object o;
                 StringBuffer strBuf = ((debug & DEBUG_DIFF) <= 0) ? null :
                     new StringBuffer();
-                o = ruleList.set(id, rule);
-                if (o != null && o instanceof Map) {
-                    Aggregation aggr =
-                        (Aggregation) ((Map) o).remove("Aggregation");
+                Map h = (Map) ruleList.set(id, rule);
+                if (h != null) {
+                    QuickCache c = (QuickCache) h.remove("Cache");
+                    QuickCache cache = (QuickCache) rule.get("Cache");
+                    if (c != null && cache != null) {
+                        int n = copyCache((Template) rule.get("KeyTemplate"),
+                            (TextSubstitution) rule.get("KeySubstitution"),
+                            c, cache);
+                        if (cacheList.remove(id) != null) {//old cache is active
+                            cacheList.reserve(id);
+                            cacheList.add(cache, id);
+                        }
+                        c.clear();
+                    }
+                    else if (c != null) {
+                        cacheList.remove(id);
+                        c.clear();
+                    }
+                    Aggregation aggr = (Aggregation) h.remove("Aggregation");
                     if (aggr != null && aggr.hasBody())
                         aggr.clearBodyMap();
-                    ((Map) o).clear();
+                    MessageFilter filter = (MessageFilter) h.remove("Filter");
+                    if (filter != null)
+                        filter.clear();
+                    h.clear();
                 }
                 tm = ruleInfo[RULE_PID];
                 for (int i=0; i<RULE_TIME; i++) { // update metadata
@@ -654,47 +739,36 @@ public class AggregateNode extends Node {
                     if ((debug & DEBUG_DIFF) > 0)
                         strBuf.append(" " + ruleInfo[i]);
                 }
-                if ((o = cacheList.remove(id)) != null) { // active cache
-                    QuickCache cache = (QuickCache) rule.get("Cache");
-                    int n = copyCache((Template) rule.get("KeyTemplate"),
-                        (TextSubstitution) rule.get("KeySubstitution"),
-                        (QuickCache) o, cache);
-                    cacheList.reserve(id);
-                    cacheList.add(cache, id);
-                    ((QuickCache) o).clear();
-                }
-                if ((o = pluginList.get(id)) != null) try { // has plugin
-                    java.lang.reflect.Method closer;
-                    closer = (java.lang.reflect.Method) ((Object[]) o)[2];
-                    if (closer != null && ((Object[]) o)[1] != null) {
-                        closer.invoke(((Object[]) o)[1], new Object[] {});
+                if (tm >= 0) { // update reference count of plugin for old rule
+                    meta = pluginList.getMetaData((int) tm);
+                    if (meta == null)
+                        throw(new IllegalStateException(name + ": " + key +
+                            " has no plugin found at " + tm));
+                    meta[0] --;
+                    if (meta[0] <= 0) { // reference count is 0, check closer
+                        Object[] asset = (Object[]) pluginList.remove((int) tm);
+                        if (asset != null && asset.length >= 3) {//invoke closer
+                            java.lang.reflect.Method closer;
+                            closer = (java.lang.reflect.Method) asset[2];
+                            if (closer != null && asset[1] != null) try {
+                                closer.invoke(asset[1], new Object[] {});
+                            }
+                            catch (Throwable t) {
+                            }
+                        }
                     }
-                }
-                catch (Throwable t) {
                 }
                 if ((debug & DEBUG_DIFF) > 0)
                     new Event(Event.DEBUG, name + "/" + key + " ruleInfo:" +
                         strBuf).send();
                 return id;
             }
+            else
+                new Event(Event.ERR, name + " failed to init rule "+key).send();
         }
         else if (cfgList != null && cfgList.containsKey(key)) {
-            int n;
-            ConfigList cfg;
-            if (getStatus() == NODE_RUNNING)
-                throw(new IllegalStateException(name + " is in running state"));
-            cfg = (ConfigList) cfgList.get(key);
-            cfg.resetReporter(ph);
-            cfg.setDataField(name);
-            refreshRule(key, in);
-            n = cfg.getSize();
-            if (n > 0)
-                id = ruleList.getID(cfg.getKey(0));
-            else
-                id = 0;
-            return id;
+            return super.replaceRule(key, ph, in);
         }
-
         return -1;
     }
 
@@ -1705,31 +1779,26 @@ public class AggregateNode extends Node {
         Aggregation aggr;
         Object[] asset;
         Map rule;
-        int rid;
-        setStatus(NODE_CLOSED);
-        cells.clear();
-        msgList.clear();
-        assetList.clear();
+        int id, rid;
         browser = ruleList.browser();
         while((rid = browser.next()) >= 0) {
             rule = (Map) ruleList.get(rid);
             if (rule != null) {
-                aggr = (Aggregation) rule.get("Aggregation");
+                aggr = (Aggregation) rule.remove("Aggregation");
                 if (aggr != null && aggr.hasBody())
                     aggr.clearBodyMap();
-                cache = (QuickCache) rule.get("Cache");
+                cache = (QuickCache) rule.remove("Cache");
                 if (cache != null)
                     cache.clear();
-                rule.clear();
             }
         }
-        ruleList.clear();
+        super.close();
         cacheList.clear();
 
         java.lang.reflect.Method closer;
         browser = pluginList.browser();
-        while ((rid = browser.next()) >= 0) {
-            asset = (Object[]) pluginList.get(rid);
+        while ((id = browser.next()) >= 0) {
+            asset = (Object[]) pluginList.get(id);
             if (asset == null || asset.length < 3)
                 continue;
             closer = (java.lang.reflect.Method) asset[2];

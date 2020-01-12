@@ -370,8 +370,10 @@ public class DistinguishNode extends Node {
         ruleInfo[RULE_STATUS] = NODE_RUNNING;
         ruleInfo[RULE_TIME] = tm;
 
-        if ((o = ph.get("DisplayMask")) != null && o instanceof String)
+        if ((o = ph.get("DisplayMask")) != null && o instanceof String) {
             ruleInfo[RULE_DMASK] = Integer.parseInt((String) o);
+            rule.put("DisplayMask", o);
+        }
         else
             ruleInfo[RULE_DMASK] = displayMask;
 
@@ -438,7 +440,9 @@ public class DistinguishNode extends Node {
      */
     public int removeRule(String key, XQueue in) {
         int id = ruleList.getID(key);
-        if (id > 0) { // can not delete the default rule
+        if (id == 0) // can not remove the default rule
+            return -1;
+        else if (id > 0) { // for a normal rule
             if (getStatus() == NODE_RUNNING)
                 throw(new IllegalStateException(name + " is in running state"));
             long[] ruleInfo = ruleList.getMetaData(id);
@@ -446,28 +450,17 @@ public class DistinguishNode extends Node {
                 throw(new IllegalStateException(name+": "+key+" is busy with "+
                     ruleInfo[RULE_SIZE] + " outstangding msgs"));
             expire(System.currentTimeMillis(), id, true);
-            ruleList.remove(id);
+            Map h = (Map) ruleList.remove(id);
+            if (h != null) {
+                MessageFilter filter = (MessageFilter) h.remove("Filter");
+                if (filter != null)
+                    filter.clear();
+                h.clear();
+            }
             return id;
         }
         else if (cfgList != null && cfgList.containsKey(key)) {
-            int i, n, k = 0;
-            long tm;
-            String str;
-            ConfigList cfg;
-            if (getStatus() == NODE_RUNNING)
-                throw(new IllegalStateException(name + " is in running state"));
-            tm = System.currentTimeMillis();
-            cfg = (ConfigList) cfgList.remove(key);
-            n = cfg.getSize();
-            for (i=0; i<n; i++) {
-                str = cfg.getKey(i);
-                id = ruleList.getID(str);
-                k += expire(tm, id, false);
-                ruleList.remove(id);
-            }
-            if (k > 0)
-                disfragment(tm);
-            return id;
+            return super.removeRule(key, in);
         }
 
         return -1;

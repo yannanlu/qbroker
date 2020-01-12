@@ -3,6 +3,15 @@ package org.qbroker.flow;
 /* ReleaseTag.java - release tag for all the packages of qbroker */
 
 /**
+ * V1.2.21 (2020/01/12): added string of DisplayMask to the rule storage for
+ * each rule in all MessageNode implementations to allow setDisplayMask of node
+ * to update the displayMask of rule level when it is not defined on the rule,
+ * added cleanup part to removeRule and replaceRule in Node, added or updated
+ * methods of removeRule and replaceRule in most of MessageNode implementations,
+ * updated the method of close with cleanups in all MessageNode implementations,
+ * added logging on status change of node to the main run loop in MessageFlow,
+ * added normalize() to JSON2Map for unique json content in alphabetical order
+ *<br>
  * V1.2.20 (2019/12/07): added two methods to the interface of HTTPConnector,
  * added two methods to HTTPConnector and HTTPClient in net, added support of
  * basic auth to HTTPClient, added support of the header for Content-Type to
@@ -339,7 +348,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V1.2.20 2019/12/07 12:03:49";
+    private static String ReleaseTAG = "QBroker V1.2.21 2020/01/12 08:53:21";
 
     public ReleaseTag() {
     }

@@ -772,7 +772,13 @@ public abstract class Node implements MessageNode {
             if (ruleInfo != null && ruleInfo[RULE_SIZE] > 0) // check integrity
                 throw(new IllegalStateException(name+": "+key+" is busy with "+
                     ruleInfo[RULE_SIZE] + " outstangding msgs"));
-            ruleList.remove(id);
+            Map h = (Map) ruleList.remove(id);
+            if (h != null) {
+                MessageFilter filter = (MessageFilter) h.remove("Filter");
+                if (filter != null)
+                    filter.clear();
+                h.clear();
+            }
             return id;
         }
         else if (cfgList != null && (id = cfgList.getID(key)) >= 0) {
@@ -850,7 +856,13 @@ public abstract class Node implements MessageNode {
             if (rule != null && rule.containsKey("Name")) {
                 StringBuffer strBuf = ((debug & DEBUG_DIFF) <= 0) ? null :
                     new StringBuffer();
-                ruleList.set(id, rule);
+                Map h = (Map) ruleList.set(id, rule);
+                if (h != null) {
+                    MessageFilter filter = (MessageFilter) h.remove("Filter");
+                    if (filter != null)
+                        filter.clear();
+                    h.clear();
+                }
                 tm = ruleInfo[RULE_PID];
                 for (int i=0; i<RULE_TIME; i++) { // update metadata
                     switch (i) {
@@ -1481,7 +1493,22 @@ public abstract class Node implements MessageNode {
     }
 
     public void setDisplayMask(int mask) {
+        int rid;
+        long[] ruleInfo;
+        Map rule;
+        if (mask == displayMask)
+            return;
         displayMask = mask;
+        Browser browser = ruleList.browser();
+        while((rid = browser.next()) >= 0) { // update DMASK that is not defined
+            rule = (Map) ruleList.get(rid);
+            if (rule == null || rule.containsKey("DisplayMask"))
+                continue;
+            ruleInfo = ruleList.getMetaData(rid);
+            if (ruleInfo == null || ruleInfo.length <= RULE_TIME)
+                continue;
+            ruleInfo[RULE_DMASK] = mask;
+        }
     }
 
     public int getDebugMode() {
@@ -1692,7 +1719,7 @@ public abstract class Node implements MessageNode {
         Map rule;
         Browser browser;
         MessageFilter filter;
-        int rid;
+        int rid, id;
         setStatus(NODE_CLOSED);
         cells.clear();
         callbackMethod = null;
@@ -1702,20 +1729,25 @@ public abstract class Node implements MessageNode {
         browser = ruleList.browser();
         while((rid = browser.next()) >= 0) {
             rule = (Map) ruleList.get(rid);
-            filter = (MessageFilter) rule.get("Filter");
-            if (filter != null)
-                filter.clear();
-            if (rule != null)
+            if (rule != null) {
+                filter = (MessageFilter) rule.remove("Filter");
+                if (filter != null)
+                    filter.clear();
                 rule.clear();
+            }
         }
         ruleList.clear();
         if (cfgList != null) {
-            ConfigList cfg;
+            Object cfg;
             browser = cfgList.browser();
-            while((rid = browser.next()) >= 0) {
-                cfg = (ConfigList) cfgList.get(rid);
-                if (cfg != null)
-                    cfg.close();
+            while((id = browser.next()) >= 0) {
+                cfg = cfgList.get(id);
+                if (cfg != null) {
+                    if (cfg instanceof ConfigList)
+                        ((ConfigList) cfg).close();
+                    else if (cfg instanceof ConfigTemplate)
+                        ((ConfigTemplate) cfg).close();
+                }
             }
             cfgList.clear();
         }

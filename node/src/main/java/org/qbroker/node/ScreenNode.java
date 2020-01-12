@@ -368,8 +368,10 @@ public class ScreenNode extends Node {
         if ((o = ph.get("TimeToLive")) != null && o instanceof String)
             ruleInfo[RULE_TTL] = 1000*Integer.parseInt((String) o);
 
-        if ((o = ph.get("DisplayMask")) != null && o instanceof String)
+        if ((o = ph.get("DisplayMask")) != null && o instanceof String) {
             ruleInfo[RULE_DMASK] = Integer.parseInt((String) o);
+            rule.put("DisplayMask", o);
+        }
         else
             ruleInfo[RULE_DMASK] = displayMask;
 
@@ -515,7 +517,9 @@ public class ScreenNode extends Node {
      */
     public int removeRule(String key, XQueue in) {
         int id = ruleList.getID(key);
-        if (id > 0) { // can not delete the default rule
+        if (id == 0) // can not remove the default rule
+            return -1;
+        else if (id > 0) { // for a normal rule
             if (getStatus() == NODE_RUNNING)
                 throw(new IllegalStateException(name + " is in running state"));
             long[] ruleInfo = ruleList.getMetaData(id);
@@ -531,34 +535,18 @@ public class ScreenNode extends Node {
             if (ruleInfo != null && ruleInfo[RULE_SIZE] > 0) // check integrity
                 throw(new IllegalStateException(name+": "+key+" is busy with "+
                     ruleInfo[RULE_SIZE] + " outstangding msgs"));
-            ruleList.remove(id);
-            return id;
-        }
-        else if (cfgList != null && cfgList.containsKey(key)) {
-            int i, n;
-            String str;
-            ConfigList cfg;
-            Object o;
-            if (getStatus() == NODE_RUNNING)
-                throw(new IllegalStateException(name + " is in running state"));
-            long tm = System.currentTimeMillis();
-            cfg = (ConfigList) cfgList.remove(key);
-            n = cfg.getSize();
-            for (i=0; i<n; i++) {
-                str = cfg.getKey(i);
-                id = ruleList.getID(str);
-                if ((o = cacheList.browse(id)) != null) { // flush old cache
-                    byte[] buffer = new byte[8192];
-                    tm = flush(tm, in, id, buffer, (QuickCache) o);
-                    ((QuickCache) o).clear();
-                    if (cacheList.getNextID(id) >= 0)
-                        cacheList.remove(id);
-                }
-                ruleList.remove(id);
+            Map h = (Map) ruleList.remove(id);
+            if (h != null) {
+                MessageFilter filter = (MessageFilter) h.remove("Filter");
+                if (filter != null)
+                    filter.clear();
+                h.clear();
             }
             return id;
         }
-
+        else if (cfgList != null && cfgList.containsKey(key)) {
+            return super.removeRule(key, in);
+        }
         return -1;
     }
 
@@ -568,10 +556,18 @@ public class ScreenNode extends Node {
      */
     public int replaceRule(String key, Map ph, XQueue in) {
         int id = ruleList.getID(key);
-        if (id > 0) {
+        if (id == 0) // can not replace the default rule
+            return -1;
+        else if (id > 0) { // for a normal rule
+            if (ph == null || ph.size() <= 0)
+                throw(new IllegalArgumentException("Empty property for rule"));
+            if (!key.equals((String) ph.get("Name"))) {
+                new Event(Event.ERR, name + ": name not match for rule " + key +
+                    ": " + (String) ph.get("Name")).send();
+                return -1;
+            }
             if (getStatus() == NODE_RUNNING)
                 throw(new IllegalStateException(name + " is in running state"));
-            String str;
             long tm = System.currentTimeMillis();
             long[] meta = new long[RULE_TIME+1];
             long[] ruleInfo = ruleList.getMetaData(id);
@@ -587,8 +583,13 @@ public class ScreenNode extends Node {
                     if (cacheList.getNextID(id) >= 0)
                         cacheList.remove(id);
                 }
-
-                ruleList.set(id, rule);
+                Map h = (Map) ruleList.set(id, rule);
+                if (h != null) {
+                    MessageFilter filter = (MessageFilter) h.remove("Filter");
+                    if (filter != null)
+                        filter.clear();
+                    h.clear();
+                }
                 tm = ruleInfo[RULE_PID];
                 for (int i=0; i<RULE_TIME; i++) { // update metadata
                     switch (i) {
@@ -609,24 +610,12 @@ public class ScreenNode extends Node {
                         strBuf).send();
                 return id;
             }
+            else
+                new Event(Event.ERR, name + " failed to init rule "+key).send();
         }
         else if (cfgList != null && cfgList.containsKey(key)) {
-            int n;
-            ConfigList cfg;
-            if (getStatus() == NODE_RUNNING)
-                throw(new IllegalStateException(name + " is in running state"));
-            cfg = (ConfigList) cfgList.get(key);
-            cfg.resetReporter(ph);
-            cfg.setDataField(name);
-            refreshRule(key, in);
-            n = cfg.getSize();
-            if (n > 0)
-                id = ruleList.getID(cfg.getKey(0));
-            else
-                id = 0;
-            return id;
+            return super.replaceRule(key, ph, in);
         }
-
         return -1;
     }
 
@@ -1770,23 +1759,18 @@ public class ScreenNode extends Node {
         Browser browser;
         QuickCache cache;
         Map rule;
-        int id;
-        setStatus(NODE_CLOSED);
-        cells.clear();
-        msgList.clear();
-        assetList.clear();
+        int rid;
         browser = ruleList.browser();
-        while((id = browser.next()) >= 0) {
-            rule = (Map) ruleList.get(id);
+        while((rid = browser.next()) >= 0) {
+            rule = (Map) ruleList.get(rid);
             if (rule != null) {
-                cache = (QuickCache) rule.get("Cache");
+                cache = (QuickCache) rule.remove("Cache");
                 if (cache != null)
                     cache.clear();
-                rule.clear();
             }
         }
-        ruleList.clear();
         cacheList.clear();
+        super.close();
     }
 
     protected void finalize() {
