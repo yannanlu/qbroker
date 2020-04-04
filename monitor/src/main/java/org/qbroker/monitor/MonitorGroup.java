@@ -91,7 +91,7 @@ public class MonitorGroup {
             throw(new IllegalArgumentException("Name is not defined"));
         name = (String) o;
 
-        if ((o = props.get("Type")) != null)
+        if ((o = props.get("Type")) != null) // ### very important on diffs
             type = (String) o;
 
         if ((o = props.get("Capacity")) != null)
@@ -336,11 +336,11 @@ public class MonitorGroup {
                 continue;
             }
             k = pl.size();
-            for (j=0; j<k; j++) {
-                str = (String) pl.get(j);
+            for (j=0; j<k; j++) { // loop thru the list of deleted items
+                str = pl.get(j);
                 if (str == null || str.length() <= 0)
                     continue;
-                if (temp.containsItem(str)) {
+                if (temp.containsItem(str)) { // remove the item
                     str = temp.remove(str);
                     n += destroyMonitor(str);
                     if ((debug & Service.DEBUG_LOAD) > 0)
@@ -348,6 +348,7 @@ public class MonitorGroup {
                             " has been removed for dynamic " + key).send();
                 }
             }
+            // add new items
             temp.updateItems(list);
             if (temp.withSharedReport() && (ph=temp.getSharedReport()) != null){
                 reports.put(key, ph);
@@ -1025,7 +1026,7 @@ public class MonitorGroup {
                 new Event(Event.INFO, name + " Config: " + key +
                     " has been " + operation).send();
             }
-            else if (!templateList.containsKey(key)) { // for generated objects
+            else if (!templateList.containsKey(key)) { // new generated objects
                 ConfigTemplate temp = null;
                 boolean isNew = !cachedProps.containsKey(key);
                 map = (Map) change.remove(key); // assume it used only once
@@ -1100,7 +1101,7 @@ public class MonitorGroup {
                     }
                 }
             }
-            else { // update for generated objs
+            else { // for existing generated objs, recreate their cfg template
                 ConfigTemplate temp = null;
                 Map<String, Object> h = new HashMap<String, Object>();
                 map = (Map) change.remove(key); // assume it used only once

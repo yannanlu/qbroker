@@ -3,6 +3,12 @@ package org.qbroker.flow;
 /* ReleaseTag.java - release tag for all the packages of qbroker */
 
 /**
+ * V1.2.22 (2020/03/14): added the method of addConnectionMemberInfo() to
+ * SonicMQRequester for querying destinations on a consumer or a producer,
+ * added the method of main() to ConfigList for testing purpose, updated
+ * in-line comments in MonitorGroup, updated SonicMQMonitor for queries
+ * on queue metrics
+ *<br>
  * V1.2.21 (2020/01/12): added string of DisplayMask to the rule storage for
  * each rule in all MessageNode implementations to allow setDisplayMask of node
  * to update the displayMask of rule level when it is not defined on the rule,
@@ -348,7 +354,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V1.2.21 2020/01/12 08:53:21";
+    private static String ReleaseTAG = "QBroker V1.2.22 2020/03/14 10:37:45";
 
     public ReleaseTag() {
     }

@@ -356,7 +356,7 @@ public class SonicMQMonitor extends Monitor {
         }
         else if (isQueue) { // for queue metrics
             if (serialNumber == 1) { // make sure the data is right
-                str = (String) map.get("name");
+                str = (String) map.get("queue");
                 if (!qName.equals(str))
                     new Event(Event.ERR, name + " got a different queue: " +
                         str).send();
@@ -377,19 +377,6 @@ public class SonicMQMonitor extends Monitor {
             jmxc.close();
             if (ippsCount > 0) {
                 String sr, sd;
-                int k = (int) ippsCount;
-                for (int i=k-1; i>=0; i--) { // cleanup idle connections
-                    Map mp = list.get(i);
-                    sd = (String) mp.get("messages_Delivered");
-                    sr = (String) mp.get("messages_Received");
-                    if ("0".equals(sd) && "0".equals(sr)) {
-                        str = (String) mp.get("host");
-                        str += "/" + (String) mp.get("name");
-                        if (cache.containsKey(str))
-                            cache.remove(str);
-                        list.remove(i);
-                    }
-                }
                 if (previousStatus < TimeWindows.EXCEPTION) { // initial reset
                     for (Map mp : list) {
                         str = (String) mp.get("host");
@@ -399,7 +386,7 @@ public class SonicMQMonitor extends Monitor {
                 }
                 else { // clean up cache
                     HashSet<String> hset = new HashSet<String>();
-                    k = cache.size();
+                    int k = cache.size();
                     for (Map mp : list) {
                         str = (String) mp.get("host");
                         str += "/" + (String) mp.get("name");
@@ -414,7 +401,7 @@ public class SonicMQMonitor extends Monitor {
             }
 
             outMsgs = 0;
-            str = (String) map.get("messages_Count");
+            str = (String) map.get("messagecount");
             map.clear();
             try {
                 long prev;

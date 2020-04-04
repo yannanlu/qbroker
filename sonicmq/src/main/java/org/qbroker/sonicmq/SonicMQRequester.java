@@ -24,6 +24,9 @@ import javax.management.Notification;
 import javax.management.NotificationListener;
 import javax.management.JMException;
 import javax.jms.Message;
+import javax.jms.Destination;
+import javax.jms.Queue;
+import javax.jms.Topic;
 import com.sonicsw.mf.jmx.client.JMSConnectorClient;
 import com.sonicsw.mf.jmx.client.JMSConnectorAddress;
 import com.sonicsw.mf.jmx.client.ExpressionBasedNotificationFilter;
@@ -31,6 +34,9 @@ import com.sonicsw.mq.mgmtapi.runtime.IBrokerProxy;
 import com.sonicsw.mq.mgmtapi.runtime.MQProxyFactory;
 import com.sonicsw.mf.mgmtapi.runtime.ProxyRuntimeException;
 import com.sonicsw.mq.common.runtime.IConnectionData;
+import com.sonicsw.mq.common.runtime.IConnectionMemberDetails;
+import com.sonicsw.mq.common.runtime.IConnectionMemberInfo;
+import com.sonicsw.mq.common.runtime.IDestination;
 import com.sonicsw.mq.common.runtime.IDurableSubscriptionData;
 import com.sonicsw.mq.common.runtime.ISubscriberData;
 import com.sonicsw.mq.common.runtime.IQueueData;
@@ -155,14 +161,10 @@ public class SonicMQRequester implements Requester, Comparator<IMetric> {
             switch (category.charAt(0)) {
               case 'c':
                 prefix = objName.getKeyProperty("user");
-                if (prefix != null && (n = prefix.length()) > 0) {
-                    if (prefix.endsWith("*"))
-                        prefix = prefix.substring(0, n - 1);
-                }
                 keys = listConnections(broker, prefix, regex);
                 break;
               case 'q':
-                prefix = objName.getKeyProperty("queue");
+                prefix = objName.getKeyProperty("name");
                 if (prefix != null && (n = prefix.length()) > 0) {
                     if (prefix.endsWith("*"))
                         prefix = prefix.substring(0, n - 1);
@@ -171,10 +173,6 @@ public class SonicMQRequester implements Requester, Comparator<IMetric> {
                 break;
               case 's':
                 prefix = objName.getKeyProperty("user");
-                if (prefix != null && (n = prefix.length()) > 0) {
-                    if (prefix.endsWith("*"))
-                        prefix = prefix.substring(0, n - 1);
-                }
                 if (category.endsWith("r"))
                     keys = listSubscribers(broker, prefix, regex);
                 else
@@ -182,18 +180,10 @@ public class SonicMQRequester implements Requester, Comparator<IMetric> {
                 break;
               case 'm':
                 prefix = objName.getKeyProperty("type");
-                if (prefix != null && (n = prefix.length()) > 0) {
-                    if (prefix.endsWith("*"))
-                        prefix = prefix.substring(0, n - 1);
-                }
-                keys = listActiveMetrics(broker, prefix);
+                keys = listMetricNames(broker, prefix);
                 break;
               case 'u':
                 prefix = objName.getKeyProperty("user");
-                if (prefix != null && (n = prefix.length()) > 0) {
-                    if (prefix.endsWith("*"))
-                        prefix = prefix.substring(0, n - 1);
-                }
                 keys = listUsersWithDurableSubscriptions(broker, prefix);
                 break;
               default:
@@ -245,18 +235,50 @@ public class SonicMQRequester implements Requester, Comparator<IMetric> {
             throw(new JMException("no connection to " + uri));
         else try {
             int n;
-            String topic, cid, sid, id, prefix;
+            String queue, topic, cid, sid, id, prefix, type;
             IBrokerProxy broker = MQProxyFactory.createBrokerProxy(jmxc,
                 new ObjectName(domain + ":ID=" + brokerName));
             switch (category.charAt(0)) {
               case 'c':
                 prefix = objName.getKeyProperty("user");
-                id = objName.getKeyProperty("connect_id");
-                list = queryConnections(broker, prefix, id, regex);
+                id = objName.getKeyProperty("name");
+                sid = objName.getKeyProperty("session_id");
+                type = objName.getKeyProperty("type");
+                queue = objName.getKeyProperty("queue");
+                topic = objName.getKeyProperty("topic");
+                if (sid != null && sid.length() > 0)
+                    n = Integer.parseInt(sid);
+                else
+                    n = 0;
+                if ("consumer".equals(type)) { // for consumer connections
+                    if (queue != null)
+                        list = queryConnections(broker, prefix, id, regex,
+                            n, "Queue Receiver", queue);
+                    else if (topic != null)
+                        list = queryConnections(broker, prefix, id, regex,
+                            n, "Topic Subscriber", topic);
+                    else
+                        list = queryConnections(broker, prefix, id, regex,
+                            n, "Queue Receiver", null);
+                }
+                else if ("producer".equals(type)) { // for producer connections
+                    if (queue != null)
+                        list = queryConnections(broker, prefix, id, regex,
+                            n, "Queue Sender", queue);
+                    else if (topic != null)
+                        list = queryConnections(broker, prefix, id, regex,
+                            n, "Topic Publisher", topic);
+                    else
+                        list = queryConnections(broker, prefix, id, regex,
+                            n, "Queue Sender", null);
+                }
+                else // for connections
+                    list = queryConnections(broker, prefix, id, regex,
+                        n, null, null);
                 break;
               case 'q':
                 prefix = objName.getKeyProperty("queue");
-                id = objName.getKeyProperty("id");
+                id = objName.getKeyProperty("name");
                 list = queryQueues(broker, prefix, id, regex);
                 break;
               case 's':
@@ -275,14 +297,19 @@ public class SonicMQRequester implements Requester, Comparator<IMetric> {
               case 'm':
                 prefix = objName.getKeyProperty("type");
                 id = objName.getKeyProperty("name");
-                if (id == null && "connection".equals(prefix) && // check user
-                    (id = objName.getKeyProperty("user")) != null) {
+                if ("connection".equals(prefix) && // for connections
+                    (cid = objName.getKeyProperty("user")) != null) {
                     Map<String, String> tag = new HashMap<String, String>();
                     topic = objName.getKeyProperty("topic");
+                    if ("*".equals(topic))
+                        topic = null;
+                    queue = objName.getKeyProperty("queue");
+                    if ("*".equals(queue))
+                        queue = null;
                     StringBuffer strBuf = new StringBuffer();
-                    if (topic != null) { // for topic connections
+                    if (topic != null) { // connections for topic subscriber
                         sid = objName.getKeyProperty("subscription_id");
-                        list = querySubscribers(broker, id, null, topic,
+                        list = querySubscribers(broker, cid, id, topic,
                             null, sid, regex);
                         for (Map ph : list) {
                             id = (String) ph.get("connect_id");
@@ -292,19 +319,11 @@ public class SonicMQRequester implements Requester, Comparator<IMetric> {
                             strBuf.append(id.replaceAll("\\$", "\\\\\\$"));
                         }
                     }
-                    else if (objName.getKeyProperty("queue") != null) {
-                        HashSet<String> h = new HashSet<String>();
-                        list = querySubscribers(broker, id, null, null,
-                            null, null, null);
-                        for (Map ph : list) {
-                            h.add((String) ph.get("connect_id"));
-                        }
-                        list.clear();
-                        list = queryConnections(broker, id, null, regex);
+                    else if (queue != null) { // connections for queue receiver
+                        list = queryConnections(broker, cid, id, regex,
+                            0, "Queue Receiver", queue);
                         for (Map ph : list) {
                             id = (String) ph.get("connect_id");
-                            if (h.contains(id)) // excluding topic connections
-                                continue;
                             tag.put(id, (String) ph.get("host"));
                             if (strBuf.length() > 0)
                                 strBuf.append("|");
@@ -312,7 +331,8 @@ public class SonicMQRequester implements Requester, Comparator<IMetric> {
                         }
                     }
                     else { // for all connections
-                        list = queryConnections(broker, id, null, regex);
+                        list = queryConnections(broker, cid, id, regex,
+                            0, null, null);
                         for (Map ph : list) {
                             id = (String) ph.get("connect_id");
                             tag.put(id, (String) ph.get("host"));
@@ -330,6 +350,7 @@ public class SonicMQRequester implements Requester, Comparator<IMetric> {
                             id = (String) ph.get("name");
                             ph.put("host", tag.get(id));
                         }
+                        tag.clear();
                     }
                     break;
                 }
@@ -980,10 +1001,12 @@ public class SonicMQRequester implements Requester, Comparator<IMetric> {
 
     /** returns a list of maps for the connections with a prefix on usernames */
     private List<Map> queryConnections(IBrokerProxy broker, String username,
-        String connectID, String regex) {
+        String connectID, String regex, int sid, String type,
+        String destination) {
         List list;
         List<Map> pl = new ArrayList<Map>();
         String brokerName = broker.getBrokerName();
+        Long memberRef = null;
         boolean withConnectID = (connectID != null && connectID.length() > 0);
         boolean withRegex = (regex != null && regex.length() > 0);
         if (withConnectID)
@@ -1009,10 +1032,167 @@ public class SonicMQRequester implements Requester, Comparator<IMetric> {
             ph.put("connect_id", str);
             ph.put("host", iconn.getHost());
             ph.put("user", iconn.getUser());
-            pl.add(ph);
+            memberRef = iconn.getConnectionMemberRef();
+            if (memberRef != null) {
+                ArrayList<Long> rl;
+                rl = addConnectionMemberInfo(broker, memberRef, null, null, ph);
+                ph.put("session_count", String.valueOf(rl.size()));
+                rl = addConnectionMemberInfo(broker, rl.get(sid), null,null,ph);
+                ph.put("session_id", String.valueOf(sid));
+                if (type == null) { // query without details
+                    pl.add(ph);
+                    continue;
+                }
+                for (Long ref : rl) { // query destination info on the type
+                    addConnectionMemberInfo(broker, ref, type, destination, ph);
+                }
+                if (ph.containsKey("count")) // got a match on the destination
+                    pl.add(ph);
+                else
+                    ph.clear();
+            }
         }
 
         return pl;
+    }
+
+    /**
+     * queries the info on the type and the destionation, and adds the data
+     * to the given map. It returns a array of Long for a list of refs.
+     */
+    private ArrayList<Long> addConnectionMemberInfo(IBrokerProxy broker,
+        Long memberRef, String type, String destination, Map<String,String>ph) {
+        IConnectionMemberDetails details;
+        IConnectionMemberInfo info;
+        IDestination dest;
+        String s, str;
+        details = broker.getConnectionMemberDetails(memberRef);
+        info = details.getInfo();
+        str = info.getTypeString();
+        if ("connection".equals(str))
+            ph.put("type", str);
+        else if ("session".equals(str)) {
+            s = ph.get("session_count");
+            if (s != null)
+                ph.put("session_count", String.valueOf(Integer.parseInt(s)+1));
+            else {
+                ph.put("session_count", "1");
+                ph.put("type", str);
+            }
+        }
+        else if (str.equals(type) && ("Queue Receiver".equals(type) ||
+            "Queue Sender".equals(type))) { // for queues
+            if (str.endsWith("Receiver")) {
+                s = ph.get("consumer_count");
+                if (s != null)
+                    ph.put("consumer_count",
+                        String.valueOf(Integer.parseInt(s) + 1));
+                else {
+                    ph.put("consumer_count", "1");
+                    ph.put("type", str);
+                }
+            }
+            else {
+                s = ph.get("producer_count");
+                if (s != null)
+                    ph.put("producer_count",
+                        String.valueOf(Integer.parseInt(s) + 1));
+                else {
+                    ph.put("producer_count", "1");
+                    ph.put("type", str);
+                }
+            }
+            if ((dest = details.getDestination()) != null) try {
+                Destination d = JMSObjectFactory.createJMSDestination(dest);
+                str = ((Queue) d).getQueueName();
+                s = ph.get("total_count");
+                if (s != null)
+                    ph.put("total_count",String.valueOf(Integer.parseInt(s)+1));
+                else
+                    ph.put("total_count", "1");
+                if (destination == null) { // count number of queues
+                    if (s == null)
+                        ph.put("queue", str);
+                    ph.put("count", ph.get("total_count"));
+                }
+                else if ("*".equals(destination)) { // list all queues
+                    String line = ph.get("queue");
+                    ph.put("count", ph.get("total_count"));
+                    if (line != null)
+                        ph.put("queue", line + ", " + str);
+                    else
+                        ph.put("queue", str);
+                }
+                else if (destination.equals(str)) { // list all matched queues
+                    s = ph.get("count");
+                    if (s != null)
+                        ph.put("count", String.valueOf(Integer.parseInt(s)+1));
+                    else {
+                        ph.put("count", "1");
+                        ph.put("queue", str);
+                    }
+                }
+            }
+            catch (Exception ex) {
+            }
+        }
+        else if (str.equals(type) && (str.equals("Topic Subscriber") ||
+            str.equals("Topic Publisher"))) { // for topics
+            if (str.endsWith("Subscriber")) {
+                s = ph.get("consumer_count");
+                if (s != null)
+                    ph.put("consumer_count",
+                        String.valueOf(Integer.parseInt(s) + 1));
+                else {
+                    ph.put("consumer_count", "1");
+                    ph.put("type", str);
+                }
+            }
+            else {
+                s = ph.get("producer_count");
+                if (s != null)
+                    ph.put("producer_count",
+                        String.valueOf(Integer.parseInt(s) + 1));
+                else {
+                    ph.put("producer_count", "1");
+                    ph.put("type", str);
+                }
+            }
+            if ((dest = details.getDestination()) != null) try {
+                Destination d = JMSObjectFactory.createJMSDestination(dest);
+                str = ((Topic) d).getTopicName();
+                s = ph.get("total_count");
+                if (s != null)
+                    ph.put("total_count",String.valueOf(Integer.parseInt(s)+1));
+                else
+                    ph.put("total_count", "1");
+                if (destination == null) { // count number of topics
+                    if (s == null)
+                        ph.put("topic", str);
+                    ph.put("count", ph.get("total_count"));
+                }
+                else if ("*".equals(destination)) { // list all topics
+                    String line = ph.get("topic");
+                    ph.put("count", ph.get("total_count"));
+                    if (line != null)
+                        ph.put("topic", line + ", " + str);
+                    else
+                        ph.put("topic", str);
+                }
+                else if (destination.equals(str)) { // list all matched topics
+                    s = ph.get("count");
+                    if (s != null)
+                        ph.put("count", String.valueOf(Integer.parseInt(s)+1));
+                    else {
+                        ph.put("count", "1");
+                        ph.put("topic", str);
+                    }
+                }
+            }
+            catch (Exception ex) {
+            }
+        }
+        return info.getChildRefs();
     }
 
     /** returns names of the subscribers with a given prefix on username */
@@ -1264,36 +1444,30 @@ public class SonicMQRequester implements Requester, Comparator<IMetric> {
         return pl;
     }
 
-    /** returns names of the active metrics with a given type */
-    private String[] listActiveMetrics(IBrokerProxy broker, String type) {
+    /** returns names of all metrics with a given type */
+    private String[] listMetricNames(IBrokerProxy broker, String type) {
         IMetricInfo[] info = broker.getMetricsInfo();
         int n = info.length;
         IMetricIdentity[] ida;
         if (type == null || type.length() <= 0) { // without type
-            IMetricIdentity[] ids = new IMetricIdentity[n];
+            ida = new IMetricIdentity[n];
             for (int i=0; i<n; i++) {
-                ids[i] = info[i].getMetricIdentity();
+                ida[i] = info[i].getMetricIdentity();
             }
-            ida = broker.getActiveMetrics(ids);
         }
         else { // with type
             int k = 0;
             ida = new IMetricIdentity[n];
             for (int i=0; i<n; i++) {
-                ida[i] = null;
                 if (info[i].getMetricIdentity().getName().startsWith(type))
                     ida[k++] = info[i].getMetricIdentity();
             }
-            IMetricIdentity[] ids = new IMetricIdentity[k];
-            for (int i=0; i<k; i++)
-                ids[i] = ida[i];
-            ida = broker.getActiveMetrics(ids);
+            n = k;
         }
-        n = ida.length;
         String[] keys = new String[n];
         for (int i=0; i<n; i++)
             keys[i] = ida[i].getName();
-
+        Arrays.sort(keys);
         return keys;
     }
 
@@ -1570,26 +1744,36 @@ public class SonicMQRequester implements Requester, Comparator<IMetric> {
                     "only. Please specify target in the following format:");
                 System.out.println("\tdomain.container:ID=component" +
                     "[,category=<CATEGORY>[,key=<VALUE>]]");
-                System.out.println("where key is the name of the parameter. "+
-                    "The <VALUE> ending with '*' is for list only. The " +
-                    "keyword of category is required whereas its value of " +
-                    "<CATEGORY> specifies the query space with the following "+
-                    "values supported:");
+                System.out.println("where key is the name of a parameter." +
+                    "The <VALUE> is the value of the parameter. Multiple " +
+                    "key-value pairs are allowed. The <VALUE> for the key of "+
+                    "name ending with '*' is for list only. The keyword of " +
+                    "category is required and can be only specified once. " +
+                    "Its value of <CATEGORY> specifies the query space with " +
+                    "the following values supported:");
                 System.out.println("\tcategory=connection for active " +
-                    "connections with selectable items of connect_id or host");
-                System.out.println("\tcategory=subscriber for active " + 
-                    "subscribers with selectable items of topic or host");
+                    "connections with required key of user, and optional keys "+
+                    "like name, type and queue or topic. Use -a to select " +
+                    " connections from certain hosts");
+                System.out.println("\tcategory=subscriber for active " +
+                    "subscribers with required keys of user and topic. Use "+
+                    "-a to select subscribers from certain hosts");
                 System.out.println("\tcategory=subscription for durable " +
-                    "subscriptions with selectable items of topic");
-                System.out.println("\tcategory=queue for non-temporary " + 
-                    "queues with selectable items of queue name");
-                System.out.println("\tcategory=metric for active metrics " + 
-                    "with selectable items of either connect_id or queue name");
+                    "subscriptions with required keys of user and topic, " +
+                    "as well as optional keys of subscription_id, cleint_id. " +
+                    "Use -a to select subscriptions from certain hosts");
+                System.out.println("\tcategory=queue for queues with reqired " +
+                    "key of name to specify the name of the queue. Use " +
+                    "-a to select queues with certain names");
+                System.out.println("\tcategory=metric for active metrics " +
+                    "with required keys of type and user, as well as " +
+                    "optional keys like name, queue or topic");
                 System.out.println("\tcategory=user for users with durable " +
                     "subscriptions");
                 System.out.println("\tcategory=topic for browsing up to 1000 " +
                     "messages from the first durable subscription matched " +
-                    "with a specific set of topic, subscription_id, cleint_id");
+                    "with a set of specific keys like topic, subscription_id " +
+                    "and cleint_id");
                 System.out.println("\tcategory=notification for listening on "+
                     "the JMX notifications");
             }
@@ -1628,7 +1812,9 @@ public class SonicMQRequester implements Requester, Comparator<IMetric> {
                     System.out.println("listener is removed for " + target);
                 }
             }
-            else if (target.indexOf('*') >= 0) { // for list
+            else if ((i=target.indexOf(",name=")) > 0 &&
+                ((n=target.indexOf(",",i+1)) > i && target.charAt(n-1) == '*' ||
+                target.endsWith("*"))) { // for listing if name ending with '*'
                 keys = jmx.list(target, attr);
                 n = keys.length;
                 for (i=0; i<n; i++)
@@ -1751,7 +1937,7 @@ public class SonicMQRequester implements Requester, Comparator<IMetric> {
         System.out.println("  n: username");
         System.out.println("  p: password");
         System.out.println("  t: target");
-        System.out.println("  a: attributes or items delimited via ':'");
+        System.out.println("  a: attributes or items delimited via ':' to select results");
         System.out.println("\nExample: java org.qbroker.net.SonicMQRequester -u tcp://intsonicqa1:2506 -n Administrator -p xxxx");
     }
 }
