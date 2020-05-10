@@ -3,6 +3,12 @@ package org.qbroker.flow;
 /* ReleaseTag.java - release tag for all the packages of qbroker */
 
 /**
+ * V1.2.23 (2020/05/10): added the method of main() to ConfigTemplate for
+ * testing purpose, fixed a typo in SyntheticMonitor, changed supported
+ * firefox version from FIREFOX_38 to FIREFOX_60 in ScriptedBrowser,
+ * updated the pom.xml in net for Selenium version 3.0.1 and HtmlUnit
+ * webdriver of 2.33.2
+ *<br>
  * V1.2.22 (2020/03/14): added the method of addConnectionMemberInfo() to
  * SonicMQRequester for querying destinations on a consumer or a producer,
  * added the method of main() to ConfigList for testing purpose, updated
@@ -354,7 +360,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V1.2.22 2020/03/14 10:37:45";
+    private static String ReleaseTAG = "QBroker V1.2.23 2020/05/10 09:18:37";
 
     public ReleaseTag() {
     }

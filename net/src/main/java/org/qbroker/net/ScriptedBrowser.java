@@ -17,6 +17,13 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import com.gargoylesoftware.htmlunit.BrowserVersion;
 
+/**
+ * ScriptedBrowser uses a headless Selenium webdirver, HtmlUnit webdriver for
+ * automations of web testing. Currently, it has been tested with Selenium
+ * 3.0.1 and HtmlUnit webdriver of 2.33.2. It compiles OK with Selenium
+ * 3.141.59 and HtmlUnit webdriver of 2.33.2 plus Guava 29.0-jre. But it never
+ * exits at the end of exit. Somehow, driver.quit() is not working any more.
+ */
 public class ScriptedBrowser {
     protected String uri;
     private String username = null;
@@ -66,8 +73,8 @@ public class ScriptedBrowser {
         str = (String) props.get("BrowserVersion");
         if (str == null)
             driver = new HtmlUnitDriver();
-        else if ("fireforx_38".equalsIgnoreCase(str))
-            driver = new HtmlUnitDriver(BrowserVersion.FIREFOX_38);
+        else if ("fireforx_60".equalsIgnoreCase(str))
+            driver = new HtmlUnitDriver(BrowserVersion.FIREFOX_60);
         else if ("chrome".equalsIgnoreCase(str))
             driver = new HtmlUnitDriver(BrowserVersion.CHROME);
         else if ("internet_explorer".equalsIgnoreCase(str))

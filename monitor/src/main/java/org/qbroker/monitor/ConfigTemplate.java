@@ -833,4 +833,114 @@ public class ConfigTemplate {
     protected void finalize() {
         close();
     }
+
+    /** not tested yet */
+    public static void main(String[] args) {
+        int n, index = -1;
+        String filename = null, target = "key", key, str, data = "test";
+        ConfigTemplate cfgTemp = null;
+
+        if (args.length <= 1) {
+            printUsage();
+            System.exit(0);
+        }
+
+        for (int i=0; i<args.length; i++) {
+            if (args[i].charAt(0) != '-' || args[i].length() != 2) {
+                continue;
+            }
+            switch (args[i].charAt(1)) {
+              case '?':
+                printUsage();
+                System.exit(0);
+                break;
+              case 'I':
+                if (i+1 < args.length)
+                    filename = args[++i];
+                break;
+              case 'd':
+                if (i+1 < args.length)
+                    data = args[++i];
+                break;
+              case 'i':
+                if (i+1 < args.length)
+                    index = Integer.parseInt(args[++i]);
+                break;
+              case 't':
+                if (i+1 < args.length)
+                    target = args[++i];
+                break;
+              default:
+            }
+        }
+
+        if (filename == null)
+            printUsage();
+        else try {
+            java.io.FileReader fr = new java.io.FileReader(filename);
+            Map ph = (Map) JSON2Map.parse(fr);
+            fr.close();
+
+            cfgTemp = new ConfigTemplate(ph);
+            n = cfgTemp.getSize();
+            if (target.equals("key")) { // display all keys
+                for (int i=0; i<n; i++) {
+                    key = cfgTemp.getKey(i);
+                    System.out.println(target + ": size=" + n + " count=n/a");
+                    System.out.println(i++ + ": " + key);
+                }
+            }
+            else if (target.equals("item")) { // display all items
+                for (int i=0; i<n; i++) {
+                    str = cfgTemp.getItem(i);
+                    System.out.println(target + ": size=" + n + " count=n/a");
+                    System.out.println(i++ + ": " + str);
+                }
+            }
+            else if (target.equals("config")) {// for config properties at index
+                str = cfgTemp.getItem(index);
+                ph = cfgTemp.getProps(str);
+                System.out.println(JSON2Map.toJSON(ph, "  ", "\n"));
+            }
+            else if (target.equals("data")) { // for config properties with data
+                if (0 > 1) {
+                    List<Map> list = new ArrayList<Map>();
+                    StringReader in = new StringReader(data);
+                    ph = (Map) JSON2Map.parse(in);
+                    in.close();
+                    list.add(ph);
+                    cfgTemp.updateItems(list);
+                    str = JSON2Map.normalize(ph);
+                    ph = cfgTemp.getProps(str);
+                    System.out.println(JSON2Map.toJSON(ph, "  ", "\n"));
+                }
+                else {
+                    List<String> list = new ArrayList<String>();
+                    list.add(data);
+                    cfgTemp.updateItems(list);
+                    ph = cfgTemp.getProps(data);
+                    System.out.println(JSON2Map.toJSON(ph, "  ", "\n"));
+                }
+            }
+            else
+                System.out.println(target + " is not supported");
+            if (cfgTemp != null)
+                cfgTemp.close();
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            if (cfgTemp != null)
+                cfgTemp.close();
+        }
+    }
+
+    private static void printUsage() {
+        System.out.println("ConfigTemplate Version 1.0 (written by Yannan Lu)");
+        System.out.println("ConfigTemplate: a list of configuration properties generated from the same template");
+        System.out.println("Usage: java org.qbroker.monitor.ConfigTemplate -I cfg.json -t key [-i index -d data]");
+        System.out.println("  -?: print this usage page");
+        System.out.println("  -t: target for display on key, item, data, config (default: key)");
+        System.out.println("  -i: index of the item for displaying config (default: 0)");
+        System.out.println("  -d: data of the values for item (default: test)");
+    }
 }

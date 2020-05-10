@@ -188,7 +188,7 @@ public class SyntheticMonitor extends Monitor {
                     catch (Exception e) {
                     }
                     if (taskInfo[i][TASK_ID] == ScriptedBrowser.GET) {
-                        str = browser.get(taskData[i][TASK_ID]);
+                        str = browser.get(uri);
                     }
                     else if (taskInfo[i][TASK_ID] == ScriptedBrowser.GETTITLE) {
                         str = browser.getTitle();
