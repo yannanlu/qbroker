@@ -31,25 +31,25 @@ import org.qbroker.monitor.MonitorUtils;
 import org.qbroker.event.Event;
 
 /**
- * ConfigTemplate manages a list of similar configuration properties with a
- * property template for a specific object. The property template has at least
- * one variable. It is used to generate the property configurations for all the
- * instances with unique names in the list. Apart from the property template,
- * ConfigTemplate has also a name template to generate a list of keys as the
- * distinct names for each of the instances, as well as a list of items as the
- * values for all the variables. Moreover, a name substitution is optional to
- * further normalize the value for the names. Both the name template and the
- * list of items are updatable and resetable on demand. ConfigTemplate supports
- * updates on the property template also.
+ * ConfigTemplate represents a list of similar configuration properties sharing
+ * with the same property template. The property template has at least one
+ * variable. The template is used to generate the property configurations for
+ * all the instances with distinct names from a given list of value sets. Apart
+ * from the property template, ConfigTemplate has also a name template to
+ * generate a list of keys as the distinct names for each of the instances,
+ * as well as the list of items as the value sets for all the variables.
+ * Moreover, a name substitution is optional to further normalize the names.
+ * Both the name template and the list of items are updatable and resetable
+ * on demand. ConfigTemplate also supports updates on the property template.
  *<br><br>
- * ConfigTemplate also supports dynamic creations of the item list. In this
- * case, Item has to be a Map specifying a MonitorReport to query or update the
+ * ConfigTemplate also supports dynamic updates of the item list. In this case,
+ * Item has to be a Map object specifying a MonitorReport to query or update the
  * list of items dynamically. The instance of the MonitorReport will be used
  * to generate the report frequently from which the list of items will be
  * updated automatically. The method of isDynamic() is used to check if the
  * instance of ConfigTemplate supporting dynamic item list or not. If the
- * managed object is of Monitor, it also supports the private report for each
- * dynamically generated monitor.
+ * managed object is the type of Monitor, it also supports the private report
+ * for each dynamically generated monitor.
  *<br><br>
  * ConfigTemplate supports overriding on the configuration properties if a list
  * of property maps defined as Override. In each of the property map, it must
@@ -58,7 +58,7 @@ import org.qbroker.event.Event;
  * its property map will be merged into the configuration properties as the
  * override.
  *<br><br>
- * In case of dynamic generated monitors, ConfigTemplate supports both private
+ * In case of dynamicly generated monitors, ConfigTemplate supports both private
  * report and/or shared report. A private report is the report dedicated to
  * each generated monitor. The reporter makes the private reports available
  * for each of the monitor. The container will pass the report to the job
@@ -836,8 +836,8 @@ public class ConfigTemplate {
 
     /** not tested yet */
     public static void main(String[] args) {
-        int n, index = -1;
-        String filename = null, target = "key", key, str, data = "test";
+        int n, index = 0, count = 1;
+        String filename = null, target = "key", str, data = "test";
         ConfigTemplate cfgTemp = null;
 
         if (args.length <= 1) {
@@ -884,26 +884,26 @@ public class ConfigTemplate {
             cfgTemp = new ConfigTemplate(ph);
             n = cfgTemp.getSize();
             if (target.equals("key")) { // display all keys
+                System.out.println(target + ": size=" + n + " count=" + count);
                 for (int i=0; i<n; i++) {
-                    key = cfgTemp.getKey(i);
-                    System.out.println(target + ": size=" + n + " count=n/a");
-                    System.out.println(i++ + ": " + key);
+                    System.out.println(i + ": " + cfgTemp.getKey(i));
                 }
             }
             else if (target.equals("item")) { // display all items
+                System.out.println(target + ": size=" + n + " count=" + count);
                 for (int i=0; i<n; i++) {
-                    str = cfgTemp.getItem(i);
-                    System.out.println(target + ": size=" + n + " count=n/a");
-                    System.out.println(i++ + ": " + str);
+                    System.out.println(i + ": " + cfgTemp.getItem(i));
                 }
             }
             else if (target.equals("config")) {// for config properties at index
+                if (index >= n || index < 0)
+                    index = 0;
                 str = cfgTemp.getItem(index);
                 ph = cfgTemp.getProps(str);
-                System.out.println(JSON2Map.toJSON(ph, "  ", "\n"));
+                System.out.println(JSON2Map.toJSON(ph));
             }
             else if (target.equals("data")) { // for config properties with data
-                if (0 > 1) {
+                if (count > 1) {
                     List<Map> list = new ArrayList<Map>();
                     StringReader in = new StringReader(data);
                     ph = (Map) JSON2Map.parse(in);
@@ -912,14 +912,14 @@ public class ConfigTemplate {
                     cfgTemp.updateItems(list);
                     str = JSON2Map.normalize(ph);
                     ph = cfgTemp.getProps(str);
-                    System.out.println(JSON2Map.toJSON(ph, "  ", "\n"));
+                    System.out.println(JSON2Map.toJSON(ph));
                 }
                 else {
                     List<String> list = new ArrayList<String>();
                     list.add(data);
                     cfgTemp.updateItems(list);
                     ph = cfgTemp.getProps(data);
-                    System.out.println(JSON2Map.toJSON(ph, "  ", "\n"));
+                    System.out.println(JSON2Map.toJSON(ph));
                 }
             }
             else
@@ -941,6 +941,6 @@ public class ConfigTemplate {
         System.out.println("  -?: print this usage page");
         System.out.println("  -t: target for display on key, item, data, config (default: key)");
         System.out.println("  -i: index of the item for displaying config (default: 0)");
-        System.out.println("  -d: data of the values for item (default: test)");
+        System.out.println("  -d: data of the value set for item (default: test)");
     }
 }
