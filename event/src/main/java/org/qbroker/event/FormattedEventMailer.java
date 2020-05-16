@@ -197,9 +197,7 @@ public class FormattedEventMailer implements EventAction {
     }
 
     private String send(Event event, Map map) throws MessagingException {
-        int i, n;
-        String key, value, subject, text;
-        String[] allFields;
+        String value, subject, text;
         Template template = null;
         TextSubstitution[] msgSub = null;
         HashMap attr;
@@ -217,11 +215,8 @@ public class FormattedEventMailer implements EventAction {
 
         attr = event.attribute;
         template = (Template) map.get("Subject");
-        allFields = template.getAllFields();
         subject = template.copyText();
-        n = allFields.length;
-        for (i=0; i<n; i++) { // for subject
-            key = allFields[i];
+        for (String key : template.keySet()) { // for subject
             if (attr.containsKey(key)) {
                 if (change == null)
                     value = (String) attr.get(key);
@@ -239,11 +234,8 @@ public class FormattedEventMailer implements EventAction {
         }
 
         template = (Template) map.get("Template");
-        allFields = template.getAllFields();
         text = template.copyText();
-        n = allFields.length;
-        for (i=0; i<n; i++) {
-            key = allFields[i];
+        for (String key : template.keySet()) { // for body
             if (attr.containsKey(key)) {
                 if (change == null)
                     value = (String) attr.get(key);

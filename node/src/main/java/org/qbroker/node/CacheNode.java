@@ -980,7 +980,7 @@ public class CacheNode extends Node {
                         }
                         else if (!templateCache.containsKey(key)) { //first time
                             template = new Template(key, "%%[^%]+%%");
-                            if (template.numberOfFields() > 0) {
+                            if (template.size() > 0) {
                                 templateCache.insert(key, currentTime,
                                     sessionTimeout, null, template);
                                 key = MessageUtils.format(inMessage, buffer,
@@ -989,7 +989,7 @@ public class CacheNode extends Node {
                         }
                         else if (templateCache.isExpired(key, currentTime)) {
                             template = new Template(key, "%%[^%]+%%");
-                            if (template.numberOfFields() > 0) {
+                            if (template.size() > 0) {
                                 templateCache.insert(key, currentTime,
                                     sessionTimeout, null, template);
                                 key = MessageUtils.format(inMessage, buffer,
@@ -999,7 +999,7 @@ public class CacheNode extends Node {
                         else {
                             templateCache.expire(key, currentTime);
                             template = new Template(key, "%%[^%]+%%");
-                            if (temp.numberOfFields() > 0) {
+                            if (temp.size() > 0) {
                                 templateCache.insert(key, currentTime,
                                     sessionTimeout, null, template);
                                 key = MessageUtils.format(inMessage, buffer,

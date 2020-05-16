@@ -109,7 +109,8 @@ public class MessageUtils {
     public final static String OS_VERSION = System.getProperty("os.version");
     public final static String USER_NAME = System.getProperty("user.name");
     private final static String hostname = Event.getHostName().toLowerCase();
-    private final static Map defaultMap = new HashMap();
+    private final static Map<String, String> defaultMap =
+        new HashMap<String, String>();
     private final static Template defaultTemplate =
         new Template("${hostname}, ${HOSTNAME}, ${owner}, ${pid}",
         "\\$\\{[^\\$\\{\\}]+\\}");
@@ -125,30 +126,28 @@ public class MessageUtils {
         defaultMap.put("pid", String.valueOf(Event.getPID()));
     }
 
-    public static String substitute(String input, Template template) {
-        return substitute(input, template, null);
+    public static String substitute(String input) {
+        return Utils.substitute(input, defaultTemplate, defaultMap);
     }
 
-    public static String substitute(String input, Template template, Map map) {
-        if (input == null)
-            return input;
-
+    public static String substitute(String input, Template template) {
         if (template == null)
             template = defaultTemplate;
-
-        if (map != null)
-            return template.substitute(input, map);
-        else
-            return template.substitute(input, defaultMap);
+        return Utils.substitute(input, template, defaultMap);
     }
 
-    /** substitutes GlobalProperties with ${xxx} as the place holder */
-    public static String substitute(String input) {
-        Map report = null;
-        MonitorReport reporter = null;
+    public static String substitute(String input, Template template,
+        Map<String, String> data) {
+        if (template == null)
+            template = defaultTemplate;
+        if (data == null)
+            data = defaultMap;
+        return Utils.substitute(input, template, data);
+    }
 
-        if (input == null || input.indexOf("${") < 0)
-            return input;
+    /** returns the cached reporter or set it up before returning it */
+    private static MonitorReport getCachedReporter() {
+        MonitorReport reporter = null;
 
         if (defaultReporter == null) { // init the default reporter
             Map<String, Object> ph = new HashMap<String, Object>();
@@ -164,70 +163,67 @@ public class MessageUtils {
         else // use the cached one
             reporter = defaultReporter;
 
+        return reporter;
+    }
+
+    /** returns report for GlobalProperties with ${xxx} as the place holder */
+    private static Map getGlobalReport() {
+        Map report = null;
+        MonitorReport reporter = getCachedReporter(); 
+
         if (reporter == null)
             return null;
         else try {
             report = reporter.generateReport(System.currentTimeMillis());
         }
         catch (Exception e) { // no report found so take the default
-            return substitute(input, defaultTemplate, defaultMap);
+            return null;
         }
 
         if (report == null || report.size() <= 0) // empty report
             return null;
         else synchronized (reporter) { // got the report
-            Template template = null;
             String tempStr = (String) report.get("Template");
-            if (tempStr == null || tempStr.indexOf("${") < 0)
-                template = defaultTemplate;
-            else if (rptTemplate == null) {
-                template = new Template(tempStr, "\\$\\{[^\\$\\{\\}]+\\}");
-                rptTemplate = template;
-            }
-            else if (tempStr.equals(rptTemplate.copyText())) // no change
-                template = rptTemplate;
-            else { // overwrite it
-                template = new Template(tempStr, "\\$\\{[^\\$\\{\\}]+\\}");
-                rptTemplate = template;
-            }
-            return substitute(input, template, report);
+            if (tempStr == null || tempStr.indexOf("${") < 0) //not well defined
+                report.remove("Template");
+            else if (rptTemplate == null) // set rptTemplate
+                rptTemplate = new Template(tempStr, "\\$\\{[^\\$\\{\\}]+\\}");
+            else if (!tempStr.equals(rptTemplate.copyText())) //recreate rptTemp
+                rptTemplate = new Template(tempStr, "\\$\\{[^\\$\\{\\}]+\\}");
+
+            return report;
         }
     }
 
     /** It returns a Map with fully cloned and substituted properties */
     public static Map<String, Object> substituteProperties(Map props) {
-        Object o;
+        Map report;
         Map<String, Object> ph;
-        String key, str;
 
         if (props == null)
             return null;
 
-        ph = new HashMap<String, Object>();
-        for (Iterator iter = props.keySet().iterator(); iter.hasNext();) {
-            o = iter.next();
-            if (o == null || !(o instanceof String))
-                continue;
-            key = (String) o;
-            o = props.get(key);
-            if (o == null)
-                ph.put(key, o);
-            else if (o instanceof Map)
-                ph.put(key, substituteProperties((Map) o));
-            else if (o instanceof List)
-                ph.put(key, substituteProperties((List) o));
-            else if (o instanceof String) {
-                str = (String) o;
-                if (str.indexOf("${") >= 0)
-                    str = substitute(str);
-                ph.put(key, str);
+        if ((report = getGlobalReport()) == null)
+            ph = Utils.substituteProperties(props, defaultTemplate, defaultMap);
+        else if (!report.containsKey("Template")) { // use defaultTemplate
+            Map<String, String> data = new HashMap<String, String>();
+            for (String key : defaultTemplate.keySet()) {
+                if (report.containsKey(key))
+                    data.put(key, (String) report.get(key));
             }
-            else {
-                str = o.toString();
-                if (str.indexOf("${") >= 0)
-                    str = substitute(str);
-                ph.put(key, o.toString());
+            ph = Utils.substituteProperties(props, defaultTemplate, data);
+            data.clear();
+            report.clear();
+        }
+        else { // rptTemplate is initialized already
+            Map<String, String> data = new HashMap<String, String>();
+            for (String key : rptTemplate.keySet()) {
+                if (report.containsKey(key))
+                    data.put(key, (String) report.get(key));
             }
+            ph = Utils.substituteProperties(props, rptTemplate, data);
+            data.clear();
+            report.clear();
         }
 
         return ph;
@@ -235,36 +231,33 @@ public class MessageUtils {
 
     /** It returns a List with fully cloned and substituted properties */
     public static List<Object> substituteProperties(List props) {
-        Object o;
+        Map report;
         List<Object> list;
-        String str;
-        int i, n;
 
         if (props == null)
             return null;
 
-        list = new ArrayList<Object>();
-        n = props.size();
-        for (i=0; i<n; i++) {
-            o = props.get(i);
-            if (o == null)
-                list.add(o);
-            else if (o instanceof Map)
-                list.add(substituteProperties((Map) o));
-            else if (o instanceof List)
-                list.add(substituteProperties((List) o));
-            else if (o instanceof String) {
-                str = (String) o;
-                if (str.indexOf("${") >= 0)
-                    str = substitute(str);
-                list.add(str);
+        if ((report = getGlobalReport()) == null)
+            list=Utils.substituteProperties(props, defaultTemplate, defaultMap);
+        else if (!report.containsKey("Template")) { // use defaultTemplate
+            Map<String, String> data = new HashMap<String, String>();
+            for (String key : defaultTemplate.keySet()) {
+                if (report.containsKey(key))
+                    data.put(key, (String) report.get(key));
             }
-            else {
-                str = o.toString();
-                if (str.indexOf("${") >= 0)
-                    str = substitute(str);
-                list.add(str);
+            list = Utils.substituteProperties(props, defaultTemplate, data);
+            data.clear();
+            report.clear();
+        }
+        else { // rptTemplate is initialized already
+            Map<String, String> data = new HashMap<String, String>();
+            for (String key : rptTemplate.keySet()) {
+                if (report.containsKey(key))
+                    data.put(key, (String) report.get(key));
             }
+            list = Utils.substituteProperties(props, rptTemplate, data);
+            data.clear();
+            report.clear();
         }
 
         return list;
@@ -721,8 +714,7 @@ public class MessageUtils {
      */
     public static String format(Message msg, byte[] buffer,
         Template template) throws JMSException {
-        String key, value, field, text, body = "";
-        int i, n;
+        String key, value, text, body = "";
         if (template == null)
             return processBody(msg, buffer);
 
@@ -730,9 +722,7 @@ public class MessageUtils {
             body = processBody(msg, buffer);
 
         text = template.copyText();
-        n = template.numberOfFields();
-        for (i=0; i<n; i++) {
-            field = template.getField(i);
+        for (String field : template.keySet()) {
             if ((key = getPropertyID(field)) != null)
                 value = getProperty(key, msg);
             else if (msg.propertyExists(field))
@@ -755,8 +745,7 @@ public class MessageUtils {
      */
     public static String format(MapMessage msg, String mapKey,
         Template template) throws JMSException {
-        String key, value, field, text, body = "";
-        int i, n;
+        String key, value, text, body = "";
         if (template == null) {
             if (mapKey == null || mapKey.length() <= 0)
                 return "";
@@ -770,9 +759,7 @@ public class MessageUtils {
         }
 
         text = template.copyText();
-        n = template.numberOfFields();
-        for (i=0; i<n; i++) {
-            field = template.getField(i);
+        for (String field : template.keySet()) {
             if ((key = getPropertyID(field)) != null)
                 value = getProperty(key, msg);
             else if (msg.propertyExists(field))
@@ -794,10 +781,9 @@ public class MessageUtils {
      */
     public static String format(Message msg, byte[] buffer,
         Template template, Map subMap) throws JMSException {
-        String key, value, field, text, body = "";
+        String key, value, text, body = "";
         TextSubstitution[] sub;
         Object o;
-        int i, n;
         if (subMap == null || subMap.size() <= 0)
             return format(msg, buffer, template);
 
@@ -808,9 +794,7 @@ public class MessageUtils {
             body = processBody(msg, buffer);
 
         text = template.copyText();
-        n = template.numberOfFields();
-        for (i=0; i<n; i++) {
-            field = template.getField(i);
+        for (String field : template.keySet()) {
             if ((key = getPropertyID(field)) != null)
                 value = getProperty(key, msg);
             else if (msg.propertyExists(field))
@@ -846,8 +830,7 @@ public class MessageUtils {
      */
     public static String format(Message msg, byte[] buffer, Template template,
         Template repeat, Map exclude) throws JMSException {
-        String key, value, field, text, body = "";
-        int i, n;
+        String key, value, text, body = "";
         if (template == null && repeat == null)
             return processBody(msg, buffer);
 
@@ -855,9 +838,7 @@ public class MessageUtils {
             body = processBody(msg, buffer);
 
         text = template.copyText();
-        n = template.numberOfFields();
-        for (i=0; i<n; i++) {
-            field = template.getField(i);
+        for (String field : template.keySet()) {
             if ((key = getPropertyID(field)) != null)
                 value = getProperty(key, msg);
             else if (msg.propertyExists(field))
@@ -889,6 +870,7 @@ public class MessageUtils {
             StringBuffer strBuf = new StringBuffer();
             Enumeration enu = msg.getPropertyNames();
             boolean hasKey, hasValue;
+            String field;
 
             hasKey =  (repeat.containsField("key")) ? true : false;
             hasValue =  (repeat.containsField("value")) ? true : false;

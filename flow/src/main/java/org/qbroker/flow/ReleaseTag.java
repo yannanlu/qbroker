@@ -3,6 +3,34 @@ package org.qbroker.flow;
 /* ReleaseTag.java - release tag for all the packages of qbroker */
 
 /**
+ * V1.2.24 (2020/05/16): added new methods of checkLoggerName(), substitute()
+ * and substituteProperties() to Utils, added a line calling checkLoggerName()
+ * to main() of QClient and SyntheticMonitor for decryptions, added WithSecret
+ * to SyntheticMonitor to support decryptions on its config, added support of
+ * multiple key-value pairs in command line to main() of SyntheticMonitor
+ * via the in-line template in the config file, updated MessageUtils to
+ * call Utils.substituteProperties(), added EncryptedPassword and
+ * EncryptedCredentials to QClient to overwrite their values if they are
+ * defined in the json config file, replaced the method of keyIterator(int)
+ * with keySet(int) on GroupedCache, updated TextSubstitution to replace
+ * iterator() with keySet(), replaced the method of iterator() with keySet()
+ * on JSONTemplate
+ *<br>
+ * removed the method of getAllFields() from Template, replaced its method
+ * of numberOfFields() with size(), replaced its method of iterator() with
+ * keySet(), changed the data type of the 2nd argument from Map to
+ * Map<String, String> on its method of substitute(String, Map), added a new
+ * method of substitute(Map, String) to Template to support none-string maps,
+ * updated SQLUtils, EventUtils, EventAppender, EventPoster, EventTrapSender,
+ * EventSummary, EventSelector, EventSQLExecutor, EventScriptLauncher,
+ * EventSyslogger, FormattedEventMailer, JDBCLoginModule, MessageUtils,
+ * Aggregation, JMSHealthChecker, JSONFormatter, Msg2Text, JSON2Map, JSONFilter,
+ * JSONTemplate, MonitorUtils, ConfigTemplate, WebOperator, ReportQuery,
+ * ServiceMonitor, GenericList, WinlogMonitor, CacheNode, CascadeNode,
+ * DeliverNode, JSONTNode, JSONPathNode, MapReduceNode, PickupNode, ScriptNode,
+ * SelectNode, ServiceNode, SpreadNode, XPathNode, XSLTNode, HeartbeatGenerator,
+ * MessageEvaluator and GenericRequester for the change on Template
+ *<br>
  * V1.2.23 (2020/05/10): added the method of main() to ConfigTemplate for
  * testing purpose, fixed a typo in SyntheticMonitor, changed supported
  * firefox version from FIREFOX_38 to FIREFOX_60 in ScriptedBrowser,
@@ -360,7 +388,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V1.2.23 2020/05/10 09:18:37";
+    private static String ReleaseTAG = "QBroker V1.2.24 2020/05/16 08:13:47";
 
     public ReleaseTag() {
     }

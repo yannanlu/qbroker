@@ -432,7 +432,7 @@ public class MapReduceNode extends Node {
                         key = (String) map.get("LinkTemplate");
                         if (key != null && key.length() > 0) { // for link
                             ltmp[i] = new Template(key);
-                            if (ltmp[i].numberOfFields() <= 0)
+                            if (ltmp[i].size() <= 0)
                                 ltmp[i] = null;
                             else { // dynamic link
                                 if ((o = map.get("LinkSubstitution")) != null &&

@@ -3,6 +3,7 @@ package org.qbroker.monitor;
 /* WinlogMonitor.java - a log monitor watching Windows Eventlog */
 
 import java.util.Map;
+import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Arrays;
@@ -256,10 +257,11 @@ public class WinlogMonitor extends Monitor implements Comparator<int[]> {
             close();
 
         script = cmdTemplate.copyText();
-        if (cmdTemplate.numberOfFields() > 0) {
-            update(position, timestamp, report);
-            script = cmdTemplate.substitute(script, report);
-            report.clear();
+        if (cmdTemplate.size() > 0) {
+            Map<String, String> data = new HashMap<String, String>();
+            update(position, timestamp, data);
+            script = cmdTemplate.substitute(script, data);
+            data.clear();
         }
 
         cmdArray = RunCommand.parseCmd(script);
@@ -581,7 +583,7 @@ public class WinlogMonitor extends Monitor implements Comparator<int[]> {
         return event;
     }
 
-    private void update(long n, long t, Map<String, Object> map) {
+    private void update(long n, long t, Map<String, String> map) {
         int i;
         String str;
         Calendar cal = Calendar.getInstance();

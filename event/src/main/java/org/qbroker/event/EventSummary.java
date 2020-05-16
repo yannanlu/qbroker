@@ -194,7 +194,8 @@ public class EventSummary implements EventMerger {
         if (eventGroup == null || (n = eventGroup.length) == 0)
             return null;
 
-        fields = summaryTemplate.getAllFields();
+        i = summaryTemplate.size();
+        fields = summaryTemplate.keySet().toArray(new String[i]);
         if (summaryHeader != null)
             strBuf.append(summaryHeader);
         if (subMap == null || subMap.size() <= 0) {

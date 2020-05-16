@@ -1875,17 +1875,14 @@ public class JSON2Map {
 
     /** returns the formatted JSON text for the given template or null */
     public static String format(Map ph, Template temp) {
-        String key, value, text;
-        String[] textFields;
+        String value, text;
         Object o;
 
         if (ph == null || temp == null)
             return null;
 
         text = temp.copyText();
-        textFields = temp.getAllFields();
-        for (int i=0; i<textFields.length; i++) {
-            key = textFields[i];
+        for (String key : temp.keySet()) {
             o = get(ph, key); 
             if (o == null)
                 value = "";
@@ -1905,17 +1902,14 @@ public class JSON2Map {
 
     /** returns the formatted JSON text for the given template or null */
     public static String format(List pl, Template temp) {
-        String key, value, text;
-        String[] textFields;
+        String value, text;
         Object o;
 
         if (pl == null || temp == null)
             return null;
 
         text = temp.copyText();
-        textFields = temp.getAllFields();
-        for (int i=0; i<textFields.length; i++) {
-            key = textFields[i];
+        for (String key : temp.keySet()) {
             o = get(pl, key); 
             if (o == null)
                 value = "";
@@ -1938,12 +1932,12 @@ public class JSON2Map {
         Number r = null;
         if (expr == null || list == null)
             return -1;
-        int n = list.size();
+        int k, n = list.size();
         if (expr.indexOf("#{") >= 0) {
             Template template = new Template(expr, "#\\{[^#\\{\\}]+\\}");
-            if (template.numberOfFields() > 0) { // template
+            if ((k = template.size()) > 0) { // template
                 Object obj;
-                String[] keys = template.getAllFields();
+                String[] keys = template.keySet().toArray(new String[k]);
                 for (int i=0; i<n; i++) {
                     obj = list.get(i);
                     if (obj instanceof Map) {

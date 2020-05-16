@@ -11,7 +11,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Iterator;
 import java.text.SimpleDateFormat;
 import java.text.ParsePosition;
 import java.sql.PreparedStatement;
@@ -120,10 +119,9 @@ public class SQLUtils {
             }
             map.put("Sequence", list);
             map.put("Type", type);
-            list = temp.getAllFields();
             str = new String(sqlText);
-            for (i=0; i<list.length; i++)
-                str = temp.substitute(list[i], "?", str);
+            for (String field : temp.keySet())
+                str = temp.substitute(field, "?", str);
         }
         else {
             str = sqlText;

@@ -408,7 +408,7 @@ public class JSONFormatter {
 
         if (template[id] == null)
             return -1;
-        else if (template[id].numberOfFields() <= 0) // static value
+        else if (template[id].size() <= 0) // static value
             value = template[id].copyText(); 
         else if (isList)
             value = format((List) obj, msg, template[id]);
@@ -1142,7 +1142,7 @@ public class JSONFormatter {
 
         if (template[id] == null)
             return -1;
-        else if (template[id].numberOfFields() <= 0) // static value
+        else if (template[id].size() <= 0) // static value
             value = template[id].copyText(); 
         else if (isList)
             value = format((List) obj, msg, template[id]);
@@ -1668,17 +1668,14 @@ public class JSONFormatter {
     public static String format(Map obj, Message msg, Template template)
         throws JMSException {
         Object o;
-        String key, value, field, text;
-        int i, n;
+        String key, value, text;
 
         if (template == null)
             return null;
 
         text = template.copyText();
-        n = template.numberOfFields();
-        for (i=0; i<n; i++) {
-            field = template.getField(i);
-            if (field == null || field.length() <= 0)
+        for (String field : template.keySet()) {
+            if (field.length() <= 0)
                 continue;
             if (field.charAt(0) == '.') { // json path
                 o = JSON2FmModel.get(obj, field);
@@ -1713,17 +1710,14 @@ public class JSONFormatter {
     public static String format(List obj, Message msg, Template template)
         throws JMSException {
         Object o;
-        String key, value, field, text;
-        int i, n;
+        String key, value, text;
 
         if (template == null)
             return null;
 
         text = template.copyText();
-        n = template.numberOfFields();
-        for (i=0; i<n; i++) {
-            field = template.getField(i);
-            if (field == null || field.length() <= 0)
+        for (String field : template.keySet()) {
+            if (field.length() <= 0)
                 continue;
             if (field.charAt(0) == '.') { // json path
                 o = JSON2FmModel.get(obj, field);
@@ -1757,17 +1751,14 @@ public class JSONFormatter {
      */
     public static String format(String obj, Message msg, Template template)
         throws JMSException {
-        String key, value, field, text;
-        int i, n;
+        String key, value, text;
 
         if (template == null)
             return null;
 
         text = template.copyText();
-        n = template.numberOfFields();
-        for (i=0; i<n; i++) {
-            field = template.getField(i);
-            if (field == null || field.length() <= 0)
+        for (String field : template.keySet()) {
+            if (field.length() <= 0)
                 continue;
             if (field.charAt(0) == '.') { // json path
                 if (".".equals(field))

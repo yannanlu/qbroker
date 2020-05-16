@@ -494,7 +494,7 @@ public class ServiceNode extends Node {
         // default properties
         if ((o = ph.get("DefaultProperty")) != null && o instanceof Map) {
             Template temp = new Template(JSON2Map.toJSON((Map) o));
-            if (temp.numberOfFields() <= 0) // not a template
+            if (temp.size() <= 0) // not a template
                 rule.put("DefaultProperty", Utils.cloneProperties((Map) o));
             else
                 rule.put("DefaultProperty", temp);

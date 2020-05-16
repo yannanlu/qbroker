@@ -6,7 +6,7 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.Set;
 import java.io.Reader;
 import java.io.StringReader;
 import java.io.FileReader;
@@ -57,8 +57,6 @@ public class JSONTemplate extends AssetList {
         JSONSection sect;
         TextSubstitution sub;
         List list;
-        Iterator iter;
-        String key;
         int i, n;
 
         if (props == null || props.size() <= 0)
@@ -89,7 +87,7 @@ public class JSONTemplate extends AssetList {
            throw(new IllegalArgumentException("template is not defined for " +
                name));
 
-        if (temp.numberOfFields() <= 0)
+        if (temp.size() <= 0)
         throw(new IllegalArgumentException("template has no field defined for "+
                name));
 
@@ -120,9 +118,7 @@ public class JSONTemplate extends AssetList {
             add(sect.getName(), new long[]{i}, sect);
         }
 
-        iter = temp.iterator();
-        while (iter.hasNext()) { // check if any section is missing
-            key = (String) iter.next();
+        for (String key : temp.keySet()) { // check if any section is missing
             if (!key.startsWith("s:"))
                 continue;
             key = key.substring(2);
@@ -157,8 +153,8 @@ public class JSONTemplate extends AssetList {
         params.clear();
     }
 
-    public Iterator iterator() {
-        return temp.iterator();
+    public Set<String> keySet() {
+        return temp.keySet();
     }
 
     public String copyText() {
@@ -192,7 +188,7 @@ public class JSONTemplate extends AssetList {
                 params.put("v:" + key, o);
         }
         text = temp.copyText();
-        for (String key : temp.getAllFields()) {
+        for (String key : temp.keySet()) {
             if (key.startsWith("p:")) { // for a parameter
                 o = params.get(key.substring(2));
                 if (o == null)
@@ -302,7 +298,7 @@ public class JSONTemplate extends AssetList {
                 params.put(key, o);
         }
         text = temp.copyText();
-        for (String key : temp.getAllFields()) {
+        for (String key : temp.keySet()) {
             if (key.startsWith("p:")) { // for a parameter
                 o = params.get(key.substring(2));
                 if (o == null)

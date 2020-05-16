@@ -302,7 +302,7 @@ public class XPathNode extends Node {
                     continue;
                 str = (String) ((Map) o).get(key);
                 temp = new Template(str);
-                if (temp == null || temp.numberOfFields() <= 0) {
+                if (temp == null || temp.size() <= 0) {
                     xpe = xpath.compile(str);
                     expr.put(key, xpe);
                 }

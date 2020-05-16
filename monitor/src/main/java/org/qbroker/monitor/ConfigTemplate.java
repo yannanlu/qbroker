@@ -109,8 +109,8 @@ public class ConfigTemplate {
             throw(new IllegalArgumentException("Name template is not defined" +
                 " for " + name));
         template = new Template((String) o);
-        if (template.numberOfFields() > 0)
-            key = template.getAllFields()[0];
+        if (template.size() > 0)
+            key = template.getField(0);
         else
             throw(new IllegalArgumentException("Name template is empty for " +
                 name));
@@ -264,7 +264,7 @@ public class ConfigTemplate {
             return false;
 
         Template temp = new Template(text);
-        if (temp.numberOfFields() > 0) {
+        if (temp.size() > 0) {
             Map ph = null;
             try {
                 StringReader in = new StringReader(content);
@@ -276,7 +276,7 @@ public class ConfigTemplate {
             if (ph != null && ph.size() > 0) {
                 String str = temp.copyText();
                 ph.put("Name", str);
-                key = temp.getAllFields()[0];
+                key = temp.getField(0);
                 content = JSON2Map.toJSON(ph);
                 ph.clear();
                 keyMap.clear();

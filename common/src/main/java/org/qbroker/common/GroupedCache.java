@@ -4,7 +4,6 @@ package org.qbroker.common;
 
 import java.util.Map;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Set;
 import org.qbroker.common.AssetList;
 import org.qbroker.common.Browser;
@@ -131,11 +130,11 @@ public class GroupedCache {
     public int expireGroup(int id, long currentTime) {
         int n = -1;
         String key;
-        Iterator iter = keyIterator(id);
-        if (iter != null) {
+        Set keyset = keySet(id);
+        if (keyset != null) {
             n = 0;
-            while (iter.hasNext()) {
-                key = (String) iter.next();
+            for (Object obj : keyset) {
+                key = (String) obj;
                 cache.expire(key, currentTime);
                 n ++;
             }
@@ -150,11 +149,11 @@ public class GroupedCache {
     public int invalidateGroup(int id, long currentTime) {
         int n = -1;
         String key;
-        Iterator iter = keyIterator(id);
-        if (iter != null) {
+        Set keyset = keySet(id);
+        if (keyset != null) {
             n = 0;
-            while (iter.hasNext()) {
-                key = (String) iter.next();
+            for (Object obj : keyset) {
+                key = (String) obj;
                 cache.invalidate(key, currentTime);
                 n ++;
             }
@@ -258,13 +257,13 @@ public class GroupedCache {
     }
 
     /**
-     * returns an Iterator for all existing keys in the group with id or
+     * returns a Set for all existing keys in the group with id or
      * null if the group id does not exist.
      */
-    public Iterator keyIterator(int id) {
+    public Set keySet(int id) {
         Object o = list.get(id);
         if (o != null)
-            return ((Map) o).keySet().iterator();
+            return ((Map) o).keySet();
         else
             return null;
     }

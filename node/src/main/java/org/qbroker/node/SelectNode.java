@@ -409,7 +409,7 @@ public class SelectNode extends Node {
                     pm = new Perl5Matcher();
                 }
                 temp = new Template((String) o);
-                if (temp != null && temp.numberOfFields() > 0){//dynamic pattern
+                if (temp != null && temp.size() > 0){//dynamic pattern
                     rule.put("Pattern", temp);
                     ruleInfo[RULE_EXTRA] = -1;
                 }
@@ -467,7 +467,7 @@ public class SelectNode extends Node {
                     xpath = XPathFactory.newInstance().newXPath();
                 }
                 temp = new Template((String) o);
-                if (temp != null && temp.numberOfFields() > 0) { //dynamic xpath
+                if (temp != null && temp.size() > 0) { //dynamic xpath
                     rule.put("XPath", temp);
                     ruleInfo[RULE_EXTRA] = -1;
                 }

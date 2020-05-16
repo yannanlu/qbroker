@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Iterator;
 import java.text.SimpleDateFormat;
 import java.text.ParsePosition;
 import java.io.IOException;
@@ -914,7 +913,6 @@ public class TextSubstitution {
     public static Map<String, TextSubstitution[]> getSubstitutionMap(Map map) {
         Map<String, TextSubstitution[]> subMap;
         List list;
-        Iterator iter;
         String key;
         TextSubstitution[] sub;
         Object o;
@@ -922,9 +920,9 @@ public class TextSubstitution {
         subMap = new HashMap<String, TextSubstitution[]>();
         if (map == null || map.size() <= 0)
             return subMap;
-        for (iter=map.keySet().iterator(); iter.hasNext();) {
-            key = (String) iter.next();
-            if (key == null || key.length() <= 0)
+        for (Object obj : map.keySet()) {
+            key = (String) obj;
+            if (key.length() <= 0)
                 continue;
             o = map.get(key);
             if (o == null || !(o instanceof ArrayList))

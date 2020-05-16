@@ -106,11 +106,10 @@ public class EventSQLExecutor implements EventAction {
             sql = EventUtils.substitute((String) o, template);
             map = new HashMap();
             temp = new Template(sql);
-            if (temp.numberOfFields() <= 0)
+            if (temp.size() <= 0)
                 map.put("Template", sql);
             else { // with variables
                 map.put("Template", temp);
-                map.put("Fields", temp.getAllFields());
                 o = props.get("Substitution");
                 if (o != null && o instanceof List) {
                     msgSub = EventUtils.initSubstitutions((List) o);
@@ -146,11 +145,10 @@ public class EventSQLExecutor implements EventAction {
             sql = EventUtils.substitute(value, template);
             map = new HashMap();
             temp = new Template(sql);
-            if (temp.numberOfFields() <= 0)
+            if (temp.size() <= 0)
                 map.put("Template", sql);
             else { // with variables
                 map.put("Template", temp);
-                map.put("Fields", temp.getAllFields());
                 o = ((Map) o).get("Substitution");
                 if (o != null && o instanceof List) // override
                    map.put("MsgSub", EventUtils.initSubstitutions((List) o));
@@ -200,7 +198,7 @@ public class EventSQLExecutor implements EventAction {
         Object o;
         HashMap attr;
         Map map;
-        String key, value, priorityName, eventKey, sql = null, str = null;
+        String value, priorityName, eventKey, sql = null, str = null;
         StringBuffer strBuf;
         int i, n;
 
@@ -231,7 +229,6 @@ public class EventSQLExecutor implements EventAction {
             return;
 
         if ((o = map.get("Template")) != null && o instanceof Template) {
-            String[] allFields;
             Map change = null;
             Template template;
             TextSubstitution[] msgSub;
@@ -244,11 +241,8 @@ public class EventSQLExecutor implements EventAction {
                     change = null;
             }
 
-            allFields = (String[]) map.get("Fields");
             sql = template.copyText();
-            n = allFields.length;
-            for (i=0; i<n; i++) {
-                key = allFields[i];
+            for (String key : template.keySet()) {
                 if (attr.containsKey(key)) {
                     if (change == null)
                         value = (String) attr.get(key);

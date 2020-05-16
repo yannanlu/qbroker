@@ -79,13 +79,15 @@ public class Msg2Text {
         }
 
         if (template != null) {
-            keys = template.getAllFields();
-            names = new String[keys.length];
-            for (int i=0; i<keys.length; i++) { // init property ids
-                names[i] = keys[i];
-                keys[i] = MessageUtils.getPropertyID(keys[i]);
+            int i = template.size();
+            keys = new String[i];
+            names = new String[i];
+            i = 0;
+            for (String key : template.keySet()) { // init property ids
+                keys[i] = MessageUtils.getPropertyID(key);
                 if (keys[i] == null)
-                    keys[i] = names[i];
+                    keys[i] = key;
+                names[i++] = key;
             }
         }
 

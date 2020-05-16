@@ -272,10 +272,10 @@ public class ServiceMonitor extends Monitor {
             for (Map map : mapList) { // check each template
                 i ++;
                 temp = (Template) map.get("Template");
-                if (temp == null || temp.numberOfFields() <= 0)
+                if (temp == null || temp.size() <= 0)
                     throw(new IllegalArgumentException("EvalTemplate, " + i +
                         ", is either null or empty"));
-                for (String key : temp.getAllFields()) { // verify each field
+                for (String key : temp.keySet()) { // verify each field
                     if ("state".equals(key) || "monit".equals(key))  
                         continue;
                     if (!hset.contains(key)) {
@@ -539,7 +539,7 @@ public class ServiceMonitor extends Monitor {
                 Template temp = MonitorUtils.getMappedTemplate(serviceName,
                     mapList, pm);
                 if (temp != null) {
-                    expr = temp.substitute(temp.copyText(), latest);
+                    expr = temp.substitute(latest, temp.copyText());
                     o = Evaluation.evaluate(expr);
                 }
                 if (temp == null) { // no template found

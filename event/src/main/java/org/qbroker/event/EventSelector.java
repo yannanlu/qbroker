@@ -164,12 +164,10 @@ public class EventSelector implements EventFilter {
             return "^" + def + "$";
         padding = def.substring(0, m-1) + "*";
         template = new Template(pattern, "\\([^\\(\\)]+\\)");
-        keys = template.getAllFields();
-        n = keys.length;
         k = 0;
-        for (i=0; i<n; i++) { // look for keys without OR
-            if (keys[i].indexOf("|") < 0) { // get rid of parentheses
-                pattern = template.substitute(keys[i], keys[i], pattern);
+        for (String key : template.keySet()) { // look for keys without OR
+            if (key.indexOf("|") < 0) { // get rid of parentheses
+                pattern = template.substitute(key, key, pattern);
                 k ++;
             }
         }

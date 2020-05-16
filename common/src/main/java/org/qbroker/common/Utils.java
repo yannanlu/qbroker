@@ -10,7 +10,6 @@ import java.util.ArrayList;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.Collection;
-import java.util.Iterator;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.IOException;
@@ -34,6 +33,7 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathConstants;
 import org.qbroker.common.BytesBuffer;
+import org.qbroker.common.Template;
 import org.qbroker.common.TextSubstitution;
 import org.qbroker.common.TraceStackThread;
 
@@ -283,6 +283,15 @@ public class Utils {
         key = text.substring(j);
         list.add(key);
         return list.toArray(new String[list.size()]);
+    }
+
+    /** substitutes the input string with given template and data map */
+    public static String substitute(String input, Template template, 
+        Map<String, String> data) {
+        if (input == null || template == null || data == null)
+            return input;
+
+        return template.substitute(input, data);
     }
 
     /**
@@ -842,11 +851,10 @@ public class Utils {
             return null;
 
         ph = new HashMap<String, Object>();
-        for (Iterator iter=props.keySet().iterator(); iter.hasNext();) {
-            o = iter.next();
-            if (o == null || !(o instanceof String))
+        for (Object obj : props.keySet()) {
+            if (!(obj instanceof String))
                 continue;
-            key = (String) o;
+            key = (String) obj;
             o = props.get(key);
             if (o == null)
                 ph.put(key, o);
@@ -905,13 +913,12 @@ public class Utils {
         else if (pa.size() != pb.size())
             return false;
 
-        for (Iterator iter=pa.keySet().iterator(); iter.hasNext();) {
-            o = iter.next();
-            if (!pb.containsKey(o))
+        for (Object obj : pa.keySet()) {
+            if (!pb.containsKey(obj))
                 return false;
-            if (o == null || !(o instanceof String)) // ignore null or non-s key
+            if (!(obj instanceof String)) // ignore null or non-s key
                 continue;
-            key = (String) o;
+            key = (String) obj;
             o = pa.get(key);
             c = pb.get(key);
             if (o == null && c == null)
@@ -1190,11 +1197,10 @@ public class Utils {
         if (expression != null && expression.size() > 0) try {
             Object o;
             XPathExpression xpe;
-            Iterator iter;
             String key;
             Map<String, String> map = new HashMap<String, String>();
-            for (iter=expression.keySet().iterator(); iter.hasNext();) {
-                key = (String) iter.next();
+            for (Object obj : expression.keySet()) {
+                key = (String) obj;
                 if (key == null || key.length() <= 0)
                     continue;
                 o = expression.get(key);
@@ -1465,6 +1471,19 @@ public class Utils {
             return null;
     }
 
+    /**
+     * It checks if system property is set for OpenSSLPlugin and LoggerName.
+     * If none of them is set, set both of them.
+     */
+    public static void checkLoggerName(String name) {
+        if (System.getProperty("OpenSSLPlugin") == null &&
+            System.getProperty("LoggerName") == null &&
+            name != null && name.length() > 0) { // set SSLPlugin and LoggerName
+           System.setProperty("OpenSSLPlugin","org.qbroker.security.Decryptor");
+            System.setProperty("LoggerName", name);
+        }
+    }
+
     /** initializes static methods from OpenSSL plugin */
     private synchronized static void initStaticMethod(String name)
         throws ClassNotFoundException, NoSuchMethodException {
@@ -1477,5 +1496,82 @@ public class Utils {
         else
             throw(new IllegalArgumentException("method of " + name +
                   " is not supported for OpenSSL plugin"));
+    }
+
+    /** It returns a Map with fully cloned and substituted properties */
+    public static Map<String, Object> substituteProperties(Map props,
+        Template temp, Map<String, String> data) {
+        Object o;
+        Map<String, Object> ph;
+        String key, str;
+
+        if (props == null || temp == null || data == null)
+            return null;
+
+        ph = new HashMap<String, Object>();
+        for (Object obj : props.keySet()) {
+            if (!(obj instanceof String))
+                continue;
+            key = (String) obj;
+            o = props.get(key);
+            if (o == null)
+                ph.put(key, o);
+            else if (o instanceof Map)
+                ph.put(key, substituteProperties((Map) o, temp, data));
+            else if (o instanceof List)
+                ph.put(key, substituteProperties((List) o, temp, data));
+            else if (o instanceof String) {
+                str = (String) o;
+                if (str.indexOf("${") >= 0)
+                    str = temp.substitute(str, data);
+                ph.put(key, str);
+            }
+            else {
+                str = o.toString();
+                if (str.indexOf("${") >= 0)
+                    str = temp.substitute(str, data);
+                ph.put(key, o.toString());
+            }
+        }
+
+        return ph;
+    }
+
+    /** It returns a List with fully cloned and substituted properties */
+    public static List<Object> substituteProperties(List props,
+        Template temp, Map<String, String> data) {
+        Object o;
+        List<Object> list;
+        String str;
+        int i, n;
+
+        if (props == null || temp == null || data == null)
+            return null;
+
+        list = new ArrayList<Object>();
+        n = props.size();
+        for (i=0; i<n; i++) {
+            o = props.get(i);
+            if (o == null)
+                list.add(o);
+            else if (o instanceof Map)
+                list.add(substituteProperties((Map) o, temp, data));
+            else if (o instanceof List)
+                list.add(substituteProperties((List) o, temp, data));
+            else if (o instanceof String) {
+                str = (String) o;
+                if (str.indexOf("${") >= 0)
+                    str = temp.substitute(str, data);
+                list.add(str);
+            }
+            else {
+                str = o.toString();
+                if (str.indexOf("${") >= 0)
+                    str = temp.substitute(str, data);
+                list.add(str);
+            }
+        }
+
+        return list;
     }
 }

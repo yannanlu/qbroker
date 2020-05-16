@@ -300,7 +300,7 @@ public class JMSHealthChecker extends Monitor {
         }
         if ((o = props.get("MessageBody")) != null) {
             template = new Template((String) o);
-            if (template.numberOfFields() <= 0) {
+            if (template.size() <= 0) {
                 isDynamic = false;
                 if (outMessage != null) try {
                     outMessage.setText((String) o);
@@ -483,9 +483,10 @@ public class JMSHealthChecker extends Monitor {
                 text = MonitorUtils.substitute(text, template);
 
             if (template.containsField("date")) {
-                Map h = new HashMap();
-                h.put("date", Event.dateFormat(new Date(currentTime)));
-                text = MonitorUtils.substitute(text, template, h);
+                Map<String, String> data = new HashMap<String, String>();
+                data.put("date", Event.dateFormat(new Date(currentTime)));
+                text = MonitorUtils.substitute(text, template, data);
+                data.clear();
             }
 
             try {

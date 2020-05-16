@@ -628,7 +628,7 @@ public class GenericList extends Report {
                         dataBlock.remove(i);
                         continue;
                     }
-                    str = temp.substitute(temp.copyText(), map);
+                    str = temp.substitute(map, temp.copyText());
                     if (str == null || str.length() <= 0)
                         continue;
                     if (MonitorUtils.filter(str, aPatternGroup, pm, true) &&

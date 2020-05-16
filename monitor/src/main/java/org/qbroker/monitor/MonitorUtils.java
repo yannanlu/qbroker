@@ -351,18 +351,18 @@ public class MonitorUtils {
     }
 
     public static String substitute(String input, Template template) {
-        return substitute(input, template, null);
-    }
-
-    public static String substitute(String input, Template template, Map map) {
-        if (input == null)
-            return input;
         if (template == null)
             template = defaultTemplate;
-        if (map != null)
-            return template.substitute(input, map);
-        else
-            return template.substitute(input, defaultMap);
+        return Utils.substitute(input, template, defaultMap);
+    }
+
+    public static String substitute(String input, Template template,
+        Map<String, String> data) {
+        if (template == null)
+            template = defaultTemplate;
+        if (data == null)
+            data = defaultMap;
+        return Utils.substitute(input, template, data);
     }
 
     public static Pattern[][] getPatterns(String name, Map ph,

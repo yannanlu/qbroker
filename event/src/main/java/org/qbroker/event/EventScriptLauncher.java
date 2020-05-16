@@ -100,11 +100,10 @@ public class EventScriptLauncher implements EventAction {
             script = EventUtils.substitute((String) o, template);
             map = new HashMap();
             temp = new Template(script);
-            if (temp.numberOfFields() <= 0)
+            if (temp.size() <= 0)
                 map.put("Template", script);
             else { // with variables
                 map.put("Template", temp);
-                map.put("Fields", temp.getAllFields());
                 o = props.get("Substitution");
                 if (o != null && o instanceof List) {
                     msgSub = EventUtils.initSubstitutions((List) o);
@@ -140,11 +139,10 @@ public class EventScriptLauncher implements EventAction {
             script = EventUtils.substitute(value, template);
             map = new HashMap();
             temp = new Template(script);
-            if (temp.numberOfFields() <= 0)
+            if (temp.size() <= 0)
                 map.put("Template", script);
             else { // with variables
                 map.put("Template", temp);
-                map.put("Fields", temp.getAllFields());
                 o = ((Map) o).get("Substitution");
                 if (o != null && o instanceof List) // override
                    map.put("MsgSub", EventUtils.initSubstitutions((List) o));
@@ -195,9 +193,8 @@ public class EventScriptLauncher implements EventAction {
         Event ev;
         HashMap attr;
         Map map;
-        String key, value, priorityName, eventKey, script = null;
+        String value, priorityName, eventKey, script = null;
         StringBuffer strBuf;
-        int i, n;
 
         if (event == null)
             return;
@@ -226,7 +223,6 @@ public class EventScriptLauncher implements EventAction {
             return;
 
         if ((o = map.get("Template")) != null && o instanceof Template) {
-            String[] allFields;
             Map change = null;
             Template temp;
             TextSubstitution[] msgSub;
@@ -239,11 +235,8 @@ public class EventScriptLauncher implements EventAction {
                     change = null;
             }
 
-            allFields = (String[]) map.get("Fields");
             script = temp.copyText();
-            n = allFields.length;
-            for (i=0; i<n; i++) {
-                key = allFields[i];
+            for (String key : temp.keySet()) {
                 if (attr.containsKey(key)) {
                     if (change == null)
                         value = (String) attr.get(key);
@@ -273,7 +266,7 @@ public class EventScriptLauncher implements EventAction {
 
         if (secret != null && script.indexOf("__secret__") > 0) {
             // with secret defined in script
-            key = template.substitute("secret", secret, script);
+            String key = template.substitute("secret", secret, script);
             ev = EventUtils.runScript(key, timeout);
         }
         else
@@ -298,7 +291,7 @@ public class EventScriptLauncher implements EventAction {
         ev.setAttribute("script", script);
         ev.setAttribute("original", strBuf.toString());
 
-        for (i=0; i<copiedProperty.length; i++) {
+        for (int i=0; i<copiedProperty.length; i++) {
             if ((o = attr.get(copiedProperty[i])) == null)
                 continue;
             ev.setAttribute(copiedProperty[i], (String) o);

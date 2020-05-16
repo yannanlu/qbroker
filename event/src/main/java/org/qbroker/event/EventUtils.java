@@ -33,7 +33,8 @@ public class EventUtils {
     public final static String defaultType = "Unknown";
     private final static String hostname = Event.getHostName().toLowerCase();
     private final static Map emptyMap = new HashMap();
-    private final static Map defaultMap = new HashMap();
+    private final static Map<String, String> defaultMap =
+        new HashMap<String, String>();
     private final static Template defaultTemplate =
         new Template("##hostname##, ##HOSTNAME##, ##owner##, ##pid##");
     private final static String padding[] = {
@@ -747,10 +748,8 @@ public class EventUtils {
      * returns a formatted string of the event with a given template
      */
     public static String format(Event event, Template template) {
-        String value, field, text;
-        String[] textFields;
+        String value, text;
         HashMap attr;
-        int i;
         if (event == null || (attr = event.attribute) == null)
             return null;
 
@@ -758,9 +757,7 @@ public class EventUtils {
             return (String) attr.get("text");
 
         text = template.copyText();
-        textFields = template.getAllFields();
-        for (i=0; i<textFields.length; i++) {
-            field = textFields[i];
+        for (String field : template.keySet()) {
             value = (String) attr.get(field);
             if (value == null)
                 value = "";
@@ -774,12 +771,10 @@ public class EventUtils {
      * and a set of substitutions
      */
     public static String format(Event event, Template template, Map subMap) {
-        String value, field, text;
-        String[] textFields;
+        String value, text;
         HashMap attr;
         TextSubstitution[] sub;
         Object o;
-        int i;
 
         if (subMap == null || subMap.size() <= 0)
             return format(event, template);
@@ -791,9 +786,7 @@ public class EventUtils {
             return (String) attr.get("text");
 
         text = template.copyText();
-        textFields = template.getAllFields();
-        for (i=0; i<textFields.length; i++) {
-            field = textFields[i];
+        for (String field : template.keySet()) {
             value = (String) attr.get(field);
             if (value == null)
                 value = "";
@@ -838,17 +831,17 @@ public class EventUtils {
     }
 
     public static String substitute(String input, Template template) {
-        return substitute(input, template, null);
-    }
-
-    public static String substitute(String input, Template template, Map map) {
-        if (input == null)
-            return input;
         if (template == null)
             template = defaultTemplate;
-        if (map != null)
-            return template.substitute(input, map);
-        else
-            return template.substitute(input, defaultMap);
+        return Utils.substitute(input, template, defaultMap);
+    }
+
+    public static String substitute(String input, Template template,
+        Map<String, String> data) {
+        if (template == null)
+            template = defaultTemplate;
+        if (data == null)
+            data = defaultMap;
+        return Utils.substitute(input, template, defaultMap);
     }
 }

@@ -413,7 +413,7 @@ public class XSLTNode extends org.qbroker.node.Node {
                         continue;
                     str = (String) ((Map) o).get(key);
                     temp = new Template(str);
-                    if (temp == null || temp.numberOfFields() <= 0)
+                    if (temp == null || temp.size() <= 0)
                         params.put(key, str);
                     else {
                         params.put(key, temp);

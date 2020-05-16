@@ -542,7 +542,7 @@ public class MessageEvaluator extends Persister {
                             continue;
                         value = (String) ((Map) o).get(str);
                         tp = new Template(value);
-                        if (tp == null || tp.numberOfFields() <= 0)
+                        if (tp == null || tp.size() <= 0)
                             hmap.put(str, value);
                         else { // dynamic parameters
                             hmap.put(str, tp);
@@ -591,7 +591,7 @@ public class MessageEvaluator extends Persister {
                         continue;
                     value = (String) ((Map) o).get(str);
                     tp = new Template(value);
-                    if (tp == null || tp.numberOfFields() <= 0) {
+                    if (tp == null || tp.size() <= 0) {
                         xpe = xpath.compile(value);
                         hmap.put(str, xpe);
                     }
@@ -732,7 +732,7 @@ public class MessageEvaluator extends Persister {
                             continue;
                         value = (String) ((Map) o).get(str);
                         tp = new Template(value);
-                        if (tp == null || tp.numberOfFields() <= 0)
+                        if (tp == null || tp.size() <= 0)
                             hmap.put(str, value);
                         else { // dynamic parameters
                             hmap.put(str, tp);

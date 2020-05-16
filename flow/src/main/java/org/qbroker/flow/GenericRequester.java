@@ -121,7 +121,7 @@ public class GenericRequester implements Requester {
                     key = str;
                 if (value != null && value.length() > 0) {
                     Template tmp = new Template(value);
-                    if (tmp.numberOfFields() > 0)
+                    if (tmp.size() > 0)
                         msgMap.put(key, tmp);
                     else
                         msgMap.put(key, value);

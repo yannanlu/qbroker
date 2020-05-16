@@ -160,11 +160,10 @@ public class EventSyslogger implements EventAction {
             value = EventUtils.substitute((String) o, template);
             map = new HashMap<String, Object>();
             temp = new Template(value);
-            if (temp.numberOfFields() <= 0)
+            if (temp.size() <= 0)
                 map.put("Template", value);
             else { // with variables
                 map.put("Template", temp);
-                map.put("Fields", temp.getAllFields());
                 o = props.get("Substitution");
                 if (o != null && o instanceof List) {
                    msgSub = EventUtils.initSubstitutions((List) o);
@@ -202,11 +201,10 @@ public class EventSyslogger implements EventAction {
             value = EventUtils.substitute(value, template);
             map = new HashMap<String, Object>();
             temp = new Template(value);
-            if (temp.numberOfFields() <= 0)
+            if (temp.size() <= 0)
                 map.put("Template", value);
             else { // with variables
                 map.put("Template", temp);
-                map.put("Fields", temp.getAllFields());
                 o = h.get("Substitution");
                 if (o != null && o instanceof List) // override
                    map.put("MsgSub", EventUtils.initSubstitutions((List) o));
@@ -275,8 +273,8 @@ public class EventSyslogger implements EventAction {
 
         if (map != null && map.size() > 0) {
             Object o;
-            String key, value;
-            int i, n, facility;
+            String value;
+            int facility;
             HashMap attr = event.attribute;
             if ((o = map.get("Facility")) != null && o instanceof Integer) {
                 facility = ((Integer) o).intValue();
@@ -287,7 +285,6 @@ public class EventSyslogger implements EventAction {
                 facility = defaultFacility;
 
             if ((o = map.get("Template")) != null && o instanceof Template) {
-                String[] allFields;
                 Map change = null;
                 Template template;
                 TextSubstitution[] msgSub;
@@ -300,11 +297,8 @@ public class EventSyslogger implements EventAction {
                         change = null;
                 }
 
-                allFields = (String[]) map.get("Fields");
                 text = template.copyText();
-                n = allFields.length;
-                for (i=0; i<n; i++) {
-                    key = allFields[i];
+                for (String key : template.keySet()) {
                     if (attr.containsKey(key)) {
                         if (change == null)
                             value = (String) attr.get(key);

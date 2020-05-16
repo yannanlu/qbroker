@@ -27,6 +27,7 @@ import java.text.SimpleDateFormat;
 import java.text.ParsePosition;
 import javax.jms.Message;
 import javax.jms.JMSException;
+import org.qbroker.common.Utils;
 import org.qbroker.common.XQueue;
 import org.qbroker.json.JSON2Map;
 import org.qbroker.jms.MessageUtils;
@@ -119,6 +120,7 @@ public class QClient {
                 System.exit(0);
             }
 
+            Utils.checkLoggerName("QClient");
             if ((o = props.get("Source")) != null) {
                 list = (List) o;
                 numSource = list.size();
@@ -461,7 +463,10 @@ public class QClient {
               case 'm':
                 if (i + 1 >= args.length)
                     continue;
-                sProps.put("Password", args[++i]);
+                if (sProps.containsKey("EncryptedPassword"))
+                    sProps.put("EncryptedPassword", args[++i]);
+                else
+                    sProps.put("Password", args[++i]);
                 break;
               case 'H':
                 if (i + 1 >= args.length)
@@ -471,12 +476,18 @@ public class QClient {
               case 'M':
                 if (i + 1 >= args.length)
                     continue;
-                tProps.put("Password", args[++i]);
+                if (tProps.containsKey("EncryptedPassword"))
+                    tProps.put("EncryptedPassword", args[++i]);
+                else
+                    tProps.put("Password", args[++i]);
                 break;
               case 'R':
                 if (i + 1 >= args.length)
                     continue;
-                tProps.put("Credentials", args[++i]);
+                if (tProps.containsKey("EncryptedCredentials"))
+                    tProps.put("EncryptedCredentials", args[++i]);
+                else
+                    tProps.put("Credentials", args[++i]);
                 realSubQmgr = args[i];
                 break;
               case 'O':
@@ -531,7 +542,10 @@ public class QClient {
               case 'w':
                 if (i + 1 >= args.length)
                     continue;
-                sProps.put("Credentials", args[++i]);
+                if (sProps.containsKey("EncryptedCredentials"))
+                    sProps.put("EncryptedCredentials", args[++i]);
+                else
+                    sProps.put("Credentials", args[++i]);
                 storeOption = args[i];
                 break;
               case 'E':
@@ -838,6 +852,7 @@ public class QClient {
             if (realSubQmgr != null) {
                 sProps.put("RealSubQmgr", realSubQmgr);
                 tProps.remove("Credentials");
+                tProps.remove("EncryptedCredentials");
             }
             if (sBCQ != null) {
                 sProps.put("BrokerControlQueue", sBCQ);
@@ -846,6 +861,7 @@ public class QClient {
             if (storeOption != null) {
                 sProps.put("StoreOption", storeOption);
                 sProps.remove("Credentials");
+                sProps.remove("EncryptedCredentials");
             }
         }
         str = (String) tProps.get("URI");

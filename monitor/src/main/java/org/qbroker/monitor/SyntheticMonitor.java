@@ -13,6 +13,7 @@ import org.apache.log4j.Level;
 import org.qbroker.common.TimeWindows;
 import org.qbroker.common.Template;
 import org.qbroker.common.TextSubstitution;
+import org.qbroker.common.Base64Encoder;
 import org.qbroker.common.Utils;
 import org.qbroker.event.Event;
 import org.qbroker.monitor.MonitorUtils;
@@ -27,7 +28,9 @@ import org.qbroker.net.ScriptedBrowser;
  * in the listed order. If any task fails, the entire test will be fail.
  *<br><br>
  * Each member of NextTask will contain Operation, LocatorType, LocatorValue,
- * SleepTime in ms and WaitTime in sec.
+ * PauseTime in ms and WaitTime in sec. In case of input data, KeyData has to
+ * be defined. If the data is encrypted, make sure to define WithSecret in
+ * the same task and set its value to "true".
  *<br>
  * @author yannanlu@yahoo.com
  */
@@ -70,12 +73,9 @@ public class SyntheticMonitor extends Monitor {
 
         // convert the fields of ##MM## into __MM__ to avoid URI Exception
         Template pathTemplate = new Template(uri, "##[a-zA-Z]+##");
-        if (pathTemplate.numberOfFields() > 0) {
-            String [] allFields = pathTemplate.getAllFields();
-            for (int i=0; i<allFields.length; i++) {
-                uri = pathTemplate.substitute(allFields[i],
-                    "__" + allFields[i] + "__", uri);
-            }
+        if (pathTemplate.size() > 0) {
+            for (String key : pathTemplate.keySet())
+                uri = pathTemplate.substitute(key, "__" + key + "__", uri);
         }
 
         k = 0;
@@ -107,7 +107,19 @@ public class SyntheticMonitor extends Monitor {
             taskInfo[i][TASK_PAUSE] = (str != null) ? Integer.parseInt(str) :-1;
             str = (String) map.get("WaitTime");
             taskInfo[i][TASK_WAIT] = (str != null) ? Integer.parseInt(str) : -1;
-            taskData[i][TASK_ID] = (String) map.get("KeyData");
+            if ((str = (String) map.get("KeyData")) != null) {
+                if ((o = map.get("WithSecret")) == null ||
+                    !"true".equalsIgnoreCase((String) o))
+                    taskData[i][TASK_ID] = str;
+                else try { // decrypt the secret
+                    taskData[i][TASK_ID] = Utils.decrypt(str);
+                }
+                catch (Exception e) {
+                    throw(new IllegalArgumentException(
+                        "failed to decrypt secret for step " + ++i + ": " +
+                        e.toString()));
+                }
+            }
             taskData[i][TASK_TYPE] = (String) map.get("LocatorText");
             taskData[i][TASK_EXTRA] = (String) map.get("LocatorText2");
         }
@@ -530,8 +542,11 @@ public class SyntheticMonitor extends Monitor {
 
     public static void main(String args[]) {
         String filename = null;
+        List<String> propertyName, propertyValue;
         Monitor monitor = null;
 
+        propertyName = new ArrayList<String>();
+        propertyValue = new ArrayList<String>();
         if (args.length == 0) {
             printUsage();
             System.exit(0);
@@ -549,6 +564,16 @@ public class SyntheticMonitor extends Monitor {
                 if (i+1 < args.length)
                     filename = args[++i];
                 break;
+              case 'p':
+                if (i + 1 >= args.length)
+                    continue;
+                propertyName.add(args[++i]);
+                break;
+              case 'v':
+                if (i + 1 >= args.length)
+                    continue;
+                propertyValue.add(args[++i]);
+                break;
               default:
             }
         }
@@ -560,7 +585,17 @@ public class SyntheticMonitor extends Monitor {
             java.io.FileReader fr = new java.io.FileReader(filename);
             Map ph = (Map) org.qbroker.json.JSON2Map.parse(fr);
             fr.close();
+            String tempStr = (String) ph.get("Template"); 
+            if (tempStr != null && tempStr.indexOf("${") >= 0 &&
+                propertyName.size() > 0) { // with template of ${}
+                int i = 0;
+                Map<String, String> data = new HashMap<String, String>();
+                for (String key : propertyName)
+                    data.put(key, propertyValue.get(i++));
+                ph = Utils.substituteProperties(ph,new Template(tempStr),data);
+            }
 
+            Utils.checkLoggerName("SyntheticMonitor");
             monitor = new SyntheticMonitor(ph);
             Map r = monitor.generateReport(0L);
             String str = (String) r.get("ReturnCode");
@@ -593,5 +628,7 @@ public class SyntheticMonitor extends Monitor {
         System.out.println("SyntheticMonitor Version 1.0 (written by Yannan Lu)");
         System.out.println("SyntheticMonitor: run a Selenium script on a website");
         System.out.println("Usage: java org.qbroker.monitor.SyntheticMonitor -I cfg.json");
+        System.out.println("  -p: name of the property to be substituted");
+        System.out.println("  -v: value of the property for substitution");
     }
 }

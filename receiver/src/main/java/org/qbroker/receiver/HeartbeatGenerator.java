@@ -467,7 +467,7 @@ public class HeartbeatGenerator extends Receiver {
                     temp = (Template) h.get("template");
                     if (temp == null)
                         msg = new TextEvent();
-                    else if (temp.numberOfFields() <= 0)
+                    else if (temp.size() <= 0)
                         msg = new TextEvent(temp.copyText());
                     else { // with template variables
                         sharedProps.put("name", key);
@@ -593,7 +593,7 @@ public class HeartbeatGenerator extends Receiver {
                     temp = (Template) h.get("template");
                     if (temp == null)
                         msg = new TextEvent();
-                    else if (temp.numberOfFields() <= 0)
+                    else if (temp.size() <= 0)
                         msg = new TextEvent(temp.copyText());
                     else {
                         sharedProps.put("name", key);

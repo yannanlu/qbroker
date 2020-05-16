@@ -190,10 +190,9 @@ public class EventAppender implements EventAction {
 
     public String append(Event event, Map map) throws IOException {
         int i, n;
-        String key, value, headline = null, text = null;
+        String value, headline = null, text = null;
         HashMap attr;
         Map change = null;
-        String[] allFields;
         Template template = null;
         TextSubstitution[] msgSub = null;
 
@@ -210,11 +209,8 @@ public class EventAppender implements EventAction {
         attr = event.attribute;
         template = (Template) map.get("Summary");
         if (template != null) {
-            allFields = template.getAllFields();
             headline = template.copyText();
-            n = allFields.length;
-            for (i=0; i<n; i++) {
-                key = allFields[i];
+            for (String key : template.keySet()) {
                 if (attr.containsKey(key)) {
                     if (change == null)
                         value = (String) attr.get(key);
@@ -234,11 +230,8 @@ public class EventAppender implements EventAction {
 
         template = (Template) map.get("Template");
         if (template != null) {
-            allFields = template.getAllFields();
             text = template.copyText();
-            n = allFields.length;
-            for (i=0; i<n; i++) {
-                key = allFields[i];
+            for (String key : template.keySet()) {
                 if (attr.containsKey(key)) {
                     if (change == null)
                         value = (String) attr.get(key);

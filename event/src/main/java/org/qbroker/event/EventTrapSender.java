@@ -50,7 +50,6 @@ public class EventTrapSender extends SNMPConnector implements EventAction {
         List<Object> list;
         Template template;
         TextSubstitution[] msgSub = null;
-        String[] fields;
         Iterator iter;
         String key;
 
@@ -92,11 +91,9 @@ public class EventTrapSender extends SNMPConnector implements EventAction {
                 list.set(i, h);
                 if ((o = h.get("Value")) != null) { // may contain variables
                     template = new Template((String) o);
-                    fields = template.getAllFields();
-                    if (fields != null && fields.length > 0) { // variables
+                    if (template.size() > 0) { // with variables
                         h.put("Value", template);
-                        h.put("Fields", fields);
-                        k += fields.length;
+                        k += template.size();
                     }
                 }
             }
@@ -146,11 +143,9 @@ public class EventTrapSender extends SNMPConnector implements EventAction {
                 list.set(i, h);
                 if ((o = h.get("Value")) != null) { // may contain variables
                     template = new Template((String) o);
-                    fields = template.getAllFields();
-                    if (fields != null && fields.length > 0) { // variables
+                    if (template.size() > 0) { // with variables
                         h.put("Value", template);
-                        h.put("Fields", fields);
-                        k += fields.length;
+                        k += template.size();
                     }
                 }
             }
@@ -202,12 +197,11 @@ public class EventTrapSender extends SNMPConnector implements EventAction {
     }
 
     private int send(Event event, List list) throws IOException {
-        int i, j, n;
+        int i, n;
         Object o;
         Map map, change = null;
         HashMap attr;
-        String text, key, value;
-        String[] allFields;
+        String text, value;
         String[][] data;
         Template template = null;
         TextSubstitution[] msgSub = null;
@@ -245,10 +239,8 @@ public class EventTrapSender extends SNMPConnector implements EventAction {
                 continue;
             }
             template = (Template) o;
-            allFields = (String[]) map.get("Fields");
             text = template.copyText();
-            for (j=0; j<allFields.length; j++) {
-                key = allFields[j];
+            for (String key : template.keySet()) {
                 if (attr.containsKey(key)) {
                     if (change == null)
                         value = (String) attr.get(key);

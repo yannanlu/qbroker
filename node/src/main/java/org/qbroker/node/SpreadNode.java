@@ -1040,8 +1040,8 @@ public class SpreadNode extends Node {
         dataField = (String[][]) rule.get("DataField");
         dateFormat = (DateFormat) rule.get("DateFormat");
         template = (Template) rule.get("Template");
-        if (template.numberOfFields() > 0)
-            key = template.getAllFields()[0];
+        if (template.size() > 0)
+            key = template.getField(0);
         else
             key = template.copyText();
 

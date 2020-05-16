@@ -280,7 +280,7 @@ public class JSONPathNode extends Node {
                     continue;
                 str = (String) ((Map) o).get(key);
                 temp = new Template(str);
-                if (temp == null || temp.numberOfFields() <= 0)
+                if (temp == null || temp.size() <= 0)
                     expr.put(key, str);
                 else
                     expr.put(key, temp);

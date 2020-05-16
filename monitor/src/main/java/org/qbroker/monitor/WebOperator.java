@@ -64,12 +64,9 @@ public class WebOperator extends Monitor {
 
         // convert the fields of ##MM## into __MM__ to avoid URI Exception
         Template pathTemplate = new Template(uri, "##[a-zA-Z]+##");
-        if (pathTemplate.numberOfFields() > 0) {
-            String [] allFields = pathTemplate.getAllFields();
-            for (int i=0; i<allFields.length; i++) {
-                uri = pathTemplate.substitute(allFields[i],
-                    "__" + allFields[i] + "__", uri);
-            }
+        if (pathTemplate.size() > 0) {
+            for (String key : pathTemplate.keySet())
+                uri = pathTemplate.substitute(key, "__" + key + "__", uri);
         }
 
         try {

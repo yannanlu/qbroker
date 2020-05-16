@@ -1668,7 +1668,7 @@ public class Aggregation {
                     o = Utils.evaluate(list.item(i), expr);
                     if (o == null || !(o instanceof Map))
                         continue;
-                    key = tmp.substitute(tmp.copyText(), (Map) o);
+                    key = tmp.substitute((Map) o, tmp.copyText());
                     key = sub.substitute(key);
                     if (!cache.containsKey(key)) {
                         cache.put(key, null);
@@ -1681,7 +1681,7 @@ public class Aggregation {
                     o = Utils.evaluate(nodes.item(i), expr);
                     if (o == null || !(o instanceof Map))
                         continue;
-                    key = tmp.substitute(tmp.copyText(), (Map) o);
+                    key = tmp.substitute((Map) o, tmp.copyText());
                     if (!cache.containsKey(key)) {
                         cache.put(key, null);
                         parent.appendChild(doc.importNode(list.item(i), true));
@@ -1805,7 +1805,7 @@ public class Aggregation {
                     o = Utils.evaluate(nodes.item(i), expr);
                     if (o == null || !(o instanceof Map))
                         continue;
-                    key = tmp.substitute(tmp.copyText(), (Map) o);
+                    key = tmp.substitute((Map) o, tmp.copyText());
                     cache.put(sub.substitute(key), null);
                 }
             }
@@ -1814,7 +1814,7 @@ public class Aggregation {
                     o = Utils.evaluate(nodes.item(i), expr);
                     if (o == null || !(o instanceof Map))
                         continue;
-                    key = tmp.substitute(tmp.copyText(), (Map) o);
+                    key = tmp.substitute((Map) o, tmp.copyText());
                     cache.put(key, null);
                 }
             }
@@ -1858,7 +1858,7 @@ public class Aggregation {
                     o = list.get(i);
                     if (o == null || !(o instanceof Map))
                         continue;
-                    key = tmp.substitute(tmp.copyText(), (Map) o);
+                    key = tmp.substitute((Map) o, tmp.copyText());
                     cache.put(sub.substitute(key), null);
                 }
             }
@@ -1867,7 +1867,7 @@ public class Aggregation {
                     o = list.get(i);
                     if (o == null || !(o instanceof Map))
                         continue;
-                    key = tmp.substitute(tmp.copyText(), (Map) o);
+                    key = tmp.substitute((Map) o, tmp.copyText());
                     cache.put(key, null);
                 }
             }

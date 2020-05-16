@@ -67,9 +67,8 @@ public class JDBCLoginModule implements LoginModule {
             throw new IllegalArgumentException("empty URI");
         if (template == null)
             throw new IllegalArgumentException("no SQLQuery defined");
-        String[] keys = template.getAllFields();
-        if (keys != null && keys.length > 0)
-            key = keys[0]; 
+        if (template.size() > 0)
+            key = template.getField(0);
 
         try {
             md = MessageDigest.getInstance("MD5");
@@ -125,7 +124,7 @@ public class JDBCLoginModule implements LoginModule {
         Map<String, Object> ph = Utils.cloneProperties(props);
         text = null;
         try {
-            if (template.numberOfFields() > 0)
+            if (template.size() > 0)
                 ph.put("SQLQuery", template.substitute(key, username,
                     template.copyText()));
             DBQuery reporter = new DBQuery(ph);

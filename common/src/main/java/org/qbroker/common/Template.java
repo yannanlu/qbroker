@@ -8,8 +8,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.ArrayList;
-import java.util.Iterator;
 import org.apache.oro.text.regex.Pattern;
 import org.apache.oro.text.regex.Perl5Compiler;
 import org.apache.oro.text.regex.Perl5Matcher;
@@ -181,13 +181,7 @@ public class Template {
             }
         }
 
-        Iterator iterator = (fields.keySet()).iterator();
-        k = fields.size();
-        allFields = new String[k];
-        k = 0;
-        while (iterator.hasNext()) {
-            allFields[k++] = (String) iterator.next();
-        }
+        allFields = fields.keySet().toArray(new String[fields.size()]);
     }
 
     public Template(Object obj, String pattern) {
@@ -210,7 +204,7 @@ public class Template {
         return fields.containsKey(key);
     }
 
-    public int numberOfFields() {
+    public int size() {
         return fields.size();
     }
 
@@ -231,13 +225,6 @@ public class Template {
             return allFields[i];
         else
             return null;
-    }
-
-    public String[] getAllFields() {
-        String[] all = new String[allFields.length];
-        for (int i=0; i<allFields.length; i++)
-            all[i] = allFields[i];
-        return all;
     }
 
     public String[] getSequence() {
@@ -261,8 +248,8 @@ public class Template {
         return list.toArray(new String[list.size()]);
     }
 
-    public Iterator iterator() {
-        return (fields.keySet()).iterator();
+    public Set<String> keySet() {
+        return fields.keySet();
     }
 
     public String substitute(String field, String value, String input) {
@@ -277,13 +264,22 @@ public class Template {
             new StringSubstitution(value), input, Util.SUBSTITUTE_ALL);
     }
 
-    public String substitute(String input, Map map) {
-        String field, value;
+    public String substitute(String input, Map<String, String> data) {
+        if (data == null || data.size() == 0)
+            return input;
+        for (String field : allFields) {
+            String value = data.get(field);
+            if (value != null && input.indexOf(field) >= 0)
+                input = substitute(field, value, input);
+        }
+        return input;
+    }
+
+    public String substitute(Map map, String input) {
         if (map == null || map.size() == 0)
             return input;
-        for (int i=0; i<allFields.length; i++) {
-            field = allFields[i];
-            value = (String) map.get(field);
+        for (String field : allFields) {
+            String value = (String) map.get(field);
             if (value != null && input.indexOf(field) >= 0)
                 input = substitute(field, value, input);
         }

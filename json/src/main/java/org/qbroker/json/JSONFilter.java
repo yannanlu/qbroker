@@ -114,8 +114,8 @@ public class JSONFilter implements Filter<Map> {
             if ((o = props.get("substitution")) != null && o instanceof String)
                 tsub = new TextSubstitution((String) o);
             hasFormatter = true;
-            keys = temp.getAllFields();
-            count = temp.numberOfFields();
+            count = temp.size();
+            keys = temp.keySet().toArray(new String[count]);
             for (int i=0; i<count; i++) {
                 if (keys[i].startsWith("s:")) { // for sections
                     hasSection = true;
