@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashSet;
 import java.io.StringReader;
 import org.apache.oro.text.regex.Pattern;
 import org.apache.oro.text.regex.MatchResult;
@@ -75,9 +76,8 @@ import org.qbroker.event.Event;
  */
 
 public class ConfigTemplate {
-    private String name, key;
-    private String content = null;
-    private String[] items = null, keys = null;
+    private String name, title;
+    private String[] keys = null;
     private Template template;
     private TextSubstitution tsub = null;
     private Map<String, String> keyMap = null;
@@ -92,41 +92,42 @@ public class ConfigTemplate {
     private Pattern pattern = null;
     private DocumentBuilder builder = null;
     private XPathExpression xpe = null;
-    private int size = 0, resultType = Utils.RESULT_LIST;
+    private int count = 0, size = 0, resultType = Utils.RESULT_LIST;
     private boolean isDynamic = false;
     private boolean withPrivateReport = false;
     private boolean withSharedReport = false;
 
     public ConfigTemplate(Map props) {
         Object o;
-        String saxParser = null;
 
         if ((o = props.get("Name")) == null)
             throw(new IllegalArgumentException("Name is not defined"));
         name = (String) o;
 
-        if ((o = props.get("Template")) == null)
-            throw(new IllegalArgumentException("Name template is not defined" +
-                " for " + name));
-        template = new Template((String) o);
-        if (template.size() > 0)
-            key = template.getField(0);
-        else
-            throw(new IllegalArgumentException("Name template is empty for " +
-                name));
+        if ((o = props.get("Template")) == null || !(o instanceof String))
+            throw(new IllegalArgumentException(name +
+                ": name template is not defined or not a string"));
+        title = (String) o;
+        if (title.length() <= 0 || title.indexOf("##") < 0)
+            throw(new IllegalArgumentException(name +
+                ": name template is empty or not well defined"));
 
         // substitution for Name only
         if ((o = props.get("Substitution")) != null && o instanceof String)
             tsub = new TextSubstitution((String) o);
 
-        // for property map
+        // for property template
         if ((o = props.get("Property")) != null && o instanceof Map) {
             Map<String, Object> ph = Utils.cloneProperties((Map) o);
 
-            // reset name
-            ph.put("Name", template.copyText());
-            content = JSON2Map.toJSON(ph);
+            // reset the property template with title
+            ph.put("Name", title);
+            template = new Template(JSON2Map.toJSON(ph));
+            count = template.size();
             ph.clear();
+            if (count <= 0) // empty template
+                throw(new IllegalArgumentException(name +
+                    ": property template has no variables"));
         }
         else
             throw(new IllegalArgumentException(name +
@@ -135,9 +136,9 @@ public class ConfigTemplate {
         keyMap = new HashMap<String, String>();
         if ((o = props.get("Item")) == null)
             throw(new IllegalArgumentException(name + ": no item defined"));
-        else if (o instanceof List)
+        else if (o instanceof List) // for static item list
             updateItems((List) o);
-        else if (o instanceof Map) { // for the reporter
+        else if (o instanceof Map) { // with the reporter
             resetReporter((Map) o);
             isDynamic = true;
         }
@@ -252,43 +253,78 @@ public class ConfigTemplate {
         if ((o = rep.get("PostSubstitution")) != null && o instanceof String)
             postSub = new TextSubstitution((String) o);
 
-        withSharedReport =
-            (reporter.getReportMode() == MonitorReport.REPORT_LOCAL);
+        withSharedReport=(reporter.getReportMode()==MonitorReport.REPORT_LOCAL);
         cachedProps = Utils.cloneProperties(props);
     }
 
     /** it resets the name template and keys and returns true on success */
-    @SuppressWarnings("unchecked")
     public boolean resetTemplate(String text) {
+        return resetTemplate(text, ((tsub != null) ? tsub.getName() : null));
+    }
+
+    /**
+     * it resets the name template and the name substitution. Then it updates
+     * all keys and returns true on success
+     */
+    @SuppressWarnings("unchecked")
+    public boolean resetTemplate(String text, String expr) {
         if (text == null || text.length() <= 0)
             return false;
 
-        Template temp = new Template(text);
-        if (temp.size() > 0) {
-            Map ph = null;
-            try {
-                StringReader in = new StringReader(content);
-                ph = (Map) JSON2Map.parse(in);
-                in.close();
+        if (title.equals(text)) { // no change on name template
+            if (expr != null) { // check tsub
+                if (tsub == null || !expr.equals(tsub.getName())) // reset tsub
+                    tsub = new TextSubstitution(expr);
+                else
+                    return false;
             }
-            catch (Exception e) {
-            }
-            if (ph != null && ph.size() > 0) {
-                String str = temp.copyText();
-                ph.put("Name", str);
-                key = temp.getField(0);
-                content = JSON2Map.toJSON(ph);
-                ph.clear();
-                keyMap.clear();
-                for (int i=0; i<size; i++) { // build keyMap for new keys
-                    keys[i] = temp.substitute(key, items[i], str);
-                    if (tsub != null)
-                        keys[i] = tsub.substitute(keys[i]);
-                    keyMap.put(keys[i], items[i]);
+            else if (tsub != null) // reset tsub
+                tsub = null;
+            else
+                return false;
+        }
+        else { // name template changed
+            title = text;
+            if (title.indexOf("##") >= 0) { // valid template for name
+                Map ph = null;
+                try {
+                    StringReader in = new StringReader(template.copyText());
+                    ph = (Map) JSON2Map.parse(in);
+                    in.close();
                 }
-                template = temp;
-                return true;
+                catch (Exception e) {
+                    ph = null;
+                }
+                if (ph == null || ph.size() <= 0)
+                    return false;
+
+                // reset name template with title
+                ph.put("Name", title);
+                template = new Template(JSON2Map.toJSON(ph));
+                count = template.size();
+                ph.clear();
             }
+            else
+                return false;
+            if (expr != null) { // check tsub
+                if (tsub == null || !expr.equals(tsub.getName())) // reset tsub
+                    tsub = new TextSubstitution(expr);
+            }
+            else if (tsub != null) // reset tsub
+                tsub = null;
+        }
+
+        if (count == 1) { // for item of string
+            String key = template.getField(0);
+            for (int i=0; i<size; i++) { // reset all keys
+                String str = keyMap.remove(keys[i]);
+                keys[i] = template.substitute(key, str, title);
+                if (tsub != null)
+                    keys[i] = tsub.substitute(keys[i]);
+                if (!keyMap.containsKey(keys[i]))
+                    keyMap.put(keys[i], str);
+            }
+            return true;
         }
 
         return false;
@@ -466,45 +502,43 @@ public class ConfigTemplate {
         return list;
     }
 
-    /** updates the internal item list and returns number of items */
+    /**
+     * It updates the internal lists for items and keys on a given list of
+     * strings as the new items and returns the total number of items
+     **/
     public int updateItems(List list) {
-        Object o;
+        int n;
         size = 0;
         keyMap.clear();
-        if (list != null && list.size() > 0) {
-            String str = template.copyText();
-            int i, k = 0, n = list.size();
-            for (i=0; i<n; i++) {
+        if (list != null && (n = list.size()) > 0) {
+            String key, str;
+            Object o;
+            List<String> pl = new ArrayList<String>();
+            for (int i=0; i<n; i++) {
                 o = list.get(i);
                 if (o == null || !(o instanceof String) ||
                     ((String) o).length() <= 0)
                     continue;
-                k ++;
+                pl.add((String) o);
             }
-            items = new String[k];
-            keys = new String[k];
-            if (k <= 0)
+            n = pl.size();
+            keys = new String[n];
+            if (n <= 0)
                 return 0;
-            k = 0;
-            for (i=0; i<n; i++) {
-                o = list.get(i);
-                if (o == null || !(o instanceof String) ||
-                    ((String) o).length() <= 0)
-                    continue;
-                items[k] = (String) o;
-                keys[k] = template.substitute(key, items[k], str);
+            key = template.getField(0);
+            for (int i=0; i<n; i++) {
+                str = pl.get(i);
+                keys[i] = template.substitute(key, str, title);
                 if (tsub != null)
-                    keys[k] = tsub.substitute(keys[k]);
-                if (!keyMap.containsKey(keys[k]))
-                    keyMap.put(keys[k], items[k]);
-                k ++;
+                    keys[i] = tsub.substitute(keys[i]);
+                if (!keyMap.containsKey(keys[i]))
+                    keyMap.put(keys[i], str);
             }
-            size = k;
+            pl.clear();
+            size = n;
         }
         else {
-            items = new String[0];
             keys = new String[0];
-            size = 0;
         }
 
         return size;
@@ -513,36 +547,41 @@ public class ConfigTemplate {
     /** returns the property map for a given item */
     @SuppressWarnings("unchecked")
     public Map getProps(String item) {
-        String text;
+        String text, key;
         Map ph = null;
         if (item == null || item.length() <= 0)
             return null;
+        key = template.getField(0);
+        text = template.substitute(key, item, template.copyText());
         try {
-            text = template.substitute(key, item, content);
             StringReader in = new StringReader(text);
             ph = (Map) JSON2Map.parse(in);
             in.close();
         }
         catch (Exception e) {
+            ph = null;
         }
-        if (tsub != null) { // normalize the value for Name
-            text = (String) ph.get("Name");
-            ph.put("Name", tsub.substitute(text));
-        }
-        if (overrideList.size() > 0) {
-            int i;
-            String regex;
-            Map map;
-            Browser b = overrideList.browser();
-            text = (String) ph.get("Name");
-            while ((i = b.next()) >= 0) {
-                regex = overrideList.getKey(i);
-                if (!text.matches(regex))
-                    continue;
-                map = (Map) overrideList.get(i);
-                for (Object o : map.keySet()) // override
-                    ph.put(o, map.get(o));
-                break;
+
+        if (ph != null) {
+            if (tsub != null) { // normalize the value for Name
+                text = (String) ph.get("Name");
+                ph.put("Name", tsub.substitute(text));
+            }
+            if (overrideList.size() > 0) {
+                int i;
+                String regex;
+                Map map;
+                Browser b = overrideList.browser();
+                text = (String) ph.get("Name");
+                while ((i = b.next()) >= 0) {
+                    regex = overrideList.getKey(i);
+                    if (!text.matches(regex))
+                        continue;
+                    map = (Map) overrideList.get(i);
+                    for (Object o : map.keySet()) // override
+                        ph.put(o, map.get(o));
+                    break;
+                }
             }
         }
         return ph;
@@ -553,7 +592,7 @@ public class ConfigTemplate {
     public boolean isPropertyChanged(Map props) {
         Map ph = null;
         try {
-            StringReader in = new StringReader(content);
+            StringReader in = new StringReader(template.copyText());
             ph = (Map) JSON2Map.parse(in);
             in.close();
         }
@@ -561,7 +600,7 @@ public class ConfigTemplate {
             return true;
         }
         if (ph != null)
-            ph.put("Name", key);
+            ph.put("Name", title);
         return !Utils.compareProperties(props, ph);
     }
 
@@ -584,10 +623,8 @@ public class ConfigTemplate {
     public Map getSharedReport() {
         if (withSharedReport) {
             List<String> lst = new ArrayList<String>();
-            if (items != null) { // for list of items only
-                for (String ky : items)
-                    lst.add(ky);
-            }
+            for (String key : keys)
+                lst.add(keyMap.get(key));
             Map<String, Object> mp = new HashMap<String, Object>();
             mp.put("List", lst);
             mp.put("Name", name);
@@ -625,6 +662,11 @@ public class ConfigTemplate {
         return size;
     }
 
+    /** returns the total number of variables in the property template */
+    public int getCount() {
+        return count;
+    }
+
     /** returns the name of the i-th config */
     public String getKey(int i) {
         if (i >= 0 && i < size)
@@ -633,10 +675,10 @@ public class ConfigTemplate {
             return null;
     }
 
-    /** returns the i-th item */
+    /** returns the value set of the i-th config */
     public String getItem(int i) {
         if (i >= 0 && i < size)
-            return items[i];
+            return keyMap.get(keys[i]);
         else
             return null;
     }
@@ -649,80 +691,87 @@ public class ConfigTemplate {
         return keyMap.containsValue(item);
     }
 
-    /** removes an item from the list and returns its key or null otherwise */
+    /** removes the item from the list and returns its key or null otherwise */
     public String remove(String item) {
         int i;
-        String str = null;
+        String key = null;
         for (i=0; i<size; i++) {
-            if (items[i].equals(item)) {
+            if (keyMap.get(keys[i]).equals(item)) {
                 break;
             }
         }
         if (i < size) {
-            str = keys[i];
-            keyMap.remove(str);
+            key = keys[i];
+            keyMap.remove(key);
             size --;
-            while (i < size) {
+            while (i < size) { // pack the array
                 keys[i] = keys[i+1];
-                items[i] = items[i+1];
                 i ++;
             }
         }
         if (withPrivateReport)
             privateReport.remove(item);
-        return str;
+        return key;
     }
 
     /** 
-     * It diffs the props with the internal data and returns a Map with
-     * details of differences, excluding the property template if it is
-     * included in the props. If the returned Map contains the key of
-     * Item, there is a change on it. Its value may be one of the three
-     * different data types. If the value is an empty List, it means new
-     * items are added to the list. If the list is not empty, it contains all
-     * the items to be removed. If the value is a Map, it means there is
-     * a change on the reporter or the evaluations. The value is the property
-     * map for the reporter and the evaluations. If the value is a String,
-     * it means the instance of ConfigTemplate has swapped the dynamic role.
-     * In this case, the instance of ConfigTemplate has to be deleted.
-     * If the name template is different, it will also be included.
+     * It diffs the props with the internal data and returns a Map with details
+     * of differences, excluding the property template if it is included in the
+     * props. If the returned Map contains the key of Item, there is a change
+     * on it. Its value may be one of the three different data types. If the
+     * value is a List, it will contains all the items to be removed from the
+     * internal item list. If the value is a Map, it will be the new property
+     * map for the existing reporter and its evaluations. If the value is a
+     * String, it means the instance of ConfigTemplate will switch between
+     * roles of dynamic and static. In this case, the exising instance of
+     * ConfigTemplate has to be terminated and closed. If there are changes on
+     * the name template and the substitution, they will also be included. If
+     * any of the keys does not exist in the returned map, there is no change
+     * on that object. If there is no any change, it will return null.
      */
     public Map<String, Object> diff(Map props) {
         Object o;
         Map<String, Object> ph = new HashMap<String, Object>();
-        List<String> list;
         if ((o = props.get("Item")) == null)
             throw(new IllegalArgumentException(name + ": no Item defined"));
         else if (o instanceof List) {
             if (isDynamic) { // switched to static list
                 ph.put("Item", name);
+                if ((o = props.get("Template")) != null){//compare name template
+                    if (!title.equals((String) o))
+                        ph.put("Template", o);
+                    if ((o = props.get("Substitution")) != null) {//compare tsub
+                        if (tsub == null || !tsub.getName().equals((String) o))
+                            ph.put("Substitution", o);
+                    }
+                    else if (tsub != null)
+                        ph.put("Substitution", null);
+                }
+                else
+                    throw(new IllegalArgumentException(name +
+                        ": name Template is not defined"));
                 return ph;
             }
-            List pl = (List) o;
-            int n = pl.size();
-            for (int i=0; i<n; i++) {
-                o = pl.get(i);
-                if (o == null || !(o instanceof String) ||
-                    ((String) o).length() <= 0)
-                    continue;
-                ph.put((String) o, name);
-            }
-            list = new ArrayList<String>();
-            for (int i=0; i<size; i++) {
-                if (!ph.containsKey(items[i]))
-                    list.add(items[i]);
-                ph.remove(items[i]);
-            }
-            if (list.size() > 0) // with deleted
+            List<String> list = diff((List) o);
+            if (list != null)
                 ph.put("Item", list);
-            else if (ph.size() > 0) { // has new ones
-                ph.clear();
-                ph.put("Item", list);
-            }
         }
         else if (o instanceof Map) {
             if (!isDynamic) { // switched to dynamic list
                 ph.put("Item", name);
+                if ((o = props.get("Template")) != null){//compare name template
+                    if (!title.equals((String) o))
+                        ph.put("Template", o);
+                    if ((o = props.get("Substitution")) != null) {//compare tsub
+                        if (tsub == null || !tsub.getName().equals((String) o))
+                            ph.put("Substitution", o);
+                    }
+                    else if (tsub != null)
+                        ph.put("Substitution", null);
+                }
+                else
+                    throw(new IllegalArgumentException(name +
+                        ": name Template is not defined"));
                 return ph;
             }
             if (!Utils.compareProperties(cachedProps, (Map) o))
@@ -732,9 +781,18 @@ public class ConfigTemplate {
             throw(new IllegalArgumentException(name + ": bad Item defined"));
 
         if ((o = props.get("Template")) != null) { // compare name template
-            if (!template.copyText().equals((String) o))
+            if (!title.equals((String) o))
                 ph.put("Template", o);
+            if ((o = props.get("Substitution")) != null) { // compare tsub
+                if (tsub == null || !tsub.getName().equals((String) o))
+                    ph.put("Substitution", o);
+            }
+            else if (tsub != null)
+                ph.put("Substitution", null);
         }
+        else
+            throw(new IllegalArgumentException(name +
+                ": name Template is not defined"));
         if (ph.size() <= 0)
             return null;
         else
@@ -742,51 +800,42 @@ public class ConfigTemplate {
     }
 
     /** 
-     * It diffs the list with the internal data and returns an List with
-     * details of differences. If the returned list is not null, there is a
-     * change on the list. If the list is empty, it means new items are added
-     * to the list. If the list is not empty, it contains all the items to be
-     * removed.
+     * It diffs the list with the internal data and returns a new List with
+     * details of the differences. If the returned list is null, there is no
+     * difference between the two. Otherwise, the returned list will contains
+     * all existing items to be removed from the internal data. In this case,
+     * there may be new items to be added to the internal data.
      */
     public List<String> diff(List a) {
-        int i, n;
-        Object o;
-        Map<String, String> ph = new HashMap<String, String>();
-        List<String> list;
+        HashSet<String> hSet = new HashSet<String>();
+        List<String> deleted = new ArrayList<String>();
+        String str;
 
         if (a == null)
             a = new ArrayList();
 
-        n = a.size();
-        if (n == size) { // same number of items
-            for (i=0; i<n; i++) {
-                o = a.get(i);
-                if (o == null || !(o instanceof String) ||
-                    ((String) o).length() <= 0)
-                    break;
-                if (!items[i].equals((String) o))
-                    break;
+        for (Object obj : a) { // init hset
+            if (obj instanceof String && ((String) obj).length() > 0)
+                hSet.add((String) obj);
+        }
+        for (int i=0; i<size; i++) { // check deleted first
+            str = keyMap.get(keys[i]);
+            if (!hSet.contains(str))
+                deleted.add(str);
+        }
+        hSet.clear();
+        if (deleted.size() > 0 || a.size() > size) // with deleted or new items
+            return deleted;
+        else { // check the order
+            int k = 0;
+            for (int i=0; i<size; i++) {
+                str = keyMap.get(keys[i]);
+                if (!str.equals((String) a.get(k++))) // order changed
+                    return new ArrayList<String>();
             }
-            if (i >= n) // list is identical
-                return null;
         }
-        for (i=0; i<n; i++) {
-            o = a.get(i);
-            if (o == null || !(o instanceof String) ||
-                ((String) o).length() <= 0)
-                continue;
-            ph.put((String) o, name);
-        }
-        list = new ArrayList<String>();
-        for (i=0; i<size; i++) {
-            if (!ph.containsKey(items[i]))
-                list.add(items[i]);
-            ph.remove(items[i]);
-        }
-        if (ph.size() > 0) // has new ones
-            ph.clear();
 
-        return list;
+        return null;
     }
 
     public void close() {
@@ -809,7 +858,6 @@ public class ConfigTemplate {
         if (withPrivateReport && privateReport != null)
             privateReport.clear();
         privateReport = null;
-        items = null;
         keys = null;
         size = 0;
         pm = null;
@@ -834,10 +882,10 @@ public class ConfigTemplate {
         close();
     }
 
-    /** not tested yet */
     public static void main(String[] args) {
-        int n, index = 0, count = 1;
-        String filename = null, target = "key", str, data = "test";
+        int n, count = 1;
+        String filename = null, target = "keys", str, data = null;
+        String newfile = null, title = null, expr = null;
         ConfigTemplate cfgTemp = null;
 
         if (args.length <= 1) {
@@ -858,13 +906,21 @@ public class ConfigTemplate {
                 if (i+1 < args.length)
                     filename = args[++i];
                 break;
+              case 'f':
+                if (i+1 < args.length)
+                    newfile = args[++i];
+                break;
               case 'd':
                 if (i+1 < args.length)
                     data = args[++i];
                 break;
-              case 'i':
+              case 'n':
                 if (i+1 < args.length)
-                    index = Integer.parseInt(args[++i]);
+                    title = args[++i];
+                break;
+              case 's':
+                if (i+1 < args.length)
+                    expr = args[++i];
                 break;
               case 't':
                 if (i+1 < args.length)
@@ -878,49 +934,103 @@ public class ConfigTemplate {
             printUsage();
         else try {
             java.io.FileReader fr = new java.io.FileReader(filename);
-            Map ph = (Map) JSON2Map.parse(fr);
+            Map props = (Map) JSON2Map.parse(fr);
             fr.close();
 
-            cfgTemp = new ConfigTemplate(ph);
+            cfgTemp = new ConfigTemplate(props);
             n = cfgTemp.getSize();
-            if (target.equals("key")) { // display all keys
+            if (target.equals("keys")) { // display all keys
+                if (newfile != null) {
+                    fr = new java.io.FileReader(newfile);
+                    Map ph = (Map) JSON2Map.parse(fr);
+                    fr.close();
+                    List list = (List) ph.get("Item");
+                    if (list == null)
+                        System.out.println(target + ": newfile has no Item");
+                    else
+                        cfgTemp.updateItems(list);
+                }
+                else if (data != null)
+                    cfgTemp.remove(data);
+                if (expr != null) {
+                    if (title == null)
+                        title = (String) props.get("Template");
+                    cfgTemp.resetTemplate(title, ((expr.length()>0)?expr:null));
+                }
+                else if (title != null)
+                    cfgTemp.resetTemplate(title);
                 System.out.println(target + ": size=" + n + " count=" + count);
                 for (int i=0; i<n; i++) {
                     System.out.println(i + ": " + cfgTemp.getKey(i));
                 }
             }
-            else if (target.equals("item")) { // display all items
+            else if (target.equals("items")) { // display all items
+                if (newfile != null) {
+                    fr = new java.io.FileReader(newfile);
+                    Map ph = (Map) JSON2Map.parse(fr);
+                    fr.close();
+                    List list = (List) ph.get("Item");
+                    if (list == null)
+                        System.out.println(target + ": newfile has no Item");
+                    else
+                        cfgTemp.updateItems(list);
+                }
+                else if (data != null)
+                    cfgTemp.remove(data);
+                if (expr != null) {
+                    if (title == null)
+                        title = (String) props.get("Template");
+                    cfgTemp.resetTemplate(title, ((expr.length()>0)?expr:null));
+                }
+                else if (title != null)
+                    cfgTemp.resetTemplate(title);
                 System.out.println(target + ": size=" + n + " count=" + count);
                 for (int i=0; i<n; i++) {
                     System.out.println(i + ": " + cfgTemp.getItem(i));
                 }
             }
-            else if (target.equals("config")) {// for config properties at index
-                if (index >= n || index < 0)
-                    index = 0;
-                str = cfgTemp.getItem(index);
-                ph = cfgTemp.getProps(str);
+            else if (target.equals("config")) { // for config on a specific item
+                if (title != null)
+                    cfgTemp.resetTemplate(title);
+                if (data == null)
+                    data = cfgTemp.getItem(0);
+                Map ph = cfgTemp.getProps(data);
                 System.out.println(JSON2Map.toJSON(ph));
             }
-            else if (target.equals("data")) { // for config properties with data
-                if (count > 1) {
-                    List<Map> list = new ArrayList<Map>();
-                    StringReader in = new StringReader(data);
-                    ph = (Map) JSON2Map.parse(in);
-                    in.close();
-                    list.add(ph);
-                    cfgTemp.updateItems(list);
-                    str = JSON2Map.normalize(ph);
-                    ph = cfgTemp.getProps(str);
-                    System.out.println(JSON2Map.toJSON(ph));
+            else if (target.equals("list")) { // for diffs on new list
+                if (newfile != null) {
+                    fr = new java.io.FileReader(newfile);
+                    Map ph = (Map) JSON2Map.parse(fr);
+                    fr.close();
+                    List list = (List) ph.get("Item");
+                    if (list == null)
+                        System.out.println(target + ": newfile has no Item");
+                    else if ((list = cfgTemp.diff(list)) != null) {
+                        System.out.println(target + ": " + list.size());
+                        System.out.println(JSON2Map.toJSON(list, "", "\n"));
+                    }
+                    else
+                        System.out.println(target + ": found no change");
                 }
-                else {
-                    List<String> list = new ArrayList<String>();
-                    list.add(data);
-                    cfgTemp.updateItems(list);
-                    ph = cfgTemp.getProps(data);
-                    System.out.println(JSON2Map.toJSON(ph));
+                else
+                    System.out.println(target + ": newfile is not defined");
+            }
+            else if (target.equals("change")) { // for diffs on new config
+                if (newfile != null) {
+                    fr = new java.io.FileReader(newfile);
+                    Map ph = (Map) JSON2Map.parse(fr);
+                    fr.close();
+                    if (ph == null || ph.size() <= 0)
+                        System.out.println(target + ": newfile is bad");
+                    else if ((ph = cfgTemp.diff(ph)) != null) {
+                        System.out.println(target + ": " + ph.size());
+                        System.out.println(JSON2Map.toJSON(ph));
+                    }
+                    else
+                        System.out.println(target + ": config has no change");
                 }
+                else
+                    System.out.println(target + ": newfile is not defined");
             }
             else
                 System.out.println(target + " is not supported");
@@ -937,10 +1047,12 @@ public class ConfigTemplate {
     private static void printUsage() {
         System.out.println("ConfigTemplate Version 1.0 (written by Yannan Lu)");
         System.out.println("ConfigTemplate: a list of configuration properties generated from the same template");
-        System.out.println("Usage: java org.qbroker.monitor.ConfigTemplate -I cfg.json -t key [-i index -d data]");
+        System.out.println("Usage: java org.qbroker.monitor.ConfigTemplate -I cfg.json -t target [-f new.json -d data]");
         System.out.println("  -?: print this usage page");
-        System.out.println("  -t: target for display on key, item, data, config (default: key)");
-        System.out.println("  -i: index of the item for displaying config (default: 0)");
-        System.out.println("  -d: data of the value set for item (default: test)");
+        System.out.println("  -t: target for display on keys, items, config, change and list (default: keys)");
+        System.out.println("  -n: value for name template");
+        System.out.println("  -s: value for name substitution");
+        System.out.println("  -d: data of the value set as the item for config");
+        System.out.println("  -f: path to the json file as new config for diffs (required by change or list)");
     }
 }

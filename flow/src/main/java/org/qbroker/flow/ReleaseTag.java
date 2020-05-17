@@ -14,7 +14,8 @@ package org.qbroker.flow;
  * defined in the json config file, replaced the method of keyIterator(int)
  * with keySet(int) on GroupedCache, updated TextSubstitution to replace
  * iterator() with keySet(), replaced the method of iterator() with keySet()
- * on JSONTemplate, updated main() of ConfigTemplate for testing
+ * on JSONTemplate, added getCount() and resetTemplate(String, String) to
+ * ConfigTemplate and updated its main() for testing
  *<br>
  * removed the method of getAllFields() from Template, replaced its method
  * of numberOfFields() with size(), replaced its method of iterator() with
@@ -388,7 +389,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V1.2.24 2020/05/16 10:45:29";
+    private static String ReleaseTAG = "QBroker V1.2.24 2020/05/17 11:37:04";
 
     public ReleaseTag() {
     }
