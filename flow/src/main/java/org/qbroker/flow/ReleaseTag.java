@@ -15,7 +15,8 @@ package org.qbroker.flow;
  * with keySet(int) on GroupedCache, updated TextSubstitution to replace
  * iterator() with keySet(), replaced the method of iterator() with keySet()
  * on JSONTemplate, added getCount() and resetTemplate(String, String) to
- * ConfigTemplate and updated its main() for testing
+ * ConfigTemplate and its main() for testing, added the support with count > 1
+ * to ConfigTemplate for static items only
  *<br>
  * removed the method of getAllFields() from Template, replaced its method
  * of numberOfFields() with size(), replaced its method of iterator() with
@@ -389,7 +390,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V1.2.24 2020/05/17 11:37:04";
+    private static String ReleaseTAG = "QBroker V1.2.24 2020/05/17 13:09:26";
 
     public ReleaseTag() {
     }
