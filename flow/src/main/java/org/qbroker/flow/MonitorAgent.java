@@ -40,6 +40,7 @@ import org.qbroker.common.Service;
 import org.qbroker.common.RunCommand;
 import org.qbroker.common.Browser;
 import org.qbroker.common.AssetList;
+import org.qbroker.common.DisabledException;
 import org.qbroker.json.JSON2Map;
 import org.qbroker.net.HTTPConnector;
 import org.qbroker.net.HTTPServer;
@@ -63,67 +64,64 @@ import org.qbroker.event.EventLogger;
 import org.qbroker.event.Event;
 
 /**
- * MonitorAgent is a Java container hosting multiple MonitorGroups
- * and MessageFlows.  The MonitorGroup contains various monitors that
- * periodically check if something have happened.  Whereas the MessageFlow
- * is to process messages for on-demand services.
+ * MonitorAgent is a Java container hosting multiple MonitorGroups and
+ * MessageFlows.  The MonitorGroup contains various monitors that periodically
+ * check if something have happened.  Whereas the MessageFlow is to process
+ * messages for on-demand services.
  *<br><br>
- * MonitorAgent periodically runs the registered monitors.
- * Registered monitors are grouped according to their dependencies.
- * The monitors in a same group are guaranteed to be checked in the
- * same order as they are in the group.  However, the order of different
- * groups is not honored by MonitorAgent due to MT implementation.
+ * MonitorAgent periodically runs the registered monitors. Registered monitors
+ * are grouped according to their dependencies. The monitors in the same group
+ * are guaranteed to be checked in the same order as they are in the group.
+ * However, the order of different groups is not honored by MonitorAgent due
+ * to MT implementation.
  *<br><br>
- * Each registered monitore contains three components, a MonitorReport
- * to generate the latest report on the monitored object, a MonitorAction
- * to handle the monitor report, and a set of time windows in which the
- * monitor is expected to be active.  It first calls
- * MonitorReport.generateReport(currentTime) that returns a report in
- * a Map object.  If there is no any exceptions, it checks the latest
- * monitor time with the predefined configuration of the time windows,
- * defined in ActiveTime, to see if the monitor is late or in time.
- * The result is passed through in status.  No matter what status is,
- * the MonitorAction.performAction(status, currentTime, report) will always
- * be called.
+ * Each registered monitore contains three components, a MonitorReport to
+ * generate the latest report on the monitored object, a MonitorAction to
+ * handle the monitor report, and a set of time windows in which the monitor
+ * is expected to be active. It first calls 
+ * MonitorReport.generateReport(currentTime) that returns a report in a Map
+ * object. If there is no any exceptions, it checks the latest monitor time
+ * with the predefined configuration of the time windows, defined in ActiveTime,
+ * to see if the monitor is late or in time. The result is passed through in
+ * the property of status. No matter what status is, the method of
+ * MonitorAction.performAction(status, currentTime, report) will always be
+ * called.
  *<br><br>
- * If an exception is thrown by MonitorReport.generateReport(currentTime),
- * the content of the report is invalid.  It does not make sense to check
- * on the invalid report.  Therefore MonitorAgent always catches the
- * exception and skips both the checking process and the action if any
- * exception is caught.
+ * If an exception is thrown by MonitorReport.generateReport(currentTime), the
+ * content of the report is invalid. It does not make sense to check on the
+ * invalid report. Therefore MonitorAgent always catches the exception and
+ * skips both the checking process and the action if any exception is caught.
  *<br><br>
- * It is up to developers to implement both interfaces of MonitorReport
- * and MonitorAction.  The return object of
- * MonitorReport.generateReport(currentTime) is a Map.  It is
- * an opaque container for developers to put anything about the monitor report
- * in it.  It may be the status code indicating the latest status or anything,
- * or the timestamp of a file, or a ResultSet of a database query, etc, as long
- * as the associated action knows how to retrieve them.
+ * It is up to developers to implement both interfaces of MonitorReport and
+ * MonitorAction. The return object of MonitorReport.generateReport(currentTime)
+ * is a Map. It is an opaque container for developers to put anything about the
+ * monitor report in it. It may be the status code indicating the latest status
+ * or anything, or the timestamp of a file, or a ResultSet of a database query,
+ * etc, as long as the associated action knows how to retrieve them.
  *<br><br>
- * MonitorAgent also supports shared information.  Some of the reports
- * can have their test results shared with others as the dependencies or
- * merged into a new report.  The shared information is called the internal
- * report that is a Map, too.  The other objects can access them via
- * ReportQuery report.
+ * MonitorAgent also supports shared information. Some of the reports can have
+ * their test results shared with others as the dependencies or merged into a
+ * new report. The shared information is called the internal report that is a
+ * Map, too. The other objects can access them via ReportQuery report.
  *<br><br>
- * You can disable all the monitor groups via some monitor jobs.  To do that,
+ * You can disable all the monitor groups via some monitor jobs. To do that,
  * you have to define the report and specify the correct ReportMode.
  *<br><br>
- * MonitorAgent also can be configured to pick up its configuration
- * changes automatically from the configuration repository.  The object
- * needs to be defined in the default group. Its name must be specified within
- * ConfigRepository tag.
+ * MonitorAgent also can be configured to pick up its configuration changes
+ * automatically from the configuration repository. The object needs to be
+ * defined in the default group. Its name must be specified within the tag of
+ * ConfigRepository.
  *<br><br>
- * MonitorAgent can also host multiple message flows.  A message flow
- * is a message driven application for message broker service.  With the
- * message flow, you can have MonitorAgent to pick up and deliver
- * JMS messages via various transports.  In order to configure a message flow,
- * you need to define Receivers, Nodes and Persisters under MessageFlow list.
- * For detailed information, please reference the docs for QFlow.
+ * MonitorAgent can also host multiple message flows. A message flow is a
+ * message driven application for message broker service. With a message flow,
+ * you can have MonitorAgent to pick up and deliver JMS messages via various
+ * transports. In order to configure a message flow, you need to define objects
+ * of Receivers, Nodes and Persisters under MessageFlow list. For the detailed
+ * information, please reference the docs for QFlow.
  *<br><br>
- * The default MessageFlow is the flow with the name of default.  It is the
- * dedicated MessageFlow for event escalations.  It shoule be always the first
- * message flow if it is defined.  In this case, URL should not be defined in
+ * The default MessageFlow is the flow with the name of default. It is the
+ * dedicated MessageFlow for event escalations. It shoule be always the first
+ * message flow if it is defined. In this case, URL should not be defined in
  * the master configuration file since all the events will be escalated by the
  * default MessageFlow.
  *<br>
@@ -3118,8 +3116,9 @@ public class MonitorAgent implements Service, Runnable {
                 }
                 else { // add a new group
                     id = addGroup(mtime, ph);
-                    new Event(Event.INFO, name + " group " + key +
-                        " has been created on " + id).send();
+                    if (id >= 0)
+                        new Event(Event.INFO, name + " group " + key +
+                            " has been created on " + id).send();
                 }
             }
 
@@ -3351,7 +3350,18 @@ public class MonitorAgent implements Service, Runnable {
         if (ph == null || ph.size() <= 0)
             return -1;
 
-        group = new MonitorGroup(ph);
+        try {
+            group = new MonitorGroup(ph);
+        }
+        catch (DisabledException e) {
+            new Event(Event.INFO, name + " group " + e.getMessage()).send();
+            return -2;
+        }
+        catch (Exception e) {
+            new Event(Event.ERR, name + " failed to add group: " +
+                e.toString()).send();
+            return -1;
+        }
         key = group.getName();
         groupInfo = new long[GROUP_TIME + 1];
         id = groupList.add(key, groupInfo, group);

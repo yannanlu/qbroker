@@ -24,6 +24,7 @@ import org.qbroker.common.Browser;
 import org.qbroker.common.Base64Encoder;
 import org.qbroker.common.AssetList;
 import org.qbroker.common.Utils;
+import org.qbroker.common.DisabledException;
 import org.qbroker.common.Service;
 import org.qbroker.common.XQueue;
 import org.qbroker.json.JSON2Map;
@@ -93,6 +94,20 @@ public class MonitorGroup {
 
         if ((o = props.get("Type")) != null) // ### very important on diffs
             type = (String) o;
+
+        if ((o = props.get("StaticDependencyGroup")) != null &&
+            o instanceof List) {
+            List[] depGroup = MonitorUtils.getDependencies((List) o);
+            long tt = System.currentTimeMillis();
+            int skip = MonitorUtils.checkDependencies(tt, depGroup, name);
+            MonitorUtils.clearDependencies(depGroup);
+            if (skip == MonitorReport.SKIPPED || skip == MonitorReport.DISABLED)
+                throw(new DisabledException(name +
+                    " is disabled by static dependency"));
+            else if (skip == MonitorReport.EXCEPTION)
+                throw(new IllegalArgumentException(name +
+                    " got exception from static dependency"));
+        }
 
         if ((o = props.get("Capacity")) != null)
             capacity = Integer.parseInt((String) o);

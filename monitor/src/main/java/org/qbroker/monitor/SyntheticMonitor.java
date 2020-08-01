@@ -585,14 +585,18 @@ public class SyntheticMonitor extends Monitor {
             java.io.FileReader fr = new java.io.FileReader(filename);
             Map ph = (Map) org.qbroker.json.JSON2Map.parse(fr);
             fr.close();
-            String tempStr = (String) ph.get("Template"); 
-            if (tempStr != null && tempStr.indexOf("${") >= 0 &&
-                propertyName.size() > 0) { // with template of ${}
+            if (propertyName.size() > 0) { // with template of ${}
                 int i = 0;
+                StringBuffer strBuf = new StringBuffer();
                 Map<String, String> data = new HashMap<String, String>();
-                for (String key : propertyName)
+                strBuf.append("${" + propertyName.get(0) + "}");
+                for (String key : propertyName) {
+                    strBuf.append("${" + key + "} ");
                     data.put(key, propertyValue.get(i++));
-                ph = Utils.substituteProperties(ph,new Template(tempStr),data);
+                }
+                ph = Utils.substituteProperties(ph,
+                    new Template(strBuf.toString(), "\\$\\{[^\\$\\{\\}]+\\}"),
+                    data);
             }
 
             Utils.checkLoggerName("SyntheticMonitor");
