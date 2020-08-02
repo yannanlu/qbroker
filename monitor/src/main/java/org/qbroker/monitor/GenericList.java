@@ -39,8 +39,22 @@ import org.qbroker.event.EventUtils;
 import org.qbroker.event.Event;
 
 /**
- * GenericList queries a data source for a list of keys. The list of the keys
- * will be stored in a List under the key of "List" in the report. 
+ * GenericList queries a data source for a list of items. The list of the items
+ * will be stored as a List under the key of "List" in the report. The data
+ * queried from the data source is expected to be in a format of TEXT, JSON
+ * or XML, etc, which is specified by ResultType. Based on the ResultType,
+ * GenericList will convert queried data into the items of the speicified
+ * DataType. By default, DataType is TEXT which means that the data type of all
+ * the items in the list is String. In this case, items in the list are also
+ * called as keys. If DataType is not TEXT, the data type of items will be Map.
+ *<br><br>
+ * If KeyTemplate is defined, it will be used to transform the queried data to
+ * the keys. In case that KeySubstitution is also defined, all the keys will be
+ * formatted by the TextSubstition. These keys will be used by filters to
+ * select queried data. Meanwhile, GenericList will save the original data into
+ * the report at the field of "Data" as the private report. If DataType is TEXT,
+ * KeySubstitution will be used to format the output even if KeyTemplate is not
+ * defined.
  *<br><br>
  * This needs more work to support other data sources.
  *<br>
@@ -60,8 +74,8 @@ public class GenericList extends Report {
     private TextSubstitution tsub = null;
     private int oid;
     private int resultType = Utils.RESULT_JSON;
-    private boolean isString = false;
-    Pattern patternLF = null;
+    private boolean isString = true;
+    private Pattern patternLF = null;
     private Pattern[][] aPatternGroup = null;
     private Pattern[][] xPatternGroup = null;
     protected final static int OBJ_HTTP = 1;
@@ -143,11 +157,14 @@ public class GenericList extends Report {
             throw(new IllegalArgumentException("wrong scheme: " +
                 u.getScheme()));
 
+        if ((o = props.get("DataType")) != null && o instanceof String &&
+            Integer.parseInt((String) o) != Utils.RESULT_TEXT)
+            isString = false;
         if ((o = props.get("KeyTemplate")) != null) {
             str = MonitorUtils.select(o);
             str = MonitorUtils.substitute(str, template);
             temp = new Template(str);
-            if ("##body##".equals(str))
+            if ("##body##".equals(str)) // override for now
                 isString = true;
         }
         if ((o = props.get("KeySubstitution")) != null) {
@@ -186,6 +203,8 @@ public class GenericList extends Report {
                     " failed to get XPath: " + e.toString()));
             }
         }
+        else if (!isString) // reset to true for non-structure data
+            isString = true;
 
         try {
             Perl5Compiler pc = new Perl5Compiler();
@@ -574,10 +593,9 @@ public class GenericList extends Report {
 
         if (temp != null) // save original result to Data for private report
             report.put("Data", dataBlock);
-        else
-            report.put("List", dataBlock);
-        if ((n = dataBlock.size()) > 0) { // select lines on patterns
-            if (temp == null) { // list of strings
+
+        if ((n = dataBlock.size()) > 0) { // select items on patterns
+            if (temp == null) { // no for keys
                 for (int i=n-1; i>=0; i--) {
                     str = (String) dataBlock.get(i);
                     if (str == null || str.length() <= 0) {
@@ -593,7 +611,7 @@ public class GenericList extends Report {
                         dataBlock.remove(i);
                 }
             }
-            else if (isString) { // list of strings
+            else if (isString && !(dataBlock.get(0) instanceof Map)) {
                 List<String> list = new ArrayList<String>();
                 report.put("List", list);
                 keys = new String[n];
@@ -617,9 +635,7 @@ public class GenericList extends Report {
                 for (int i=k-1; i>=0; i--) // reverse the order
                     list.add(keys[i]);
             }
-            else { // list of maps
-                List<String> list = new ArrayList<String>();
-                report.put("List", list);
+            else { // convert maps into keys
                 keys = new String[n];
                 int k = 0;
                 for (int i=n-1; i>=0; i--) {
@@ -641,12 +657,20 @@ public class GenericList extends Report {
                     else
                         dataBlock.remove(i);
                 }
-                for (int i=k-1; i>=0; i--) // reverse the order
-                    list.add(keys[i]);
+                if (isString) {
+                    List<String> list = new ArrayList<String>();
+                    report.put("List", list);
+                    for (int i=k-1; i>=0; i--) // reverse the order
+                        list.add(keys[i]);
+                }
+                else
+                    report.put("List", dataBlock);
             }
         }
-        else if (temp != null)
+        else if (isString)
             report.put("List", new ArrayList<String>());
+        else
+            report.put("List", new ArrayList<Map>());
 
         if (disableMode != 0) {
             if ((dataBlock.size() <= 0 && disableMode > 0) ||
@@ -717,12 +741,24 @@ public class GenericList extends Report {
                 NodeList nl = (NodeList) o;
                 int k = nl.getLength();
                 n = 0;
-                for (int i=0; i<k; i++) {
-                    str = Utils.nodeToText(nl.item(i));
-                    if (str == null || str.length() <= 0)
-                        continue;
-                    list.add(str);
-                    n ++;
+                if (temp == null) {
+                    for (int i=0; i<k; i++) {
+                        str = Utils.nodeToText(nl.item(i));
+                        if (str == null || str.length() <= 0)
+                            continue;
+                        list.add(str);
+                        n ++;
+                    }
+                }
+                else { // with data
+                    Map<String, String> map;
+                    for (int i=0; i<k; i++) {
+                        map = Utils.nodeToMap(nl.item(i));
+                        if (map == null || map.size() <= 0)
+                            continue;
+                        list.add(map);
+                        n ++;
+                    }
                 }
             }
         }

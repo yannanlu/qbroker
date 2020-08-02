@@ -1124,6 +1124,49 @@ public class Utils {
     }
 
     /**
+     * converts an ELEMENT node into a Map<String, String> with children of
+     * Text, Attribute, or Element.
+     */
+    public static Map<String, String> nodeToMap(Node nd) {
+        short type = nd.getNodeType();
+        Map<String, String> map = new HashMap<String, String>();
+
+        if (type == Node.ELEMENT_NODE) {
+            NodeList children = nd.getChildNodes();
+            for (int i=0; i<children.getLength(); i++) {
+                Node node = children.item(i);
+                type = node.getNodeType();
+                if (type == Node.TEXT_NODE)
+                    map.put(node.getNodeName(), node.getNodeValue());
+                else if (type == Node.ELEMENT_NODE) {
+                    NodeList list = node.getChildNodes();
+                    String key = node.getNodeName();
+                    for (int j=0; j<list.getLength(); j++) {
+                        Node child = list.item(j);
+                        type = child.getNodeType();
+                        if (type == Node.TEXT_NODE) {
+                            map.put(key, child.getNodeValue());
+                            break;
+                        }
+                    }
+                    if (!map.containsKey(key))
+                        map.put(key, nodeToText(node));
+                }
+            }
+            NamedNodeMap attrs = nd.getAttributes();
+            if (attrs != null) { // with attributes
+                for (int i=0; i<attrs.getLength(); i++) {
+                    Node attr = attrs.item(i);
+                    String key = attr.getNodeName();
+                    if (!map.containsKey(key))
+                        map.put(key, attr.getNodeValue());
+                }
+            }
+        }
+        return map;
+    }
+
+    /**
      * converts a DOM NodeList into the text representation of the hierachy.
      */
     public static String nodeListToText(NodeList list) {

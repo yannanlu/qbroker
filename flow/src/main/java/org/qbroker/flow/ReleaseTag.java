@@ -3,6 +3,11 @@ package org.qbroker.flow;
 /* ReleaseTag.java - release tag for all the packages of qbroker */
 
 /**
+ * V1.2.25 (2020/08/02): added nodeToMap() to Utils in common, added DataType
+ * to GenericList to support list of Map, added methods of normalizeItem(Map),
+ * updateMapItems(Map) and getItemList(Map) to ConfigTemplate to support cases
+ * of count > 1
+ *<br>
  * V1.2.24 (2020/05/16): added new methods of checkLoggerName(), substitute()
  * and substituteProperties() to Utils, added a line calling checkLoggerName()
  * to main() of QClient and SyntheticMonitor for decryptions, added WithSecret
@@ -391,7 +396,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V1.2.24 2020/08/01 09:39:40";
+    private static String ReleaseTAG = "QBroker V1.2.25 2020/08/02 11:23:50";
 
     public ReleaseTag() {
     }
