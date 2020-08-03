@@ -14,7 +14,7 @@ public class SimpleHttpServerTest {
     private static String uri = "http://localhost:8088/test";
 
     @BeforeClass
-    public static void initt() {
+    public static void init() {
         Map<String, String> props = new HashMap<String, String>();
         props.put("Name", "test");
         props.put("URI", uri);

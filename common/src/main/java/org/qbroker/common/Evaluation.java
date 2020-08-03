@@ -2,6 +2,8 @@ package org.qbroker.common;
 
 /* Evaluation.java - an evaluator on a simple numeric or a boolean expression */
 
+import java.util.Map;
+
 /**
  * Evaluation evaluates a simple numeric expression, or a boolean expression
  * with either numbers or single quoted strings, or a ternary expression for
@@ -12,7 +14,7 @@ package org.qbroker.common;
  * quoted strings, such as "==", "!=", "=~" and "!~". The match operation is
  * based on String.match().
  *<br><br>
- * There are 3 public methods, evaluate(), choose() and isStringExpression().
+ * There are 3 public methods, evaluate(), choose() and isStringTernary().
  * They all take a text as the input expression. The first returns either a
  * Long or a Double for a numeric expression, or an Integer for a boolean
  * expression. In case of a boolean expression, Integer 1 is for true and
@@ -61,6 +63,8 @@ public class Evaluation {
     private final static int ACTION_OR = 14;     // for logic OR
     private final static Integer TRUE = new Integer(1);
     private final static Integer FALSE = new Integer(0);
+    private final static char[] ALLOWED_START = {'0', '1', '2', '3', '4', '5',
+        '6', '7', '8', '9', '.', '-', '+', '(', '\''};
 
     private Evaluation() { // static only
     }
@@ -83,6 +87,10 @@ public class Evaluation {
         if (expr == null || (n = expr.length()) <= 0)
             return null;
 
+        if (!isAllowedAtStart(expr.charAt(0))) // found illegal start
+           throw(new IllegalArgumentException("expression can not start with '"+
+                expr.charAt(0) + "': " + expr));
+
         for (i=0; i<SIZE; i++) {
             number[i] = null;
             operation[i] = 0;
@@ -96,9 +104,15 @@ public class Evaluation {
         do {
             switch (action) {
               case ACTION_SKIP:
-              case ACTION_NEXT:
               case ACTION_SIGN:
                 position = skip(buffer, position, n);
+                break;
+              case ACTION_NEXT:
+                position = skip(buffer, position, n);
+                if (position >= 0 && !isAllowedAtStart(buffer[position]))
+                    throw(new IllegalArgumentException(
+                        "next term can not start with '" + buffer[position] +
+                        "' at " + position + ": " + expr));
                 break;
               case ACTION_LOOK:
               case ACTION_FIND:
@@ -719,6 +733,15 @@ public class Evaluation {
         }
     }
 
+    private static boolean isAllowedAtStart(char c) {
+        int i;
+        for (i=0; i<ALLOWED_START.length; i++) { // check illegal start
+           if (c == ALLOWED_START[i])
+               break;
+        }
+        return (i < ALLOWED_START.length);
+    }
+
     /**
      * It evaluates a ternary expression with a boolean expression and two
      * single quoted strings and returns one of the strings with quotes as
@@ -760,18 +783,16 @@ public class Evaluation {
     }
 
     /** returns true if expression is a ternary expression for quoted strings */
-    public static boolean isStringExpression(String expr) {
+    public static boolean isStringTernary(String expr) {
         int i;
         if (expr == null || (i = expr.lastIndexOf('\'')) <= 0 ||
             expr.indexOf('?', i+1) > 0)
             return false;
-        else if (expr.lastIndexOf('?', i) > 0)
+        if (expr.lastIndexOf('?', i) > 0)
             return true;
-        else if ((i = expr.lastIndexOf('\'', i-1)) < 0) // single quote?
+        if ((i = expr.lastIndexOf('\'', i-1)) <= 0) // single quote?
             return false;
-        else if (i == 0)
-            return true;
-        else if (expr.charAt(i-1) == '\\') { // escaped
+        if (expr.charAt(i-1) == '\\') { // escaped
             int k = 1;
             char c = expr.charAt(0);
             for (int j=0; j<i; j++) {
@@ -1021,7 +1042,7 @@ public class Evaluation {
     private static int scan(char[] buffer, int offset, int length) {
         int i;
         char c;
-        for (i=offset; i<length; i++) { // for quote or backslash
+        for (i=offset; i<length; i++) { // for first operator
             c = buffer[i];
             if (c == '+' || c == '-' || c == '*' || c == '/' || c == '%' ||
                 c == '=' || c == '!' || c == '>' || c == '<' || c == '&' ||
@@ -1156,6 +1177,32 @@ public class Evaluation {
         return strBuf.toString();
     }
 
+
+    /** returns boolean result on the data map with the evaluation template */
+    public static boolean evaluate(Map map, Template temp) {
+        Object o;
+        if (map == null || map.size() <= 0 || temp == null || temp.size() <= 0)
+            throw(new IllegalArgumentException(
+                "either data map or eval template is null or empty"));
+
+        String str = temp.substitute(map, temp.copyText());
+        try {
+            o = evaluate(str);
+        }
+        catch (Exception e) {
+            throw(new IllegalArgumentException("failed to evaluate data map: " +
+                e.toString()));
+        }
+
+        if (o == null)
+            throw(new IllegalArgumentException("unexpected null for " + str));
+        else if (!(o instanceof Integer))
+            throw(new IllegalArgumentException("unexpected result: " +
+                    o.getClass().getName() + " for " + str));
+
+        return (((Integer) o).intValue() == 1);
+    }
+
     public static void main(String[] args) {
         Number r = null;
         String expr = null;
@@ -1167,7 +1214,7 @@ public class Evaluation {
             System.exit(0);
         }
 
-        if (isStringExpression(expr)) { // for string expression
+        if (isStringTernary(expr)) { // for string ternary expression
             try {
                 String str = choose(expr);
                 if (str == null)

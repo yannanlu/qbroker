@@ -62,7 +62,7 @@ import org.qbroker.common.Evaluation;
  * <tr><td>s//:=pow d/e</td><td>Power</td><td>Real Number</td><td>s//:=pow 0.5/e</td></tr>
  * <tr><td>s//:=sqrt/e</td><td>Square Root</td><td>Number</td><td>s//:=sqrt/e</td></tr>
  * <tr><td>s//:=abs/e</td><td>Absolute Value</td><td>Number</td><td>s//:=abs/e</td></tr>
- * <tr><td>s//:=eval/e</td><td>Evaluation</td><td>Number or String</td><td>s//:=eval/e</td></tr>
+ * <tr><td>s//:=eval/e</td><td>Evaluation</td><td>Number or String in single quotes</td><td>s//:=eval/e</td></tr>
  * <tr><td>s//:=md5/e</td><td>MD5 Checksum</td><td>String</td><td>s//:=md5/e</td></tr>
  * <tr><td>s//:=chop/e</td><td>Chop</td><td>String</td><td>s//:=chop/e</td></tr>
  * <tr><td>s//:=replace d/e</td><td>Search Replace</td><td>String</td><td>s//:=replace !/e</td></tr>
@@ -473,9 +473,10 @@ public class TextSubstitution {
     }
 
     /**
-     * It evalues the input string and the expression and returns
-     * the result of the evaluation.  If anything is wrong, it
-     * returns null.
+     * It evalues the input string and the expression and returns the result of
+     * the evaluation. If anything is wrong, it returns null. For evaluations
+     * on strings with Evaluation, make sure they are single-quoted in the
+     * expression.
      */
     private String eSubstitute(String input, int dataType){
         String str = null;
@@ -669,7 +670,7 @@ public class TextSubstitution {
             break;
           case EXPR_EVAL:
             try {
-                if (Evaluation.isStringExpression(input)) {//between two strings
+                if (Evaluation.isStringTernary(input)) { // choose between two
                     str = Evaluation.choose(input);
                     if (str != null)
                         str = Evaluation.unquote(str);

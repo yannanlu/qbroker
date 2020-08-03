@@ -631,16 +631,13 @@ public class GenericList extends Report {
                         dataBlock.remove(i);
                         continue;
                     }
-                    if (eTemp != null) { // applying filter
-                        str = eTemp.substitute(map, eTemp.copyText());
-                        if (str == null || str.length() <= 0) {
+                    if (eTemp != null) try { // applying filter
+                        if (!Evaluation.evaluate(map, eTemp))
                             dataBlock.remove(i);
-                            continue;
-                        }
-                        o = Evaluation.evaluate(str);
-                        if (o == null || !(o instanceof Integer) ||
-                            ((Integer) o).intValue() == 0)
-                            dataBlock.remove(i);
+                    }
+                    catch (Exception e) {
+                        throw(new IOException(name+" failed to filter map at "+
+                            i + ": "+ e.toString()));
                     }
                 }
                 report.put("List", dataBlock);

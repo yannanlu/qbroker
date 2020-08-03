@@ -7,15 +7,16 @@ import org.junit.*;
 public class EvaluationTest {
     private String expr = "('abc' == 'ABC') ? 1 : 0";
     private String strExpr = "(2 > 1) ? 'ABC' : 'abc'";
+    private Template temp = new Template("'##name##' =~ '^prod.+$'"); 
 
     @Test
-    public void testStringExpression() {
-        assertTrue(Evaluation.isStringExpression(strExpr));
+    public void testStringTernary() {
+        assertTrue(Evaluation.isStringTernary(strExpr));
     }
 
     @Test
-    public void testNotStringExpression() {
-        assertFalse(Evaluation.isStringExpression(expr));
+    public void testNotStringTernary() {
+        assertFalse(Evaluation.isStringTernary(expr));
     }
 
     @Test
@@ -31,5 +32,17 @@ public class EvaluationTest {
     @Test
     public void testChoose() {
         assertEquals("'ABC'", Evaluation.choose(strExpr));
+    }
+
+    @Test
+    public void testMatch() {
+        String line = temp.substitute("name", "prod1", temp.copyText());
+        assertTrue(Evaluation.evaluate(line).intValue() == 1 );
+    }
+
+    @Test
+    public void testNotMatch() {
+        String line = temp.substitute("name", "Prod1", temp.copyText());
+        assertTrue(Evaluation.evaluate(line).intValue() == 0 );
     }
 }
