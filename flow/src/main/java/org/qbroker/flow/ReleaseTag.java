@@ -6,7 +6,8 @@ package org.qbroker.flow;
  * V1.2.25 (2020/08/02): added nodeToMap() to Utils in common, added DataType
  * to GenericList to support list of Map, added methods of normalizeItem(Map),
  * updateMapItems(Map) and getItemList(Map) to ConfigTemplate to support cases
- * of count > 1
+ * of count > 1, fixed the issue with isString in GenericList, added
+ * EvalTemplate to GenericList to support list of Maps without private report 
  *<br>
  * V1.2.24 (2020/05/16): added new methods of checkLoggerName(), substitute()
  * and substituteProperties() to Utils, added a line calling checkLoggerName()
@@ -396,7 +397,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V1.2.25 2020/08/02 11:23:50";
+    private static String ReleaseTAG = "QBroker V1.2.25 2020/08/02 15:30:29";
 
     public ReleaseTag() {
     }

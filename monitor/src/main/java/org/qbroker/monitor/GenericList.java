@@ -25,6 +25,7 @@ import org.w3c.dom.NodeList;
 import org.apache.oro.text.regex.Pattern;
 import org.apache.oro.text.regex.Perl5Compiler;
 import org.apache.oro.text.regex.Util;
+import org.qbroker.common.Evaluation;
 import org.qbroker.common.TimeWindows;
 import org.qbroker.common.Template;
 import org.qbroker.common.TextSubstitution;
@@ -49,12 +50,16 @@ import org.qbroker.event.Event;
  * called as keys. If DataType is not TEXT, the data type of items will be Map.
  *<br><br>
  * If KeyTemplate is defined, it will be used to transform the queried data to
- * the keys. In case that KeySubstitution is also defined, all the keys will be
- * formatted by the TextSubstition. These keys will be used by filters to
- * select queried data. Meanwhile, GenericList will save the original data into
+ * the keys. These keys will be used by filters to select queried data. In case
+ * that KeySubstitution is also defined, all selected keys will be formatted by
+ * the TextSubstition. Meanwhile, GenericList will save the original data into
  * the report at the field of "Data" as the private report. If DataType is TEXT,
  * KeySubstitution will be used to format the output even if KeyTemplate is not
- * defined.
+ * defined. If the value of KeyTemplate is set to "##body##", GenericList will
+ * save the list of String to the field of "Data". In this case, DataType will
+ * be reset to TEXT. If KeyTemplate is not defined, there will be no private
+ * report. In this case, EvalTemplate can be defined to select queried map
+ * data when DataType is not TEXT.
  *<br><br>
  * This needs more work to support other data sources.
  *<br>
@@ -70,11 +75,13 @@ public class GenericList extends Report {
     private String jsonPath = null;
     private DocumentBuilder builder = null;
     private XPathExpression xpe = null;
-    private Template temp = null;
-    private TextSubstitution tsub = null;
+    private Template kTemp = null;
+    private Template eTemp = null;
+    private TextSubstitution tSub = null;
     private int oid;
     private int resultType = Utils.RESULT_JSON;
-    private boolean isString = true;
+    private int itemType = Utils.RESULT_TEXT;
+    private boolean isString = false;
     private Pattern patternLF = null;
     private Pattern[][] aPatternGroup = null;
     private Pattern[][] xPatternGroup = null;
@@ -157,20 +164,24 @@ public class GenericList extends Report {
             throw(new IllegalArgumentException("wrong scheme: " +
                 u.getScheme()));
 
-        if ((o = props.get("DataType")) != null && o instanceof String &&
-            Integer.parseInt((String) o) != Utils.RESULT_TEXT)
-            isString = false;
-        if ((o = props.get("KeyTemplate")) != null) {
+        if ((o = props.get("DataType")) != null && o instanceof String)
+            itemType = Integer.parseInt((String) o);
+        if ((o = props.get("KeyTemplate")) != null) { // for private report
             str = MonitorUtils.select(o);
             str = MonitorUtils.substitute(str, template);
-            temp = new Template(str);
-            if ("##body##".equals(str)) // override for now
+            kTemp = new Template(str);
+            if ("##body##".equals(str)) // list of Strings for private report
                 isString = true;
+        }
+        else if ((o = props.get("EvalTemplate")) != null) { //for map selections
+            str = MonitorUtils.select(o);
+            str = MonitorUtils.substitute(str, template);
+            eTemp = new Template(str);
         }
         if ((o = props.get("KeySubstitution")) != null) {
             str = MonitorUtils.select(o);
             str = MonitorUtils.substitute(str, template);
-            tsub = new TextSubstitution(str);
+            tSub = new TextSubstitution(str);
         }
         if ((o = props.get("ResultType")) != null && o instanceof String)
             resultType = Integer.parseInt((String) o);
@@ -203,8 +214,8 @@ public class GenericList extends Report {
                     " failed to get XPath: " + e.toString()));
             }
         }
-        else if (!isString) // reset to true for non-structure data
-            isString = true;
+        else if (itemType != Utils.RESULT_TEXT) // non-structural data
+            itemType = Utils.RESULT_TEXT;
 
         try {
             Perl5Compiler pc = new Perl5Compiler();
@@ -591,11 +602,11 @@ public class GenericList extends Report {
             break;
         }
 
-        if (temp != null) // save original result to Data for private report
+        if (kTemp != null) // save original result to Data for private report
             report.put("Data", dataBlock);
 
         if ((n = dataBlock.size()) > 0) { // select items on patterns
-            if (temp == null) { // no for keys
+            if (kTemp == null && itemType == Utils.RESULT_TEXT) { // for strings
                 for (int i=n-1; i>=0; i--) {
                     str = (String) dataBlock.get(i);
                     if (str == null || str.length() <= 0) {
@@ -604,14 +615,37 @@ public class GenericList extends Report {
                     }
                     if (MonitorUtils.filter(str, aPatternGroup, pm, true) &&
                         !MonitorUtils.filter(str, xPatternGroup, pm, false)) {
-                        if (tsub != null)
-                            dataBlock.set(i, tsub.substitute(str));
+                        if (tSub != null)
+                            dataBlock.set(i, tSub.substitute(str));
                     }
                     else
                         dataBlock.remove(i);
                 }
+                report.put("List", dataBlock);
             }
-            else if (isString && !(dataBlock.get(0) instanceof Map)) {
+            else if (kTemp == null) { // list of maps without keys
+                int k = 0;
+                for (int i=n-1; i>=0; i--) {
+                    Map map = (Map) dataBlock.get(i);
+                    if (map == null || map.size() <= 0) {
+                        dataBlock.remove(i);
+                        continue;
+                    }
+                    if (eTemp != null) { // applying filter
+                        str = eTemp.substitute(map, eTemp.copyText());
+                        if (str == null || str.length() <= 0) {
+                            dataBlock.remove(i);
+                            continue;
+                        }
+                        o = Evaluation.evaluate(str);
+                        if (o == null || !(o instanceof Integer) ||
+                            ((Integer) o).intValue() == 0)
+                            dataBlock.remove(i);
+                    }
+                }
+                report.put("List", dataBlock);
+            }
+            else if (isString) { // dataBlock is a list of Strings
                 List<String> list = new ArrayList<String>();
                 report.put("List", list);
                 keys = new String[n];
@@ -624,8 +658,8 @@ public class GenericList extends Report {
                     }
                     if (MonitorUtils.filter(str, aPatternGroup, pm, true) &&
                         !MonitorUtils.filter(str, xPatternGroup, pm, false)) {
-                        if (tsub != null)
-                            keys[k++] = tsub.substitute(str);
+                        if (tSub != null)
+                            keys[k++] = tSub.substitute(str);
                         else
                             keys[k++] = str;
                     }
@@ -635,7 +669,7 @@ public class GenericList extends Report {
                 for (int i=k-1; i>=0; i--) // reverse the order
                     list.add(keys[i]);
             }
-            else { // convert maps into keys
+            else { // convert maps into keys or not
                 keys = new String[n];
                 int k = 0;
                 for (int i=n-1; i>=0; i--) {
@@ -644,30 +678,30 @@ public class GenericList extends Report {
                         dataBlock.remove(i);
                         continue;
                     }
-                    str = temp.substitute(map, temp.copyText());
+                    str = kTemp.substitute(map, kTemp.copyText());
                     if (str == null || str.length() <= 0)
                         continue;
                     if (MonitorUtils.filter(str, aPatternGroup, pm, true) &&
                         !MonitorUtils.filter(str, xPatternGroup, pm, false)) {
-                        if (tsub != null)
-                            keys[k++] = tsub.substitute(str);
+                        if (tSub != null)
+                            keys[k++] = tSub.substitute(str);
                         else
                             keys[k++] = str;
                     }
                     else
                         dataBlock.remove(i);
                 }
-                if (isString) {
+                if (itemType == Utils.RESULT_TEXT) { // list of Strings
                     List<String> list = new ArrayList<String>();
                     report.put("List", list);
                     for (int i=k-1; i>=0; i--) // reverse the order
                         list.add(keys[i]);
                 }
-                else
+                else // list of Maps
                     report.put("List", dataBlock);
             }
         }
-        else if (isString)
+        else if (kTemp == null || isString || itemType == Utils.RESULT_TEXT)
             report.put("List", new ArrayList<String>());
         else
             report.put("List", new ArrayList<Map>());
@@ -690,9 +724,9 @@ public class GenericList extends Report {
             return -1;
 
         if (dataType == Utils.RESULT_JSON) {
-            if (temp == null)
+            if (isString || (kTemp == null && itemType == Utils.RESULT_TEXT))
                 n = pickupList(text, jsonPath, list);
-            else { // with data
+            else { // with map data
                 StringReader sr = null;
                 try {
                     sr = new StringReader(text);
@@ -741,7 +775,7 @@ public class GenericList extends Report {
                 NodeList nl = (NodeList) o;
                 int k = nl.getLength();
                 n = 0;
-                if (temp == null) {
+                if(isString ||(kTemp == null && itemType == Utils.RESULT_TEXT)){
                     for (int i=0; i<k; i++) {
                         str = Utils.nodeToText(nl.item(i));
                         if (str == null || str.length() <= 0)
@@ -750,7 +784,7 @@ public class GenericList extends Report {
                         n ++;
                     }
                 }
-                else { // with data
+                else { // with map data
                     Map<String, String> map;
                     for (int i=0; i<k; i++) {
                         map = Utils.nodeToMap(nl.item(i));
@@ -828,6 +862,12 @@ public class GenericList extends Report {
 
     public void destroy() {
         super.destroy();
+        if (kTemp != null)
+            kTemp.clear();
+        if (eTemp != null)
+            eTemp.clear();
+        if (tSub != null)
+            tSub.clear();
         if (jmxReq != null)
             jmxReq.close();
         if (reporter != null)
