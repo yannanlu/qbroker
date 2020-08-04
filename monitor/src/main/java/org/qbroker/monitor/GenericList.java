@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Iterator;
+import java.io.FileInputStream;
 import java.io.StringReader;
 import java.io.IOException;
 import javax.management.JMException;
@@ -71,6 +72,7 @@ public class GenericList extends Report {
     private JMXRequester jmxReq = null;
     private MonitorReport reporter = null;
     private Requester requester= null;
+    private String filename = null;
     private String target;
     private String jsonPath = null;
     private DocumentBuilder builder = null;
@@ -251,6 +253,9 @@ public class GenericList extends Report {
             target = MonitorUtils.substitute(target, template);
             jmxReq = new JMXRequester(h);
             break;
+          case OBJ_FILE:
+            filename = u.getPath();
+            break;
           case OBJ_HTTP:
             if ((o = props.get("MaxBytes")) != null)
                 h.put("MaxBytes", o);
@@ -426,6 +431,7 @@ public class GenericList extends Report {
         String str;
         String[] keys = null;
         Object o;
+        byte[] buffer = new byte[4096];
 
         report.clear();
         if (step > 0) {
@@ -492,6 +498,11 @@ public class GenericList extends Report {
                         dataBlock.add(str);
                 }
             }
+            break;
+          case OBJ_FILE:
+            FileInputStream fs = new FileInputStream(filename);
+            n = getResult(dataBlock, resultType, Utils.read(fs, buffer));
+            fs.close();
             break;
           case OBJ_HTTP:
             if (r.get("ReturnCode") != null) {

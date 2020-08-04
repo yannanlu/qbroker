@@ -39,10 +39,13 @@ import org.qbroker.common.TextSubstitution;
  *<br><br>
  * The method of get() returns the JSON object referenced by the JSONPath.
  * Currently, it only supports simple JSONPath with delimiter of dot. The array
- * index can be a number or a simplate expression within the solid bracket.
- * In case of expressions, the variable of #{xxxx} references the value of the
- * key xxxx with the current map in a list context. It does not support fancy
- * expressions. Please check with dust.js for the JSON path.
+ * index can be a number or a simple expression within the solid bracket.
+ * In case of expressions with variables, the variable of #{xxxx} references
+ * the string value of the key xxxx with the current map in a list context. The
+ * expression will be used to select a map item in the list by text matching
+ * or comparison. It does not support other fancy expressions. Therefore, make
+ * sure to single-quote all terms. For info about JSON path, please check
+ * dust.js at https://wwww.dustjs.com.
  *<br>
  * @author yannanlu@yahoo.com
  */
@@ -1264,12 +1267,12 @@ public class JSON2Map {
                 List a = (List) o;
                 key = key.substring(1, k-1);
                 l = a.size();
-                if (pattern.matcher(key).matches()) {
+                if (pattern.matcher(key).matches()) { // key is an integer
                     j = Integer.parseInt(key);
                     if (j < 0) // wrap once only for last index
                         j += l;
                 }
-                else
+                else // key is an expression to be evaluated
                     j = evaluateIndex(key, a);
                 if (j < 0 || l <= 0 || j >= l)
                     break;
@@ -1927,7 +1930,10 @@ public class JSON2Map {
         return text;
     }
 
-    /** returns the evaluated index of the list or -1 on failure or no hit */
+    /**
+     * returns the index of the list by evaluation of the expression on its
+     * maps or -1 if no hit.
+     */
     public static int evaluateIndex(String expr, List list) {
         Number r = null;
         if (expr == null || list == null)
@@ -1937,21 +1943,17 @@ public class JSON2Map {
             Template template = new Template(expr, "#\\{[^#\\{\\}]+\\}");
             if ((k = template.size()) > 0) { // template
                 Object obj;
-                String[] keys = template.keySet().toArray(new String[k]);
                 for (int i=0; i<n; i++) {
                     obj = list.get(i);
-                    if (obj instanceof Map) {
-                        String value, text = template.copyText();
-                        Map map = (Map) obj;
-                        for (String key : keys) {
-                            value = (String) map.get(key); 
-                            text = template.substitute(key,"'"+value+"'",text);
-                        }
-                        r = Evaluation.evaluate(text);
-                        if (r instanceof Integer && r.intValue() != 0) {
+                    if (obj instanceof Map) try {
+                        if (Evaluation.evaluate((Map) obj, template)) {
                             template.clear();
                             return i;
                         }
+                    }
+                    catch (RuntimeException e) {
+                        template.clear();
+                        throw(e);
                     }
                 }
                 template.clear();

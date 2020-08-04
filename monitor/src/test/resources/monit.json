@@ -1,0 +1,18 @@
+{
+  "Name": "monit",
+  "DataField": "List",
+  "Type": "GenericList",
+  "Description": "listing services on Monit",
+  "URI": "file:///home/qbadm/monit.xml",
+  "ResultType": "4",
+  "XPath": "/*/service[@type=\"3\"]",
+  "KeyTemplate": "##body##",
+  "KeySubstitution": "s/^.+<name>([^<]+)<.+$/$1/",
+  "XPatternGroup": [
+    {
+      "Pattern": [
+        ">(monit|allEAP)<"
+      ]
+    }
+  ]
+}

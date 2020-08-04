@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.Collection;
+import java.io.Reader;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.IOException;
@@ -1388,6 +1389,20 @@ public class Utils {
         while ((bytesRead = in.read(buffer)) >= 0) {
             if (bytesRead > 0)
                 strBuf.append(new String(buffer, 0, bytesRead, "UTF-8"));
+        }
+
+        return strBuf.toString();
+    }
+
+    public static String read(Reader in, char[] buffer) throws IOException {
+        int bytesRead = 0;
+        StringBuffer strBuf;
+        if (in == null || buffer == null || buffer.length <= 0)
+            return null;
+        strBuf = new StringBuffer();
+        while ((bytesRead = in.read(buffer)) >= 0) {
+            if (bytesRead > 0)
+                strBuf.append(new String(buffer, 0, bytesRead));
         }
 
         return strBuf.toString();

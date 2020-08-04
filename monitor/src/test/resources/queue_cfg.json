@@ -1,0 +1,49 @@
+{
+  "Name": "queue_sonic",
+  "Template": "##queue##",
+  "ExtraTemplate": "##user## ##pass## ##hostname##",
+  "Item": [
+    {"queue": "YLUQueue", "user": "qbadm", "pass": "test", "hostname": "localhost"},
+    {"queue": "TestQueue", "user": "guest", "pass": "sonic", "hostname": "intsonicdev1"},
+    {"queue": "IdmServiceQueue", "user": "admin", "pass": "dev2", "hostname": "intsonicdev2"},
+    {"queue": "DirectoryServiceQueue", "user": "qbadm", "pass": "test", "hostname": "localhost"}
+  ],
+  "Property": {
+    "Name": "queue_sonic",
+    "ClassName": "org.qbroker.sonicmq.SonicMQMonitor",
+    "Site": "LITS",
+    "Type": "SonicMQMonitor",
+    "Category": "SonicMQ",
+    "Description": "JMS/JMX monitor on a queue",
+    "Step": "1",
+    "Tolerance": "1",
+    "MaxRetry": "0",
+    "MaxPage": "0",
+    "QuietPeriod": "30",
+    "ExceptionTolerance": "-1",
+    "URI": "tcp://##hostname##:2506",
+    "Username": "##user##",
+    "Password": "##pass##",
+    "WithPrivateReport": "true",
+    "Timeout": "50000",
+    "ObjectName": "Domain1.brProd01Container:ID=brProd01,category=metric,type=queue,name=##queue##",
+    "ReportName": "##queue##",
+    "ReportMode": "shared",
+    "ReportKey": [
+      "CurrentDepth",
+      "PreviousDepth",
+      "IppsCount",
+      "OppsCount",
+      "OutMessages",
+      "InMessages"
+    ],
+    "StatsLog": "/var/log/qbroker/stats/##queue##.mq",
+    "ActiveTime": {
+      "TimeWindow": [
+        {
+          "Interval": "00:00:00-24:00:00"
+        }
+      ]
+    }
+  }
+}

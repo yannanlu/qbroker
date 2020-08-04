@@ -10,8 +10,13 @@ package org.qbroker.flow;
  * EvalTemplate to GenericList to support list of Maps without private report,
  * renamed isStringExpression(String) to isStringTernary(String) in Evaluation
  * and updated TextSubstitution for it, added isAllowedAtStart(char) and
- * evaluate(Map, Template) to Evaluation, updated GenericList to use the new
- * method in Evaluation
+ * evaluate(Map, Template) to Evaluation, updated GenericList and ServiceMonitor
+ * to use the new method in Evaluation, added the implementation of OBJ_FILE
+ * to GenericList for JUnit tests, added read(Reader, char[]) to Utils for
+ * JUnit, updated evaluateIndex() of JSON2Map to use new method in Evaluation
+ * and added the requirement on single-quoted strings for index evaluations,
+ * added JUnit test cases for TextSubstitution, JSON2Map, GenericList and
+ * ConfigTemplate
  *<br>
  * V1.2.24 (2020/05/16): added new methods of checkLoggerName(), substitute()
  * and substituteProperties() to Utils, added a line calling checkLoggerName()
@@ -401,7 +406,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V1.2.25 2020/08/02 14:17:25";
+    private static String ReleaseTAG = "QBroker V1.2.25 2020/08/02 16:42:50";
 
     public ReleaseTag() {
     }

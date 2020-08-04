@@ -1,0 +1,47 @@
+{
+  "Name": "monit",
+  "Template": "##service##",
+  "Item": {
+    "DataField": "List",
+    "Type": "GenericList",
+    "Description": "listing services on Monit",
+    "URI": "file:///home/qbadm/monit.xml",
+    "ResultType": "4",
+    "XPath": "/*/service[@type=\"3\"]",
+    "KeyTemplate": "##body##",
+    "KeySubstitution": "s/^.+<name>([^<]+)<.+$/$1/",
+    "XPatternGroup": [
+      {
+        "Pattern": [
+          ">(monit|allEAP)<"
+        ]
+      }
+    ]
+  },
+  "Property": {
+    "Name": "monit",
+    "ClassName": "org.qbroker.monitor.ServiceMonitor",
+    "Site": "LITS",
+    "Type": "ServiceMonitor",
+    "Category": "PROCESS",
+    "Description": "monitoring a service on Monit",
+    "Step": "1",
+    "Tolerance": "1",
+    "MaxRetry": "2",
+    "MaxPage": "2",
+    "QuietPeriod": "60",
+    "ExceptionTolerance": "-1",
+    "URI": "report:///process",
+    "ServiceName": "##service##",
+    "ServiceType": "process",
+    "EvalTemplate": "(##state## == 512) || (##memory_percent## > 30.0)",
+    "StatsLog": "/var/log/qbroker/stats/##name##.proc",
+    "ActiveTime": {
+      "TimeWindow": [
+        {
+          "Interval": "00:00:00-24:00:00"
+        }
+      ]
+    }
+  }
+}

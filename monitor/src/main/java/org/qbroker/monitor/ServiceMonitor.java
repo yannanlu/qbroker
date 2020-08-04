@@ -536,11 +536,16 @@ public class ServiceMonitor extends Monitor {
                     actionCount = 1;
             }
             else { // with stats
+                boolean isOutOfRange = false;
                 Template temp = MonitorUtils.getMappedTemplate(serviceName,
                     mapList, pm);
-                if (temp != null) {
-                    expr = temp.substitute(latest, temp.copyText());
-                    o = Evaluation.evaluate(expr);
+                if (temp != null) try { // found the template
+                    isOutOfRange = (Evaluation.evaluate(latest, temp));
+                }
+                catch (Exception e) {
+                    level = Event.NOTICE;
+                    strBuf.append("Exception! failed to evaluate data: "+
+                        e.toString());
                 }
                 if (temp == null) { // no template found
                     level = Event.NOTICE;
@@ -548,22 +553,11 @@ public class ServiceMonitor extends Monitor {
                     if (previousState != state)
                         actionCount = 1;
                 }
-                else if (o == null || !(o instanceof Integer))  { // exception
-                    level = Event.NOTICE;
-                    strBuf.append("Exception! failed to evaluate data: "+expr);
+                else if (level == Event.NOTICE) { // evaluation failed
                     if (previousState != state)
                         actionCount = 1;
                 }
-                else if (((Integer) o).intValue() == 0) { // ok
-                    if (previousState != state) {
-                        strBuf.append(serviceType + " of " + serviceName +
-                            " is OK");
-                        actionCount = 1;
-                        if (normalStep > 0)
-                            step = normalStep;
-                    }
-                }
-                else { // error
+                else if (isOutOfRange) { // stats out of range
                     if (status != TimeWindows.BLACKOUT) { // for normal case
                         level = Event.ERR;
                         if (step > 0)
@@ -573,6 +567,15 @@ public class ServiceMonitor extends Monitor {
                         " is in error condition");
                     if (previousState != state)
                         actionCount = 1;
+                }
+                else { // service is OK
+                    if (previousState != state) {
+                        strBuf.append(serviceType + " of " + serviceName +
+                            " is OK");
+                        actionCount = 1;
+                        if (normalStep > 0)
+                            step = normalStep;
+                    }
                 }
             }
             break;
