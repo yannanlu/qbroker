@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashSet;
 import java.util.Date;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -23,9 +24,9 @@ import org.qbroker.common.Utils;
  * In case of average, AveragedOver is required.  Its referenced name should be
  * defined before it. In case of standard deviation, VarianceOf is requires.
  * Its referenced name should be defined before it. In case of max or min, the 
- * name of the field does not have to exist in the incoming message.  But the
+ * name of the field does not have to exist in the incoming data.  But the
  * referenced name by MaxOf or MinOf should be defined before it. If TimePattern
- * is defined for max or min, Aggregation will parse the value to get the
+ * is defined for max or min, Aggregator will parse the value to get the
  * timestamp for comparisons.
  *<br>
  * @author yannanlu@yahoo.com
@@ -48,41 +49,46 @@ public class Aggregator {
     public final static int AGGR_MERGE = 9;
     public final static int AGGR_UNION = 10;
     public final static int AGGR_XUNION = 11;
-    public final static int AGGR_JOIN = 12;
+    public final static int AGGR_UNIQC = 12;
     public final static int AGGR_END = 12;
-    private final static int AGGR_DSUM = 13;
-    private final static int AGGR_DMIN = 14;
-    private final static int AGGR_DMAX = 15;
-    private final static int AGGR_TMIN = 16;
-    private final static int AGGR_TMAX = 17;
-    private static final Map<String, String> optionMap =
-        new HashMap<String, String>();
+    public final static int AGGR_DSUM = 13;
+    public final static int AGGR_DMIN = 14;
+    public final static int AGGR_DMAX = 15;
+    public final static int AGGR_TMIN = 16;
+    public final static int AGGR_TMAX = 17;
+    public static final Map<String, Integer> optionMap =
+        new HashMap<String, Integer>();
 
     static {
-        optionMap.put("count", String.valueOf(AGGR_COUNT));
-        optionMap.put("sum", String.valueOf(AGGR_SUM));
-        optionMap.put("min", String.valueOf(AGGR_MIN));
-        optionMap.put("max", String.valueOf(AGGR_MAX));
-        optionMap.put("append", String.valueOf(AGGR_APPEND));
-        optionMap.put("first", String.valueOf(AGGR_FIRST));
-        optionMap.put("last", String.valueOf(AGGR_LAST));
-        optionMap.put("avg", String.valueOf(AGGR_AVG));
-        optionMap.put("std", String.valueOf(AGGR_STD));
-        optionMap.put("merge", String.valueOf(AGGR_MERGE));
-        optionMap.put("union", String.valueOf(AGGR_UNION));
-        optionMap.put("xunion", String.valueOf(AGGR_XUNION));
-        optionMap.put("join", String.valueOf(AGGR_JOIN));
-        optionMap.put("dsum", String.valueOf(AGGR_DSUM));
-        optionMap.put("dmin", String.valueOf(AGGR_DMIN));
-        optionMap.put("dmax", String.valueOf(AGGR_DMAX));
-        optionMap.put("tmin", String.valueOf(AGGR_TMIN));
-        optionMap.put("tmax", String.valueOf(AGGR_TMAX));
+        optionMap.put("count", new Integer(AGGR_COUNT));
+        optionMap.put("sum", new Integer(AGGR_SUM));
+        optionMap.put("min", new Integer(AGGR_MIN));
+        optionMap.put("max", new Integer(AGGR_MAX));
+        optionMap.put("append", new Integer(AGGR_APPEND));
+        optionMap.put("first", new Integer(AGGR_FIRST));
+        optionMap.put("last", new Integer(AGGR_LAST));
+        optionMap.put("avg", new Integer(AGGR_AVG));
+        optionMap.put("average", new Integer(AGGR_AVG));
+        optionMap.put("std", new Integer(AGGR_STD));
+        optionMap.put("standard_deviation", new Integer(AGGR_STD));
+        optionMap.put("merge", new Integer(AGGR_MERGE));
+        optionMap.put("union", new Integer(AGGR_UNION));
+        optionMap.put("xunion", new Integer(AGGR_XUNION));
+        optionMap.put("exclusive_union", new Integer(AGGR_XUNION));
+        optionMap.put("uniqc", new Integer(AGGR_UNIQC));
+        optionMap.put("unique_count", new Integer(AGGR_UNIQC));
+        optionMap.put("dsum", new Integer(AGGR_DSUM));
+        optionMap.put("dmin", new Integer(AGGR_DMIN));
+        optionMap.put("dmax", new Integer(AGGR_DMAX));
+        optionMap.put("tmin", new Integer(AGGR_TMIN));
+        optionMap.put("tmax", new Integer(AGGR_TMAX));
+        optionMap.put("earliest", new Integer(AGGR_TMIN));
+        optionMap.put("latest", new Integer(AGGR_TMAX));
     }
 
     @SuppressWarnings("unchecked")
     public Aggregator(String name, List list) {
         Object o;
-        Browser browser;
         StringBuffer strBuf = new StringBuffer();
         Map<String, Object> map;
         Map ph;
@@ -106,19 +112,9 @@ public class Aggregator {
             if (key == null || key.length() <= 0)
                 continue;
             str = (String) ph.get("Operation");
-            if (str != null && optionMap.containsKey(str.toLowerCase())) {
-                 str = (String) optionMap.get(str.toLowerCase());
-            }
-            else if (str != null) { // wrong operation
-                throw(new IllegalArgumentException(name + ": operation " +
-                    str + " on " + key + " not supported"));
-            }
-            else { // assume the default operation of none
-                str = String.valueOf(AGGR_NONE);
-            }
+            option = getAggregationID(str);
             map = new HashMap<String, Object>();
             map.put("Operation", str);
-            option = Integer.parseInt(str);
             switch (option) {
               case AGGR_COUNT:
                 str = (String) ph.get("DefaultValue");
@@ -135,6 +131,9 @@ public class Aggregator {
                 if (!map.containsKey("DefaultValue"))
                     map.put("DefaultValue", "1");
                 break;
+              case AGGR_UNIQC:
+                map.put("HashSet", new HashSet<String>());
+                break;
               case AGGR_SUM:
               case AGGR_MIN:
               case AGGR_MAX:
@@ -148,9 +147,6 @@ public class Aggregator {
                     }
                     else
                         str = (String) ph.get("DefaultValue");
-                    if ((o = ph.get("TimePattern")) != null &&
-                        o instanceof String)
-                        map.put("DateFormat", new SimpleDateFormat((String) o));
                 }
                 else if (option == AGGR_MIN) {
                     str = (String) ph.get("MinOf");
@@ -162,9 +158,6 @@ public class Aggregator {
                     }
                     else
                         str = (String) ph.get("DefaultValue");
-                    if ((o = ph.get("TimePattern")) != null &&
-                        o instanceof String)
-                        map.put("DateFormat", new SimpleDateFormat((String) o));
                 }
                 else
                     str = (String) ph.get("DefaultValue");
@@ -177,17 +170,22 @@ public class Aggregator {
                         map.put("DefaultValue", String.valueOf(y));
                         option += AGGR_END;
                     }
-                    else { // long
+                    else // long
                         map.put("DefaultValue", String.valueOf((long) y));
-                        if (option != AGGR_SUM && map.containsKey("DateFormat"))
-                            option += AGGR_END + 2; // for time
-                    }
                 }
                 catch (NumberFormatException e) {
                     throw(new IllegalArgumentException(name+
                         " failed to parse DefaultValue "+ str + " on " +
                         key + ": " + e.toString()));
                 }
+                break;
+              case AGGR_TMIN:
+              case AGGR_TMAX:
+                if ((o = ph.get("TimePattern")) != null && o instanceof String)
+                    map.put("DateFormat", new SimpleDateFormat((String) o));
+                else
+                    throw(new IllegalArgumentException(name +
+                        ": TimePattern is not defined on " + key));
                 break;
               case AGGR_AVG:
                 str = (String) ph.get("DefaultValue");
@@ -367,6 +365,12 @@ public class Aggregator {
                         value = "1";
                     }
                 }
+                else if (option == AGGR_UNIQC) {
+                    HashSet hset = (HashSet) map.get("HashSet");
+                    hset.clear();
+                    hset.add(value);
+                    value = "1";
+                }
 
                 if (option == AGGR_AVG) { // for average
                     if (value == null) // no such value, use default
@@ -466,6 +470,13 @@ public class Aggregator {
                 }
                 value = (String) rpt.get(key);
                 result[i] = String.valueOf(x + Long.parseLong(value));
+                break;
+              case AGGR_UNIQC:
+                HashSet hset = (HashSet) map.get("HashSet");
+                value = (String) report.get(key);
+                if (value != null && !hset.contains(value))
+                    hset.add(value);
+                result[i] = String.valueOf(hset.size());
                 break;
               case AGGR_SUM:
                 value = (String) rpt.get(key);
@@ -706,6 +717,16 @@ public class Aggregator {
 
     }
 
+    public static int getAggregationID(String key) {
+        if (key == null)
+            return AGGR_NONE;
+        else if (optionMap.containsKey(key.toLowerCase()))
+            return optionMap.get(key.toLowerCase()).intValue();
+        else // wrong operation
+            throw(new IllegalArgumentException("aggreation " + key +
+                " is not supported"));
+    }
+
     public String getName() {
         return name;
     }
@@ -727,6 +748,18 @@ public class Aggregator {
     }
 
     public void clear() {
+        int n = aggrList.size();
+        for (int i=0; i<n; i++) {
+            Map ph = (Map) aggrList.get(i);
+            if (ph != null) {
+                if (ph.containsKey("HashSet")) {
+                    HashSet s = (HashSet) ph.remove("HashSet");
+                    if (s != null)
+                        s.clear();
+                }
+                ph.clear();
+            }
+        }
         aggrList.clear();
     }
 

@@ -3,6 +3,23 @@ package org.qbroker.flow;
 /* ReleaseTag.java - release tag for all the packages of qbroker */
 
 /**
+ * V1.2.26 (2020/08/09): added the interface of Provider to common, added
+ * GenericProvider to receiver, added SingleNodeService to node, added unit
+ * tests for Aggregator, SimpleParser, Aggregation and ParserNode, moved
+ * GenericRequester from flow to persister, updated AgeMonitor, NumberMonitor
+ * IncrementalMonitor due to this move, moved initNode() from MessageFlow to
+ * MessageUtils and updated MessageFlow
+ *<br>
+ * added UNIQC to Aggregator, Aggregation and NumberMonitor to support
+ * unique_count, changed Aggregation, AggregateNode and MapReduceNode to use
+ * static constants and method defined in Aggregator, fixed a minor typo in
+ * ThreadPool, updated comments in XQueue and IndexedXQueue, minor change on
+ * XQCallbackWrapper and SimpleParser, updated doRequest() of QFlow, minor
+ * change on MonitorAgent, added getReport() to MessageUtils and updated it
+ * to check system property on ReportClass to support unit tests, added the
+ * property of AppendNewLine to Msg2Text for RESULT_COLLECTIBLE and
+ * RESULT_POSTABLE only in case newline is required for EOTBytes = 0x0a
+ *<br>
  * V1.2.25 (2020/08/02): added nodeToMap() to Utils in common, added DataType
  * to GenericList to support list of Map, added methods of normalizeItem(Map),
  * updateMapItems(Map) and getItemList(Map) to ConfigTemplate to support cases
@@ -406,7 +423,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V1.2.25 2020/08/02 16:42:50";
+    private static String ReleaseTAG = "QBroker V1.2.26 2020/08/09 23:12:30";
 
     public ReleaseTag() {
     }

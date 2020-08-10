@@ -35,6 +35,7 @@ import org.xml.sax.SAXException;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import org.qbroker.common.XQueue;
+import org.qbroker.common.Aggregator;
 import org.qbroker.common.Browser;
 import org.qbroker.common.AssetList;
 import org.qbroker.common.QList;
@@ -798,9 +799,9 @@ public class AggregateNode extends Node {
                 msg.setJMSTimestamp(inMessage.getJMSTimestamp());
                 i = aggr.initialize(currentTime, inMessage, msg);
                 if (i == 0 && aggr.hasBody()) switch (aggr.getBodyOperation()) {
-                  case Aggregation.AGGR_FIRST:
-                  case Aggregation.AGGR_LAST:
-                  case Aggregation.AGGR_APPEND:
+                  case Aggregator.AGGR_FIRST:
+                  case Aggregator.AGGR_LAST:
+                  case Aggregator.AGGR_APPEND:
                     msgStr = MessageUtils.processBody(inMessage, buffer);
                     if (msgStr == null) // no such value, use default
                         msgStr = (String) aggr.getFromBody("DefaultValue");
@@ -808,7 +809,7 @@ public class AggregateNode extends Node {
                         msgStr = "";
                     msg.setText(msgStr);
                     break;
-                  case Aggregation.AGGR_MERGE:
+                  case Aggregator.AGGR_MERGE:
                     k = aggr.getBodyType();
                     msgStr = MessageUtils.processBody(inMessage, buffer);
                     if (msgStr == null) // no such value, use default
@@ -861,11 +862,11 @@ public class AggregateNode extends Node {
                 int[] meta = cache.getMetaData(key);
                 i = aggr.aggregate(currentTime, inMessage, msg);
                 if (i == 0 && aggr.hasBody()) switch (aggr.getBodyOperation()) {
-                  case Aggregation.AGGR_LAST:
+                  case Aggregator.AGGR_LAST:
                     msgStr = MessageUtils.processBody(inMessage, buffer);
                     msg.setText(msgStr);
                     break;
-                  case Aggregation.AGGR_APPEND:
+                  case Aggregator.AGGR_APPEND:
                     str = MessageUtils.processBody(inMessage, buffer);
                     if (str == null) // no such value, use default
                         str = (String) aggr.getFromBody("DefaultValue");
@@ -880,7 +881,7 @@ public class AggregateNode extends Node {
                     }
                     msg.setText(msgStr + str);
                     break;
-                  case Aggregation.AGGR_MERGE:
+                  case Aggregator.AGGR_MERGE:
                     k = aggr.getBodyType();
                     msgStr = MessageUtils.processBody(inMessage, buffer);
                     if (msgStr == null) // no such value, use default
@@ -918,7 +919,7 @@ public class AggregateNode extends Node {
                             sr.close();
                     }
                     break;
-                  case Aggregation.AGGR_FIRST:
+                  case Aggregator.AGGR_FIRST:
                   default:
                 }
                 // update internal count for the key

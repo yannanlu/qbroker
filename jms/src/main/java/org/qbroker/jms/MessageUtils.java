@@ -126,6 +126,13 @@ public class MessageUtils {
         defaultMap.put("pid", String.valueOf(Event.getPID()));
     }
 
+    /**
+     * returns a copy of the report
+     */
+    public static Map<String, Object> getReport(String rptName) {
+        return null;
+    }
+
     public static String substitute(String input) {
         return Utils.substitute(input, defaultTemplate, defaultMap);
     }
@@ -154,7 +161,8 @@ public class MessageUtils {
             ph.put("Name", "GlobalProperties");
             ph.put("Type", "ReportQuery");
             ph.put("ReportKey", new ArrayList());
-            ph.put("ReportClass", "org.qbroker.flow.QFlow");
+            ph.put("ReportClass",
+                System.getProperty("ReportClass", "org.qbroker.flow.QFlow"));
             ph.put("Step", "1");
             reporter = MonitorUtils.getNewReport(ph);
             defaultReporter = reporter;
@@ -2030,6 +2038,31 @@ public class MessageUtils {
         return new String[0];
     }
 
+    public static void disableAck(XQueue xq) {
+        int mask = xq.getGlobalMask();
+        xq.setGlobalMask(mask & (~XQueue.EXTERNAL_XA));
+    }
+
+    public static void enableAck(XQueue xq) {
+        int mask = xq.getGlobalMask();
+        xq.setGlobalMask(mask | XQueue.EXTERNAL_XA);
+    }
+
+    public static boolean keepRunning(XQueue xq) {
+        if ((xq.getGlobalMask() & XQueue.KEEP_RUNNING) > 0)
+            return true;
+        else
+            return false;
+    }
+
+    public static boolean isStopped(XQueue xq) {
+        int mask = XQueue.KEEP_RUNNING | XQueue.PAUSE | XQueue.STANDBY;
+        if ((xq.getGlobalMask() & mask) > 0)
+            return false;
+        else
+            return true;
+    }
+
     /**
      * sets STOP bit on the global mask of the XQueue.
      */
@@ -2368,6 +2401,48 @@ public class MessageUtils {
         plugin[1] = o;
 
         return plugin;
+    }
+
+    /**
+     * It instantiates a node object from the given props and returns the object
+     * upon success.  In case of failure, it returns the exception.
+     */
+    public static Object initNode(Map props, String prefix) {
+        Object o;
+        String key, className;
+
+        if (props == null || props.size() <= 0) {
+            new Event(Event.ERR, prefix +
+                ": null or empty property Map").send();
+            return null;
+        }
+        if ((o = props.get("Name")) == null || !(o instanceof String)) {
+            new Event(Event.ERR, prefix + ": Name not defined").send();
+            return null;
+        }
+        key = (String) o;
+
+        className = (String) props.get("ClassName");
+        if (className == null || className.length() == 0) {
+            new Event(Event.ERR, prefix + ": ClassName not defined for " +
+                key).send();
+            return null;
+        }
+
+        try { // instantiate the object
+            java.lang.reflect.Constructor con;
+            Class<?> cls = Class.forName(className);
+            con = cls.getConstructor(new Class[]{Map.class});
+            o = con.newInstance(new Object[]{props});
+        }
+        catch (Exception e) {
+            o = e;
+        }
+        catch (Error er) {
+            o = er;
+        }
+
+        return o;
     }
 
     /** enables the flow control on the SoniceMQ JMS session */

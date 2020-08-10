@@ -42,6 +42,7 @@ public class Msg2Text {
     private String baseTag0, baseTag1;
     private int defaultType = Utils.RESULT_TEXT;
     private boolean hasRepeatedTemplate = false;
+    private String end = null;
     private final SimpleDateFormat zonedDateFormat =
         new SimpleDateFormat("yyyy-MM-dd HH:mm:ss,SSS zz");
 
@@ -58,6 +59,12 @@ public class Msg2Text {
 
         if ((o = props.get("ResultType")) != null)
             defaultType = Integer.parseInt((String) o);
+
+        if (((defaultType & Utils.RESULT_COLLECTIBLE) > 0 ||
+            (defaultType & Utils.RESULT_POSTABLE) > 0) &&
+            (o = props.get("AppendNewLine")) != null && o instanceof String &&
+            "true".equals((String) o)) // for event only
+            end = "\n";
 
         if ((o = props.get("BaseTag")) != null) {
             baseTag0 = "<" + (String) o + " type=\"ARRAY\">";
@@ -136,7 +143,7 @@ public class Msg2Text {
             else if ((defaultType & Utils.RESULT_JSON) > 0)
                 text = getJSON(msg, new byte[4096]);
             else
-                text = getText(defaultType, msg, new byte[4096]);
+                text = getText(defaultType, msg, new byte[4096]) + end;
 
             msg.clearBody();
             if (msg instanceof TextMessage) {

@@ -5028,18 +5028,22 @@ public class MonitorAgent implements Service, Runnable {
         pool = new ThreadPool("client", 1, 1, pstr, "persist",
             new Class[]{XQueue.class, int.class});
         client = pool.checkout(50L);
-        if (client == null)
+        if (client == null) {
+            pool.close();
+            xq.clear();
             return "failed to checkout a connection";
+        }
 
         pool.assign(new Object[] {xq, new Integer(0)}, 0);
         cid = -1;
         for (i=0; i<10; i++) {
-            cid = xq.reserve(500L, id);
+            cid = xq.collect(500L, id);
             if (cid >= 0)
                 break;
         }
         MessageUtils.stopRunning(xq);
         pool.close();
+        xq.clear();
         if (cid >= 0)
             return null;
         else

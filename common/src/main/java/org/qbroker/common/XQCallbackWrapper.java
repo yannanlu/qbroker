@@ -15,23 +15,37 @@ import java.lang.reflect.Method;
 
 public class XQCallbackWrapper {
     private String name;
-    private Object obj = null;
+    private Object object = null;
     private Method method = null;
+    private boolean isUsable = false;
 
-    public XQCallbackWrapper(String name, Object obj, Method method) {
-        this.name = name;
-        this.obj = obj;
-        this.method = method;
+    public XQCallbackWrapper(String name, Object object, Method method) {
+        if (name != null && name.length() > 0)
+            this.name = name;
+        else
+            throw(new IllegalArgumentException("XQCallbackWrapper: " +
+                "name is null"));
+        if (object != null)
+            this.object = object;
+        else
+            throw(new IllegalArgumentException(name + ": object is null"));
+        if (method != null)
+            this.method = method;
+        else
+            throw(new IllegalArgumentException(name + ": method is null"));
+        isUsable = true;
     }
 
     public Exception callback(String key, String id) {
-        if (obj != null && method != null) try {
-            method.invoke(obj, new Object[] {key, id});
+        if (isUsable) try {
+            method.invoke(object, new Object[] {key, id});
+            return null;
         }
         catch (Exception e) {
             return e;
         }
-        return null;
+        else
+            return new IllegalStateException(name + " is not usable any more");
     }
 
     public String getName() {
@@ -39,8 +53,9 @@ public class XQCallbackWrapper {
     }
 
     public void clear() {
-        obj = null;
+        object = null;
         method = null;
+        isUsable = false;
     }
 
     protected void finalize() {

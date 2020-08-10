@@ -1,4 +1,4 @@
-package org.qbroker.flow;
+package org.qbroker.persister;
 
 /* GenericRequester.java - a requester of JMS messages via various persister */
 
@@ -43,7 +43,6 @@ import org.qbroker.monitor.MonitorUtils;
 import org.qbroker.json.JSON2Map;
 import org.qbroker.jms.TextEvent;
 import org.qbroker.jms.MessageUtils;
-import org.qbroker.persister.MessagePersister;
 import org.qbroker.event.EventUtils;
 import org.qbroker.event.Event;
 
@@ -58,6 +57,7 @@ public class GenericRequester implements Requester {
     private String dataField, rcField, resultField;
     private SimpleDateFormat zonedDateFormat;
     private ThreadPool pool;
+    private Thread thr;
     private XQueue xq;
     private MessagePersister persister = null;
     private Map<String, Object> msgMap;
@@ -95,11 +95,10 @@ public class GenericRequester implements Requester {
                 e.toString()));
         }
 
-        persister = (MessagePersister) MessageFlow.initNode(props, name);
+        persister = (MessagePersister) MessageUtils.initNode(props, name);
 
         if ((o = props.get("RequestCommand")) != null) // for command
             isCommand = true;
-
 
         if ((o = props.get("RequestTemplate")) != null)
             temp = new Template((String) o);
@@ -175,9 +174,11 @@ public class GenericRequester implements Requester {
 
         zonedDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss,SSS zz");
 
-        xq = new IndexedXQueue("xq_" + name, 2);
+        xq = new IndexedXQueue("xq_" + name, 1);
         pool = new ThreadPool("pool_" + name, 1, 1, persister, "persist",
             new Class[] {XQueue.class, int.class});
+        thr = pool.checkout(500L);
+        pool.assign(new Object[] {xq, new Integer(0)}, 0);
     }
 
     /**
@@ -203,7 +204,7 @@ public class GenericRequester implements Requester {
      */
     public int getResponse(String request, StringBuffer strBuf,
         boolean autoDisconn) throws WrapperException {
-        int k, id, cid;
+        int k;
         String str, target, operation, attrs;
         TextEvent event = null;
 
@@ -239,41 +240,44 @@ public class GenericRequester implements Requester {
                 e.toString()));
         }
 
-        str = reconnect();
-        if (str != null)
-            throw(new WrapperException(name + " failed to reconnect: " + str));
-        id = xq.reserve(500L);
-        cid = xq.add(event, id);
-        if (id < 0 || cid <= 0) { // failed to reserve or add the msg
-            MessageUtils.stopRunning(xq);
-            isConnected = false;
-            throw(new WrapperException(name + " failed to add request at " +
-                id + "/" + xq.size() + " " + xq.depth()));
+        if (autoDisconn) {
+            str = reconnect();
+            if (str != null)
+                throw(new WrapperException(name+" failed to reconnect: "+str));
         }
 
-        pool.assign(new Object[] {xq, new Integer(0)}, 0);
-        k = reqTimeout / 500 + 1;
-        cid = -1;
-        for (int i=0; i<=k; i++) {
-            cid = xq.collect(500L, id);
-            if (cid >= 0)
-                break;
-        }
-        if (autoDisconn) {
+        k = doRequest(event, reqTimeout);
+
+        if (k == 0) { // timed out
             MessageUtils.stopRunning(xq);
+            if (thr.isAlive())
+                thr.interrupt();
             isConnected = false;
-        }
-        if (cid < 0) {
             throw(new WrapperException(name + ": request timed out from "+uri));
         }
+        else if (k < 0) { // failed
+            MessageUtils.stopRunning(xq);
+            if (thr.isAlive())
+                thr.interrupt();
+            isConnected = false;
+            throw(new WrapperException(name + " failed to add request at 0 /" +
+                xq.size() + " " + xq.depth()));
+        }
+        else if (autoDisconn) {
+            MessageUtils.stopRunning(xq);
+            if (thr.isAlive())
+                thr.interrupt();
+            isConnected = false;
+        }
+
         if (rcField != null) { // rcField is expected
             str = event.getAttribute(rcField);
             if (str != null)
-                cid = Integer.parseInt(str);
+                k = Integer.parseInt(str);
             else
-                cid = -1;
-            if (cid != 0) // request failed with non-zero
-                return (cid > 0) ? -cid: -2;
+                k = -1;
+            if (k != 0) // request failed with non-zero
+                return (k > 0) ? -k : -2;
         }
         if (!"body".equals(dataField))
             str = event.getAttribute(dataField);
@@ -305,6 +309,23 @@ public class GenericRequester implements Requester {
         return k;
     }
 
+    public int doRequest(TextEvent event, int timeout) {
+        int id, cid, k;
+        id = xq.reserve(500L);
+        cid = xq.add(event, id);
+        if (id < 0 || cid <= 0) // failed to reserve or add the msg
+            return -1;
+
+        k = timeout / 500 + 1;
+        cid = -1;
+        for (int i=0; i<=k; i++) { // wait for response
+            cid = xq.collect(500L, id);
+            if (cid >= 0) // got response
+                return 1;
+        }
+        return 0;
+    }
+
     public String reconnect() {
         int id;
         if (xq.depth() > 0) { // leftover
@@ -316,13 +337,6 @@ public class GenericRequester implements Requester {
             xq.clear();
         persister.setStatus(MessagePersister.PSTR_READY);
         MessageUtils.resumeRunning(xq);
-        Thread thr = pool.checkout(500L);
-        if (thr == null) { // failed to check out the thread
-            MessageUtils.stopRunning(xq);
-            isConnected = false;
-            return "failed to checkout a thread from " +
-                pool.getName() + ": " + pool.getSize();
-        }
         isConnected = true;
         return null;
     }
@@ -342,12 +356,16 @@ public class GenericRequester implements Requester {
 
     public void close() {
         MessageUtils.stopRunning(xq);
-        if (pool != null)
-            pool.close();
-        pool = null;
         if (persister != null)
             persister.close();
         persister = null;
+        if (pool != null) {
+            if (thr.isAlive())
+                thr.interrupt();
+            pool.checkin(thr);
+            pool.close();
+        }
+        pool = null;
         xq.clear();
         isConnected = false;
     }
@@ -536,6 +554,6 @@ public class GenericRequester implements Requester {
     private static void printUsage() {
         System.out.println("GenericRequester Version 1.0 (written by Yannan Lu)");
         System.out.println("GenericRequester: send a request via a given persister");
-        System.out.println("Usage: java org.qbroker.flow.GenericRequester -I cfg.json -f filename");
+        System.out.println("Usage: java org.qbroker.persister.GenericRequester -I cfg.json -f filename");
     }
 }

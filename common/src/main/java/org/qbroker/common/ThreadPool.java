@@ -49,7 +49,7 @@ public class ThreadPool implements Runnable {
     private Map<Thread, int[]> idMap;
     private String name;
     private int capacity, minSize, length;
-    private long waitTime;
+    private long waitTime, longerWaitTime;
     public static final int POOL_OK = 0;
     public static final int POOL_CHECKOUT = 1;
     public static final int POOL_INVALID = 2;
@@ -94,6 +94,7 @@ public class ThreadPool implements Runnable {
         }
 
         waitTime = 2000L;
+        longerWaitTime = 5 * waitTime;
         pool = new IndexedXQueue(name, capacity);
         root = new IndexedXQueue(name, capacity);
 
@@ -183,7 +184,7 @@ public class ThreadPool implements Runnable {
                 pool.remove(id);
                 status = POOL_CLOSED;
             }
-            else if (s != POOL_OK) { // recreate the object
+            else if (s != POOL_OK) { // recreate the thread
                 idMap.remove(thr);
                 pool.remove(id);
                 try {
@@ -193,7 +194,7 @@ public class ThreadPool implements Runnable {
                 }
                 status = POOL_INVALID;
             }
-            else { // recycle the object
+            else { // recycle the thread
                 pool.putback(id);
                 status = POOL_OK;
             }
@@ -231,16 +232,16 @@ public class ThreadPool implements Runnable {
 
         while ((pool.getGlobalMask() & XQueue.KEEP_RUNNING) > 0) {
             cs = pool.getCellStatus(id);
-            if (cs == XQueue.CELL_OCCUPIED) {
+            if (cs == XQueue.CELL_OCCUPIED) { // thread not checked out yet
                 try {
-                    Thread.sleep(waitTime);
+                    Thread.sleep(longerWaitTime);
                 }
                 catch (InterruptedException e) {
                 }
                 if (id != getId(thr)) { // destroyed
                     cs = -1;
                     break;
-                 }
+                }
                 continue;
             }
             else if (id != getId(thr)) { // destroyed
@@ -253,14 +254,14 @@ public class ThreadPool implements Runnable {
             cid = -1;
             // wait for a task since the thread has been checked out
             do {
-                cid = root.getNextCell(5*waitTime, id);
-                if (cid >= 0) {
+                cid = root.getNextCell(waitTime, id);
+                if (cid >= 0) { // task arrived
                     if (id != getId(thr)) { // destroyed
                         root.putback(id);
                         cid = 2;
                     }
-                    // got the task
-                    cid = 1;
+                    else // still alive
+                        cid = 1;
                 }
                 else if (id != getId(thr)) // destroyed
                     cid = 2;
@@ -291,7 +292,7 @@ public class ThreadPool implements Runnable {
                 }
                 count ++;
             }
-            else { // cid == 1
+            else { // cid == 1 but task is null
                 GenericLogger.log(Event.WARNING, name + ": null task for "+ id);
                 count ++;
             }
@@ -345,7 +346,7 @@ public class ThreadPool implements Runnable {
         return pool.getGlobalMask();
     }
 
-    /** return the ID of the object or -1 if it does not contain such object */
+    /** return the ID of the thread or -1 if it does not contain such object */
     public synchronized int getId(Thread thr) {
         if (thr != null && idMap.containsKey(thr))
             return idMap.get(thr)[0];
@@ -362,6 +363,9 @@ public class ThreadPool implements Runnable {
             pool.clear();
             root.clear();
         }
+        for (Thread thr : idMap.keySet())
+            if (thr.isAlive())
+                thr.interrupt();
         idMap.clear();
     }
 

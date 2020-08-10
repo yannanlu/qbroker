@@ -266,7 +266,7 @@ public class MessageFlow implements Runnable {
         long[] info;
         Object o;
         long tm;
-        String key, name;
+        String key, str;
 
         if ((o = props.get("DefaultStatus")) != null) {
             key = (String) o;
@@ -347,7 +347,7 @@ public class MessageFlow implements Runnable {
             info[GROUP_STATUS] = MessageReceiver.RCVR_READY;
             info[GROUP_TIME] = tm;
             o = receiverList.get(i);
-            name = ((MessageReceiver) o).getName();
+            str = ((MessageReceiver) o).getName();
             key = ((MessageReceiver) o).getLinkName();
             if (outLink.containsKey(key)) {
                 k = Integer.parseInt((String) outLink.get(key));
@@ -355,14 +355,14 @@ public class MessageFlow implements Runnable {
             }
             else {
                 new Event(Event.ERR, MF_RCVR + ": " + key + " for " +
-                    name + " has no consumers at the output end").send();
+                    str + " has no consumers at the output end").send();
             }
         }
 
         browser = nodeList.browser();
         while ((i = browser.next()) >= 0) {
             o = nodeList.get(i);
-            name = ((MessageNode) o).getName();
+            str = ((MessageNode) o).getName();
             size = ((MessageNode) o).getNumberOfOutLinks();
             for (j=0; j<size; j++) {
                 key = ((MessageNode) o).getLinkName(j);
@@ -376,7 +376,7 @@ public class MessageFlow implements Runnable {
                 }
                 else {
                     new Event(Event.ERR, MF_NODE + ": " + key + " for " +
-                        name + " has no consumers at the output end").send();
+                        str + " has no consumers at the output end").send();
                 }
             }
         }
@@ -548,7 +548,7 @@ public class MessageFlow implements Runnable {
             ph.clear();
             return -1;
         }
-        o = initNode(ph, name);
+        o = MessageUtils.initNode(ph, name);
 
         if (o == null) {
             ph.clear();
@@ -5465,48 +5465,6 @@ public class MessageFlow implements Runnable {
         }
         if (n > 0)
             new Event(Event.DEBUG, prefix +" diff:"+ strBuf.toString()).send();
-    }
-
-    /**
-     * It instantiates a node object from the given props and returns the object
-     * upon success.  In case of failure, it returns the exception.
-     */
-    public static Object initNode(Map props, String prefix) {
-        Object o;
-        String key, className;
-
-        if (props == null || props.size() <= 0) {
-            new Event(Event.ERR, prefix +
-                ": null or empty property Map").send();
-            return null;
-        }
-        if ((o = props.get("Name")) == null || !(o instanceof String)) {
-            new Event(Event.ERR, prefix + ": Name not defined").send();
-            return null;
-        }
-        key = (String) o;
-
-        className = (String) props.get("ClassName");
-        if (className == null || className.length() == 0) {
-            new Event(Event.ERR, prefix + ": ClassName not defined for " +
-                key).send();
-            return null;
-        }
-
-        try { // instantiate the object
-            java.lang.reflect.Constructor con;
-            Class<?> cls = Class.forName(className);
-            con = cls.getConstructor(new Class[]{Map.class});
-            o = con.newInstance(new Object[]{props});
-        }
-        catch (Exception e) {
-            o = e;
-        }
-        catch (Error er) {
-            o = er;
-        }
-
-        return o;
     }
 
     private void checkpoint(MessageNode node) {

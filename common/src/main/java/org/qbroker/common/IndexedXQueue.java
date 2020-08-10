@@ -1,10 +1,10 @@
 package org.qbroker.common;
 
-/* IndexedXQueue.java - an XQueue with indexed collectible cells */
+/* IndexedXQueue.java - an XQueue with indexed cells supporting collectibles */
 
 /**
- * IndexedXQueue implements XQueue as a FIFO storage with a circular array
- * for tracking and transaction support.
+ * IndexedXQueue implements XQueue as a FIFO in-memory storage with a circular
+ * array to support tracking and transactions. It also support callbacks.
  *<br><br>
  * All cells in an XQueue line up in a circle implemented by an array.  The
  * cells on the same status always stay together in a group.  Therefore the
@@ -13,14 +13,14 @@ package org.qbroker.common;
  * divides taken cells and occupied cells.  Tail separates occupied cells and
  * reserved cells.  Lead divides taken cells and empty cells.  Mark separates
  * reserved cells and empty cells.  Cusp separates collected empty cells and
- * the rest empty cells.
+ * the collected empty cells.
  *<br><br>
  * capacity -- maximum number of cells in the queue<br>
- * size -- number of the new and taken objects in the queue<br>
+ * size -- number of the new and in-use objects in the queue<br>
  * depth -- number of new objects in the queue<br>
  * watermark -- size + number of reserved cells<br>
  * collectible -- number of empty cells that have not been collected yet<br>
- * count -- number of objects taken out of the queue since last reset<br>
+ * count -- number of objects removed from the queue since last reset<br>
  * mtime -- timestamp of the reset on the queue<br>
  * status -- status of a cell or the object<br>
  * id -- the id of a cell or the object<br>
@@ -118,14 +118,20 @@ public class IndexedXQueue implements XQueue {
         return collectible;
     }
 
+    /** returns number of objects removed from the queue since the last reset */
     public long getCount() {
         return count;
     }
 
+    /** returns the timestamp of the last reset */
     public long getMTime() {
         return mtime;
     }
 
+    /**
+     * resets the timer and count, and returns the number of removed objects
+     * since the previous reset
+     */
     public synchronized long reset() {
         long n = count;
         count = 0;
@@ -146,7 +152,7 @@ public class IndexedXQueue implements XQueue {
     }
 
     /**
-     * test if any cell is occupied or any object is ready to be taken
+     * tests if any cell is occupied or any object is ready to be taken
      */
     public synchronized boolean available() {
         if (depth > 0)
@@ -710,7 +716,7 @@ public class IndexedXQueue implements XQueue {
     }
 
     /**
-     * puts the in-use object back to the cell with the id and makes the cell
+     * puts the in-use object back to the cell at the id and makes the cell
      * occupied again so that the object is ready to be taken.
      */
     public synchronized int putback(int id) {

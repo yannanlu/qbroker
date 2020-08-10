@@ -4,6 +4,7 @@ package org.qbroker.jms;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,6 +25,7 @@ import org.w3c.dom.NodeList;
 import javax.jms.Message;
 import javax.jms.JMSException;
 import javax.jms.MessageFormatException;
+import org.qbroker.common.Aggregator;
 import org.qbroker.common.Browser;
 import org.qbroker.common.AssetList;
 import org.qbroker.common.Template;
@@ -60,51 +62,8 @@ public class Aggregation {
     private AssetList aggrList;
     private Map bodyMap;
     private long serialNumber = 0;
-    private int bodyOperation = AGGR_NONE;
+    private int bodyOperation = Aggregator.AGGR_NONE;
     private int bodyType = Utils.RESULT_TEXT, dataType = -1;
-    public final static int AGGR_NONE = -1;
-    public final static int AGGR_COUNT = 0;
-    public final static int AGGR_SUM = 1;
-    public final static int AGGR_MIN = 2;
-    public final static int AGGR_MAX = 3;
-    public final static int AGGR_APPEND = 4;
-    public final static int AGGR_FIRST = 5;
-    public final static int AGGR_LAST = 6;
-    public final static int AGGR_AVG = 7;
-    public final static int AGGR_STD = 8;
-    public final static int AGGR_MERGE = 9;
-    public final static int AGGR_UNION = 10;
-    public final static int AGGR_XUNION = 11;
-    public final static int AGGR_JOIN = 12;
-    public final static int AGGR_END = 12;
-    private final static int AGGR_DSUM = 13;
-    private final static int AGGR_DMIN = 14;
-    private final static int AGGR_DMAX = 15;
-    private final static int AGGR_TMIN = 16;
-    private final static int AGGR_TMAX = 17;
-    private static final Map<String, String> optionMap =
-        new HashMap<String, String>();
-
-    static {
-        optionMap.put("count", String.valueOf(AGGR_COUNT));
-        optionMap.put("sum", String.valueOf(AGGR_SUM));
-        optionMap.put("min", String.valueOf(AGGR_MIN));
-        optionMap.put("max", String.valueOf(AGGR_MAX));
-        optionMap.put("append", String.valueOf(AGGR_APPEND));
-        optionMap.put("first", String.valueOf(AGGR_FIRST));
-        optionMap.put("last", String.valueOf(AGGR_LAST));
-        optionMap.put("avg", String.valueOf(AGGR_AVG));
-        optionMap.put("std", String.valueOf(AGGR_STD));
-        optionMap.put("merge", String.valueOf(AGGR_MERGE));
-        optionMap.put("union", String.valueOf(AGGR_UNION));
-        optionMap.put("xunion", String.valueOf(AGGR_XUNION));
-        optionMap.put("join", String.valueOf(AGGR_JOIN));
-        optionMap.put("dsum", String.valueOf(AGGR_DSUM));
-        optionMap.put("dmin", String.valueOf(AGGR_DMIN));
-        optionMap.put("dmax", String.valueOf(AGGR_DMAX));
-        optionMap.put("tmin", String.valueOf(AGGR_TMIN));
-        optionMap.put("tmax", String.valueOf(AGGR_TMAX));
-    }
 
     @SuppressWarnings("unchecked")
     public Aggregation(String name, List list) {
@@ -113,9 +72,8 @@ public class Aggregation {
         StringBuffer strBuf = new StringBuffer();
         Map<String, Object> map;
         Map ph;
-        Iterator iter;
         List<String> pl;
-        String key, str;
+        String key, str = null;
         long[] aggrInfo;
         int i, j, n, id, option;
 
@@ -139,26 +97,22 @@ public class Aggregation {
             if ("body".equals(key)) { // no aggregation on body
                 new Event(Event.WARNING, name + ": no aggregation on " + key +
                     ", skip it for now").send();
+                option = Aggregator.AGGR_NONE;
                 str = null;
             }
-            else
+            else try {
                 str = (String) ph.get("Operation");
-            if (str != null && optionMap.containsKey(str.toLowerCase())) {
-                 str = (String) optionMap.get(str.toLowerCase());
+                option = Aggregator.getAggregationID(str);
             }
-            else if (str != null) { // wrong operation
-                new Event(Event.ERR, name + ": operation " + str +
-                    " on " + key + " not supported, ignore it").send();
-                str = String.valueOf(AGGR_NONE);
-            }
-            else { // assume the default operation of none
-                str = String.valueOf(AGGR_NONE);
+            catch (Exception e) { // wrong operation
+                new Event(Event.ERR, name + " ignored the operation of " + str +
+                    " on " + key + ": " + e.getMessage()).send();
+                option = Aggregator.AGGR_NONE;
             }
             map = new HashMap<String, Object>();
             map.put("Operation", str);
-            option = Integer.parseInt(str);
             switch (option) {
-              case AGGR_COUNT:
+              case Aggregator.AGGR_COUNT:
                 str = (String) ph.get("DefaultValue");
                 if (str != null && str.length() > 0)
                     map.put("DefaultValue", str);
@@ -173,10 +127,13 @@ public class Aggregation {
                 if (!map.containsKey("DefaultValue"))
                     map.put("DefaultValue", "1");
                 break;
-              case AGGR_SUM:
-              case AGGR_MIN:
-              case AGGR_MAX:
-                if (option == AGGR_MAX) {
+              case Aggregator.AGGR_UNIQC:
+                map.put("HashSet", new HashSet<String>());
+                break;
+              case Aggregator.AGGR_SUM:
+              case Aggregator.AGGR_MIN:
+              case Aggregator.AGGR_MAX:
+                if (option == Aggregator.AGGR_MAX) {
                     str = (String) ph.get("MaxOf");
                     if (str != null && !key.equals(str) &&
                         aggrList.containsKey(str)) {
@@ -186,11 +143,8 @@ public class Aggregation {
                     }
                     else
                         str = (String) ph.get("DefaultValue");
-                    if ((o = ph.get("TimePattern")) != null &&
-                        o instanceof String)
-                        map.put("DateFormat", new SimpleDateFormat((String) o));
                 }
-                else if (option == AGGR_MIN) {
+                else if (option == Aggregator.AGGR_MIN) {
                     str = (String) ph.get("MinOf");
                     if (str != null && !key.equals(str) &&
                         aggrList.containsKey(str)) {
@@ -200,9 +154,6 @@ public class Aggregation {
                     }
                     else
                         str = (String) ph.get("DefaultValue");
-                    if ((o = ph.get("TimePattern")) != null &&
-                        o instanceof String)
-                        map.put("DateFormat", new SimpleDateFormat((String) o));
                 }
                 else
                     str = (String) ph.get("DefaultValue");
@@ -213,13 +164,10 @@ public class Aggregation {
                     double y = Double.parseDouble(str);
                     if (str.indexOf(".") >= 0) { // double
                         map.put("DefaultValue", String.valueOf(y));
-                        option += AGGR_END;
+                        option += Aggregator.AGGR_END;
                     }
-                    else { // long
+                    else // long
                         map.put("DefaultValue", String.valueOf((long) y));
-                        if (option != AGGR_SUM && map.containsKey("DateFormat"))
-                            option += AGGR_END + 2; // for time
-                    }
                 }
                 catch (NumberFormatException e) {
                     new Event(Event.ERR, name+": failed to parse DefaultValue "+
@@ -227,7 +175,15 @@ public class Aggregation {
                     map.put("DefaultValue", "0");
                 }
                 break;
-              case AGGR_FIRST:
+              case Aggregator.AGGR_TMIN:
+              case Aggregator.AGGR_TMAX:
+                if ((o = ph.get("TimePattern")) != null && o instanceof String)
+                    map.put("DateFormat", new SimpleDateFormat((String) o));
+                else
+                    throw(new IllegalArgumentException(name +
+                        ": TimePattern is not defined on " + key));
+                break;
+              case Aggregator.AGGR_FIRST:
                 str = (String) ph.get("FirstOf");
                 if (str != null && !key.equals(str) &&
                     aggrList.containsKey(str)) {
@@ -240,7 +196,7 @@ public class Aggregation {
                 if (str == null || str.length() <= 0)
                     map.put("DefaultValue", "");
                 break;
-              case AGGR_AVG:
+              case Aggregator.AGGR_AVG:
                 str = (String) ph.get("DefaultValue");
                 if (str == null || str.length() <= 0) {
                     map.put("DefaultValue", "0.0");
@@ -260,11 +216,11 @@ public class Aggregation {
                     Map h = (Map) aggrList.get(str);
                     if (h != null && meta != null && meta.length > 0) {
                         // make sure its default value is set to 0 or 1
-                        if (meta[0] == AGGR_SUM)
+                        if (meta[0] == Aggregator.AGGR_SUM)
                             h.put("DefaultValue", "0");
-                        else if (meta[0] == AGGR_DSUM)
+                        else if (meta[0] == Aggregator.AGGR_DSUM)
                             h.put("DefaultValue", "0.0");
-                        else if (meta[0] == AGGR_COUNT)
+                        else if (meta[0] == Aggregator.AGGR_COUNT)
                             h.put("DefaultValue", "1");
                         map.put("AveragedOver", str);
                     }
@@ -272,16 +228,16 @@ public class Aggregation {
                         new Event(Event.ERR, name + ": " +
                             " failed to find AveragedOver " + str +
                             " for "+ key +", so disable it").send();
-                        option = AGGR_NONE;
+                        option = Aggregator.AGGR_NONE;
                     }
                 }
                 else {
                     new Event(Event.ERR,name+": AveragedOver not defined for "+
                         key +", so disable it").send();
-                    option = AGGR_NONE;
+                    option = Aggregator.AGGR_NONE;
                 }
                 break;
-              case AGGR_STD:
+              case Aggregator.AGGR_STD:
                 str = (String) ph.get("DefaultValue");
                 if (str == null || str.length() <= 0) {
                     map.put("DefaultValue", "0.0");
@@ -300,7 +256,7 @@ public class Aggregation {
                     long[] meta = aggrList.getMetaData(str);
                     Map h = (Map) aggrList.get(str);
                     if (h != null && meta != null && meta.length > 0 &&
-                        meta[0] == AGGR_AVG) {
+                        meta[0] == Aggregator.AGGR_AVG) {
                         map.put("VarianceOf", str);
                         map.put("DefaultValue", h.get("DefaultValue"));
                     }
@@ -308,16 +264,16 @@ public class Aggregation {
                         new Event(Event.ERR, name + ": " +
                             " failed to find VarianceOf " + str +
                             " for "+ key +", so disable it").send();
-                        option = AGGR_NONE;
+                        option = Aggregator.AGGR_NONE;
                     }
                 }
                 else {
                     new Event(Event.ERR,name+": VarianceOf not defined for "+
                         key +", so disable it").send();
-                    option = AGGR_NONE;
+                    option = Aggregator.AGGR_NONE;
                 }
                 break;
-              case AGGR_APPEND:
+              case Aggregator.AGGR_APPEND:
                 str = (String) ph.get("DefaultValue");
                 if (str == null)
                     map.put("DefaultValue", "");
@@ -341,7 +297,7 @@ public class Aggregation {
         }
 
         bodyMap = new HashMap();
-        bodyOperation = AGGR_NONE;
+        bodyOperation = Aggregator.AGGR_NONE;
     }
 
     /**
@@ -369,16 +325,19 @@ public class Aggregation {
                 continue;
             aggrInfo = aggrList.getMetaData(i);
             option = (int) aggrInfo[0];
-            if (option == AGGR_NONE)
+            if (option == Aggregator.AGGR_NONE)
                 continue;
             map = (Map) aggrList.get(i);
             try {
                 value = event.getAttribute(key);
 
-                if (option == AGGR_MIN || option == AGGR_MAX ||
-                    option == AGGR_DMIN || option == AGGR_DMAX ||
-                    option == AGGR_TMIN || option == AGGR_TMAX ||
-                    option == AGGR_FIRST) {
+                if (option == Aggregator.AGGR_MIN ||
+                    option == Aggregator.AGGR_MAX ||
+                    option == Aggregator.AGGR_DMIN ||
+                    option == Aggregator.AGGR_DMAX ||
+                    option == Aggregator.AGGR_TMIN ||
+                    option == Aggregator.AGGR_TMAX ||
+                    option == Aggregator.AGGR_FIRST) {
                     if (map.containsKey("MaxOf")) {
                         str = (String) map.get("MaxOf");
                         if (str != null && (k = aggrList.getID(str)) >= 0)
@@ -398,7 +357,8 @@ public class Aggregation {
                     if (value == null) // bypass setting the default value
                         continue;
                 }
-                else if (option == AGGR_TMIN || option == AGGR_TMAX) {
+                else if (option == Aggregator.AGGR_TMIN ||
+                    option == Aggregator.AGGR_TMAX) {
                     if (map.containsKey("MaxOf")) {
                         str = (String) map.get("MaxOf");
                         if (str != null && (k = aggrList.getID(str)) >= 0)
@@ -413,7 +373,7 @@ public class Aggregation {
                     if (value == null) // bypass setting the default value
                         continue;
                 }
-                else if (option == AGGR_COUNT) {
+                else if (option == Aggregator.AGGR_COUNT) {
                     if ((dataSet=(DataSet) map.get("Condition")) != null) {
                         if (value == null) // no such value, use default
                             value = (String) map.get("DefaultValue");
@@ -430,8 +390,14 @@ public class Aggregation {
                         value = "1";
                     }
                 }
+                else if (option == Aggregator.AGGR_UNIQC) {
+                    HashSet hset = (HashSet) map.get("HashSet");
+                    hset.clear();
+                    hset.add(value);
+                    value = "1";
+                }
 
-                if (option == AGGR_AVG) { // for average
+                if (option == Aggregator.AGGR_AVG) { // for average
                     if (value == null) // no such value, use default
                         value = (String) map.get("DefaultValue");
                     y = Double.parseDouble(value);
@@ -450,7 +416,7 @@ public class Aggregation {
                         result[i] = String.valueOf(y);
                     }
                 }
-                else if (option == AGGR_STD) { // for standard deviation
+                else if (option == Aggregator.AGGR_STD){//for standard deviation
                     result[i] = "0";
                 }
                 else {
@@ -507,12 +473,12 @@ public class Aggregation {
                 continue;
             meta = aggrList.getMetaData(i);
             option = (int) meta[0];
-            if (option == AGGR_NONE)
+            if (option == Aggregator.AGGR_NONE)
                 continue;
             map = (Map) aggrList.get(i);
 
             switch (option) {
-              case AGGR_COUNT:
+              case Aggregator.AGGR_COUNT:
                 if ((dataSet = (DataSet) map.get("Condition")) != null) {
                     value = event.getAttribute(key);
                     if (value == null) // no such value, use default
@@ -532,7 +498,14 @@ public class Aggregation {
                 value = msg.getAttribute(key);
                 result[i] = String.valueOf(x + Long.parseLong(value));
                 break;
-              case AGGR_SUM:
+              case Aggregator.AGGR_UNIQC:
+                HashSet hset = (HashSet) map.get("HashSet");
+                value = event.getAttribute(key);
+                if (value != null && !hset.contains(value))
+                    hset.add(value);
+                result[i] = String.valueOf(hset.size());
+                break;
+              case Aggregator.AGGR_SUM:
                 value = msg.getAttribute(key);
                 if (value == null) // no such value
                     break;
@@ -543,7 +516,7 @@ public class Aggregation {
                 x += Long.parseLong(value);
                 result[i] = String.valueOf(x);
                 break;
-              case AGGR_AVG:
+              case Aggregator.AGGR_AVG:
                 value = msg.getAttribute(key);
                 if (value == null) // no such value
                     break;
@@ -567,7 +540,7 @@ public class Aggregation {
                     }
                 }
                 break;
-              case AGGR_STD:
+              case Aggregator.AGGR_STD:
                 str = (String) map.get("VarianceOf");
                 if (str != null && str.length() > 0) { // for averaged
                     Map h;
@@ -607,7 +580,7 @@ public class Aggregation {
                     }
                 }
                 break;
-              case AGGR_MIN:
+              case Aggregator.AGGR_MIN:
                 value = event.getAttribute(key);
                 if (value == null) { // check MinOf
                     if (map.containsKey("MinOf")) {
@@ -625,7 +598,7 @@ public class Aggregation {
                 else if (value == null) // first one so set the value
                     result[i] = String.valueOf(x);
                 break;
-              case AGGR_MAX:
+              case Aggregator.AGGR_MAX:
                 value = event.getAttribute(key);
                 if (value == null) { // check MaxOf
                     if (map.containsKey("MaxOf")) {
@@ -643,7 +616,7 @@ public class Aggregation {
                 else if (value == null) // first one so set the value
                     result[i] = String.valueOf(x);
                 break;
-              case AGGR_DSUM:
+              case Aggregator.AGGR_DSUM:
                 value = msg.getAttribute(key);
                 if (value == null) // no such value
                     break;
@@ -654,7 +627,7 @@ public class Aggregation {
                 y += Double.parseDouble(value);
                 result[i] = String.valueOf(y);
                 break;
-              case AGGR_DMIN:
+              case Aggregator.AGGR_DMIN:
                 value = event.getAttribute(key);
                 if (value == null) { // check MinOf
                     if (map.containsKey("MinOf")) {
@@ -672,7 +645,7 @@ public class Aggregation {
                 else if (value == null) // first one so set the value
                     result[i] = String.valueOf(y);
                 break;
-              case AGGR_DMAX:
+              case Aggregator.AGGR_DMAX:
                 value = event.getAttribute(key);
                 if (value == null) { // check MaxOf
                     if (map.containsKey("MaxOf")) {
@@ -690,7 +663,7 @@ public class Aggregation {
                 else if (value == null) // first one so set the value
                     result[i] = String.valueOf(y);
                 break;
-              case AGGR_TMIN:
+              case Aggregator.AGGR_TMIN:
                 dateFormat = (DateFormat) map.get("DateFormat");
                 value = event.getAttribute(key);
                 if (value == null) { // check MinOf
@@ -709,7 +682,7 @@ public class Aggregation {
                 else if (str == null) // first one so set the value
                     result[i] = value;
                 break;
-              case AGGR_TMAX:
+              case Aggregator.AGGR_TMAX:
                 dateFormat = (DateFormat) map.get("DateFormat");
                 value = event.getAttribute(key);
                 if (value == null) { // check MaxOf
@@ -728,7 +701,7 @@ public class Aggregation {
                 else if (str == null) // first one so set the value
                     result[i] = value;
                 break;
-              case AGGR_APPEND:
+              case Aggregator.AGGR_APPEND:
                 str = msg.getAttribute(key);
                 if (str == null) // no such value
                     str = "";
@@ -741,9 +714,9 @@ public class Aggregation {
                 }
                 result[i] = str + value;
                 break;
-              case AGGR_FIRST:
+              case Aggregator.AGGR_FIRST:
                 break;
-              case AGGR_LAST:
+              case Aggregator.AGGR_LAST:
                 result[i] = event.getAttribute(key);
                 break;
               default:
@@ -808,16 +781,19 @@ public class Aggregation {
                 continue;
             aggrInfo = aggrList.getMetaData(i);
             option = (int) aggrInfo[0];
-            if (option == AGGR_NONE)
+            if (option == Aggregator.AGGR_NONE)
                 continue;
             map = (Map) aggrList.get(i);
             try {
                 value = MessageUtils.getProperty(key, inMessage);
 
-                if (option == AGGR_MIN || option == AGGR_MAX ||
-                    option == AGGR_DMIN || option == AGGR_DMAX ||
-                    option == AGGR_TMIN || option == AGGR_TMAX ||
-                    option == AGGR_FIRST) {
+                if (option == Aggregator.AGGR_MIN ||
+                    option == Aggregator.AGGR_MAX ||
+                    option == Aggregator.AGGR_DMIN ||
+                    option == Aggregator.AGGR_DMAX ||
+                    option == Aggregator.AGGR_TMIN ||
+                    option == Aggregator.AGGR_TMAX ||
+                    option == Aggregator.AGGR_FIRST) {
                     if (map.containsKey("MaxOf")) {
                         str = (String) map.get("MaxOf");
                         if (str != null && (k = aggrList.getID(str)) >= 0)
@@ -837,7 +813,7 @@ public class Aggregation {
                     if (value == null) // bypass setting the default value
                         continue;
                 }
-                else if (option == AGGR_COUNT) {
+                else if (option == Aggregator.AGGR_COUNT) {
                     if ((dataSet=(DataSet) map.get("Condition"))!=null) {
                         if (value == null) // no such value, use default
                             value = (String) map.get("DefaultValue");
@@ -854,8 +830,14 @@ public class Aggregation {
                         value = "1";
                     }
                 }
+                else if (option == Aggregator.AGGR_UNIQC) {
+                    HashSet hset = (HashSet) map.get("HashSet");
+                    hset.clear();
+                    hset.add(value);
+                    value = "1";
+                }
 
-                if (option == AGGR_AVG) { // for average
+                if (option == Aggregator.AGGR_AVG) { // for average
                     if (value == null) // no such value, use default
                         value = (String) map.get("DefaultValue");
                     y = Double.parseDouble(value);
@@ -874,7 +856,7 @@ public class Aggregation {
                         result[i] = String.valueOf(y);
                     }
                 }
-                else if (option == AGGR_STD) { // for standard deviation
+                else if (option == Aggregator.AGGR_STD){//for standard deviation
                     result[i] = "0";
                 }
                 else {
@@ -938,12 +920,12 @@ public class Aggregation {
                 continue;
             aggrInfo = aggrList.getMetaData(i);
             option = (int) aggrInfo[0];
-            if (option == AGGR_NONE)
+            if (option == Aggregator.AGGR_NONE)
                 continue;
             map = (Map) aggrList.get(i);
 
             switch (option) {
-              case AGGR_COUNT:
+              case Aggregator.AGGR_COUNT:
                 if ((dataSet = (DataSet) map.get("Condition")) != null) {
                     value = MessageUtils.getProperty(key, inMessage);
                     if (value == null) // no such value, use default
@@ -963,7 +945,14 @@ public class Aggregation {
                 value = MessageUtils.getProperty(key, msg);
                 result[i] = String.valueOf(x + Long.parseLong(value));
                 break;
-              case AGGR_SUM:
+              case Aggregator.AGGR_UNIQC:
+                HashSet hset = (HashSet) map.get("HashSet");
+                value = MessageUtils.getProperty(key, inMessage);
+                if (value != null && !hset.contains(value))
+                    hset.add(value);
+                result[i] = String.valueOf(hset.size());
+                break;
+              case Aggregator.AGGR_SUM:
                 value = MessageUtils.getProperty(key, msg);
                 if (value == null) // no such value
                     break;
@@ -974,7 +963,7 @@ public class Aggregation {
                 x += Long.parseLong(value);
                 result[i] = String.valueOf(x);
                 break;
-              case AGGR_AVG:
+              case Aggregator.AGGR_AVG:
                 value = MessageUtils.getProperty(key, msg);
                 if (value == null) // no such value
                     break;
@@ -998,7 +987,7 @@ public class Aggregation {
                     }
                 }
                 break;
-              case AGGR_STD:
+              case Aggregator.AGGR_STD:
                 str = (String) map.get("VarianceOf");
                 if (str != null && str.length() > 0) { // for averaged
                     Map h;
@@ -1038,7 +1027,7 @@ public class Aggregation {
                     }
                 }
                 break;
-              case AGGR_MIN:
+              case Aggregator.AGGR_MIN:
                 value = MessageUtils.getProperty(key, inMessage);
                 if (value == null) { // check MinOf
                     if (map.containsKey("MinOf")) {
@@ -1056,7 +1045,7 @@ public class Aggregation {
                 else if (value == null) // first one so set the value
                     result[i] = String.valueOf(x);
                 break;
-              case AGGR_MAX:
+              case Aggregator.AGGR_MAX:
                 value = MessageUtils.getProperty(key, inMessage);
                 if (value == null) { // check MaxOf
                     if (map.containsKey("MaxOf")) {
@@ -1074,7 +1063,7 @@ public class Aggregation {
                 else if (value == null) // first one so set the value
                     result[i] = String.valueOf(x);
                 break;
-              case AGGR_DSUM:
+              case Aggregator.AGGR_DSUM:
                 value = MessageUtils.getProperty(key, msg);
                 if (value == null) // no such value
                     break;
@@ -1085,7 +1074,7 @@ public class Aggregation {
                 y += Double.parseDouble(value);
                 result[i] = String.valueOf(y);
                 break;
-              case AGGR_DMIN:
+              case Aggregator.AGGR_DMIN:
                 value = MessageUtils.getProperty(key, inMessage);
                 if (value == null) { // check MinOf
                     if (map.containsKey("MinOf")) {
@@ -1103,7 +1092,7 @@ public class Aggregation {
                 else if (value == null) // first one so set the value
                     result[i] = String.valueOf(y);
                 break;
-              case AGGR_DMAX:
+              case Aggregator.AGGR_DMAX:
                 value = MessageUtils.getProperty(key, inMessage);
                 if (value == null) { // check MaxOf
                     if (map.containsKey("MaxOf")) {
@@ -1121,7 +1110,7 @@ public class Aggregation {
                 else if (value == null) // first one so set the value
                     result[i] = String.valueOf(y);
                 break;
-              case AGGR_TMIN:
+              case Aggregator.AGGR_TMIN:
                 dateFormat = (DateFormat) map.get("DateFormat");
                 value = MessageUtils.getProperty(key, inMessage);
                 if (value == null) { // check MinOf
@@ -1140,7 +1129,7 @@ public class Aggregation {
                 else if (str == null) // first one so set the value
                     result[i] = value;
                 break;
-              case AGGR_TMAX:
+              case Aggregator.AGGR_TMAX:
                 dateFormat = (DateFormat) map.get("DateFormat");
                 value = MessageUtils.getProperty(key, inMessage);
                 if (value == null) { // check MaxOf
@@ -1159,7 +1148,7 @@ public class Aggregation {
                 else if (str == null) // first one so set the value
                     result[i] = value;
                 break;
-              case AGGR_APPEND:
+              case Aggregator.AGGR_APPEND:
                 str = MessageUtils.getProperty(key, msg);
                 
                 if (str == null) // no such value
@@ -1173,9 +1162,9 @@ public class Aggregation {
                 }
                 result[i] = str + value;
                 break;
-              case AGGR_FIRST:
+              case Aggregator.AGGR_FIRST:
                 break;
-              case AGGR_LAST:
+              case Aggregator.AGGR_LAST:
                 result[i] = MessageUtils.getProperty(key, inMessage);
                 break;
               default:
@@ -1236,12 +1225,12 @@ public class Aggregation {
                 return -2;
             aggrInfo = aggrList.getMetaData(i);
             option = (int) aggrInfo[0];
-            if (option == AGGR_NONE)
+            if (option == Aggregator.AGGR_NONE)
                 return -2;
             map = (Map) aggrList.get(i);
 
             switch (option) {
-              case AGGR_MIN:
+              case Aggregator.AGGR_MIN:
                 value = MessageUtils.getProperty(key, inMessage);
                 if (value == null) { // check MinOf
                     if (map.containsKey("MinOf")) {
@@ -1263,7 +1252,7 @@ public class Aggregation {
                     return -1;
                 else
                     return 0;
-              case AGGR_MAX:
+              case Aggregator.AGGR_MAX:
                 value = MessageUtils.getProperty(key, inMessage);
                 if (value == null) { // check MaxOf
                     if (map.containsKey("MaxOf")) {
@@ -1285,7 +1274,7 @@ public class Aggregation {
                     return -1;
                 else
                     return 0;
-              case AGGR_DMIN:
+              case Aggregator.AGGR_DMIN:
                 value = MessageUtils.getProperty(key, inMessage);
                 if (value == null) { // check MinOf
                     if (map.containsKey("MinOf")) {
@@ -1307,7 +1296,7 @@ public class Aggregation {
                     return -1;
                 else
                     return 0;
-              case AGGR_DMAX:
+              case Aggregator.AGGR_DMAX:
                 value = MessageUtils.getProperty(key, inMessage);
                 if (value == null) { // check MaxOf
                     if (map.containsKey("MaxOf")) {
@@ -1329,7 +1318,7 @@ public class Aggregation {
                     return -1;
                 else
                     return 0;
-              case AGGR_TMIN:
+              case Aggregator.AGGR_TMIN:
                 dateFormat = (DateFormat) map.get("DateFormat");
                 value = MessageUtils.getProperty(key, inMessage);
                 if (value == null) { // check MinOf
@@ -1352,7 +1341,7 @@ public class Aggregation {
                     return -1;
                 else
                     return 0;
-              case AGGR_TMAX:
+              case Aggregator.AGGR_TMAX:
                 dateFormat = (DateFormat) map.get("DateFormat");
                 value = MessageUtils.getProperty(key, inMessage);
                 if (value == null) { // check MaxOf
@@ -1443,23 +1432,9 @@ public class Aggregation {
         if ((o = map.get("Operation")) != null) {
             int i;
             String str = (String) o;
-            if ("append".equalsIgnoreCase(str))
-                i = AGGR_APPEND;
-            else if ("first".equalsIgnoreCase(str))
-                i = AGGR_FIRST;
-            else if ("last".equalsIgnoreCase(str))
-                i = AGGR_LAST;
-            else if ("merge".equalsIgnoreCase(str))
-                i = AGGR_MERGE;
-            else if ("union".equalsIgnoreCase(str))
-                i = AGGR_UNION;
-            else if ("xunion".equalsIgnoreCase(str))
-                i = AGGR_XUNION;
-            else if ("join".equalsIgnoreCase(str))
-                i = AGGR_JOIN;
-            else
-                i = AGGR_APPEND;
-            bodyOperation = i;
+            bodyOperation = Aggregator.getAggregationID(str);
+            if (bodyOperation == Aggregator.AGGR_NONE)
+                 bodyOperation= Aggregator.AGGR_APPEND;
             if ((o = map.get("XPath")) != null)
                 bodyType = Utils.RESULT_XML;
             else if ((o = map.get("JSONPath")) != null)
@@ -1895,7 +1870,7 @@ public class Aggregation {
             map = (Map) aggrList.get(i);
             strBuf.append(indent + i + ": " + key + " " + meta[0] + " " +
                 (String) map.get("DefaultValue"));
-            if (AGGR_AVG == meta[0] && map.containsKey("AveragedOver"))
+            if (Aggregator.AGGR_AVG==meta[0] && map.containsKey("AveragedOver"))
                 strBuf.append(" " + (String) map.get("AveragedOver"));
         }
 
@@ -1904,6 +1879,16 @@ public class Aggregation {
 
     public void clear() {
         if (aggrList != null) {
+            int n = aggrList.size();
+            for (int i=0; i<n; i++) {
+                Map map = (Map) aggrList.get(i);
+                if (map != null) {
+                    HashSet hs = (HashSet) map.remove("HashSet");
+                    if (hs != null)
+                        hs.clear();
+                    map.clear();
+                }
+            }
             aggrList.clear();
             aggrList = null;
         }

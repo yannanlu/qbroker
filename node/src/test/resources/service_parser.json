@@ -1,0 +1,130 @@
+{
+  "Name": "Service",
+  "Site": "DEVOPS",
+  "Category": "TEST",
+  "Type": "Service",
+  "Operation": "move",
+  "Description": "a message Service",
+  "XAMode": "0",
+  "Capacity": "16",
+  "Mode": "daemon",
+  "ConfigDir": "/tmp",
+  "Node": ["node_parser"],
+  "Persister": ["pstr_echo", "pstr_nohit"],
+  "node_parser": {
+    "Name": "node_parser",
+    "ClassName": "org.qbroker.node.ParserNode",
+    "Description": "parse stats data of event",
+    "Operation": "parse",
+    "LinkName": "root",
+    "Capacity": "16",
+    "XAMode": "1",
+    "DisplayMask": "0",
+    "Ruleset": [{
+      "Name": "test",
+      "ClassName": "org.qbroker.common.SimpleParser",
+      "PatternGroup": [
+        {
+          "Pattern": [
+            "\"GET \\/ HTTP\\/1\\.[01]\" 200 ",
+            "login\\.qbroker\\.org",
+            "SSO\\?execution=e"
+          ]
+        }
+      ],
+      "ParserArgument": [
+        {
+          "LogTime": "^\\[([^ ]+ [+-]?\\d+)\\] "
+        },
+        {
+          "Source": "([^  ]+) [^ ]+ "
+        },
+        {
+          "owner": "([^ ]+) "
+        },
+        {
+          "program": "\"([^ ]+) [^\"]+\" "
+        },
+        {
+          "pid": "(\\d+) "
+        },
+        {
+          "Size": "(\\d+) "
+        },
+        {
+          "text": "\"([^\"]+)\""
+        },
+        {
+          "Duration": ".+ (\\d+)$"
+        }
+      ],
+      "FormatterArgument": [
+        {
+          "FieldName": "name",
+          "Template": [
+            "##JMSType##_log"
+          ]
+        },
+        {
+          "FieldName": "type",
+          "Template": [
+            "LogCollector"
+          ]
+        },
+        {
+          "FieldName": "site",
+          "Template": [
+            "##name##"
+          ],
+          "Substitution": [
+            "s/_.+$//",
+            "s//:=upper/e"
+          ]
+        },
+        {
+          "FieldName": "JMSTimestamp",
+          "Template": [
+            "##LogTime##"
+          ],
+          "Substitution": [
+            "s/\\//-/g",
+            "s//~=dd-MMM-yyyy:HH:mm:ss zz/e"
+          ]
+        },
+        {
+          "FieldName": "category",
+          "Template": [
+            "TEST"
+          ]
+        }
+      ]
+    }],
+    "OutLink": [
+      "echo",
+      {
+        "Name": "nohit",
+        "Capacity": "16",
+        "Partition": "0,8"
+      },
+      "nohit"
+    ]
+  },
+  "pstr_echo": {
+    "Name": "pstr_echo",
+    "Description": "pstr for Default",
+    "ClassName": "org.qbroker.persister.StreamPersister",
+    "URI": "file://-",
+    "Operation": "echo",
+    "LinkName": "echo",
+    "DisplayMask": "0"
+  },
+  "pstr_nohit": {
+    "Name": "pstr_nohit",
+    "ClassName": "org.qbroker.persister.LogPersister",
+    "URI": "log:///dev/null",
+    "LinkName": "nohit",
+    "Operation": "append",
+    "Template": "##JMStype##",
+    "DisplayMask": "0"
+  }
+}

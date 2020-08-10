@@ -274,7 +274,7 @@ public class IncrementalMonitor extends Monitor {
             map.put("ClassName", "org.qbroker.event.EventParser");
             h.put("Parser", map);
             requester = GenericList.initRequester(h,
-                "org.qbroker.flow.GenericRequester", name);
+                "org.qbroker.persister.GenericRequester", name);
             break;
           case OBJ_UDP:
             if ((o = props.get("JSONPath")) != null) {
@@ -315,7 +315,7 @@ public class IncrementalMonitor extends Monitor {
             map.put("ClassName", "org.qbroker.event.EventParser");
             h.put("Parser", map);
             requester = GenericList.initRequester(h,
-                "org.qbroker.flow.GenericRequester", name);
+                "org.qbroker.persister.GenericRequester", name);
             break;
           case OBJ_HTTP:
             if ((o = props.get("MaxBytes")) != null)
@@ -511,7 +511,7 @@ public class IncrementalMonitor extends Monitor {
             h.put("DisplayMask", "0");
             h.put("TextMode", "1");
             requester = GenericList.initRequester(h,
-                "org.qbroker.flow.GenericRequester", name);
+                "org.qbroker.persister.GenericRequester", name);
             break;
           default:
             break;

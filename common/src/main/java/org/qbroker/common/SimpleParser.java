@@ -56,8 +56,7 @@ public class SimpleParser {
         try {
             Perl5Compiler pc = new Perl5Compiler();
             pm = new Perl5Matcher();
-            pattern = pc.compile(strBuf.toString(),
-                Perl5Compiler.SINGLELINE_MASK);
+            pattern=pc.compile(strBuf.toString(),Perl5Compiler.SINGLELINE_MASK);
         }
         catch(Exception e) {
             throw new IllegalArgumentException(e.toString());

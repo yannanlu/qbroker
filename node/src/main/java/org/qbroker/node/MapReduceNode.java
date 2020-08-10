@@ -31,6 +31,7 @@ import org.xml.sax.InputSource;
 import org.w3c.dom.Document;
 import org.qbroker.common.XQueue;
 import org.qbroker.common.IndexedXQueue;
+import org.qbroker.common.Aggregator;
 import org.qbroker.common.Browser;
 import org.qbroker.common.AssetList;
 import org.qbroker.common.Utils;
@@ -1558,8 +1559,8 @@ public class MapReduceNode extends Node {
                 meta[REQ_SUCCESS] = 1;
                 i = aggr.initialize(currentTime, inMessage, request);
                 if (i == 0 && aggr.hasBody()) switch (aggr.getBodyOperation()) {
-                  case Aggregation.AGGR_LAST:
-                  case Aggregation.AGGR_APPEND:
+                  case Aggregator.AGGR_LAST:
+                  case Aggregator.AGGR_APPEND:
                     msgStr = MessageUtils.processBody(inMessage, buffer);
                     if (msgStr == null) // no such value, use default
                         msgStr = (String) aggr.getFromBody("DefaultValue");
@@ -1567,7 +1568,7 @@ public class MapReduceNode extends Node {
                         msgStr = "";
                     pendList.set(cid, msgStr);
                     break;
-                  case Aggregation.AGGR_MERGE:
+                  case Aggregator.AGGR_MERGE:
                     k = aggr.getBodyType();
                     msgStr = MessageUtils.processBody(inMessage, buffer);
                     if (msgStr == null) // no such value, use default
@@ -1613,7 +1614,7 @@ public class MapReduceNode extends Node {
                             sr.close();
                     }
                     break;
-                  case Aggregation.AGGR_UNION:
+                  case Aggregator.AGGR_UNION:
                     k = aggr.getBodyType();
                     msgStr = MessageUtils.processBody(inMessage, buffer);
                     if (msgStr == null) // no such value, use default
@@ -1643,7 +1644,7 @@ public class MapReduceNode extends Node {
                             sr.close();
                     }
                     break;
-                  case Aggregation.AGGR_FIRST:
+                  case Aggregator.AGGR_FIRST:
                     msgStr = MessageUtils.processBody(inMessage, buffer);
                     if (msgStr == null)
                         msgStr = "";
@@ -1668,13 +1669,13 @@ public class MapReduceNode extends Node {
                 i = aggr.compare(0, inMessage, request);
                 aggr.aggregate(currentTime, inMessage, request);
                 if (i > 0 && aggr.hasBody()) switch (aggr.getBodyOperation()) {
-                  case Aggregation.AGGR_LAST:
+                  case Aggregator.AGGR_LAST:
                     msgStr = MessageUtils.processBody(inMessage, buffer);
                     if (msgStr == null)
                         msgStr = "";
                     pendList.set(cid, msgStr);
                     break;
-                  case Aggregation.AGGR_APPEND:
+                  case Aggregator.AGGR_APPEND:
                     str = MessageUtils.processBody(inMessage, buffer);
                     if (str == null) // no such value, use default
                         str = (String) aggr.getFromBody("DefaultValue");
@@ -1689,7 +1690,7 @@ public class MapReduceNode extends Node {
                     }
                     pendList.set(cid, msgStr + str);
                     break;
-                  case Aggregation.AGGR_MERGE:
+                  case Aggregator.AGGR_MERGE:
                     k = aggr.getBodyType();
                     msgStr = MessageUtils.processBody(inMessage, buffer);
                     if (msgStr == null) // no such value, use default
@@ -1722,7 +1723,7 @@ public class MapReduceNode extends Node {
                             sr.close();
                     }
                     break;
-                  case Aggregation.AGGR_UNION:
+                  case Aggregator.AGGR_UNION:
                     k = aggr.getBodyType();
                     msgStr = MessageUtils.processBody(inMessage, buffer);
                     if (msgStr == null) // no such value, use default

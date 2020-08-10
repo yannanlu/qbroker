@@ -1576,7 +1576,7 @@ public class QFlow implements Service, Runnable {
      */
     public int doRequest(org.qbroker.common.Event req, int timeout) {
         XQueue xq;
-        int i, n, sid = -1, begin, len;
+        int i = 0, n = -1, sid = -1, begin, len;
         int m = 1;
 
         if (req == null)
@@ -1630,7 +1630,8 @@ public class QFlow implements Service, Runnable {
 
             if (sid < 0)
                 return 0;
-            // make sure the cell of sid is empty
+
+            // make sure the cell of sid is empty before sending the request
             i = reqList.collect(-1L, sid);
             if (i >= 0) // a previous request timed out
                 new Event(Event.NOTICE,name+" collected a time-out request at "+
@@ -1641,7 +1642,7 @@ public class QFlow implements Service, Runnable {
             i = xq.add(request, sid);
 
             for (i=0; i<m; i++) { // wait for ack
-                if (reqList.collect(500L, sid) >= 0) { // collected it
+                if (reqList.collect(500L, sid) >= 0) { // got the response
                     return 1;
                 }
             }
@@ -1690,22 +1691,30 @@ public class QFlow implements Service, Runnable {
 
             if (sid < 0)
                 return 0;
-            i = xq.reserve(50L, sid);
-            if (i != sid) {
+
+            do {
+                n = xq.reserve(500L, sid);
+                if (n == sid || !MessageUtils.keepRunning(xq))
+                    break;
+            } while (++i < m);
+            if (n != sid) { // previous request timed out and it is not done yet
                 idList.cancel(sid);
+                new Event(Event.ERR, name + " failed to reserve the cell at " +
+                    sid + " since a previous request is still not done yet: " +
+                    xq.getCellStatus(sid) + " " + xq.depth() + ":" +
+                    xq.size() + "/" + xq.getCapacity()).send();
                 return -1;
             }
             request.setAttribute("reqID", String.valueOf(sid));
             i = xq.add(request, sid);
 
-            for (i=0; i<m; i++) {
-                if (xq.collect(500L, sid) >= 0) { // try to collect the response
+            for (i=0; i<m; i++) { // wait for response
+                if (xq.collect(500L, sid) >= 0) { // got the response
                     idList.cancel(sid);
                     return 1;
                 }
             }
             request.setExpiration(System.currentTimeMillis() - 60000L);
-            xq.takeback(sid);
             idList.cancel(sid);
         }
         return 0;

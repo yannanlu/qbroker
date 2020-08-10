@@ -22,6 +22,7 @@ import org.apache.oro.text.regex.MatchResult;
 import org.apache.oro.text.regex.Perl5Compiler;
 import org.apache.oro.text.regex.Util;
 import org.apache.oro.text.regex.MalformedPatternException;
+import org.qbroker.common.Aggregator;
 import org.qbroker.common.TimeWindows;
 import org.qbroker.common.TextSubstitution;
 import org.qbroker.common.Utils;
@@ -78,7 +79,8 @@ public class AgeMonitor extends Monitor {
     protected TextSubstitution tSub = null;
     private long timeDifference;
     private long previousTime, previousRefTime, previousLeadTime, t0 = 0L;
-    private int triggerSize, timeOffset, previousTrigger, oid, op = NUM_MIN;
+    private int triggerSize, timeOffset, previousTrigger, oid;
+    private int op = Aggregator.AGGR_TMIN;
     private int updateCount, previousLevel;
     private boolean isNumber = false, isETime = false, emptyDataIgnored;
     private boolean logDetail = false;
@@ -100,10 +102,6 @@ public class AgeMonitor extends Monitor {
     private final static int OBJ_PCF = 14;
     private final static int OBJ_SONIC = 15;
     private final static int OBJ_REQ = 16;
-    private final static int NUM_MIN = 0;
-    private final static int NUM_MAX = 1;
-    private final static int NUM_FIRST = 2;
-    private final static int NUM_LAST = 3;
 
     public AgeMonitor(Map props) {
         super(props);
@@ -261,7 +259,7 @@ public class AgeMonitor extends Monitor {
             map.put("ClassName", "org.qbroker.event.EventParser");
             h.put("Parser", map);
             requester = GenericList.initRequester(h,
-                "org.qbroker.flow.GenericRequester", name);
+                "org.qbroker.persister.GenericRequester", name);
             break;
           case OBJ_UDP:
             if ((o = props.get("JSONPath")) != null) {
@@ -302,7 +300,7 @@ public class AgeMonitor extends Monitor {
             map.put("ClassName", "org.qbroker.event.EventParser");
             h.put("Parser", map);
             requester = GenericList.initRequester(h,
-                "org.qbroker.flow.GenericRequester", name);
+                "org.qbroker.persister.GenericRequester", name);
             break;
           case OBJ_HTTP:
             if ((o = props.get("MaxBytes")) != null)
@@ -502,7 +500,7 @@ public class AgeMonitor extends Monitor {
             h.put("DisplayMask", "0");
             h.put("TextMode", "1");
             requester = GenericList.initRequester(h,
-                "org.qbroker.flow.GenericRequester", name);
+                "org.qbroker.persister.GenericRequester", name);
             break;
           default:
             break;
@@ -580,14 +578,9 @@ public class AgeMonitor extends Monitor {
             referenceName = "";
 
         if ((o = props.get("Operation")) != null) { // for aggregation
-            if ("latest".equalsIgnoreCase((String) o))
-                op = NUM_MAX;
-            else if ("first".equalsIgnoreCase((String) o))
-                op = NUM_FIRST;
-            else if ("last".equalsIgnoreCase((String) o))
-                op = NUM_LAST;
-            else
-                op = NUM_MIN;
+            op = Aggregator.getAggregationID((String) o);
+            if (op == Aggregator.AGGR_NONE)
+                op = Aggregator.AGGR_TMIN;
         }
 
         if ((o = props.get("EmptyDataIgnored")) != null &&
@@ -881,7 +874,7 @@ public class AgeMonitor extends Monitor {
                     init = 1;
                 }
                 else switch (op) { // aggregation
-                  case NUM_MAX:
+                  case Aggregator.AGGR_TMAX:
                     if (mtime > leadingTime) {
                         leadingTime = mtime;
                         if (logDetail)
@@ -890,7 +883,7 @@ public class AgeMonitor extends Monitor {
                             report.put("LeadingBlock", strBuf.toString());
                     }
                     break;
-                  case NUM_MIN:
+                  case Aggregator.AGGR_TMIN:
                     if (mtime < leadingTime) {
                         leadingTime = mtime;
                         if (logDetail)
@@ -899,14 +892,14 @@ public class AgeMonitor extends Monitor {
                             report.put("LeadingBlock", strBuf.toString());
                     }
                     break;
-                  case NUM_LAST:
+                  case Aggregator.AGGR_LAST:
                     leadingTime = mtime;
                     if (logDetail)
                         report.put("LeadingBlock", (String) dataBlock.get(i));
                     else
                         report.put("LeadingBlock", strBuf.toString());
                     break;
-                  case NUM_FIRST:
+                  case Aggregator.AGGR_FIRST:
                   default:
                 }
             }

@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashSet;
 import java.util.Properties;
 import java.util.Iterator;
 import java.util.Date;
@@ -19,6 +20,7 @@ import org.apache.oro.text.regex.MatchResult;
 import org.apache.oro.text.regex.Perl5Compiler;
 import org.apache.oro.text.regex.Util;
 import org.apache.oro.text.regex.MalformedPatternException;
+import org.qbroker.common.Aggregator;
 import org.qbroker.common.TimeWindows;
 import org.qbroker.common.Template;
 import org.qbroker.common.TextSubstitution;
@@ -65,7 +67,7 @@ public class NumberMonitor extends Monitor {
     private String queryStr, dataField, snmpOID = null, previousNumber;
     private Pattern pattern, patternLF;
     private TextSubstitution tSub = null;
-    private int oid, op = NUM_COUNT, previousLevel;
+    private int oid, op = Aggregator.AGGR_COUNT, previousLevel;
     private double scale, shift;
     private boolean isDouble = false, emptyDataIgnored, logDetail = false;
     protected final static int OBJ_HTTP = 1;
@@ -84,11 +86,6 @@ public class NumberMonitor extends Monitor {
     protected final static int OBJ_PCF = 14;
     protected final static int OBJ_SONIC = 15;
     protected final static int OBJ_REQ = 16;
-    public final static int NUM_COUNT = 0;
-    public final static int NUM_SUM = 1;
-    public final static int NUM_MIN = 2;
-    public final static int NUM_MAX = 3;
-    public final static int NUM_AVG = 4;
 
     public NumberMonitor(Map props) {
         super(props);
@@ -185,18 +182,9 @@ public class NumberMonitor extends Monitor {
         }
 
         if ((o = props.get("Operation")) != null) {
-            if ("count".equalsIgnoreCase((String) o))
-                op = NUM_COUNT;
-            else if ("sum".equalsIgnoreCase((String) o))
-                op = NUM_SUM;
-            else if ("max".equalsIgnoreCase((String) o))
-                op = NUM_MAX;
-            else if ("min".equalsIgnoreCase((String) o))
-                op = NUM_MIN;
-            else if ("average".equalsIgnoreCase((String) o))
-                op = NUM_AVG;
-            else
-                op = NUM_COUNT;
+            op = Aggregator.getAggregationID((String) o);
+            if (op == Aggregator.AGGR_NONE)
+                op = Aggregator.AGGR_COUNT;
         }
 
         if ((o = props.get("LogDetail")) != null && "true".equals((String) o))
@@ -250,7 +238,7 @@ public class NumberMonitor extends Monitor {
                 queryStr = MonitorUtils.substitute(queryStr, template);
             }
             else
-                throw(new IllegalArgumentException("RequestCommand is nullned"));
+               throw(new IllegalArgumentException("RequestCommand is nullned"));
             h.put("RequestCommand", queryStr);
             if ((o = props.get("Username")) != null) {
                 h.put("Username", o);
@@ -284,7 +272,7 @@ public class NumberMonitor extends Monitor {
             map.put("ClassName", "org.qbroker.event.EventParser");
             h.put("Parser", map);
             requester = GenericList.initRequester(h,
-                "org.qbroker.flow.GenericRequester", name);
+                "org.qbroker.persister.GenericRequester", name);
             break;
           case OBJ_UDP:
             if ((o = props.get("JSONPath")) != null) {
@@ -325,7 +313,7 @@ public class NumberMonitor extends Monitor {
             map.put("ClassName", "org.qbroker.event.EventParser");
             h.put("Parser", map);
             requester = GenericList.initRequester(h,
-                "org.qbroker.flow.GenericRequester", name);
+                "org.qbroker.persister.GenericRequester", name);
             break;
           case OBJ_HTTP:
             if ((o = props.get("MaxBytes")) != null)
@@ -525,7 +513,7 @@ public class NumberMonitor extends Monitor {
             h.put("DisplayMask", "0");
             h.put("TextMode", "1");
             requester = GenericList.initRequester(h,
-                "org.qbroker.flow.GenericRequester", name);
+                "org.qbroker.persister.GenericRequester", name);
             break;
           default:
             break;
@@ -552,6 +540,7 @@ public class NumberMonitor extends Monitor {
         double doubleNumber = 0.0;
         Map<String, Object> r = null;
         List dataBlock = new ArrayList();
+        HashSet<String> hset = null;
         Object o;
         String str;
         StringBuffer strBuf;
@@ -755,15 +744,17 @@ public class NumberMonitor extends Monitor {
             else
                 leadingNumber = Long.parseLong(previousNumber);
         }
+        if (op == Aggregator.AGGR_UNIQC)
+            hset = new HashSet<String>();
         for (int i=0; i<n; i++) {
             if (pm.contains((String) dataBlock.get(i), pattern)) {
                 double f = 0;
                 MatchResult mr;
                 switch (op) {
-                  case NUM_MAX:
-                  case NUM_MIN:
-                  case NUM_SUM:
-                  case NUM_AVG:
+                  case Aggregator.AGGR_MAX:
+                  case Aggregator.AGGR_MIN:
+                  case Aggregator.AGGR_SUM:
+                  case Aggregator.AGGR_AVG:
                     mr = pm.getMatch();
                     if (mr.groups() > 1) { // got the number
                         str = (tSub == null) ? mr.group(1) :
@@ -784,8 +775,8 @@ public class NumberMonitor extends Monitor {
                             else
                                 report.put("LeadingBlock", str);
                         }
-                        else if (isDouble && ((op == NUM_MAX &&
-                            f > doubleNumber) || (op == NUM_MIN &&
+                        else if (isDouble && ((op == Aggregator.AGGR_MAX &&
+                            f > doubleNumber) || (op == Aggregator.AGGR_MIN &&
                             f < doubleNumber))) {
                             doubleNumber = f;
                             if (logDetail)
@@ -794,8 +785,9 @@ public class NumberMonitor extends Monitor {
                             else
                                 report.put("LeadingBlock", str);
                         }
-                        else if (!isDouble && ((op == NUM_MAX &&
-                            number > leadingNumber) || (op == NUM_MIN &&
+                        else if (!isDouble && ((op == Aggregator.AGGR_MAX &&
+                            number > leadingNumber) ||
+                            (op == Aggregator.AGGR_MIN &&
                             number < leadingNumber))) {
                             leadingNumber = number;
                             if (logDetail)
@@ -804,7 +796,8 @@ public class NumberMonitor extends Monitor {
                             else
                                 report.put("LeadingBlock", str);
                         }
-                        else if (op == NUM_SUM || op == NUM_AVG) {
+                        else if (op == Aggregator.AGGR_SUM ||
+                            op == Aggregator.AGGR_AVG) {
                             if (isDouble)
                                 doubleNumber += f;
                             else
@@ -818,7 +811,16 @@ public class NumberMonitor extends Monitor {
                         }
                     }
                     break;
-                  case NUM_COUNT:
+                  case Aggregator.AGGR_UNIQC:
+                    mr = pm.getMatch();
+                    if (mr.groups() > 1) { // got the key
+                        str = (tSub == null) ? mr.group(1) :
+                            tSub.substitute(mr.group(1));
+                        if (!hset.contains(str)) // add the unique key
+                            hset.add(str);
+                    }
+                    break;
+                  case Aggregator.AGGR_COUNT:
                   default:
                     str = (String) dataBlock.get(i);
                     if (init < 0) {
@@ -848,11 +850,16 @@ public class NumberMonitor extends Monitor {
                 continue;
             }
         }
-        if (op == NUM_COUNT) {
+        if (op == Aggregator.AGGR_COUNT) {
             leadingNumber = number;
             report.put("LeadingNumber", String.valueOf(number));
         }
-        else if (op == NUM_AVG && init > 0) {
+        else if (op == Aggregator.AGGR_UNIQC) {
+            leadingNumber = hset.size(); 
+            report.put("LeadingNumber", String.valueOf(leadingNumber));
+            hset.clear();
+        }
+        else if (op == Aggregator.AGGR_AVG && init > 0) {
             if (isDouble) {
                 doubleNumber /= init;
                 report.put("LeadingNumber", String.valueOf(doubleNumber));
