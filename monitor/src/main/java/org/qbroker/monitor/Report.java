@@ -39,7 +39,7 @@ public abstract class Report implements MonitorReport {
     protected SimpleDateFormat timeFormat[] = new SimpleDateFormat[0];
     protected Template timeTemplate = null;
     protected final static String formatText[] = {"yyyy",
-        "yy", "MMM", "MM", "dd", "HH", "mm", "ss"};
+        "yy", "MMM", "MM", "dd", "HH", "mm", "ss", "zz"};
     protected final static String FILE_SEPARATOR =
         System.getProperty("file.separator");
 

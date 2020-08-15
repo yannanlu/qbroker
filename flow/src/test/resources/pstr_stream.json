@@ -1,0 +1,7 @@
+{
+  "Name":"client",
+  "ClassName":"org.qbroker.persister.StreamPersister",
+  "URI":"tcp://localhost:8087",
+  "Operation":"request",
+  "DataField": "body"
+}

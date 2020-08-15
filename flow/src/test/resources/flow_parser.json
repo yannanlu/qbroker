@@ -1,0 +1,172 @@
+{
+  "Name": "Flow",
+  "Site": "DEVOPS",
+  "Category": "TEST",
+  "Type": "QFlow",
+  "Operation": "move",
+  "Description": "a message flow",
+  "XAMode": "0",
+  "Capacity": "16",
+  "Mode": "daemon",
+  "ConfigDir": "/tmp",
+  "MaxNumberFlow": "1",
+  "Receiver": ["rcvr_tcp"],
+  "Node": ["node_parser", "node_format"],
+  "Persister": ["pstr_echo", "pstr_nohit"],
+  "rcvr_tcp": {
+    "Name": "rcvr_tcp",
+    "ClassName":"org.qbroker.receiver.ServerReceiver",
+    "URI":"tcp://localhost:8087",
+    "Operation":"respond",
+    "LinkName": "root",
+    "EOTBytes":"0x0a",
+    "DisplayMask": "-1",
+    "StringProperty": {
+      "JMSType": "test"
+    }
+  },
+  "node_parser": {
+    "Name": "node_parser",
+    "ClassName": "org.qbroker.node.ParserNode",
+    "Description": "parse stats data of event",
+    "Operation": "parse",
+    "LinkName": "root",
+    "Capacity": "16",
+    "XAMode": "1",
+    "DisplayMask": "6",
+    "Ruleset": [{
+      "Name": "test",
+      "ClassName": "org.qbroker.common.SimpleParser",
+      "PatternGroup": [
+        {
+          "Pattern": [
+            "\"GET \\/ HTTP\\/1\\.[01]\" 200 ",
+            "login\\.qbroker\\.org",
+            "SSO\\?execution=e"
+          ]
+        }
+      ],
+      "ParserArgument": [
+        {
+          "LogTime": "^\\[([^ ]+ [+-]?\\d+)\\] "
+        },
+        {
+          "Source": "([^  ]+) [^ ]+ "
+        },
+        {
+          "owner": "([^ ]+) "
+        },
+        {
+          "program": "\"([^ ]+) [^\"]+\" "
+        },
+        {
+          "pid": "(\\d+) "
+        },
+        {
+          "Size": "(\\d+) "
+        },
+        {
+          "text": "\"([^\"]+)\""
+        },
+        {
+          "Duration": ".+ (\\d+)$"
+        }
+      ],
+      "FormatterArgument": [
+        {
+          "FieldName": "name",
+          "Template": [
+            "##JMSType##_log"
+          ]
+        },
+        {
+          "FieldName": "type",
+          "Template": [
+            "LogCollector"
+          ]
+        },
+        {
+          "FieldName": "site",
+          "Template": [
+            "##name##"
+          ],
+          "Substitution": [
+            "s/_.+$//",
+            "s//:=upper/e"
+          ]
+        },
+        {
+          "FieldName": "JMSTimestamp",
+          "Template": [
+            "##LogTime##"
+          ],
+          "Substitution": [
+            "s/\\//-/g",
+            "s//~=dd-MMM-yyyy:HH:mm:ss zz/e"
+          ]
+        },
+        {
+          "FieldName": "category",
+          "Template": [
+            "TEST"
+          ]
+        }
+      ]
+    }],
+    "OutLink": [
+      "event",
+      {
+        "Name": "nohit",
+        "Capacity": "16",
+        "Partition": "0,8"
+      },
+      "nohit"
+    ]
+  },
+  "node_format": {
+    "Name": "node_format",
+    "ClassName": "org.qbroker.node.FormatNode",
+    "Description": "format event",
+    "Operation": "format",
+    "LinkName": "event",
+    "XAMode": "0",
+    "Capacity": "16",
+    "DisplayMask": "64",
+    "Ruleset": [{
+      "Name": "jevent",
+      "ClassName": "org.qbroker.jms.Msg2Text",
+      "FormatterArgument": {
+        "Template": "",
+        "ResultType": "64",
+        "AppendNewLine": "true"
+      }
+    }],
+    "OutLink": [
+      "echo",
+      {
+        "Name": "nohit",
+        "Capacity": "16",
+        "Partition": "8,8"
+      },
+      "nohit"
+    ]
+  },
+  "pstr_echo": {
+    "Name": "pstr_echo",
+    "Description": "pstr for Default",
+    "ClassName": "org.qbroker.persister.StreamPersister",
+    "URI": "file://-",
+    "Operation": "echo",
+    "LinkName": "echo",
+    "DisplayMask": "0"
+  },
+  "pstr_nohit": {
+    "Name": "pstr_nohit",
+    "ClassName": "org.qbroker.persister.LogPersister",
+    "URI": "log:///dev/null",
+    "LinkName": "nohit",
+    "Operation": "append",
+    "Template": "##JMStype##",
+    "DisplayMask": "6"
+  }
+}

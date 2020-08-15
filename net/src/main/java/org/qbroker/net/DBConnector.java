@@ -70,6 +70,10 @@ public class DBConnector implements Connector {
                 dbDriver = "com.microsoft.jdbc.sqlserver.SQLServerDriver";
             else if (ssp.startsWith("db2"))
                 dbDriver = "com.ibm.db2.jcc.DB2Driver";
+            else if (ssp.startsWith("hsqldb"))
+                dbDriver = "org.hsqldb.jdbc.JDBCDriver";
+            else if (ssp.startsWith("h2"))
+                dbDriver = "org.h2.Driver";
             else
                 throw(new IllegalArgumentException("DBDriver is not defined"));
         }

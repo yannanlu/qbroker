@@ -270,7 +270,7 @@ public class StreamPersister extends Persister {
                             Utils.decrypt((String) o));
                     }
                     catch (Exception e) {
-                        throw(new IllegalArgumentException("failed to decrypt " +
+                        throw(new IllegalArgumentException("failed to decrypt "+
                             "EncryptedPassword: " + e.toString()));
                     }
                 }
@@ -308,7 +308,7 @@ public class StreamPersister extends Persister {
                             Utils.decrypt((String) o));
                     }
                     catch (Exception e) {
-                        throw(new IllegalArgumentException("failed to decrypt " +
+                        throw(new IllegalArgumentException("failed to decrypt "+
                             "EncryptedPassword: " + e.toString()));
                     }
                 }

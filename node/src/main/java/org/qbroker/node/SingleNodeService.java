@@ -1385,7 +1385,7 @@ public class SingleNodeService implements Service, Runnable {
                 break;
               case 't':
                 if (i+1 < args.length)
-                    timeout = Integer.parseInt(args[++i]);
+                    timeout = 1000 * Integer.parseInt(args[++i]);
                 break;
               default:
             }
@@ -1423,5 +1423,6 @@ public class SingleNodeService implements Service, Runnable {
         System.out.println("  -?: print this usage page");
         System.out.println("  -I: config file for the service");
         System.out.println("  -d: data as the content of message body");
+        System.out.println("  -t: timeout in second");
     }
 }

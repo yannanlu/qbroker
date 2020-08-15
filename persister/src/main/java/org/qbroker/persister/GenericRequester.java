@@ -13,6 +13,7 @@ import java.io.File;
 import java.io.StringReader;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.lang.reflect.InvocationTargetException;
 import javax.jms.Message;
 import javax.jms.JMSException;
 import org.apache.oro.text.regex.Pattern;
@@ -37,6 +38,7 @@ import org.qbroker.common.IndexedXQueue;
 import org.qbroker.common.ThreadPool;
 import org.qbroker.common.DataSet;
 import org.qbroker.common.Requester;
+import org.qbroker.common.Service;
 import org.qbroker.common.Utils;
 import org.qbroker.common.WrapperException;
 import org.qbroker.monitor.MonitorUtils;
@@ -51,7 +53,7 @@ import org.qbroker.event.Event;
  *<br>
  * @author yannanlu@yahoo.com
  */
-public class GenericRequester implements Requester {
+public class GenericRequester implements Requester, Service {
     private String uri;
     private String name;
     private String dataField, rcField, resultField;
@@ -70,11 +72,11 @@ public class GenericRequester implements Requester {
     private Pattern[][] aPatternGroup = null;
     private Pattern[][] xPatternGroup = null;
     private int dataType = Utils.RESULT_JSON;
-    private int reqTimeout = 10000;
+    private int reqTimeout = 10000, debug = 0;
     boolean isConnected = false;
     boolean isCommand = false;
 
-    public GenericRequester(Map props) {
+    public GenericRequester(Map props, XQueue xq) {
         String str;
         Object o;
         URI u = null;
@@ -94,8 +96,6 @@ public class GenericRequester implements Requester {
             throw(new IllegalArgumentException(name + " failed to parse uri: "+
                 e.toString()));
         }
-
-        persister = (MessagePersister) MessageUtils.initNode(props, name);
 
         if ((o = props.get("RequestCommand")) != null) // for command
             isCommand = true;
@@ -171,14 +171,75 @@ public class GenericRequester implements Requester {
                     ": failed to compile pattern: " + e.toString()));
             }
         }
-
         zonedDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss,SSS zz");
 
-        xq = new IndexedXQueue("xq_" + name, 1);
+        if (xq != null && xq.getCapacity() > 0)
+            this.xq = xq;
+        initialize(props);
+    }
+
+    public GenericRequester(Map props) {
+        this(props, null);
+    }
+
+    public void initialize(Map props) {
+        Object o = MessageUtils.initNode(props, name);
+        if (o == null) {
+            throw(new IllegalArgumentException(name +
+                " failed to instanciate persister with null"));
+        }
+        else if (o instanceof MessagePersister) {
+            persister = (MessagePersister) o;
+            new Event(Event.INFO, name + " is instantiated").send();
+        }
+        else if (o instanceof InvocationTargetException) {
+            InvocationTargetException e = (InvocationTargetException) o;
+            Throwable ex = e.getTargetException();
+            if (ex == null) {
+                throw(new IllegalArgumentException(name +
+                    " failed to instanciate persister: "+
+                    Event.traceStack(e)));
+            }
+            else if (ex instanceof JMSException) {
+                Exception ee = ((JMSException) ex).getLinkedException();
+                if (ee != null)
+                    throw(new IllegalArgumentException(name +
+                        " failed to instanciate persister: " +ee.toString()+" "+
+                        Event.traceStack(ex)));
+                else
+                    throw(new IllegalArgumentException(name +
+                        " failed to instanciate persister: " +
+                        Event.traceStack(ex)));
+            }
+            else {
+                throw(new IllegalArgumentException(name +
+                    " failed to instanciate persister: " +
+                    Event.traceStack(ex)));
+            }
+        }
+        else if (o instanceof Exception) {
+            Exception e = (Exception) o;
+            throw(new IllegalArgumentException(name +
+                " failed to instanciate persister: " + Event.traceStack(e)));
+        }
+        else if (o instanceof Error) {
+            Error e = (Error) o;
+            new Event(Event.ERR, name + " failed to instantiate persister: " +
+                e.toString()).send();
+            Event.flush(e);
+        }
+        else {
+            throw(new IllegalArgumentException(name +
+                " failed to instanciate persister: "+ o.toString()));
+        }
+
+        if (xq == null)
+            xq = new IndexedXQueue("xq_" + name, 1);
         pool = new ThreadPool("pool_" + name, 1, 1, persister, "persist",
             new Class[] {XQueue.class, int.class});
         thr = pool.checkout(500L);
         pool.assign(new Object[] {xq, new Integer(0)}, 0);
+        isConnected = true;
     }
 
     /**
@@ -240,34 +301,23 @@ public class GenericRequester implements Requester {
                 e.toString()));
         }
 
-        if (autoDisconn) {
-            str = reconnect();
-            if (str != null)
-                throw(new WrapperException(name+" failed to reconnect: "+str));
-        }
+        if (!isConnected)
+            reconnect();
 
         k = doRequest(event, reqTimeout);
 
         if (k == 0) { // timed out
-            MessageUtils.stopRunning(xq);
-            if (thr.isAlive())
-                thr.interrupt();
-            isConnected = false;
+            if (autoDisconn)
+                stop();
             throw(new WrapperException(name + ": request timed out from "+uri));
         }
         else if (k < 0) { // failed
-            MessageUtils.stopRunning(xq);
-            if (thr.isAlive())
-                thr.interrupt();
-            isConnected = false;
+            stop();
             throw(new WrapperException(name + " failed to add request at 0 /" +
                 xq.size() + " " + xq.depth()));
         }
         else if (autoDisconn) {
-            MessageUtils.stopRunning(xq);
-            if (thr.isAlive())
-                thr.interrupt();
-            isConnected = false;
+            stop();
         }
 
         if (rcField != null) { // rcField is expected
@@ -309,8 +359,10 @@ public class GenericRequester implements Requester {
         return k;
     }
 
-    public int doRequest(TextEvent event, int timeout) {
+    public int doRequest(org.qbroker.common.Event event, int timeout) {
         int id, cid, k;
+        if (!(event instanceof TextEvent))
+            return -1;
         id = xq.reserve(500L);
         cid = xq.add(event, id);
         if (id < 0 || cid <= 0) // failed to reserve or add the msg
@@ -327,17 +379,9 @@ public class GenericRequester implements Requester {
     }
 
     public String reconnect() {
-        int id;
-        if (xq.depth() > 0) { // leftover
-            id = xq.getNextCell(500L);
-            if (id >= 0)
-                xq.remove(id);
-        }
-        if (xq.size() > 0)
-            xq.clear();
-        persister.setStatus(MessagePersister.PSTR_READY);
-        MessageUtils.resumeRunning(xq);
-        isConnected = true;
+        stop();
+        xq.clear();
+        start();
         return null;
     }
 
@@ -354,20 +398,48 @@ public class GenericRequester implements Requester {
         return dataType;
     }
 
-    public void close() {
+    public String getName() {
+        return name;
+    }
+
+    public String getOperation() {
+        return persister.getOperation();
+    }
+
+    public int getStatus() {
+        return persister.getStatus();
+    }
+
+    public int getDebugMode() {
+        return debug;
+    }
+
+    public void setDebugMode(int debug) {
+        this.debug = debug;
+    }
+
+    public void start() {
+        persister.setStatus(Persister.PSTR_READY);
+        MessageUtils.resumeRunning(xq);
+        thr = pool.checkout(500L);
+        pool.assign(new Object[] {xq, new Integer(0)}, 0);
+        isConnected = true;
+    }
+
+    public void stop() {
+        persister.setStatus(Persister.PSTR_STOPPED);
         MessageUtils.stopRunning(xq);
-        if (persister != null)
-            persister.close();
-        persister = null;
-        if (pool != null) {
-            if (thr.isAlive())
-                thr.interrupt();
-            pool.checkin(thr);
-            pool.close();
-        }
-        pool = null;
-        xq.clear();
+        if (thr.isAlive())
+            thr.interrupt();
+        pool.checkin(thr);
         isConnected = false;
+    }
+
+    public void close() {
+        stop();
+        persister.close();
+        pool.close();
+        xq.clear();
     }
 
     /** returns a Message created from the request and formatters */
@@ -484,7 +556,8 @@ public class GenericRequester implements Requester {
 
     public static void main(String[] args) {
         byte[] buffer = new byte[4096];
-        String filename = null, path = null;
+        String filename = null, path = null, operation = null;
+        int timeout = 0;
         Requester requester = null;
 
         if (args.length <= 1) {
@@ -509,6 +582,14 @@ public class GenericRequester implements Requester {
                 if (i+1 < args.length)
                     filename = args[++i];
                 break;
+              case 'o':
+                if (i+1 < args.length)
+                    operation = args[++i];
+                break;
+              case 't':
+                if (i+1 < args.length)
+                    timeout = Integer.parseInt(args[++i]);
+                break;
               default:
             }
         }
@@ -532,6 +613,10 @@ public class GenericRequester implements Requester {
                 fs.close();
             }
 
+            if (operation != null && operation.length() > 0)
+                ph.put("Operation", operation);
+            if (timeout > 0)
+                ph.put("RequestTimeout", String.valueOf(timeout));
             requester = new GenericRequester(ph);
             n = requester.getResponse(queryStr, strBuf, true);
             if (n >= 0)
@@ -555,5 +640,9 @@ public class GenericRequester implements Requester {
         System.out.println("GenericRequester Version 1.0 (written by Yannan Lu)");
         System.out.println("GenericRequester: send a request via a given persister");
         System.out.println("Usage: java org.qbroker.persister.GenericRequester -I cfg.json -f filename");
+        System.out.println("  -?: print this usage page");
+        System.out.println("  -f: filename for the content of request");
+        System.out.println("  -o: operation of the persister");
+        System.out.println("  -t: timeout in second");
     }
 }

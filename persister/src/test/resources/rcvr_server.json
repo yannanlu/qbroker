@@ -1,0 +1,11 @@
+{
+  "Name": "server_tcp",
+  "ClassName":"org.qbroker.receiver.ServerReceiver",
+  "URI":"tcp://localhost:8087",
+  "Operation":"respond",
+  "EOTBytes":"0x0a",
+  "DisplayMask": "0",
+  "StringProperty": {
+    "category": "TEST"
+  }
+}

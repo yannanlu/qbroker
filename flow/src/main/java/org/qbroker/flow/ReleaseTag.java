@@ -18,7 +18,11 @@ package org.qbroker.flow;
  * change on MonitorAgent, added getReport() to MessageUtils and updated it
  * to check system property on ReportClass to support unit tests, added the
  * property of AppendNewLine to Msg2Text for RESULT_COLLECTIBLE and
- * RESULT_POSTABLE only in case newline is required for EOTBytes = 0x0a
+ * RESULT_POSTABLE only in case newline is required for EOTBytes = 0x0a,
+ * added zz to Report for timeTemplate, updated GenericProvider,
+ * GenericRequester and SingleNodeService for unit testing, added support of
+ * hsqldb and h2 to DBConnector for unit testing, added unit tests for
+ * DBConnector, QConnector, ServerReceiver, StreamPersister and MessageFlow
  *<br>
  * V1.2.25 (2020/08/02): added nodeToMap() to Utils in common, added DataType
  * to GenericList to support list of Map, added methods of normalizeItem(Map),
@@ -423,7 +427,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V1.2.26 2020/08/09 23:12:30";
+    private static String ReleaseTAG = "QBroker V1.2.26 2020/08/15 08:12:30";
 
     public ReleaseTag() {
     }

@@ -26,11 +26,9 @@ public class ParserNodeTest {
         Map props = (Map) JSON2Map.parse(new StringReader(text));
         SingleNodeService service = SingleNodeService.initService(props);
         service.start();
-
         msg = new TextEvent(content);
         int k = service.doRequest(msg, 2000);
         msg.setGroupID(k);
-         
         if (service != null) try {
             service.close();
         }
@@ -39,47 +37,15 @@ public class ParserNodeTest {
     }
 
     @Test
-    public void testReturnCode() {
+    public void testParse() {
         assertEquals(1, msg.getGroupID());
-    }
-
-    @Test
-    public void testLogTime() {
         assertEquals("07/Aug/2020:11:23:53 -0400", msg.getAttribute("LogTime"));
-    }
-
-    @Test
-    public void testSource() {
         assertEquals("127.0.0.1", msg.getAttribute("Source"));
-    }
-
-    @Test
-    public void testOwner() {
         assertEquals("testuser", msg.getAttribute("owner"));
-    }
-
-    @Test
-    public void testProgram() {
         assertEquals("GET", msg.getAttribute("program"));
-    }
-
-    @Test
-    public void testPid() {
         assertEquals("200", msg.getAttribute("pid"));
-    }
-
-    @Test
-    public void testSize() {
         assertEquals("2310", msg.getAttribute("Size"));
-    }
-
-    @Test
-    public void testText() {
         assertEquals("https://login.qbroker.org/idp/profile/SAML2/Redirect/SSO?execution=e1s1", msg.getAttribute("text"));
-    }
-
-    @Test
-    public void testDuration() {
         assertEquals("12609", msg.getAttribute("Duration"));
     }
 }
