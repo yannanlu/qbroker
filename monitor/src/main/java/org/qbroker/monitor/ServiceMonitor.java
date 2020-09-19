@@ -636,7 +636,10 @@ public class ServiceMonitor extends Monitor {
             for (String key : attrs) {
                 if ("status".equals(key) || "monitor".equals(key))
                     continue;
-                event.setAttribute(key, "N/A");
+                if ("pid".equals(key))
+                    event.setAttribute(key, "0");
+                else
+                    event.setAttribute(key, "N/A");
             }
         }
         else {
@@ -647,6 +650,8 @@ public class ServiceMonitor extends Monitor {
                 o = latest.get(key);
                 if (o != null)
                     event.setAttribute(key, (String) o);
+                else if ("pid".equals(key))
+                    event.setAttribute(key, "0");
                 else
                     event.setAttribute(key, "N/A");
             }

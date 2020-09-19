@@ -5,11 +5,13 @@ package org.qbroker.net;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Collections;
+import java.util.Enumeration;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.lang.reflect.InvocationTargetException;
+import java.security.Principal;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -355,9 +357,49 @@ public class JettyServer extends HttpServlet implements HTTPServer {
 
     public void doGet(HttpServletRequest request, HttpServletResponse response)
         throws ServletException, IOException {
-        response.setContentType("text/html");
+        doRequest(request, response);
+    }
+
+    public void doPost(HttpServletRequest request,
+        HttpServletResponse response) throws ServletException, IOException {
+        doRequest(request, response);
+    }
+
+    public void doPut(HttpServletRequest request,
+        HttpServletResponse response) throws ServletException, IOException {
+        doRequest(request, response);
+    }
+
+    private void doRequest(HttpServletRequest request,
+        HttpServletResponse response) throws ServletException, IOException {
+        Principal principal = request.getUserPrincipal();
+        String remoteUser = request.getRemoteUser();
+        String query = request.getQueryString();
+        StringBuffer strBuf = new StringBuffer();
+        strBuf.append("  \"Method\": \"" + request.getMethod() + "\",\n");
+        strBuf.append("  \"Path\": \"" + request.getRequestURI() + "\",\n");
+        if (remoteUser != null)
+            strBuf.append("  \"RemoteUser\": \""+principal.toString()+"\",\n");
+        if (principal != null)
+            strBuf.append("  \"Principal\": \"" +principal.getName()+ "\",\n");
+        if (query != null)
+            strBuf.append("  \"Query\": \"" + query + "\",\n");
+        Enumeration<String> headerNames = request.getHeaderNames();
+        if (headerNames.hasMoreElements()) {
+            int i = 0;
+            strBuf.append("  \"Headers\": {" + "\n");
+            while (headerNames.hasMoreElements()) {
+                String key = headerNames.nextElement();
+                String str = request.getHeader(key);
+                if (i++ > 0)
+                    strBuf.append(",\n");
+                strBuf.append("    \"" + key + "\": \"" + str + "\"");
+            }
+            strBuf.append("\n  }\n");
+        }
+        response.setContentType("application/json");
         response.setStatus(HttpServletResponse.SC_OK);
-        response.getWriter().println("<h1>Hello from default servlet</h1>");
+        response.getWriter().println("{\n" + strBuf.toString() + "}\n");
     }
 
     public String getName() {

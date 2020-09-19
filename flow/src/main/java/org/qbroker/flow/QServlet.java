@@ -165,6 +165,12 @@ public class QServlet extends MessageServlet {
                System.setProperty("java.security.auth.login.config",jaasConfig);
             jaasHandler = new SimpleCallbackHandler();
         }
+        else if ((remoteUser = config.getInitParameter("RemoteUser")) != null) {
+            if (remoteUser.length() > 0) // trust external auth
+                withRemoteUser = ("remote_user".equalsIgnoreCase(remoteUser));
+            else
+                remoteUser = null;
+        }
 
         // initialize MD5 
         if (jaasHandler != null) try {
@@ -324,11 +330,14 @@ public class QServlet extends MessageServlet {
         setService(qf);
     }
 
-    public void doGet(HttpServletRequest request,
-        HttpServletResponse response) throws ServletException, IOException {
+    public void doGet(HttpServletRequest request, HttpServletResponse response)
+        throws ServletException, IOException {
         String uri = null;
         Object o;
         RequestDispatcher rd = null;
+
+        if ((qf.getDebugMode() & (QFlow.DEBUG_TRAN + QFlow.DEBUG_TRAN)) > 0)
+            logRequest(name, request);
 
         uri = processRequest(request, response, null);
 
@@ -354,8 +363,8 @@ public class QServlet extends MessageServlet {
         }
     }
 
-    public void doPost(HttpServletRequest request,
-        HttpServletResponse response) throws ServletException, IOException {
+    public void doPost(HttpServletRequest request, HttpServletResponse response)
+        throws ServletException, IOException {
         String uri = null, path;
         RequestDispatcher rd = null;
         Object o;
@@ -365,6 +374,9 @@ public class QServlet extends MessageServlet {
         int bufferSize = 4096;
         long size = 0;
         boolean isMultipart = ServletFileUpload.isMultipartContent(request);
+
+        if ((qf.getDebugMode() & (QFlow.DEBUG_TRAN + QFlow.DEBUG_TRAN)) > 0)
+            logRequest(name, request);
 
         path = request.getPathInfo();
         if (path == null)
@@ -580,8 +592,8 @@ public class QServlet extends MessageServlet {
         }
     }
 
-    public void doPut(HttpServletRequest request,
-        HttpServletResponse response) throws ServletException, IOException {
+    public void doPut(HttpServletRequest request, HttpServletResponse response)
+        throws ServletException, IOException {
         String uri = null, path, key, str;
         RequestDispatcher rd = null;
         Object o;
@@ -590,6 +602,9 @@ public class QServlet extends MessageServlet {
         int bufferSize = 4096;
         int bytesRead;
         long size = 0;
+
+        if ((qf.getDebugMode() & (QFlow.DEBUG_TRAN + QFlow.DEBUG_TRAN)) > 0)
+            logRequest(name, request);
 
         path = request.getPathInfo();
         if (path == null)
@@ -681,6 +696,9 @@ public class QServlet extends MessageServlet {
         String uri = null;
         Object o;
         RequestDispatcher rd = null;
+
+        if ((qf.getDebugMode() & (QFlow.DEBUG_TRAN + QFlow.DEBUG_TRAN)) > 0)
+            logRequest(name, request);
 
         uri = processRequest(request, response, null);
 

@@ -56,6 +56,7 @@ public class ScriptedBrowser {
     public ScriptedBrowser(Map props) {
         Object o;
         String str;
+        Map<String, String> ph = new HashMap<String, String>();
 
         if ((o = props.get("URI")) == null)
             throw(new IllegalArgumentException("URI is not defined"));
@@ -66,21 +67,43 @@ public class ScriptedBrowser {
             password = (String) props.get("Password");
         }
 
+        if ((o = props.get("Headers")) != null && o instanceof Map) {
+            Map map = (Map) o;
+            for (Object obj : map.keySet()) {
+                str = (String) obj;
+                if (str == null || str.length() <= 0)
+                    continue;
+                if ((o = map.get(str)) == null || !(o instanceof String))
+                    continue;
+                if (((String) o).length() > 0)
+                    ph.put(str, (String) o);
+            }
+        }
+
         if ((o = props.get("WithJavascriptEnabled")) != null &&
             "false".equalsIgnoreCase((String) o))
             withJavascriptEnabled = false;
 
         str = (String) props.get("BrowserVersion");
         if (str == null)
-            driver = new HtmlUnitDriver();
+            driver = (ph.size() <= 0) ? new HtmlUnitDriver() :
+                new HtmlUnitDriverWithHeaders(ph);
         else if ("fireforx_60".equalsIgnoreCase(str))
-            driver = new HtmlUnitDriver(BrowserVersion.FIREFOX_60);
+            driver = (ph.size() <= 0) ?
+                new HtmlUnitDriver(BrowserVersion.FIREFOX_60) :
+                new HtmlUnitDriverWithHeaders(BrowserVersion.FIREFOX_60, ph);
         else if ("chrome".equalsIgnoreCase(str))
-            driver = new HtmlUnitDriver(BrowserVersion.CHROME);
+            driver = (ph.size() <= 0) ?
+                new HtmlUnitDriver(BrowserVersion.CHROME) :
+                new HtmlUnitDriverWithHeaders(BrowserVersion.CHROME, ph);
         else if ("internet_explorer".equalsIgnoreCase(str))
-            driver = new HtmlUnitDriver(BrowserVersion.INTERNET_EXPLORER);
+            driver = (ph.size() <= 0) ?
+                new HtmlUnitDriver(BrowserVersion.INTERNET_EXPLORER) :
+                new HtmlUnitDriverWithHeaders(BrowserVersion.INTERNET_EXPLORER,
+                ph);
         else
-            driver = new HtmlUnitDriver();
+            driver = (ph.size() <= 0) ? new HtmlUnitDriver() :
+                new HtmlUnitDriverWithHeaders(ph);
 
         if (withJavascriptEnabled)
             driver.setJavascriptEnabled(true);

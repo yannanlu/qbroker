@@ -18,7 +18,7 @@
     <dependency>
       <groupId>org.qbroker</groupId>
       <artifactId>net</artifactId>
-      <version>1.1.8</version>
+      <version>1.1.9</version>
     </dependency>
     <dependency>
       <groupId>org.qbroker</groupId>
@@ -43,7 +43,7 @@
     <dependency>
       <groupId>org.qbroker</groupId>
       <artifactId>jms</artifactId>
-      <version>1.2.14</version>
+      <version>1.2.15</version>
     </dependency>
     <dependency>
       <groupId>org.qbroker</groupId>
@@ -78,7 +78,7 @@
     <dependency>
       <groupId>org.qbroker</groupId>
       <artifactId>flow</artifactId>
-      <version>1.2.26</version>
+      <version>1.2.27</version>
     </dependency>
     <dependency>
       <groupId>org.qbroker</groupId>

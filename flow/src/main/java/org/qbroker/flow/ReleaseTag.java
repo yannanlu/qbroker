@@ -3,6 +3,12 @@ package org.qbroker.flow;
 /* ReleaseTag.java - release tag for all the packages of qbroker */
 
 /**
+ * V1.2.27 (2020/09/19): added logRequest() to MessageServlet and JettryServer,
+ * added support of external authentications to MessageServlet, added
+ * REMOTE_USER to QServlet, updated ServiceMonitor with pid=0 for non-running
+ * processes, added HtmlUnitDriverWithHeaders to net, updated ScriptBrowser
+ * with the support of request headers
+ *<br>
  * V1.2.26 (2020/08/09): added the interface of Provider to common, added
  * GenericProvider to receiver, added SingleNodeService to node, added unit
  * tests for Aggregator, SimpleParser, Aggregation and ParserNode, moved
@@ -427,7 +433,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V1.2.26 2020/08/15 08:12:30";
+    private static String ReleaseTAG = "QBroker V1.2.27 2020/09/19 09:12:30";
 
     public ReleaseTag() {
     }

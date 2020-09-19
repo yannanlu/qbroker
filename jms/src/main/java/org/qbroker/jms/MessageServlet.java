@@ -17,6 +17,7 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.IOException;
+import java.security.Principal;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -87,6 +88,8 @@ import org.qbroker.jms.EchoService;
  * request. After the process is done, the message is supposed to have the
  * response loaded. MessageServlet will convert it back to the HTTP response
  * and sends the response back to the HTTP client.
+ *<br><br>
+ * It supports authentications via JAAS or trusted external sources.
  *<br>
  * @author yannanlu@yahoo.com
  */
@@ -100,12 +103,14 @@ public class MessageServlet extends HttpServlet {
     protected SimpleDateFormat zonedDateFormat;
     protected DiskFileItemFactory factory = null;
     protected String jaasLogin = null;
+    protected String remoteUser = null;
     protected String restURI = null;
     protected String headerRegex = null;
     protected SimpleCallbackHandler jaasHandler = null;
     protected String[] propertyName, propertyValue;
     protected MessageDigest md = null;
     protected int restURILen = 0;
+    protected boolean withRemoteUser = false;
 
     public MessageServlet() { // for servlet container only
     }
@@ -132,14 +137,16 @@ public class MessageServlet extends HttpServlet {
 
         if ((o = props.get("JAASLogin")) != null) {
             jaasLogin = (String) o;
-            if ((o = props.get("JAASConfig")) != null)
+            if ((o = props.get("JAASConfig")) != null) {//init JAAS LoginContext
                 jaasConfig = (String) o;
-        }
-
-        if (jaasLogin != null) { // initialize JAAS LoginContext
-            if (jaasConfig != null)
                System.setProperty("java.security.auth.login.config",jaasConfig);
+            }
             jaasHandler = new SimpleCallbackHandler();
+        }
+        else if ((o = props.get("RemoteUser")) != null &&
+            ((String) o).length() > 0) { // trust external auth
+            remoteUser = (String) o;
+            withRemoteUser = ("remote_user".equalsIgnoreCase(remoteUser));
         }
 
         // initialize MD5 
@@ -180,12 +187,19 @@ public class MessageServlet extends HttpServlet {
         if (service == null)
             throw(new IllegalArgumentException("service is null"));
         this.service = service;
+        if (name == null)
+            name = service.getName();
+        else if (!name.equals(service.getName()))
+            name = service.getName();
     }
 
     public void doGet(HttpServletRequest request, HttpServletResponse response)
         throws ServletException, IOException {
         String uri = null;
         Object o;
+
+        if ((service.getDebugMode() & Service.DEBUG_LOOP) > 0)
+            logRequest(name, request);
 
         uri = processRequest(request, response, null);
 
@@ -206,8 +220,8 @@ public class MessageServlet extends HttpServlet {
         }
     }
 
-    public void doPost(HttpServletRequest request,
-        HttpServletResponse response) throws ServletException, IOException {
+    public void doPost(HttpServletRequest request, HttpServletResponse response)
+        throws ServletException, IOException {
         String uri = null, path;
         Object o;
         Iterator iter;
@@ -216,6 +230,9 @@ public class MessageServlet extends HttpServlet {
         int bufferSize = 4096;
         long size = 0;
         boolean isMultipart = ServletFileUpload.isMultipartContent(request);
+
+        if ((service.getDebugMode() & Service.DEBUG_LOOP) > 0)
+            logRequest(name, request);
 
         path = request.getPathInfo();
         if (path == null)
@@ -240,8 +257,7 @@ public class MessageServlet extends HttpServlet {
                 event.setAttribute("type", str);
             }
             catch (Exception e) {
-                new Event(Event.ERR, getServletName() +
-                    " failed to read raw content: " +
+                new Event(Event.ERR, name + " failed to read raw content: " +
                     Event.traceStack(e)).send();
                 response.setContentType("text/plain");
                 response.getWriter().println("failed to read raw content: " +
@@ -358,8 +374,7 @@ public class MessageServlet extends HttpServlet {
                         }
                         key += " has been uploaded with "+rc+" record updated";
                         if ((service.getDebugMode() & service.DEBUG_TRAN) > 0)
-                            new Event(Event.DEBUG, getServletName() +
-                                ": " + key).send();
+                            new Event(Event.DEBUG, name + ": " + key).send();
                         key += ". You may need to refresh to see the change.";
                         response.getWriter().println(key);
                     }
@@ -369,10 +384,9 @@ public class MessageServlet extends HttpServlet {
                         }
                         catch (Exception ex) {
                         }
-                        new Event(Event.ERR, getServletName() +
-                           " failed to upload " + len + " bytes for " +
-                           event.getAttribute("name") + ": " +
-                           Event.traceStack(ee)).send();
+                        new Event(Event.ERR, name + " failed to upload " +
+                            len + " bytes for " + event.getAttribute("name") +
+                            ": " + Event.traceStack(ee)).send();
                         response.sendError(response.SC_INTERNAL_SERVER_ERROR);
                     }
                     return;
@@ -380,7 +394,7 @@ public class MessageServlet extends HttpServlet {
             }
         }
         catch (Exception e) {
-            new Event(Event.ERR, getServletName() + " failed to upload file: " +
+            new Event(Event.ERR, name + " failed to upload file: " +
                 Event.traceStack(e)).send();
             response.setContentType("text/plain");
             response.getWriter().println("file upload failed: " +
@@ -423,8 +437,8 @@ public class MessageServlet extends HttpServlet {
         }
     }
 
-    public void doPut(HttpServletRequest request,
-        HttpServletResponse response) throws ServletException, IOException {
+    public void doPut(HttpServletRequest request, HttpServletResponse response)
+        throws ServletException, IOException {
         String uri = null, path, key, str;
         Object o;
         Iterator iter;
@@ -432,6 +446,9 @@ public class MessageServlet extends HttpServlet {
         int bufferSize = 4096;
         int bytesRead;
         long size = 0;
+
+        if ((service.getDebugMode() & Service.DEBUG_LOOP) > 0)
+            logRequest(name, request);
 
         path = request.getPathInfo();
         if (path == null)
@@ -455,8 +472,7 @@ public class MessageServlet extends HttpServlet {
             }
         }
         catch (Exception e) {
-            new Event(Event.ERR, getServletName() +
-                " failed to read raw content: " +
+            new Event(Event.ERR, name + " failed to read raw content: " +
                 Event.traceStack(e)).send();
             response.setStatus(HttpServletResponse.SC_GATEWAY_TIMEOUT);
             response.setContentType("text/plain");
@@ -518,6 +534,9 @@ public class MessageServlet extends HttpServlet {
         HttpServletResponse response) throws ServletException, IOException {
         String uri = null;
         Object o;
+
+        if ((service.getDebugMode() & Service.DEBUG_LOOP) > 0)
+            logRequest(name, request);
 
         uri = processRequest(request, response, null);
 
@@ -671,11 +690,9 @@ public class MessageServlet extends HttpServlet {
         boolean isFileUpload = false;
         boolean isStream = false;
         Map props = request.getParameterMap();
-        if (name == null)
-            name = getServletName();
         path = request.getPathInfo();
         clientIP = request.getRemoteAddr();
-        if (jaasLogin != null) { // enforce JAAS Login
+        if (jaasLogin != null || remoteUser != null) { // enforce JAAS Login
             HttpSession session = request.getSession(true);
             if (session.isNew() || // new session
                 (status = (String) session.getAttribute("status")) == null) {
@@ -705,14 +722,25 @@ public class MessageServlet extends HttpServlet {
 
             if ("NEW".equals(status)) { // not logged in yet
                 TextEvent message;
-                o = props.get("username");
-                username = (o != null) ? ((String[]) o)[0] : null;
-                o = props.get("password");
-                String password = (o != null) ? ((String[]) o)[0] : null;
-                if (username == null || password == null)
-                    return loginURL;
-                if (!login(username, password)) // failed on login
-                    return loginURL;
+                if (jaasLogin != null) { // JAAS
+                    o = props.get("username");
+                    username = (o != null) ? ((String[]) o)[0] : null;
+                    o = props.get("password");
+                    String password = (o != null) ? ((String[]) o)[0] : null;
+                    if (username == null || password == null)
+                        return loginURL;
+                    if (!login(username, password)) // failed on login
+                        return loginURL;
+                }
+                else { // trust external auth
+                    username = (withRemoteUser) ? request.getRemoteUser() :
+                        request.getHeader(remoteUser);
+                    if (username == null) { // remote user is not set
+                         new Event(Event.WARNING, name +
+                             " failed to get RemoteUser at "+remoteUser).send();
+                         return loginURL;
+                    }
+                }
                 // the user has logged in
                 response.setHeader("login", username);
                 session.setAttribute("status", "ACTIVE");
@@ -1364,8 +1392,7 @@ public class MessageServlet extends HttpServlet {
             loginCtx = new LoginContext(jaasLogin, jaasHandler);
         }
         catch (LoginException e) {
-            new Event(Event.ERR, getServletName() +
-                " failed to create LoginContext for " +
+            new Event(Event.ERR, name + " failed to create LoginContext for " +
                 jaasLogin + ": " + Event.traceStack(e)).send();
             return false;
         }
@@ -1380,8 +1407,8 @@ public class MessageServlet extends HttpServlet {
             ic = false;
         }
         catch (LoginException e) {
-            new Event(Event.WARNING, getServletName() + ": login failed for " +
-                username + ": " + Event.traceStack(e)).send();
+            new Event(Event.WARNING, name + ": login failed for " + username +
+                ": " + Event.traceStack(e)).send();
         }
         jaasHandler.setPassword("");
         if (ic) try {
@@ -1391,6 +1418,37 @@ public class MessageServlet extends HttpServlet {
         }
         loginCtx = null;
         return ic;
+    }
+
+    protected static void logRequest(String name, HttpServletRequest request)
+        throws ServletException, IOException {
+        Principal principal = request.getUserPrincipal();
+        String remoteUser = request.getRemoteUser();
+        String query = request.getQueryString();
+        StringBuffer strBuf = new StringBuffer();
+        strBuf.append("  \"Method\": \"" + request.getMethod() + "\",\n");
+        strBuf.append("  \"Path\": \"" + request.getRequestURI() + "\",\n");
+        if (remoteUser != null)
+            strBuf.append("  \"RemoteUser\": \"" +principal.getName()+ "\",\n");
+        if (principal != null)
+            strBuf.append("  \"Principal\": \"" +principal.getName()+ "\",\n");
+        if (query != null)
+            strBuf.append("  \"Query\": \"" + query + "\",\n");
+        Enumeration<String> headerNames = request.getHeaderNames();
+        if (headerNames.hasMoreElements()) {
+            int i = 0;
+            strBuf.append("  \"Headers\": {" + "\n");
+            while (headerNames.hasMoreElements()) {
+                String key = headerNames.nextElement();
+                String str = request.getHeader(key);
+                if (i++ > 0)
+                    strBuf.append(",\n");
+                strBuf.append("    \"" + key + "\": \"" + str + "\"");
+            }
+            strBuf.append("\n  }\n");
+        }
+        new Event(Event.DEBUG, name +" got request: {\n"+strBuf.toString() +
+            "}").send();
     }
 
     private String toMsg(HttpServletRequest req, int type) {
