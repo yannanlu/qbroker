@@ -15,10 +15,10 @@ import org.qbroker.persister.Persister;
 import org.qbroker.event.Event;
 
 /**
- * LogPersister gets JMS messages from an XQueue and appends the
- * messages into a log file.  LogPersister supports flow control and
- * allows object control from its owner.  It is fault tolerant with retry
- * and idle options.
+ * LogPersister gets JMS messages from an XQueue and either appends the
+ * messages into a log file or tails a log file and sends new log entries back
+ * as responses. LogPersister supports flow control and allows object control
+ * from its owner. It is fault tolerant with retry and idle options.
  *<br>
  * @author yannanlu@yahoo.com
  */
@@ -37,7 +37,7 @@ public class LogPersister extends Persister {
 
         msgLog = new MessageLogger(props);
         operation = msgLog.getOperation();
-        if (!"append".equals(operation))
+        if (!"append".equals(operation) && !"tail".equals(operation))
             throw(new IllegalArgumentException("unsupported operation: " +
                 operation));
 
@@ -147,7 +147,10 @@ public class LogPersister extends Persister {
             baseTime = pauseTime;
 
         try {
-            msgLog.append(xq);
+            if ("append".equals(operation))
+                msgLog.append(xq);
+            else
+                msgLog.tail(xq);
         }
         catch (Exception e) {
             Exception ex = null;

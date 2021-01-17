@@ -12,27 +12,21 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
 import java.util.Iterator;
-import java.util.Enumeration;
 import java.util.Date;
 import java.text.SimpleDateFormat;
 import java.text.ParsePosition;
 import javax.jms.Message;
 import javax.jms.BytesMessage;
 import javax.jms.TextMessage;
-import javax.jms.MapMessage;
 import javax.jms.JMSException;
-import javax.jms.MessageFormatException;
 import javax.jms.MessageNotWriteableException;
-import javax.jms.Destination;
-import javax.jms.DeliveryMode;
-import javax.jms.Topic;
-import javax.jms.Queue;
 import org.qbroker.common.XQueue;
 import org.qbroker.common.Template;
 import org.qbroker.common.TimeWindows;
 import org.qbroker.common.NewlogFetcher;
 import org.qbroker.common.DirectoryTree;
 import org.qbroker.common.TimeWindows;
+import org.qbroker.common.TimeoutException;
 import org.qbroker.common.Utils;
 import org.qbroker.jms.MessageUtils;
 import org.qbroker.jms.MessageFilter;
@@ -44,11 +38,12 @@ import org.qbroker.event.Event;
 /**
  * MessageLogger handles common logs as JMS Messages.
  *<br><br>
- * There are three methods, fetch(), download() and append().  The former is
- * NOT MT-Safe.  During the fetch operation, the message acknowledgement and
- * session transaction are supported via explicitly persisting reference.
- * The method of download() is used for synchronous requests.  The method of
- * append() is used for asynchronous logging or storing.
+ * There are three methods, fetch(), tail(), download() and append(). The former
+ * is NOT MT-Safe. During the fetch operation, the message acknowledgement and
+ * session transaction are supported via explicitly persisting reference. The
+ * method of tail() is used to tail a log file via repeated requests. The method
+ * of download() is used for synchronous requests to download a file. The method
+ * of append() is used for asynchronous logging or storing.
  *<br><br>
  * For fetch(), there are 4 different transaction mode determined by XAMode.
  * For XAMode = 1 or 3, the client based transcation is enabled so that the
@@ -77,10 +72,11 @@ public class MessageLogger {
     private long waitTime = 500L;
     private int receiveTime = 1000;
     private int textMode = 1;
+    private int resultType = 1;
     private int xaMode = 0;
     private int mode = 0;
     private int logSize = 1;
-    private int maxNumberMsg = 0;
+    private int maxNumberMsg = 0, sessionSize = 0, maxIdleTime = 0;
     private SimpleDateFormat dateFormat = null;
     private Template template = null;
     private boolean append = true, oldLogFile = false;
@@ -93,7 +89,7 @@ public class MessageLogger {
     private int bufferSize = 4096;
     private NewlogFetcher newlog;
     private String logfile;
-    private String rcField, fieldName;
+    private String rcField, resultField, fieldName;
     private String operation = "append";
     private String uri;
     private int[] partition;
@@ -152,6 +148,11 @@ public class MessageLogger {
         else
             rcField = "ReturnCode";
 
+        if ((o = props.get("ResultField")) != null && o instanceof String)
+            resultField = (String) o;
+        else
+            resultField = "LogCount";
+
         if ("store".equals(operation) && "file".equals(s)) {
             append = false;
             if ((o = props.get("VerifyDirectory")) != null &&
@@ -159,7 +160,7 @@ public class MessageLogger {
                 verifyDirectory = true;
         }
 
-        if ("fetch".equals(operation)) {
+        if ("fetch".equals(operation) || "tail".equals(operation)) {
             Map<String, Object> h = new HashMap<String, Object>(); 
             if ((o = props.get("LogSize")) == null ||
                 (logSize = Integer.parseInt((String) o)) < 0)
@@ -199,6 +200,7 @@ public class MessageLogger {
             h.put("MaxNumberLogs", props.get("MaxNumberLogs"));
             h.put("MaxScannedLogs", props.get("MaxScannedLogs"));
             h.put("MaxLogLength", props.get("MaxLogLength"));
+            h.put("AheadTime", props.get("AheadTime"));
             h.put("Debug", props.get("Debug"));
 
             if ((xaMode & MessageUtils.XA_CLIENT) > 0) { // for XAMode 1 or 3
@@ -270,11 +272,22 @@ public class MessageLogger {
         if (props.get("TextMode") != null) {
             textMode = Integer.parseInt((String) props.get("TextMode"));
         }
+        if (props.get("ResultType") != null) {
+            resultType = Integer.parseInt((String) props.get("ResultType"));
+        }
         if (props.get("DisplayMask") != null) {
             displayMask = Integer.parseInt((String) props.get("DisplayMask"));
         }
         if ((o = props.get("MaxNumberMessage")) != null) {
             maxNumberMsg = Integer.parseInt((String) o);
+        }
+        if ((o = props.get("SessionSize")) != null) {
+            sessionSize = Integer.parseInt((String) o);
+        }
+        if ((o = props.get("MaxIdleTime")) != null) {
+            maxIdleTime = 1000 * Integer.parseInt((String) o);
+            if (maxIdleTime < 0)
+                maxIdleTime = 0;
         }
         if (props.get("WaitTime") != null) {
             waitTime = Long.parseLong((String) props.get("WaitTime"));
@@ -425,6 +438,15 @@ public class MessageLogger {
                                 new Event(Event.INFO, "fetched an entry from " +
                                     newlog.getPath() + " into a msg").send();
                             }
+                            if (maxNumberMsg > 0 && count >= maxNumberMsg) {
+                                newlog.close();
+                                if (displayMask != 0)
+                                    new Event(Event.INFO, xq.getName() +
+                                        ": fetched " + count +
+                                        " log entries from "+
+                                        newlog.getPath()).send();
+                                return;
+                            }
                         }
                         else {
                             xq.cancel(sid);
@@ -535,6 +557,8 @@ public class MessageLogger {
                                   new Event(Event.INFO,"fetched an entry from "+
                                         newlog.getPath() +" into a msg").send();
                                 }
+                                if (maxNumberMsg > 0 && count >= maxNumberMsg)
+                                    break;
                                 if (isSleepy) { // slow down a while
                                     long tm = System.currentTimeMillis() +
                                         sleepTime;
@@ -644,7 +668,7 @@ public class MessageLogger {
                         }
                     }
                     st = t;
-                    if (maxNumberMsg > 0 && sessionCount >= maxNumberMsg) {
+                    if (sessionSize > 0 && sessionCount >= sessionSize) {
                         n = 0;
                         newlog.seek(pos);
                         // end of the session
@@ -733,6 +757,8 @@ public class MessageLogger {
                             new Event(Event.INFO, "fetched an entry from " +
                                 newlog.getPath() + " into a msg").send();
                         }
+                        if (maxNumberMsg > 0 && count >= maxNumberMsg)
+                            break;
                         if (isSleepy) { // slow down a while
                             long tm = System.currentTimeMillis() + sleepTime;
                             do {
@@ -842,7 +868,9 @@ public class MessageLogger {
                 new Event(Event.WARNING, "session commit failed: " +
                     Event.traceStack(e)).send();
             }
-            if(maxNumberMsg > 0 && sessionCount >= maxNumberMsg) //session reset
+            if (mode != 1) // not on daemon mode
+                break;
+            if(sessionSize > 0 && sessionCount >= sessionSize) // session reset
                 sessionCount = 0;
             if (n == 0 && receiveTime > 0) {
                 mask = xq.getGlobalMask();
@@ -871,6 +899,363 @@ public class MessageLogger {
         if (displayMask != 0)
             new Event(Event.INFO, xq.getName() + ": fetched " + count +
                 " log entries from " + newlog.getPath()).send();
+    }
+
+    /**
+     * It listens to an XQueue for incoming JMS messages and extracts the
+     * tail request from each of them. The tail request contains an optional
+     * log reference or an optional timestamp to locate the new log entries.
+     * Once it gets a new request, it opens the log file with the given
+     * reference to fetch new log entries one by one. Each log entry will be
+     * appended into the body of the incoming message as the response.
+     * Please always to set a reasonable MaxNumberMsg to limit maximum number
+     * of log entries for the tail operation.
+     */
+    public void tail(XQueue xq) throws IOException, JMSException,
+        TimeoutException {
+        Message outMessage;
+        String msgStr = null;
+        String line = null;
+        int i, l, n, mask;
+        int sid = -1;
+        long currentTime, idleTime, tm, count = 0, t, pos, length, st = 0;
+        StringBuffer strBuf, logBuf;
+        boolean checkIdle = (maxIdleTime > 0), isJMSType = false; 
+        boolean ack = ((xq.getGlobalMask() & XQueue.EXTERNAL_XA) > 0);
+        String okRC = String.valueOf(MessageUtils.RC_OK);
+        String reqRC = String.valueOf(MessageUtils.RC_REQERROR);
+        String uriRC = String.valueOf(MessageUtils.RC_NOTFOUND);
+        String msgRC = String.valueOf(MessageUtils.RC_MSGERROR);
+        String expRC = String.valueOf(MessageUtils.RC_EXPIRED);
+        byte[] buffer = new byte[bufferSize];
+
+        currentTime = System.currentTimeMillis();
+        idleTime = currentTime;
+        n = 0;
+        while (((mask = xq.getGlobalMask()) & XQueue.KEEP_RUNNING) > 0) {
+            if ((mask & XQueue.STANDBY) > 0) //standby temporarily
+                break;
+            if ((sid = xq.getNextCell(waitTime)) < 0) {
+                if (checkIdle) {
+                    if (n++ == 0) {
+                        currentTime = System.currentTimeMillis();
+                        idleTime = currentTime;
+                    }
+                    else if (n > 10) {
+                        n = 0;
+                        currentTime = System.currentTimeMillis();
+                        if (currentTime >= idleTime + maxIdleTime)
+                            throw(new TimeoutException("idled for too long"));
+                    }
+                }
+                continue;
+            }
+            n = 0;
+
+            outMessage = (Message) xq.browse(sid);
+
+            if (outMessage == null) { // msg is not supposed to be null
+                xq.remove(sid);
+                new Event(Event.WARNING, "dropped a null msg from " +
+                    xq.getName()).send();
+                continue;
+            }
+
+            // setting default RC
+            try {
+                MessageUtils.setProperty(rcField, uriRC, outMessage);
+            }
+            catch (MessageNotWriteableException e) {
+                try {
+                    MessageUtils.resetProperties(outMessage);
+                    MessageUtils.setProperty(rcField, uriRC, outMessage);
+                }
+                catch (Exception ex) {
+                    if (ack) try { // try to ack the msg
+                        outMessage.acknowledge();
+                    }
+                    catch (Exception ee) {
+                    }
+                    xq.remove(sid);
+                    new Event(Event.WARNING,
+                       "failed to set RC on msg from "+xq.getName()).send();
+                    outMessage = null;
+                    continue;
+                }
+            }
+            catch (Exception e) {
+                if (ack) try { // try to ack the msg
+                    outMessage.acknowledge();
+                }
+                catch (Exception ex) {
+                }
+                xq.remove(sid);
+                new Event(Event.WARNING, "failed to set RC on msg from " +
+                    xq.getName()).send();
+                outMessage = null;
+                continue;
+            }
+
+            if (!(outMessage instanceof TextMessage) &&
+                !(outMessage instanceof BytesMessage)) {
+                if (ack) try { // try to ack the msg
+                    outMessage.acknowledge();
+                }
+                catch (Exception e) {
+                }
+                xq.remove(sid);
+                new Event(Event.ERR, "unsupported msg type from " +
+                    xq.getName()).send();
+                outMessage = null;
+                continue;
+            }
+
+            msgStr = null;
+            tm = 0L;
+            try {
+                tm = outMessage.getJMSExpiration();
+                msgStr = MessageUtils.processBody(outMessage, buffer);
+                MessageUtils.setProperty(rcField, reqRC, outMessage);
+            }
+            catch (JMSException e) {
+            }
+
+            currentTime = System.currentTimeMillis();
+            if (tm > 0L && currentTime - tm >= 0L) { // msg expired
+                try {
+                    MessageUtils.setProperty(rcField, expRC, outMessage);
+                }
+                catch (Exception e) {
+                }
+                if (ack) try { // try to ack the msg
+                    outMessage.acknowledge();
+                }
+                catch (Exception e) {
+                }
+                xq.remove(sid);
+                new Event(Event.WARNING, xq.getName()+": message expired at " +
+                    Event.dateFormat(new Date(tm))).send();
+                outMessage = null;
+                continue;
+            }
+
+            if (msgStr != null && msgStr.length() > 1) { // timestamp in request
+                tm = newlog.getTimestamp(msgStr);
+                if (tm >= 0L)
+                    newlog.setReference(0L, tm, 0L);
+                else
+                    new Event(Event.WARNING, xq.getName()+": bad timestamp of "+
+                        msgStr).send();
+            }
+
+            try {
+                pos = newlog.locateNewlog();
+            }
+            catch (IOException e) {
+                if (ack) try { // try to ack the msg
+                    outMessage.acknowledge();
+                }
+                catch (Exception ex) {
+                }
+                xq.remove(sid);
+                outMessage = null;
+                throw(new IOException("failed to locate new log: " +
+                    Event.traceStack(e)));
+            }
+            catch (Exception e) {
+                if (ack) try { // try to ack the msg
+                    outMessage.acknowledge();
+                }
+                catch (Exception ex) {
+                }
+                xq.remove(sid);
+                outMessage = null;
+                throw(new IOException("failed to locate new entries: " +
+                    Event.traceStack(e)));
+            }
+
+            l = 0;
+            logBuf = new StringBuffer();
+            if (oldLogFile && (n = newlog.logBuffer.size()) > 0) {
+                for (i=0; i<n; i++) { // process all old log entries
+                    msgStr = (String) newlog.logBuffer.get(i);
+                    if (filter.evaluate(outMessage, msgStr)) {
+                        if ((resultType & Utils.RESULT_XML) > 0)
+                            logBuf.append(msgStr + Utils.RS);
+                        else if ((resultType & Utils.RESULT_JSON) > 0) {
+                            if (logBuf.length() > 0)
+                                logBuf.append(",");
+                            logBuf.append(msgStr + Utils.RS);
+                        }
+                        else
+                            logBuf.append(msgStr);
+                        l ++;
+                        if (maxNumberMsg > 0 && l >= maxNumberMsg)
+                            break;
+                    }
+                }
+            }
+            count = l;
+            if (maxNumberMsg <= 0 || count < maxNumberMsg) {
+                n = 0;
+                length = 0;
+                strBuf = new StringBuffer();
+                while ((line = newlog.getLine()) != null) {
+                    l = line.length();
+                    if ((t = newlog.getTimestamp(line)) >= 0) { // valid log
+                        if (n > 0) { // matching the patterns
+                            msgStr = strBuf.toString();
+                            strBuf = new StringBuffer();
+                            if (filter.evaluate(outMessage, msgStr)) {
+                                if ((resultType & Utils.RESULT_XML) > 0)
+                                    logBuf.append(msgStr + Utils.RS);
+                                else if ((resultType & Utils.RESULT_JSON) > 0) {
+                                    if (logBuf.length() > 0)
+                                        logBuf.append(",");
+                                    logBuf.append(msgStr + Utils.RS);
+                                }
+                                else
+                                    logBuf.append(msgStr);
+                                count ++;
+                                newlog.updateReference(pos, st, length);
+                                if (maxNumberMsg > 0 && count >= maxNumberMsg)
+                                    break;
+                            }
+                            else try { // commit on nohit
+                                newlog.updateReference(pos, st, length);
+                            }
+                            catch (Exception e) {
+                            }
+                        }
+                        st = t;
+                        strBuf.append(line);
+                        pos += length;
+                        length = l;
+                        n = 1;
+                    }
+                    else if (n > 0 && n < logSize) {
+                        strBuf.append(line);
+                        length += l;
+                        n ++;
+                    }
+                    else if (n == 0) {
+                        pos += l;
+                        newlog.updateReference(l);
+                    }
+                    else {
+                        length += l;
+                    }
+                }
+                if (n > 0) { // leftover
+                    if (n < logSize) { // there may be lines leftover
+                        t = receiveTime / (logSize - n);
+                        if (t <= 0)
+                            t = 10;
+                        do {
+                            try {
+                                Thread.sleep(t);
+                            }
+                            catch (InterruptedException e) {
+                            }
+                            n ++;
+                            if ((line = newlog.getLine()) != null) {
+                                l = line.length();
+                                if (newlog.getTimestamp(line) >= 0) // valid log
+                                    break;
+                                strBuf.append(line);
+                                length += l;
+                            }
+                        } while (n < logSize);
+                    }
+                    msgStr = strBuf.toString();
+                    if (filter.evaluate(outMessage, msgStr)) {
+                        if ((resultType & Utils.RESULT_XML) > 0)
+                            logBuf.append(msgStr + Utils.RS);
+                        else if ((resultType & Utils.RESULT_JSON) > 0) {
+                            if (logBuf.length() > 0)
+                                logBuf.append(",");
+                            logBuf.append(msgStr + Utils.RS);
+                        }
+                        else
+                            logBuf.append(msgStr);
+                        count ++;
+                        newlog.updateReference(pos, st, length);
+                        if (maxNumberMsg > 0 && count >= maxNumberMsg)
+                            break;
+                    }
+                    else try { // commit on nohit
+                        newlog.updateReference(pos, st, length);
+                    }
+                    catch (Exception e) {
+                    }
+                }
+            }
+            newlog.close();
+
+            try {
+                if ((resultType & Utils.RESULT_XML) > 0) {
+                    logBuf.insert(0, "<Result>" + Utils.RS);
+                    logBuf.append("</Result>");
+                }
+                else if ((resultType & Utils.RESULT_JSON) > 0) {
+                    logBuf.insert(0, "{" + Utils.RS + "\"Record\":[");
+                    logBuf.append("]}");
+                }
+
+                outMessage.clearBody();
+                if (outMessage instanceof TextMessage)
+                    ((TextMessage) outMessage).setText(logBuf.toString());
+                else {
+                    line = logBuf.toString();
+                    ((BytesMessage) outMessage).writeBytes(line.getBytes());
+                }
+                MessageUtils.setProperty(rcField, okRC, outMessage);
+                MessageUtils.setProperty(resultField, String.valueOf(count),
+                    outMessage);
+                if (displayMask > 0)
+                    line = MessageUtils.display(outMessage, msgStr,
+                        displayMask, propertyName);
+            }
+            catch (JMSException e) {
+                String str = "";
+                Exception ex = e.getLinkedException();
+                if (ex != null)
+                    str += " Linked exception: " + ex.toString() + "\n";
+                new Event(Event.ERR, "failed to set property " +
+                    Event.traceStack(e)).send();
+            }
+
+            if (ack) try { // try to ack the msg
+                outMessage.acknowledge();
+            }
+            catch (JMSException e) {
+                String str = "";
+                Exception ee = e.getLinkedException();
+                if (ee != null)
+                    str += "Linked exception: " + ee.getMessage()+ "\n";
+                new Event(Event.ERR, "failed to ack msg after tail on " + uri +
+                    ": " + str + Event.traceStack(e)).send();
+            }
+            catch (Exception e) {
+                new Event(Event.ERR, "failed to ack msg after tail on " + uri +
+                    ": " + Event.traceStack(e)).send();
+            }
+            catch (Error e) {
+                xq.remove(sid);
+                outMessage = null;
+                new Event(Event.ERR, "failed to ack msg after query on " + uri+
+                    ": " + e.toString()).send();
+                Event.flush(e);
+            }
+            xq.remove(sid);
+            if (displayMask > 0) // display the message
+                new Event(Event.INFO, (count+1) +":" + line).send();
+            count ++;
+            outMessage = null;
+        }
+        if (displayMask != 0 && maxNumberMsg != 1)
+            new Event(Event.INFO, "tailed " + count + " log entries from " +
+                uri).send();
     }
 
     /**

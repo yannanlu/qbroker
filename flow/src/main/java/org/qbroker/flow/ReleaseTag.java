@@ -3,6 +3,10 @@ package org.qbroker.flow;
 /* ReleaseTag.java - release tag for all the packages of qbroker */
 
 /**
+ * V1.2.28 (2021/01/17): added AheadTime to NewlogFetcher and added a line of
+ * setReference() to its fetchOldLogs(), added tail() to MessageLogger for
+ * on-demand tail operation, updated LogReceiver for tail operation
+ *<br>
  * V1.2.27 (2020/09/19): added logRequest() to MessageServlet and JettryServer,
  * added support of external authentications to MessageServlet, added
  * REMOTE_USER to QServlet, updated ServiceMonitor with pid=0 for non-running
@@ -433,7 +437,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V1.2.27 2020/09/19 09:12:30";
+    private static String ReleaseTAG = "QBroker V1.2.28 2021/01/17 13:52:40";
 
     public ReleaseTag() {
     }

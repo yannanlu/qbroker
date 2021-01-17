@@ -4,12 +4,12 @@
   <modelVersion>4.0.0</modelVersion>
   <artifactId>persister</artifactId>
   <packaging>jar</packaging>
-  <version>1.1.8</version>
+  <version>1.1.9</version>
   <url>http://maven.apache.org</url>
   <parent>
     <groupId>org.qbroker</groupId>
     <artifactId>qbroker</artifactId>
-    <version>1.2.5</version>
+    <version>1.2.6</version>
   </parent>
   <dependencies>
     <dependency>

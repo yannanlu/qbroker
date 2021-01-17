@@ -52,19 +52,22 @@ import org.qbroker.common.Utils;
  *<br><br>
  * Here are the rules for the reference file:<br><br>
  * (1) If there is the reference file, use it and trust it.<br>
- * (2) If there is no reference file, use the timestamp of the current log file
- * as the timestamp of the reference log and set the position of reference log
- * and the offset to 0.<br>
- * (3) If there is no current log file, try the timestamp of the old log
+ * (2) If there is no reference file but AheadTime is defined, use currentTime
+ * minus AheadTime as the timestamp of the reference log and set the position
+ * of reference log and the offset to 0.<br>
+ * (3) If there is no reference file and AheadTime is not defined, use the
+ * timestamp of the current log file as the timestamp of the reference log
+ * and set the position of reference log and the offset to 0.<br>
+ * (4) If there is no current log file, try the timestamp of the old log
  * file.<br>
- * (4) If still no reference, use the default reference (0 currentTime 0).<br>
- * (5) If there is a mismatch to the position of the reference log, trust
+ * (5) If still no reference, use the default reference (0 currentTime 0).<br>
+ * (6) If there is a mismatch to the position of the reference log, trust
  * the timestamp of the reference log and search for the objective log in
  * the current log file.  The objective log is the first log entry with
  * a timestamp later than the reference timestamp.<br>
- * (6) If there is a mismatch to the offset of the objective log, trust the
+ * (7) If there is a mismatch to the offset of the objective log, trust the
  * current log first.<br>
- * (7) If it does not find a objective log, reset the offset to 0.<br>
+ * (8) If it does not find a objective log, reset the offset to 0.<br>
  *<br><br>
  * The reference file is not required.  But if the file is not defined, you
  * will have to set SaveReference to false to disable the update on the
@@ -91,7 +94,7 @@ public class NewlogFetcher {
     private RandomAccessFile log;
     private FileInputStream fin;
     private ParsePosition pp;
-    private int maxNumberLogs, maxLogLength, debug, mode;
+    private int maxNumberLogs, maxLogLength, debug, mode, aheadTime = 0;
     boolean foundFirstObj, saveRef, yearRecovery;
     private byte[] buffer;
     private int startBytes, leftover, bufferSize = 4096;
@@ -185,6 +188,10 @@ public class NewlogFetcher {
             (maxLogLength = Integer.parseInt((String) o)) <= 0)
             maxLogLength = MAXLOGLENGTH;
 
+        if ((o = props.get("AheadTime")) == null ||
+            (aheadTime = Integer.parseInt((String) o)) <= 0)
+            aheadTime = 0;
+
         if ((o = props.get("Debug")) != null)
             debug = Integer.parseInt((String) o);
         else
@@ -264,6 +271,11 @@ public class NewlogFetcher {
             n = str.indexOf(" ");
             timestamp = Long.parseLong(str.substring(0, n));
             offset = Long.parseLong(str.substring(n+1));
+        }
+        else if (aheadTime > 0) { // use currentTime minus aheadTime
+            position = 0L;
+            timestamp = System.currentTimeMillis() - 1000 * aheadTime;
+            offset = 0L;
         }
         else if (logFile.exists()) {
             // if not get the time, use the mtime of the log file
@@ -1055,6 +1067,8 @@ public class NewlogFetcher {
                 " " + offset + "): " + Utils.traceStack(e));
                 return new ArrayList<String>();
             }
+            setReference(oldLog.getPosition(), oldLog.getTimestamp(),
+                oldLog.getOffset());
             return oldLog.logBuffer;
         }
         else {
