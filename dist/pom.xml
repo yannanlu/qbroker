@@ -33,7 +33,7 @@
     <dependency>
       <groupId>org.qbroker</groupId>
       <artifactId>monitor</artifactId>
-      <version>1.1.21</version>
+      <version>1.1.22</version>
     </dependency>
     <dependency>
       <groupId>org.qbroker</groupId>
@@ -78,7 +78,7 @@
     <dependency>
       <groupId>org.qbroker</groupId>
       <artifactId>flow</artifactId>
-      <version>1.2.28</version>
+      <version>1.2.29</version>
     </dependency>
     <dependency>
       <groupId>org.qbroker</groupId>

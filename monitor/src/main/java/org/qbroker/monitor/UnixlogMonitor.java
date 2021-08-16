@@ -57,17 +57,26 @@ import org.qbroker.event.Event;
  * so that it can trigger the actions on ALERT only. In this case, the value for
  * the attribute of firstEntry will be the first fatal log entry.
  *<br><br>
- * UnixlogMonitor supports ExpirationTime.  If it is defined and is larger
- * than zero in second, UnixlogMonitor will ignore any new log entry that
- * has a timestamp older than the difference of currentTime - expirationTime.
- * It can be used to skip the old log entries.
+ * UnixlogMonitor supports ExpirationTime with the default value of zero. If
+ * it is set to be larger than zero in second, UnixlogMonitor will ignore any
+ * new log entry that has a timestamp older than the difference of
+ * (currentTime - expirationTime). It can be used to skip the old log entries.
+ *<br><br>
+ * UnixlogMonitor also supports RecoveryThreshold with the default value of 1.
+ * RecoveryThreshold is the minimum number of consecutive checks which all give
+ * the healthy and positive results. UnixlogMonitor uses it to determine if the
+ * application is fully recovered from a previous failure state. If it is the
+ * default value of 1, UnixlogMonitor will reset ActionCount to 0 at the first
+ * healthy result. Otherwise, UnixlogMonitor will not do that until it sees all
+ * the healthy results from that number of consecutive checks. This feature is
+ * helpful to reduce the flapping of the monitor status.
  *<br>
  * @author yannanlu@yahoo.com
  */
 
 public class UnixlogMonitor extends Monitor {
     private String uri;
-    private int errorIgnored, maxNumberLogs, maxSessionCount;
+    private int errorIgnored, maxNumberLogs;
     private int previousNumber, logSize;
     private int numberDataFields, maxScannedLogs, debug;
     private long expirationTime = 0;
@@ -134,10 +143,9 @@ public class UnixlogMonitor extends Monitor {
             (numberDataFields = Integer.parseInt((String) o)) < 0)
             numberDataFields = 0;
 
-        if ((o = props.get("MaxSessionCount")) != null)
-            maxSessionCount = Integer.parseInt((String) o);
-        else
-            maxSessionCount = 0;
+        if ((o = props.get("RecoveryThreshold")) != null &&
+            (recoveryThreshold = Integer.parseInt((String) o)) < 0)
+            recoveryThreshold = 1;
 
         if ((o = props.get("Debug")) != null)
             debug = Integer.parseInt((String) o);
@@ -488,8 +496,9 @@ public class UnixlogMonitor extends Monitor {
             }
             actionCount ++;
             if (numberLogs > 0) {
-                if (previousNumber == 0)
+                if (previousNumber == 0) {
                     actionCount = 1;
+                }
                 if (status != TimeWindows.BLACKOUT) { // for normal case
                     level = Event.ERR;
                     if (step > 0)
@@ -501,16 +510,22 @@ public class UnixlogMonitor extends Monitor {
                         level = Event.WARNING;
                 }
                 previousNumber = numberLogs;
+                recoveryCount = 0;
             }
             else if (previousNumber > 0) {
-                if ((maxSessionCount <= 0 || actionCount > maxSessionCount)) {
+                recoveryCount ++;
+                if (recoveryThreshold<=1 || recoveryCount>=recoveryThreshold) {
                     actionCount = 0;
+                    recoveryCount = 0;
                     previousNumber = 0;
                 }
+                else
+                    actionCount --;
                 if (normalStep > 0)
                     step = normalStep;
             }
             else {
+                recoveryCount ++;
                 previousNumber = 0;
             }
             break;
@@ -691,7 +706,7 @@ public class UnixlogMonitor extends Monitor {
     public void restoreFromCheckpoint(Map<String, Object> chkpt) {
         Object o;
         long ct;
-        int aCount, eCount, pNumber, pStatus, sNumber;
+        int aCount, eCount, rCount, pNumber, pStatus, sNumber;
         if (chkpt == null || chkpt.size() == 0 || serialNumber > 0)
             return;
         if ((o = chkpt.get("Name")) == null || !name.equals((String) o))
@@ -713,6 +728,10 @@ public class UnixlogMonitor extends Monitor {
             eCount = Integer.parseInt((String) o);
         else
             return;
+        if ((o = chkpt.get("RecoveryCount")) != null)
+            rCount = Integer.parseInt((String) o);
+        else
+            return;
 
         if ((o = chkpt.get("PreviousNumber")) != null)
             pNumber = Integer.parseInt((String) o);
@@ -722,6 +741,7 @@ public class UnixlogMonitor extends Monitor {
         // restore the parameters from the checkpoint
         actionCount = aCount;
         exceptionCount = eCount;
+        recoveryCount = rCount;
         previousStatus = pStatus;
         serialNumber = sNumber;
         previousNumber = pNumber;

@@ -48,6 +48,7 @@ public abstract class Monitor implements MonitorReport, MonitorAction {
     protected int maxRetry, maxPage, tolerance, exceptionTolerance;
     protected int repeatPeriod, step, normalStep, serialNumber;
     protected int previousStatus, skip, actionCount, exceptionCount;
+    protected int recoveryCount, recoveryThreshold = 1;
     protected int disableMode, reportMode, statusOffset;
     protected int cachedSkip = NOSKIP, resolution = 1000;
     protected boolean disabledWithReport = false;
@@ -240,6 +241,7 @@ public abstract class Monitor implements MonitorReport, MonitorAction {
         serialNumber = 0;
         actionCount = 0;
         exceptionCount = 0;
+        recoveryCount = 0;
         previousStatus = -10;
         statusOffset = 0 - TimeWindows.EXCEPTION;
     }
@@ -284,6 +286,7 @@ public abstract class Monitor implements MonitorReport, MonitorAction {
         chkpt.put("SerialNumber", String.valueOf(serialNumber));
         chkpt.put("ActionCount", String.valueOf(actionCount));
         chkpt.put("ExceptionCount", String.valueOf(exceptionCount));
+        chkpt.put("RecoveryCount", String.valueOf(recoveryCount));
         chkpt.put("PreviousStatus", String.valueOf(previousStatus));
         return chkpt;
     }
@@ -291,7 +294,7 @@ public abstract class Monitor implements MonitorReport, MonitorAction {
     public void restoreFromCheckpoint(Map<String, Object> chkpt) {
         Object o;
         long ct;
-        int aCount, eCount, pNumber, pStatus, sNumber;
+        int aCount, eCount, rCount, pNumber, pStatus, sNumber;
         if (chkpt == null || chkpt.size() == 0 || serialNumber > 0)
             return;
         if ((o = chkpt.get("Name")) == null || !name.equals((String) o))
@@ -313,10 +316,15 @@ public abstract class Monitor implements MonitorReport, MonitorAction {
             eCount = Integer.parseInt((String) o);
         else
             return;
+        if ((o = chkpt.get("RecoveryCount")) != null)
+            rCount = Integer.parseInt((String) o);
+        else
+            return;
 
         // restore the parameters from the checkpoint
         actionCount = aCount;
         exceptionCount = eCount;
+        recoveryCount = rCount;
         previousStatus = pStatus;
         serialNumber = sNumber;
     }

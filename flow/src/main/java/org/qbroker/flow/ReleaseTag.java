@@ -3,6 +3,10 @@ package org.qbroker.flow;
 /* ReleaseTag.java - release tag for all the packages of qbroker */
 
 /**
+ * V1.2.29 (2021/08/15): added RecoveryThreshold to Monitor, added the
+ * implementation on RecoveryThreshold to UnixlogMonitor and removed
+ * MaxSessionCount from it
+ *<br>
  * V1.2.28 (2021/01/17): added AheadTime to NewlogFetcher and added a line of
  * setReference() to its fetchOldLogs(), added tail() to MessageLogger for
  * on-demand tail operation, updated LogReceiver for tail operation
@@ -437,7 +441,7 @@ package org.qbroker.flow;
  */
 public class ReleaseTag {
     private static String TAG = null;
-    private static String ReleaseTAG = "QBroker V1.2.28 2021/01/17 13:52:40";
+    private static String ReleaseTAG = "QBroker V1.2.29 2021/08/15 21:41:57";
 
     public ReleaseTag() {
     }
