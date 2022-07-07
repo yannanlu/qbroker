@@ -120,7 +120,7 @@
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-http</artifactId>
-      <version>9.4.14.v20181114</version>
+      <version>9.4.48.v20220622</version>
       <scope>runtime</scope>
     </dependency>
     <dependency>
